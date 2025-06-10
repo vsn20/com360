@@ -1,0 +1,258 @@
+/* Reset default styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background-color: #e0e0e0; /* Light gray background */
+  min-height: 100vh;
+}
+
+/* Homepage Styles */
+.homepage-container {
+  min-height: 100vh;
+  background-color: #e0e0e0; /* Light gray background */
+}
+
+.homepage-nav {
+  background-color: #1a1a1a; /* Black for nav bar */
+  color: white;
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.nav-links {
+  display: flex;
+  gap: 1rem;
+}
+
+.nav-links a {
+  color: white;
+  text-decoration: underline;
+  font-size: 1rem;
+}
+
+.nav-links a:hover {
+  text-decoration: none;
+  color: #2e7d32; /* Green on hover */
+}
+
+.main-content {
+  padding: 1.5rem;
+}
+
+.main-content h1 {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #1a1a1a; /* Black for headings */
+}
+
+/* Error and Unauthorized Pages */
+.error-container,
+.unauthorized-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #e0e0e0; /* Light gray background */
+}
+
+.error-content,
+.unauthorized-content {
+  text-align: center;
+}
+
+.error-content h1,
+.unauthorized-content h1 {
+  font-size: 2.25rem;
+  font-weight: bold;
+  color: #424242; /* Dark gray for error headings */
+}
+
+.error-content p,
+.unauthorized-content p {
+  font-size: 1.125rem;
+  color: #616161; /* Medium gray for text */
+  margin-top: 0.5rem;
+}
+
+/* LogoutButton Styles */
+.logout-container {
+  position: relative;
+}
+
+.user-button {
+  width: 40px;
+  height: 40px;
+  background-color: #2e7d32; /* Green for user button */
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.25rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.user-button:hover {
+  background-color: #1b5e20; /* Darker green on hover */
+}
+
+.dropdown-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 0.5rem;
+  width: 192px;
+  background-color: white;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  z-index: 10;
+}
+
+.dropdown-menu p {
+  font-size: 0.875rem;
+  margin-bottom: 0.25rem;
+}
+
+.dropdown-username {
+  color: #1a1a1a; /* Black for username */
+  font-weight: bold;
+}
+
+.dropdown-role {
+  color: #616161; /* Medium gray for role */
+}
+
+.logout-button {
+  margin-top: 0.5rem;
+  width: 100%;
+  text-align: left;
+  padding: 0.25rem 0.5rem;
+  background-color: #424242; /* Dark gray for logout button */
+  color: white;
+  border: none;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: background-color 0.2s ease;
+}
+
+.logout-button:hover {
+  background-color: #212121; /* Darker gray on hover */
+}
+
+/* Login Page Styles */
+.login-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background-color: #e0e0e0; /* Light gray background */
+}
+
+.login-container h1 {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #1a1a1a; /* Black for headings */
+  margin-bottom: 1.5rem;
+}
+
+.login-form {
+  background-color: white;
+  padding: 2rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 400px;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  font-size: 1rem;
+  color: #1a1a1a; /* Black for labels */
+  margin-bottom: 0.25rem;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 0.5rem;
+  font-size: 1rem;
+  border: 1px solid #bdbdbd; /* Light gray border */
+  border-radius: 0.25rem;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.form-group input:focus {
+  border-color: #2e7d32; /* Green on focus */
+}
+
+.login-button {
+  width: 100%;
+  padding: 0.75rem;
+  background-color: #2e7d32; /* Green for login button */
+  color: white;
+  border: none;
+  border-radius: 0.25rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.login-button:hover {
+  background-color: #1b5e20; /* Darker green on hover */
+}
+
+.error-message {
+  color: #424242; /* Dark gray for error messages */
+  font-size: 0.875rem;
+  margin-top: 1rem;
+  text-align: center;
+}
+
+/* Navbar Styles */
+.navbar-container {
+  padding: 1rem;
+  background-color: #1a1a1a; /* Black for navbar */
+}
+
+.navbar-container h1 {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: white; /* White to contrast with black background */
+  margin-bottom: 0.5rem;
+}
+
+.navbar-nav {
+  display: flex;
+  gap: 1rem;
+}
+
+.navbar-nav a {
+  color: white; /* White to contrast with black background */
+  text-decoration: none;
+  font-size: 1rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.navbar-nav a:hover {
+  background-color: #2e7d32; /* Green on hover */
+  color: white;
+}
