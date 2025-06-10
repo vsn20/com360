@@ -1,3 +1,4 @@
+
 "use server";
 
 import DBconnection from "../utils/config/db";
@@ -18,11 +19,12 @@ export async function loginaction(logindetails) {
   try {
     const pool = await DBconnection();
 
+    // Updated query: Join C_USER with C_EMP to get roleid directly
     const [rows] = await pool.query(
-      `SELECT u.*, era.roleid 
+      `SELECT u.*, e.roleid, e.issuperadmin, e.isadmin 
        FROM C_USER u 
-       LEFT JOIN employee_role_assign era ON u.EMP_ID = era.EMP_ID 
-       WHERE u.USER_ID = ?`,
+       JOIN C_EMP e ON u.empid = e.empid 
+       WHERE u.username = ?`,
       [username]
     );
 
@@ -33,32 +35,35 @@ export async function loginaction(logindetails) {
 
     const user = rows[0];
 
-    const isPasswordValid = await bcrypt.compare(password, user.PASSWORD);
+    const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
       console.log("Login failed: Incorrect password");
       return { success: false, error: "Invalid username or password" };
     }
 
-    console.log("User authenticated:", user.USER_ID, "Role:", user.roleid);
+    // Determine effective roleid: If issuperadmin is 1, roleid should be null
+    const effectiveRoleId = user.issuperadmin === 1 ? null : user.roleid;
 
-    const token = generateToken(user.USER_ID, user.roleid, username);
+    console.log("User authenticated:", user.username, "Role:", effectiveRoleId, "Superadmin:", user.issuperadmin, "Admin:", user.isadmin);
+
+    const token = generateToken(user.username, effectiveRoleId, username);
     console.log("Generated JWT token:", token);
 
     const cookieStore = cookies();
     await cookieStore.set("jwt_token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      maxAge: 60 * 60 * 24,
+      maxAge: 60 * 60 * 24, // 24 hours
       path: "/",
     });
 
     await pool.query(
-      "UPDATE C_USER SET LAST_LOGIN_TIMESTAMP = CURRENT_TIMESTAMP WHERE USER_ID = ?",
+      "UPDATE C_USER SET LAST_LOGIN_TIMESTAMP = CURRENT_TIMESTAMP WHERE username = ?",
       [username]
     );
 
-    return { success: true, roleid: user.roleid };
+    return { success: true, roleid: effectiveRoleId, issuperadmin: user.issuperadmin, isadmin: user.isadmin };
   } catch (error) {
     console.log("Login error:", error.message);
     return { success: false, error: "An error occurred during login" };
