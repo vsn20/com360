@@ -1,6 +1,5 @@
+// app/[role]/page.js
 import { getUserRole } from "../../serverActions/getUserRole";
-import LogoutButton from "../../components/LogoutButton";
-import SidebarMenu from "@/app/components/Sidebar";
 
 export default async function Homepage({ params }) {
   const role = params?.role || "";
@@ -16,8 +15,8 @@ export default async function Homepage({ params }) {
     );
   }
 
-  const { success, roleid, username, rolename, error } = await getUserRole();
-  console.log("Homepage: getUserRole result:", { success, roleid, username, rolename, error });
+  const { success, rolename, error } = await getUserRole();
+  console.log("Homepage: getUserRole result:", { success, rolename, error });
 
   if (!success) {
     return (
@@ -33,7 +32,6 @@ export default async function Homepage({ params }) {
   const userRole = rolename.toLowerCase();
   const displayRole = rolename;
 
-  // Check if the URL role matches the user's role
   if (role !== userRole) {
     return (
       <div className="unauthorized-container">
@@ -46,28 +44,17 @@ export default async function Homepage({ params }) {
   }
 
   return (
-    <div className="homepage-container">
-      <SidebarMenu roleid={roleid} />
-      <LogoutButton username={username} role={displayRole} />
-      <div
-        className="main-content"
-        style={{
-          position: "absolute",
-          top: "60px",
-          left: "220px",
-          right: 0,
-          bottom: 0,
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          fontSize: "24px",
-          fontWeight: "bold",
-          backgroundColor: "#f2f2f2",
-          height: "calc(100vh - 60px)",
-        }}
-      >
-        <h1>Hello {displayRole}, welcome to the dashboard!</h1>
-      </div>
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        height: "calc(100vh - 60px)",
+        fontSize: "24px",
+        fontWeight: "bold",
+      }}
+    >
+      <h1>Hello {displayRole}, welcome to the dashboard!</h1>
     </div>
   );
 }

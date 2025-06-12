@@ -1,5 +1,6 @@
 import Sales from '@/app/components/Sales'
 import React from 'react'
+import sidebar from '../page'
 const page = () => {
   return (
     <div  style={{
@@ -16,7 +17,6 @@ const page = () => {
         backgroundColor: '#f2f2f2', // optional for better visibility
         height: 'calc(100vh - 60px)', // remaining height after navbar
       }}>
-          
         <Sales/>
     </div>
   )
