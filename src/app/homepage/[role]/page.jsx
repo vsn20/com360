@@ -1,5 +1,6 @@
 import { getUserRole } from "../../serverActions/getUserRole";
 import LogoutButton from "../../components/LogoutButton";
+import SidebarMenu from "@/app/components/Sidebar";
 
 export default async function Homepage({ params }) {
   const role = params?.role || "";
@@ -15,7 +16,8 @@ export default async function Homepage({ params }) {
     );
   }
 
-  const { success, roleid, username, error } = await getUserRole();
+  const { success, roleid, username, rolename, error } = await getUserRole();
+  console.log("Homepage: getUserRole result:", { success, roleid, username, rolename, error });
 
   if (!success) {
     return (
@@ -28,8 +30,10 @@ export default async function Homepage({ params }) {
     );
   }
 
-  const userRole = roleid === 1 ? "admin" : "employee";
+  const userRole = rolename.toLowerCase();
+  const displayRole = rolename;
 
+  // Check if the URL role matches the user's role
   if (role !== userRole) {
     return (
       <div className="unauthorized-container">
@@ -41,31 +45,28 @@ export default async function Homepage({ params }) {
     );
   }
 
-  const isAdmin = roleid === 1;
-  const isEmployee = roleid === 2;
-  const displayRole = isAdmin ? "Admin" : "Employee";
-
   return (
     <div className="homepage-container">
-      {/* Navigation Bar */}
-      <nav className="homepage-nav">
-        <div className="nav-links">
-          <a href="/">Home</a>
-          <a href="/about">About</a>
-          <a href="/contact">Contact</a>
-        </div>
-        {/* Logout Button */}
-        <LogoutButton username={username} role={displayRole} />
-      </nav>
-
-      {/* Main Content */}
-      <div className="main-content">
-        {isAdmin && (
-          <h1>Hello Admin, welcome to club</h1>
-        )}
-        {isEmployee && (
-          <h1>Hi Employee, warm regards</h1>
-        )}
+      <SidebarMenu roleid={roleid} />
+      <LogoutButton username={username} role={displayRole} />
+      <div
+        className="main-content"
+        style={{
+          position: "absolute",
+          top: "60px",
+          left: "220px",
+          right: 0,
+          bottom: 0,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          fontSize: "24px",
+          fontWeight: "bold",
+          backgroundColor: "#f2f2f2",
+          height: "calc(100vh - 60px)",
+        }}
+      >
+        <h1>Hello {displayRole}, welcome to the dashboard!</h1>
       </div>
     </div>
   );

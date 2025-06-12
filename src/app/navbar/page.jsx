@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import React, { useEffect, useState } from 'react';
 import { getnavbaritems } from '../serverActions/NavbarAction';
-
+import '../components/navbarmenu.css'
 const Navbarpage = () => {
   const [navbaritems, setnavbaritems] = useState([]);
   const [error, seterror] = useState(null);

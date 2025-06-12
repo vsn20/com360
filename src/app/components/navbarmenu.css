@@ -1,0 +1,23 @@
+nav {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem 2rem;
+  background-color: #111;
+  color: white;
+  border-bottom: 2px solid #ccc; /* 👈 separator line */
+  z-index: 99;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+
+nav a {
+  text-decoration: none;
+  color: #333;
+  font-weight: 500;
+}
+
+nav a:hover {
+  color: #0070f3;
+}

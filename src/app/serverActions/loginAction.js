@@ -1,15 +1,15 @@
-
 "use server";
 
 import DBconnection from "../utils/config/db";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { cookies } from "next/headers";
+import { getsidebarmenu } from "./getsmenu";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
-const generateToken = (userId, roleid, username) => {
-  return jwt.sign({ userId, roleid, username }, JWT_SECRET, { expiresIn: "24h" });
+const generateToken = (userId, roleid, username, rolename, features) => {
+  return jwt.sign({ userId, roleid, username, rolename, features }, JWT_SECRET, { expiresIn: "24h" });
 };
 
 export async function loginaction(logindetails) {
@@ -19,11 +19,11 @@ export async function loginaction(logindetails) {
   try {
     const pool = await DBconnection();
 
-    // Updated query: Join C_USER with C_EMP to get roleid directly
     const [rows] = await pool.query(
-      `SELECT u.*, e.roleid, e.issuperadmin, e.isadmin 
+      `SELECT u.*, e.roleid, e.issuperadmin, e.isadmin, r.rolename 
        FROM C_USER u 
        JOIN C_EMP e ON u.empid = e.empid 
+       LEFT JOIN org_role_table r ON e.roleid = r.roleid 
        WHERE u.username = ?`,
       [username]
     );
@@ -42,12 +42,25 @@ export async function loginaction(logindetails) {
       return { success: false, error: "Invalid username or password" };
     }
 
-    // Determine effective roleid: If issuperadmin is 1, roleid should be null
     const effectiveRoleId = user.issuperadmin === 1 ? null : user.roleid;
+    const roleName = user.issuperadmin === 1 ? "superadmin" : user.rolename;
 
-    console.log("User authenticated:", user.username, "Role:", effectiveRoleId, "Superadmin:", user.issuperadmin, "Admin:", user.isadmin);
+    if (!roleName) {
+      console.log("Login failed: Role name not found");
+      return { success: false, error: "User role not found" };
+    }
 
-    const token = generateToken(user.username, effectiveRoleId, username);
+    console.log("User authenticated:", user.username, "Role:", roleName, "Superadmin:", user.issuperadmin);
+
+    // Fetch the user's permitted features
+    const sidebarItems = await getsidebarmenu(effectiveRoleId);
+    console.log("Login: Sidebar items for roleid", effectiveRoleId, ":", sidebarItems);
+
+    // Extract the href values (e.g., ["/sales", "/reports"])
+    const features = sidebarItems.map(item => item.href);
+    console.log("Login: Features included in token:", features);
+
+    const token = generateToken(user.username, effectiveRoleId, username, roleName, features);
     console.log("Generated JWT token:", token);
 
     const cookieStore = cookies();
@@ -63,7 +76,7 @@ export async function loginaction(logindetails) {
       [username]
     );
 
-    return { success: true, roleid: effectiveRoleId, issuperadmin: user.issuperadmin, isadmin: user.isadmin };
+    return { success: true, roleid: effectiveRoleId, issuperadmin: user.issuperadmin, rolename: roleName };
   } catch (error) {
     console.log("Login error:", error.message);
     return { success: false, error: "An error occurred during login" };

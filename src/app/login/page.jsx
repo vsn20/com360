@@ -21,9 +21,9 @@ export default function Login() {
     try {
       const result = await loginaction(logindetails);
       if (result.success) {
-        // Redirect based on role
-        const redirectPath = result.roleid === 1 ? "/admin/homepage" : "/employee/homepage";
-        router.push(redirectPath);
+        // Use the rolename from loginaction response for redirection
+        const roleName = result.rolename.toLowerCase();
+        router.push(`/homepage/${roleName}`);
       } else {
         setError(result.error);
       }
@@ -38,11 +38,11 @@ export default function Login() {
       <form className="login-form" onSubmit={handleSubmit}>
         <div className="form-group">
           <label>Username</label>
-          <input type="text" name="username" defaultValue="naman" />
+          <input type="text" name="username"  />
         </div>
         <div className="form-group">
           <label>Password</label>
-          <input type="password" name="password" defaultValue="12345678" />
+          <input type="password" name="password" />
         </div>
         <button className="login-button" type="submit">Login</button>
         {error && <p className="error-message">{error}</p>}

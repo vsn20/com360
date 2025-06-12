@@ -1,61 +1,87 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { logoutAction } from "../serverActions/logoutAction";
 
 export default function LogoutButton({ username, role }) {
-  console.log(`[LogoutButton] Rendering with username: ${username}, role: ${role}`);
-  
   const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
 
   const handleLogout = async () => {
-    console.log("[LogoutButton] Initiating logout");
-    await logoutAction();
-    // Note: This line will not be reached because logoutAction redirects
-    console.log("[LogoutButton] Logout successful - this log won't appear");
+    await logoutAction(); // redirects the user
   };
 
+  // Close dropdown when clicked outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   return (
-    <div className="logout-container">
-      {/* Round button */}
+    <div
+      ref={dropdownRef}
+      style={{
+        position: "fixed",
+        top: "10px",
+        right: "10px",
+        zIndex: 1000,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "flex-end",
+      }}
+    >
+      {/* Round icon button */}
       <div
-        className="user-button"
-        onMouseEnter={() => {
-          console.log("[LogoutButton] Mouse entered, opening dropdown");
-          setIsOpen(true);
-        }}
-        onMouseLeave={() => {
-          console.log("[LogoutButton] Mouse left, closing dropdown");
-          setIsOpen(false);
-        }}
-        onClick={() => {
-          console.log("[LogoutButton] Button clicked, toggling dropdown");
-          setIsOpen(!isOpen);
+        onClick={() => setIsOpen((prev) => !prev)}
+        style={{
+          width: "40px",
+          height: "40px",
+          borderRadius: "50%",
+          backgroundColor: "#111",
+          color: "#fff",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          cursor: "pointer",
+          fontWeight: "bold",
+          fontSize: "16px",
         }}
       >
         {username ? username.charAt(0).toUpperCase() : "U"}
       </div>
 
-      {/* Dropdown on hover/click */}
+      {/* Dropdown menu */}
       {isOpen && (
         <div
-          className="dropdown-menu"
-          onMouseEnter={() => {
-            console.log("[LogoutButton] Mouse entered dropdown, keeping open");
-            setIsOpen(true);
-          }}
-          onMouseLeave={() => {
-            console.log("[LogoutButton] Mouse left dropdown, closing");
-            setIsOpen(false);
+          style={{
+            marginTop: "10px",
+            background: "#fff",
+            padding: "10px",
+            borderRadius: "8px",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+            minWidth: "160px",
+            fontFamily: "sans-serif",
           }}
         >
-          <p className="dropdown-username">
-            <strong>{username}</strong>
-          </p>
-          <p className="dropdown-role">{role}</p>
+          <p style={{ margin: "4px 0", fontWeight: "bold" }}>{username}</p>
+          <p style={{ margin: "4px 0", fontSize: "12px", color: "#666" }}>{role}</p>
           <button
-            className="logout-button"
             onClick={handleLogout}
+            style={{
+              width: "100%",
+              backgroundColor: "red",
+              color: "white",
+              padding: "6px",
+              border: "none",
+              borderRadius: "5px",
+              cursor: "pointer",
+              marginTop: "8px",
+            }}
           >
             Logout
           </button>
