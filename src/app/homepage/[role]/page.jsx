@@ -1,6 +1,8 @@
 // app/[role]/page.js
 import { getUserRole } from "../../serverActions/getUserRole";
-
+export function isActivelogin(){
+    return 1;
+}
 export default async function Homepage({ params }) {
   // Decode URL-encoded role and normalize
   const role = decodeURIComponent(params?.role || "").toLowerCase().replace(/\s+/g, " ").trim();

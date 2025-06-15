@@ -4,9 +4,12 @@ import Link from 'next/link';
 import React, { useEffect, useState } from 'react';
 import { getnavbaritems } from '../serverActions/NavbarAction';
 import '../components/navbarmenu.css'
+import { usePathname } from 'next/navigation';
+import { isActivelogin } from '../homepage/[role]/page';
 const Navbarpage = () => {
   const [navbaritems, setnavbaritems] = useState([]);
   const [error, seterror] = useState(null);
+  const pathname=usePathname();
 
   useEffect(() => {
     async function fetchNavbar() {
@@ -35,13 +38,19 @@ const Navbarpage = () => {
   return (
     <div className="navbar-container">
       <nav className="navbar-nav">
+        
         {navbaritems
           .filter(item => item.name) // Only render items with a name
-          .map((item) => (
-            <Link key={item.id} href={item.href}>
+          .map((item) => {
+            let isActive=pathname===`${item.href}`;
+            if(isActivelogin){
+                isActive=item.href==='/login';
+            }
+            return(
+            <Link key={item.id} href={item.href} style={{background:isActive?"green":"black"}}>
               {item.name}
-            </Link>
-          ))}
+            </Link>)
+})}
       </nav>
     </div>
   );
