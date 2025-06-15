@@ -24,8 +24,9 @@ export default function SidebarMenu({ roleid }) {
     }
     fetchSidebar();
   }, [roleid]);
-
+const isActive = pathname === `/homepage/${role}${item.href}`;
   return (
+    
     <div className="sidebar" style={{
       position: 'fixed',
       top: '60px', // below navbar
@@ -36,15 +37,18 @@ export default function SidebarMenu({ roleid }) {
       color: 'white',
       padding: '20px',
     }}>
+      
       {sidebaritems.length > 0 ? (
-        sidebaritems.map((item) => (
+        
+        sidebaritems.map((item) => {
+           const isActive = pathname === `/homepage/${role}${item.href}`;
           <Link
             key={`${item.name}-${item.href}`}
             href={`/homepage/${role}${item.href}`}
             className="sidebar-link"
             style={{
               display: 'block',
-              color: 'white',
+              color: isActive?'yellow':'white',
               textDecoration: 'none',
               padding: '10px 0',
               borderBottom: '1px solid #444',
@@ -52,7 +56,7 @@ export default function SidebarMenu({ roleid }) {
           >
             {item.name}
           </Link>
-        ))
+})
       ) : (
         <p>No features available for your role.</p>
       )}
