@@ -43,9 +43,7 @@ const Navbarpage = () => {
           .filter(item => item.name) // Only render items with a name
           .map((item) => {
             let isActive=pathname===`${item.href}`;
-            if(isActivelogin){
-                isActive=item.href==='/login';
-            }
+
             return(
             <Link key={item.id} href={item.href} style={{background:isActive?"green":"black"}}>
               {item.name}
