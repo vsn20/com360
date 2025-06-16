@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect, useState } from "react";
 import { getsidebarmenu } from "../serverActions/getsmenu";
@@ -26,33 +26,45 @@ export default function SidebarMenu({ roleid }) {
   }, [roleid]);
 
   return (
-    <div className="sidebar" style={{
-      position: 'fixed',
-      top: '60px', // below navbar
-      left: 0,
-      width: '200px',
-      height: 'calc(100vh - 60px)',
-      backgroundColor: '#333',
-      color: 'white',
-      padding: '20px',
-    }}>
+    <div
+      className="sidebar"
+      style={{
+        position: 'fixed',
+        top: '60px', // below navbar
+        left: 0,
+        width: '200px',
+        height: 'calc(100vh - 60px)',
+        backgroundColor: '#333',
+        color: 'white',
+        padding: '20px',
+      }}
+    >
       {sidebaritems.length > 0 ? (
-        sidebaritems.map((item) => (
-          <Link
-            key={`${item.name}-${item.href}`}
-            href={`/homepage/${role}${item.href}`}
-            className="sidebar-link"
-            style={{
-              display: 'block',
-              color: 'white',
-              textDecoration: 'none',
-              padding: '10px 0',
-              borderBottom: '1px solid #444',
-            }}
-          >
-            {item.name}
-          </Link>
-        ))
+        sidebaritems.map((item) => {
+          // Normalize paths by removing trailing slashes
+          const baseHref = `/homepage/${role}${item.href}`.replace(/\/+$/, '');
+          const normalizedPathname = pathname.replace(/\/+$/, '');
+
+          // Check if the current path starts with the link's href
+          const isActive = normalizedPathname === baseHref || normalizedPathname.startsWith(`${baseHref}/`);
+
+          return (
+            <Link
+              key={`${item.name}-${item.href}`}
+              href={`/homepage/${role}${item.href}`}
+              className="sidebar-link"
+              style={{
+                display: 'block',
+                color: isActive ? 'yellow' : 'white',
+                textDecoration: 'none',
+                padding: '10px 0',
+                borderBottom: '1px solid #444',
+              }}
+            >
+              {item.name}
+            </Link>
+          );
+        })
       ) : (
         <p>No features available for your role.</p>
       )}

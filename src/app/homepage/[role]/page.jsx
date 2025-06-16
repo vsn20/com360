@@ -2,7 +2,9 @@
 import { getUserRole } from "../../serverActions/getUserRole";
 
 export default async function Homepage({ params }) {
-  const role = params?.role || "";
+  // Decode URL-encoded role and normalize
+  const role = decodeURIComponent(params?.role || "").toLowerCase().replace(/\s+/g, " ").trim();
+  console.log("Homepage: URL role:", role); // Debug
 
   if (!role) {
     return (
@@ -29,8 +31,8 @@ export default async function Homepage({ params }) {
     );
   }
 
-  const userRole = rolename.toLowerCase();
-  const displayRole = rolename;
+  const userRole = rolename.toLowerCase().replace(/\s+/g, " ").trim();
+  console.log("Homepage: Role comparison:", { urlRole: role, userRole }); // Debug
 
   if (role !== userRole) {
     return (
@@ -43,6 +45,7 @@ export default async function Homepage({ params }) {
     );
   }
 
+  const displayRole = rolename;
   return (
     <div
       style={{
