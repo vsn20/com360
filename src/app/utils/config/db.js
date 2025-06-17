@@ -1,29 +1,12 @@
-// import mongoose from "mongoose"
-
-// const DBconnection=async()=>{
-//     try {
-//          await mongoose.connect(process.env.MONGO_URL);
-//          console.log("DB CONNECTED")
-//     } catch (error) {
-//         console.log(error)
-//     }     
-// }
-
-// export default DBconnection;
-
-
-
-
-
 import mysql from 'mysql2/promise';
 
-// Create a MySQL connection pool
+// Remote MySQL credentials
 const pool = mysql.createPool({
-  host: process.env.MYSQL_HOST || 'localhost',
-  port: process.env.MYSQL_PORT || 3306,
-  user: process.env.MYSQL_USER || 'root',
-  password: process.env.MYSQL_PASSWORD || 'Chernan$#123', // Replace with your MySQL password
-  database: process.env.MYSQL_DATABASE || 'intern_proj',
+  host: '132.148.221.65', // or IP address
+  port: 3306, // default MySQL port
+  user: 'saichand',
+  password: 'SAIchand$8393',
+  database: 'com360',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
@@ -31,14 +14,13 @@ const pool = mysql.createPool({
 
 async function DBconnection() {
   try {
-    // Test the connection by getting a connection from the pool
     const connection = await pool.getConnection();
-    console.log('MySQL connected successfully');
-    connection.release(); // Release the connection back to the pool
-    return pool; // Return the pool for querying
+    console.log('MySQL connected successfully to remote server');
+    connection.release();
+    return pool;
   } catch (error) {
-    console.error('Error connecting to MySQL:', error);
-    throw new Error('Failed to connect to MySQL');
+    console.error('Error connecting to remote MySQL:', error);
+    throw new Error('Failed to connect to remote MySQL');
   }
 }
 
