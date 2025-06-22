@@ -32,7 +32,7 @@ export async function getAllroles(){
         const pool=await DBconnection();
 
         const[roleRows]=await pool.query(
-            'select orgid from org_role_table where roleid=? AND isadmin=1 LIMIT 1' ,
+            'select orgid from org_role_table where roleid=?' ,
             [adminroleid]
         );
      if (!roleRows || roleRows.length === 0) {
@@ -42,7 +42,7 @@ export async function getAllroles(){
     const orgid=roleRows[0].orgid;
 
     const [getroles]=await pool.query(
-        'select * from org_role_table where orgid=? and isadmin!=1',
+        'select * from org_role_table where orgid=?',
         [orgid]
     );
    

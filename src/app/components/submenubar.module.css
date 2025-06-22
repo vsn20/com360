@@ -1,0 +1,25 @@
+.submenuBar {
+  display: flex;
+  gap: 20px;
+  background-color: #f9fafb;
+  padding: 10px 20px;
+  border-bottom: 1px solid #e5e7eb;
+  margin-left: 200px;
+}
+
+.submenuItem {
+  color: #374151;
+  text-decoration: none;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.submenuItem:hover {
+  background-color: #e5e7eb;
+}
+
+.active {
+  color: #0fd46c;
+  border-bottom: 2px solid #0fd46c;
+}

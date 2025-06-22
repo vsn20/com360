@@ -1,73 +1,67 @@
 'use client';
 
-import { useEffect, useState } from "react";
-import { getsidebarmenu } from "../serverActions/getsmenu";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
+import styles from '../(routes)/userscreens/userscreens.module.css';
 
-export default function SidebarMenu({ roleid }) {
-  const [sidebaritems, setSidebaritems] = useState([]);
+function Sidebar({ isAdmin }) {
   const pathname = usePathname();
-
-  // Extract role from current path (e.g., /homepage/admin/sales)
-  const role = pathname.split("/")[2] || "unknown";
+  const [menuItems, setMenuItems] = useState([]);
 
   useEffect(() => {
-    async function fetchSidebar() {
+    async function fetchData() {
       try {
-        const data = await getsidebarmenu(roleid);
-        setSidebaritems(data || []);
+        const res = await fetch('/api/menu', { credentials: 'include' });
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        const data = await res.json();
+        const safeData = Array.isArray(data) ? data : [];
+        setMenuItems(safeData);
       } catch (error) {
-        console.error("Error fetching sidebar:", error);
-        setSidebaritems([]);
+        console.error('Error fetching menu items:', error.message);
+        setMenuItems([]);
       }
     }
-    fetchSidebar();
-  }, [roleid]);
+    fetchData();
+  }, []);
+
+  // Use menu items directly from /api/menu
+  const finalMenuItems = [...menuItems];
 
   return (
-    <div
-      className="sidebar"
-      style={{
-        position: 'fixed',
-        top: '60px', // below navbar
-        left: 0,
-        width: '200px',
-        height: 'calc(100vh - 60px)',
-        backgroundColor: '#333',
-        color: 'white',
-        padding: '20px',
-      }}
-    >
-      {sidebaritems.length > 0 ? (
-        sidebaritems.map((item) => {
-          // Normalize paths by removing trailing slashes
-          const baseHref = `/homepage/${role}${item.href}`.replace(/\/+$/, '');
-          const normalizedPathname = pathname.replace(/\/+$/, '');
-
-          // Check if the current path starts with the link's href
-          const isActive = normalizedPathname === baseHref || normalizedPathname.startsWith(`${baseHref}/`);
-
+    <aside className={styles.sidebarContainer}>
+      <ul className={styles.sidebarMenu}>
+        {finalMenuItems.map((item) => {
+          const safeSubmenu = Array.isArray(item.submenu) ? item.submenu : [];
+          const isActive = pathname === item.href || (safeSubmenu.length > 0 && safeSubmenu.some(sub => pathname === sub.href));
           return (
-            <Link
-              key={`${item.name}-${item.href}`}
-              href={`/homepage/${role}${item.href}`}
-              className="sidebar-link"
-              style={{
-                display: 'block',
-                color: isActive ? 'yellow' : 'white',
-                textDecoration: 'none',
-                padding: '10px 0',
-                borderBottom: '1px solid #444',
-              }}
-            >
-              {item.name}
-            </Link>
+            <li key={item.title} className={styles.sidebarMenuItem}>
+              <a
+                href={item.href || '#'}
+                className={`${styles.sidebarLink} ${isActive ? styles.active : ''}`}
+              >
+                {item.title}
+                {safeSubmenu.length > 0 && <span className={styles.sidebarArrow}></span>}
+              </a>
+              {safeSubmenu.length > 0 && (
+                <ul className={styles.sidebarSubmenu}>
+                  {safeSubmenu.map((sub) => (
+                    <li key={sub.title} className={styles.sidebarSubmenuItem}>
+                      <a
+                        href={sub.href || '#'}
+                        className={`${styles.sidebarSubmenuLink} ${pathname === sub.href ? styles.active : ''}`}
+                      >
+                        {sub.title}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </li>
           );
-        })
-      ) : (
-        <p>No features available for your role.</p>
-      )}
-    </div>
+        })}
+      </ul>
+    </aside>
   );
 }
+
+export default Sidebar;

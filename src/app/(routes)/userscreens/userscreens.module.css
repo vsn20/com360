@@ -1,0 +1,216 @@
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  background-color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-left: 200px;
+  height: 30px;
+
+
+}
+
+.left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logoContainer {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+}
+
+.logo {
+  background-color:green;
+  color: white;
+  padding: 10px 14px;
+  border-radius: 50%;
+  font-weight: bold;
+  user-select: none;
+}
+
+.dropdown {
+  display: none;
+  position: absolute;
+  top: 120%;
+  right: 0;
+  background-color: white;
+  border: 1px solid #ccc;
+  padding: 12px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  z-index: 10;
+  min-width: 200px;
+}
+
+.logoContainer:hover .dropdown {
+  display: block;
+}
+
+
+.orgName {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.icon {
+  font-size: 24px;
+  color: #4b5563;
+}
+
+.sidebarContainer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 200px;
+  height: 100vh;
+  background-color: black;
+  padding: 16px;
+  box-sizing: border-box;
+  
+}
+.rightContent {
+  margin-left: 200px; /* shifts everything right */
+}
+
+
+.sidebarMenu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebarMenuItem {
+  position: relative;
+  margin-bottom: 10px;
+}
+
+.sidebarLink {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  text-decoration: none;
+  color: white;
+  font-weight: 500;
+  background-color: transparent;
+  cursor: pointer;
+  position: relative;
+  transition: background-color 0.3s;
+}
+
+.sidebarLink::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 4px;
+  height: 100%;
+  background-color: transparent;
+  transition: background-color 0.3s;
+}
+
+.sidebarLink:hover::before {
+  background-color: #0FD46C; /* sky blue hover line */
+}
+
+.sidebarLink:hover {
+  background-color: #1f2937; /* darker gray on hover */
+}
+
+.sidebarLink.active::before {
+  background-color: #0FD46C; /* active left line */
+}
+
+
+
+
+
+
+
+.sidebarArrow {
+  margin-left: 8px;
+  font-size: 12px;
+}
+
+.sidebarSubmenu {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 100%;
+  background-color: black;
+  padding: 8px 0;
+  list-style: none;
+  border: 1px solid #e5e7eb;
+  min-width: 160px;
+  z-index: 100;
+}
+
+.sidebarMenuItem:hover .sidebarSubmenu {
+  display: block;
+}
+
+.sidebarSubmenuItem {
+  padding: 6px 16px;
+}
+
+.sidebarSubmenuLink {
+  text-decoration: none;
+  color: white;
+  display: block;
+}
+
+.sidebarSubmenuLink:hover {
+  background-color: #d1d5db;
+}
+
+
+
+.left {
+  display: flex;
+  align-items: center;
+}
+
+
+
+.logoContainer {
+  position: relative;
+  cursor: pointer;
+}
+
+
+.dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  padding: 10px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  min-width: 150px;
+  z-index: 1000;
+}
+
+.dropdown p {
+  margin: 5px 0;
+  font-size: 0.9em;
+}
+
+.dropdown button {
+  width: 100%;
+  padding: 5px;
+  background-color: #ff4444;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.dropdown button:hover {
+  background-color: #cc0000;
+}
+

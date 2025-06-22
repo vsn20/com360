@@ -1,17 +1,98 @@
-import { addRole } from "../serverActions/addRole";
+'use client';
 
-export default async function AddRole({ features, currentRole, error }) {
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { addRole } from '../serverActions/addRole';
+
+export default function AddRole({ features, currentRole, orgid, error }) {
+  const router = useRouter();
+  const [formError, setFormError] = useState(error || null);
+  const [expandedFeatures, setExpandedFeatures] = useState({}); // Track which features are expanded
+  const [selectedSubmenus, setSelectedSubmenus] = useState({}); // Track multiple selected submenus per menuid
+
+  const handleSubmit = async (formData) => {
+    formData.append('currentRole', currentRole || ''); // Ensure currentRole is a string
+    // Append all selected submenus
+    Object.entries(selectedSubmenus).forEach(([menuid, submenuIds]) => {
+      submenuIds.forEach(submenuId => {
+        if (submenuId) {
+          formData.append('submenus', `${menuid}:${submenuId}`);
+        }
+      });
+    });
+    const result = await addRole(formData);
+    if (result?.error) {
+      setFormError(result.error);
+    } else {
+      router.push(`/userscreens/roles/addroles?success=Role%20added%20successfully`);
+    }
+  };
+
+  const handleFeatureChange = (menuid) => {
+    setExpandedFeatures(prev => ({
+      ...prev,
+      [menuid]: !prev[menuid] // Toggle expansion
+    }));
+    // If unchecking, clear selected submenus for this feature
+    if (!expandedFeatures[menuid] || !selectedSubmenus[menuid]) {
+      setSelectedSubmenus(prev => ({
+        ...prev,
+        [menuid]: []
+      }));
+    }
+  };
+
+  const handleSubmenuChange = (menuid, submenuId) => {
+    setSelectedSubmenus(prev => {
+      const currentSubmenus = prev[menuid] || [];
+      if (currentSubmenus.includes(submenuId)) {
+        return {
+          ...prev,
+          [menuid]: currentSubmenus.filter(id => id !== submenuId)
+        };
+      } else {
+        return {
+          ...prev,
+          [menuid]: [...currentSubmenus, submenuId]
+        };
+      }
+    });
+  };
+
+  console.log('Features received:', JSON.stringify(features, null, 2)); // Debug features data
+  console.log('Selected Submenus:', JSON.stringify(selectedSubmenus, null, 2)); // Debug selected submenus
+
   return (
     <div style={{ padding: "20px", maxWidth: "600px", margin: "0 auto" }}>
       <h1>Add Role</h1>
       {error && <p style={{ color: "red" }}>{error}</p>}
-      <form action={addRole}>
-        {/* Hidden input to pass the current role for redirection */}
-        <input type="hidden" name="currentRole" value={currentRole} />
+      {formError && <p style={{ color: "red" }}>{formError}</p>}
+      <form action={handleSubmit}>
+        {/* Organization ID (Non-editable) */}
+        <div style={{ marginBottom: "20px" }}>
+          <label htmlFor="orgid" style={{ display: "block", marginBottom: "5px" }}>
+            Organization ID:
+          </label>
+          <input
+            type="text"
+            id="orgid"
+            name="orgid"
+            value={orgid || ''}
+            style={{
+              width: "100%",
+              padding: "8px",
+              borderRadius: "5px",
+              border: "1px solid #ccc",
+              backgroundColor: "#f0f0f0",
+            }}
+            disabled
+          />
+        </div>
 
+        {/* Required Fields */}
         <div style={{ marginBottom: "20px" }}>
           <label htmlFor="roleName" style={{ display: "block", marginBottom: "5px" }}>
-            Role Name:
+            Role Name: *
           </label>
           <input
             type="text"
@@ -24,11 +105,13 @@ export default async function AddRole({ features, currentRole, error }) {
               borderRadius: "5px",
               border: "1px solid #ccc",
             }}
+            required
           />
         </div>
 
+        {/* Feature Checkboxes with Submenus */}
         <div style={{ marginBottom: "20px" }}>
-          <h3>Select Features:</h3>
+          <h3>Select Features: *</h3>
           {features.length === 0 ? (
             <p>No features available.</p>
           ) : (
@@ -39,10 +122,31 @@ export default async function AddRole({ features, currentRole, error }) {
                     type="checkbox"
                     name="features"
                     value={feature.id}
+                    onChange={() => handleFeatureChange(feature.id)} // Toggle feature and submenus
                     style={{ marginRight: "10px" }}
                   />
                   {feature.name}
                 </label>
+                {expandedFeatures[feature.id] && feature.hassubmenu === 'yes' && feature.submenu && feature.submenu.length > 0 && (
+                  <div style={{ marginLeft: "20px" }}>
+                    {feature.submenu.map((sub) => (
+                      <div key={sub.id} style={{ margin: "5px 0" }}>
+                        <label style={{ display: "flex", alignItems: "center" }}>
+                          <input
+                            type="checkbox"
+                            checked={(selectedSubmenus[feature.id] || []).includes(sub.id)}
+                            onChange={() => handleSubmenuChange(feature.id, sub.id)}
+                            style={{ marginRight: "10px" }}
+                          />
+                          {sub.name}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {expandedFeatures[feature.id] && feature.hassubmenu !== 'yes' && (
+                  <p style={{ marginLeft: "20px", color: "gray" }}>No submenus available.</p>
+                )}
               </div>
             ))
           )}

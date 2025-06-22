@@ -1,67 +1,110 @@
-.logout-container {
-  position: absolute;
-  top: 10px;
-  right: 20px;
-  z-index: 1000;
+/* Reset default browser styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-/* Circular button */
-.user-button {
-  width: 40px;
-  height: 40px;
-  background-color: #111;
-  color: white;
-  border-radius: 50%;
+html, body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+
+
+
+#navid a:first-child {
+  font-family: 'Orbitron', sans-serif;
   font-weight: bold;
+  color: #0FD46C;
+  font-size: 15px;
+  
+  
+  
+}
+
+/* Global navbar styles */
+#navid {
+  text-decoration: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 30px;
+  z-index: 999;
   display: flex;
   align-items: center;
-  justify-content: center;
-  transition: background 0.3s;
-  border: 2px solid white;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-  cursor: pointer;
+  padding: 0 20px;
+  background-color: rgba(255, 255, 255, 0.7); /* translucent white */
+  backdrop-filter: saturate(180%) blur(10px); /* blur effect */
+  -webkit-backdrop-filter: saturate(180%) blur(10px); /* Safari support */
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1); /* subtle border */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* subtle shadow */
 }
 
-.user-button:hover {
-  background-color: #333;
+#navid a {
+  position: relative;
+  text-decoration: none;
+  color: #333;
+  margin: 0 16px;
+  font-family: Arial, sans-serif;
+  font-size: 11px;
+  transition: color 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
-/* Dropdown menu */
-.dropdown-menu {
+#navid a::after {
+  content: "";
   position: absolute;
-  top: 45px;
-  right: 0;
-  background-color: white;
-  color: #111;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  min-width: 160px;
-  padding: 0.5rem;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  bottom: -5px; /* Position under the text */
+  left: 0;
+  width: 0%;
+  height: 2px;
+  background-color: #0FD46C; /* Your brand color */
+  transition: width 0.3s ease;
 }
 
-/* Dropdown content */
-.dropdown-username,
-.dropdown-role {
-  margin: 4px 0;
-  padding: 2px 8px;
-  font-size: 14px;
-}
-
-/* Logout button */
-.logout-button {
-  background-color: #e60000;
-  color: white;
-  padding: 6px 12px;
-  margin-top: 8px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
+#navid a:hover::after {
   width: 100%;
-  font-weight: bold;
-  transition: background 0.3s;
 }
 
-.logout-button:hover {
-  background-color: #cc0000;
+#navid a.active::after {
+  width: 100%;
 }
+
+#navid a.active {
+  font-weight: bold;
+}
+
+.menu-icon {
+  width: 25px;
+  height: 25px;
+  cursor: pointer;
+}
+.button {
+  background-color: #0FD46C;
+  color: black !important;
+  padding: 5px 10px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: Arial, sans-serif;
+  transition: background-color 0.3s ease, transform 0.1s ease, color 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  text-decoration: none !important; /* to override default <a> style */
+}
+
+.button:hover {
+  background-color: #0CB25A;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  color: white !important; /* Force white on hover */
+}
+body {
+  background-color: #f3f2ef;
+}
+
+

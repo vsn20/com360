@@ -1,4 +1,4 @@
-'use server';
+"use server";
 
 import DBconnection from "../utils/config/db";
 import { redirect } from "next/navigation";
@@ -26,7 +26,6 @@ export async function addemployee(formData) {
   const empPrefName = formData.get('empPrefName') || null;
   const email = formData.get('email');
   const gender = formData.get('gender') || null;
-  const phoneNumber = formData.get('phoneNumber') || null;
   const mobileNumber = formData.get('mobileNumber') || null;
   const dob = formData.get('dob') || null;
   const hireDate = formData.get('hireDate');
@@ -37,61 +36,41 @@ export async function addemployee(formData) {
 
   if (!token) {
     console.log('Redirecting: No token found');
-    return redirect(`/homepage/${currentRole}/employee/addemployee?error=No%20token%20found.%20Please%20log%20in.`);
+    return { error: 'No token found. Please log in.' };
   }
 
-  // Decode the token to get the admin's roleid and orgid
+  // Decode the token to get the orgid (no admin restriction since permissions are in middleware)
   const decoded = decodeJwt(token);
-  if (!decoded || !decoded.roleid) {
-    console.log('Redirecting: Invalid token or roleid not found');
-    return redirect(`/homepage/${currentRole}/employee/addemployee?error=Invalid%20token%20or%20roleid%20not%20found.`);
+  if (!decoded || !decoded.orgid) {
+    console.log('Redirecting: Invalid token or orgid not found');
+    return { error: 'Invalid token or orgid not found.' };
   }
 
-  const adminRoleId = decoded.roleid;
-
-  // Fetch the orgid from org_role_table using the admin's roleid
-  let orgid;
-  try {
-    const pool = await DBconnection();
-    const [roleRows] = await pool.query(
-      'SELECT orgid FROM org_role_table WHERE roleid = ? AND isadmin = 1 LIMIT 1',
-      [adminRoleId]
-    );
-
-    if (!roleRows || roleRows.length === 0) {
-      console.log('Redirecting: Admin role not found or not an admin');
-      return redirect(`/homepage/${currentRole}/employee/addemployee?error=Admin%20role%20not%20found%20or%20not%20an%20admin.`);
-    }
-
-    orgid = roleRows[0].orgid;
-  } catch (error) {
-    console.error('Error fetching orgid:', error);
-    return redirect(`/homepage/${currentRole}/employee/addemployee?error=Failed%20to%20fetch%20organization%20ID:%20${encodeURIComponent(error.message)}`);
-  }
+  const orgid = decoded.orgid;
 
   // Validation for required fields
   if (!empFstName || empFstName.trim() === '') {
     console.log('Redirecting: First name is required');
-    return redirect(`/homepage/${currentRole}/employee/addemployee?error=First%20name%20is%20required.`);
+    return { error: 'First name is required.' };
   }
   if (!empLastName || empLastName.trim() === '') {
     console.log('Redirecting: Last name is required');
-    return redirect(`/homepage/${currentRole}/employee/addemployee?error=Last%20name%20is%20required.`);
+    return { error: 'Last name is required.' };
   }
   if (!email || email.trim() === '') {
     console.log('Redirecting: Email is required');
-    return redirect(`/homepage/${currentRole}/employee/addemployee?error=Email%20is%20required.`);
+    return { error: 'Email is required.' };
   }
   if (!roleid) {
     console.log('Redirecting: Role is required');
-    return redirect(`/homepage/${currentRole}/employee/addemployee?error=Role%20is%20required.`);
+    return { error: 'Role is required.' };
   }
   if (!hireDate) {
     console.log('Redirecting: Hire date is required');
-    return redirect(`/homepage/${currentRole}/employee/addemployee?error=Hire%20date%20is%20required.`);
+    return { error: 'Hire date is required.' };
   }
 
-  let redirectPath = `/homepage/${currentRole}/employee`;
+  let redirectPath = `/userscreens/employee/addemployee`;
   try {
     const pool = await DBconnection();
 
@@ -102,34 +81,34 @@ export async function addemployee(formData) {
     );
     if (existingEmail.length > 0) {
       console.log('Redirecting: Email already exists');
-      return redirect(`/homepage/${currentRole}/employee/addemployee?error=Email%20already%20exists.`);
+      return { error: 'Email already exists.' };
     }
 
     // Get the current number of records in C_EMP and add 1 for empid
     const [countResult] = await pool.query('SELECT COUNT(*) AS count FROM C_EMP');
     const empCount = countResult[0].count;
-    const empnid="emp_"
-    const empid = empnid+String(empCount + 1); // Convert to string since empid is varchar(255)
+    const empid = `emp_${empCount + 1}`; // Generate empid as varchar(255) with prefix
 
     // Insert into C_EMP table
     await pool.query(
       `INSERT INTO C_EMP (
-        empid, orgid, EMP_FST_NAME, EMP_MID_NAME, EMP_LAST_NAME, EMP_PREF_NAME, email, 
-        roleid, GENDER, PHONE_NUMBER, MOBILE_NUMBER, DOB, HIRE, CREATED_BY, 
-        LAST_UPDATED_BY, MODIFICATION_NUM
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        empid, orgid, EMP_FST_NAME, EMP_MID_NAME, EMP_LAST_NAME, EMP_PREF_NAME, email,
+        roleid, GENDER, MOBILE_NUMBER, DOB, HIRE, LAST_WORK_DATE, TERMINATED_DATE,
+        REJOIN_DATE, CREATED_BY, LAST_UPDATED_BY
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         empid, orgid, empFstName, empMidName, empLastName, empPrefName, email,
-        roleid, gender, phoneNumber, mobileNumber, dob, hireDate, 'system',
-        'system', 1
+        roleid, gender, mobileNumber, dob, hireDate, null, null, null, 'system', 'system'
       ]
     );
 
+    console.log(`Employee added with empid: ${empid}`);
   } catch (error) {
     console.error('Error adding employee:', error);
-    redirectPath = `/homepage/${currentRole}/employee/addemployee?error=Failed%20to%20add%20employee:%20${encodeURIComponent(error.message)}`;
+    redirectPath = `/userscreens/employee/addemployee?error=Failed%20to%20add%20employee:%20${encodeURIComponent(error.message)}`;
+    return { error: `Failed to add employee: ${error.message}` };
   }
 
-  console.log(`Redirecting to: ${redirectPath}`);
-  redirect(redirectPath);
+  // Redirect to the employee list page on success
+  return redirect(redirectPath);
 }

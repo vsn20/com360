@@ -1,67 +1,54 @@
-.logout-container {
-  position: absolute;
-  top: 10px;
-  right: 20px;
-  z-index: 1000;
+.logoContainer {
+  position: relative;
+  display: inline-block;
+  margin: 10px;
+  cursor: pointer;
 }
 
-/* Circular button */
-.user-button {
+.logo {
   width: 40px;
   height: 40px;
-  background-color: #111;
+  background-color: #0070f3;
   color: white;
   border-radius: 50%;
-  font-weight: bold;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.3s;
-  border: 2px solid white;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-  cursor: pointer;
+  font-size: 18px;
+  font-weight: bold;
 }
 
-.user-button:hover {
-  background-color: #333;
-}
-
-/* Dropdown menu */
-.dropdown-menu {
+.dropdown {
+  display: none; /* Hidden by default */
   position: absolute;
-  top: 45px;
+  top: 100%;
   right: 0;
   background-color: white;
-  color: #111;
   border: 1px solid #ccc;
-  border-radius: 8px;
-  min-width: 160px;
-  padding: 0.5rem;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 5px;
+  padding: 10px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
 }
 
-/* Dropdown content */
-.dropdown-username,
-.dropdown-role {
-  margin: 4px 0;
-  padding: 2px 8px;
+.logoContainer:hover .dropdown {
+  display: block; /* Show on hover */
+}
+
+.dropdown p {
+  margin: 5px 0;
   font-size: 14px;
 }
 
-/* Logout button */
-.logout-button {
-  background-color: #e60000;
+.dropdown button {
+  padding: 5px 10px;
+  background-color: #ff4444;
   color: white;
-  padding: 6px 12px;
-  margin-top: 8px;
   border: none;
-  border-radius: 4px;
+  border-radius: 3px;
   cursor: pointer;
-  width: 100%;
-  font-weight: bold;
-  transition: background 0.3s;
 }
 
-.logout-button:hover {
+.dropdown button:hover {
   background-color: #cc0000;
 }

@@ -33,18 +33,18 @@
 
 
 
-'use server'
+// 'use server'
 
-import DBconnection from "../utils/config/db";
+// import DBconnection from "../utils/config/db";
 
-export async function getnavbaritems() {
-  try {
-    const pool = await DBconnection(); // Get the MySQL connection pool
-    const [rows] = await pool.query('SELECT * FROM navbars'); // Query the navbars table
-    console.log("Fetched navbar items from MySQL:", rows);
-    return rows; // Return the rows directly (already plain JavaScript objects)
-  } catch (error) {
-    console.error("Error fetching navbar items:", error);
-    throw new Error("Failed to fetch navbar items");
-  }
-}
+// export async function getnavbaritems() {
+//   try {
+//     const pool = await DBconnection(); // Get the MySQL connection pool
+//     const [rows] = await pool.query('SELECT * FROM navbars'); // Query the navbars table
+//     console.log("Fetched navbar items from MySQL:", rows);
+//     return rows; // Return the rows directly (already plain JavaScript objects)
+//   } catch (error) {
+//     console.error("Error fetching navbar items:", error);
+//     throw new Error("Failed to fetch navbar items");
+//   }
+// }

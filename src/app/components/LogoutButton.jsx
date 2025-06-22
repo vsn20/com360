@@ -1,92 +1,52 @@
-"use client";
+'use client';
+import { useState, useEffect } from 'react';
+import styles from '../(routes)/userscreens/userscreens.module.css';
 
-import { useState, useRef, useEffect } from "react";
-import { logoutAction } from "../serverActions/logoutAction";
+function LogoutButton({ logoLetter = 'M', username = 'Unknown', rolename = 'Unknown', orgName = 'Unknown' }) {
+  const [userData, setUserData] = useState({
+    logoLetter: logoLetter,
+    username: username,
+    rolename: rolename,
+    orgName: orgName,
+    isLoading: true,
+  });
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-export default function LogoutButton({ username, role }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef(null);
-
-  const handleLogout = async () => {
-    await logoutAction(); // redirects the user
-  };
-
-  // Close dropdown when clicked outside
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    // Sync props with state after mount to handle hydration
+    setUserData({
+      logoLetter,
+      username,
+      rolename,
+      orgName,
+      isLoading: false,
+    });
+    console.log('LogoutButton props updated:', { logoLetter, username, rolename, orgName });
+  }, [logoLetter, username, rolename, orgName]);
+
+  if (userData.isLoading) {
+    return <div>Loading...</div>; // Prevent rendering until synced
+  }
 
   return (
     <div
-      ref={dropdownRef}
-      style={{
-        position: "fixed",
-        top: "10px",
-        right: "10px",
-        zIndex: 1000,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "flex-end",
-      }}
+      className={styles.logoContainer}
+      onMouseEnter={() => setIsDropdownOpen(true)}
+      onMouseLeave={() => setIsDropdownOpen(false)}
     >
-      {/* Round icon button */}
-      <div
-        onClick={() => setIsOpen((prev) => !prev)}
-        style={{
-          width: "40px",
-          height: "40px",
-          borderRadius: "50%",
-          backgroundColor: "#111",
-          color: "#fff",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          cursor: "pointer",
-          fontWeight: "bold",
-          fontSize: "16px",
-        }}
-      >
-        {username ? username.charAt(0).toUpperCase() : "U"}
-      </div>
-
-      {/* Dropdown menu */}
-      {isOpen && (
-        <div
-          style={{
-            marginTop: "10px",
-            background: "#fff",
-            padding: "10px",
-            borderRadius: "8px",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
-            minWidth: "160px",
-            fontFamily: "sans-serif",
-          }}
-        >
-          <p style={{ margin: "4px 0", fontWeight: "bold" }}>{username}</p>
-          <p style={{ margin: "4px 0", fontSize: "12px", color: "#666" }}>{role}</p>
-          <button
-            onClick={handleLogout}
-            style={{
-              width: "100%",
-              backgroundColor: "red",
-              color: "white",
-              padding: "6px",
-              border: "none",
-              borderRadius: "5px",
-              cursor: "pointer",
-              marginTop: "8px",
-            }}
-          >
-            Logout
-          </button>
+      <span className={styles.logo}>{userData.logoLetter.toUpperCase()}</span>
+      {isDropdownOpen && (
+        <div className={styles.dropdown}>
+          <p>Organization: {userData.orgName}</p>
+          <p>User ID: {userData.username}</p>
+          <p>Role: {userData.rolename}</p>
+          <form action="/api/logout" method="POST">
+            <button type="submit">Logout</button>
+          </form>
         </div>
       )}
     </div>
   );
 }
+
+export default LogoutButton;

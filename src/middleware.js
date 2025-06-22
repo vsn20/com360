@@ -1,124 +1,105 @@
-import { NextResponse } from "next/server";
-import jwt from "jsonwebtoken";
-import { getAllFeatures } from "./app/serverActions/getAllFeatures";
-
-const JWT_SECRET = process.env.JWT_SECRET;
-
-// Function to verify JWT
-const verifyJwt = (token) => {
-  try {
-    return jwt.verify(token, JWT_SECRET);
-  } catch (error) {
-    console.log("Middleware: Error verifying JWT:", error.message);
-    return null;
-  }
-};
+import { NextResponse } from 'next/server';
 
 export async function middleware(request) {
+  console.log("Middleware called for path:", request.nextUrl.pathname);
+
+  // Define public paths that don't require authentication (Navbar pages)
+  const publicPaths = [
+    '/',
+    '/about',
+    '/jobs',
+    '/features',
+    '/pricing',
+    '/contact',
+    '/support',
+    '/docs',
+    '/login',
+    '/register'
+  ];
+
   const { pathname } = request.nextUrl;
 
-  // Skip middleware for non-protected routes
-  if (
-    pathname.startsWith("/login") ||
-    pathname.startsWith("/api") ||
-    pathname === "/" ||
-    pathname.startsWith("/_next") ||
-    pathname.startsWith("/static") ||
-    pathname.startsWith("/home") ||
-    pathname.startsWith("/about") ||
-    pathname.startsWith("/contact")
-  ) {
-    console.log("Middleware: Skipping for non-protected route:", pathname);
-    return NextResponse.next();
-  }
+  // Get the token from cookies
+  const token = request.cookies.get('jwt_token')?.value;
 
-  // Handle /login route specifically
-  if (pathname === "/login") {
-    console.log("Middleware: Processing /login route");
-
-    // Get the JWT token from cookies
-    const token = request.cookies.get("jwt_token")?.value;
-    console.log("Middleware: JWT token:", token ? "Present" : "Missing");
-
-    if (token) {
-      // Verify the token
-      const decoded = verifyJwt(token);
-      if (decoded && decoded.rolename) {
-        const role = decoded.rolename;
-        console.log("Middleware: User is logged in, redirecting to /homepage/", role);
-        return NextResponse.redirect(new URL(`/homepage/${role}`, request.url));
-      } else {
-        console.log("Middleware: Invalid token, clearing cookie and allowing access to /login");
-        const response = NextResponse.next();
-        response.cookies.delete("jwt_token");
-        return response;
-      }
-    } else {
-      console.log("Middleware: No token found, allowing access to /login");
+  // If no token, allow public paths and redirect protected paths to /login
+  if (!token) {
+    if (publicPaths.includes(pathname)) {
+      console.log(`No token: Public path accessed: ${pathname}`);
       return NextResponse.next();
     }
+    console.log("No token found, redirecting to login");
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // Check if the route matches /homepage/[role]/feature (e.g., /homepage/admin/sales)
-  const segments = pathname.split("/");
-  if (segments.length < 3 || segments[1] !== "homepage") {
-    console.log("Middleware: Route does not match /homepage/[role]:", pathname);
+  try {
+    // Handle public paths (except /login) for authenticated users
+    if (publicPaths.includes(pathname) && pathname !== '/login') {
+      console.log(`Authenticated user attempting to access restricted public path: ${pathname}`);
+      const verifyResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/verify-token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: `jwt_token=${token}`,
+        },
+        body: JSON.stringify({ token }), // No pathname to get accessibleItems
+      });
+
+      const result = await verifyResponse.json();
+
+      if (verifyResponse.ok && result.success && result.accessibleItems) {
+        const redirectPath = result.accessibleItems.length > 0 ? result.accessibleItems[0].href : '/userscreens';
+        console.log(`Authenticated user redirected from ${pathname} to ${redirectPath}`);
+        return NextResponse.redirect(new URL(redirectPath, request.url));
+      }
+      // If token is invalid, allow access to public path
+      console.log(`Invalid token, allowing access to ${pathname}`);
+      return NextResponse.next();
+    }
+
+    // Allow /login for authenticated users
+    if (pathname === '/login') {
+      console.log(`Authenticated user accessing /login`);
+      return NextResponse.next();
+    }
+
+    // Handle protected paths
+    const verifyResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/verify-token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: `jwt_token=${token}`,
+      },
+      body: JSON.stringify({ token, pathname }),
+    });
+
+    const result = await verifyResponse.json();
+
+    if (!verifyResponse.ok || result.error) {
+      console.log(`Access denied: ${result.error}`);
+      if (verifyResponse.status === 403 && result.error === 'Access denied' && result.accessibleItems) {
+        const redirectPath = result.accessibleItems.length > 0 ? result.accessibleItems[0].href : '/userscreens';
+        console.log(`Redirecting to least priority path ${redirectPath} for inaccessible path: ${pathname}`);
+        return NextResponse.redirect(new URL(redirectPath, request.url));
+      }
+      console.log(`Redirecting to /login for path: ${pathname}`);
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+
+    console.log(`Access granted to ${pathname}`);
     return NextResponse.next();
+  } catch (error) {
+    console.error("Middleware error:", error.message);
+    return NextResponse.redirect(new URL('/login', request.url));
   }
-
-  const role = segments[2]; // e.g., "admin"
-  const feature = segments.length > 3 ? segments[3] : null; // e.g., "sales" or null for /homepage/admin
-  console.log("Middleware: Processing route:", pathname, "Role:", role, "Feature:", feature || "none");
-
-  // Get the JWT token from cookies
-  const token = request.cookies.get("jwt_token")?.value;
-  console.log("Middleware: JWT token:", token ? "Present" : "Missing");
-
-  if (!token) {
-    console.log("Middleware: No token found, redirecting to login");
-    return NextResponse.redirect(new URL("/login", request.url));
-  }
-
-  // Verify the token
-  const decoded = verifyJwt(token);
-  if (!decoded) {
-    console.log("Middleware: Failed to verify token, redirecting to login");
-    const response = NextResponse.redirect(new URL("/login", request.url));
-    response.cookies.delete("jwt_token");
-    return response;
-  }
-
-  console.log("Middleware: Decoded token:", decoded);
-
-  // If the route is just /homepage/[role], allow access (no feature to check)
-  if (!feature) {
-    console.log("Middleware: No feature to check, proceeding to homepage");
-    return NextResponse.next();
-  }
-
-  // Fetch features dynamically
-  const { success, features, error: fetchError } = await getAllFeatures();
-  if (!success) {
-    console.log("Middleware: Failed to fetch features:", fetchError);
-    return NextResponse.redirect(new URL(`/homepage/${role}`, request.url));
-  }
-
-  // Transform features into an array of href strings
-  const featureHrefs = features.map(feature => feature.href);
-  console.log("Middleware: Feature hrefs:", featureHrefs);
-
-  const hasAccess = featureHrefs.includes(`/${feature}`);
-  console.log("Middleware: Has access to feature", feature, ":", hasAccess);
-
-  if (!hasAccess) {
-    console.log(`Middleware: No access to feature ${feature}, redirecting to /homepage/${role}`);
-    return NextResponse.redirect(new URL(`/homepage/${role}`, request.url));
-  }
-
-  console.log(`Middleware: Access granted to feature ${feature}`);
-  return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/homepage/:role/:path*", "/login"],
+  matcher: [
+    // Match all paths except:
+    // - API routes
+    // - Next.js internal static/image/favicon files
+    // - .well-known paths (to avoid DevTools-related errors)
+    '/((?!api|_next/static|_next/image|favicon.ico|.well-known).*)',
+  ],
 };

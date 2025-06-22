@@ -9,11 +9,16 @@ export default function AddEmployee({ roles, currentrole, orgid, error }) {
   const [formError, setFormError] = useState(null);
 
   // Today's date in YYYY-MM-DD format for the input field
-  const today = new Date().toISOString().split('T')[0]; // "2025-06-16"
+  const today = new Date().toISOString().split('T')[0]; // "2025-06-20"
 
   const handleSubmit = async (formData) => {
-    formData.append('currentRole', currentrole);
-    await addemployee(formData);
+    formData.append('currentRole', currentrole || ''); // Ensure currentrole is a string
+    const result = await addemployee(formData);
+    if (result?.error) {
+      setFormError(result.error);
+    } else {
+      router.push(`/userscreens/employee?success=Employee%20added%20successfully`);
+    }
   };
 
   return (
@@ -31,7 +36,7 @@ export default function AddEmployee({ roles, currentrole, orgid, error }) {
             type="text"
             id="orgid"
             name="orgid"
-            value={orgid}
+            value={orgid || ''}
             style={{
               width: "100%",
               padding: "8px",
@@ -46,7 +51,7 @@ export default function AddEmployee({ roles, currentrole, orgid, error }) {
         {/* Required Fields */}
         <div style={{ marginBottom: "20px" }}>
           <label htmlFor="empFstName" style={{ display: "block", marginBottom: "5px" }}>
-            First Name: 
+            First Name: *
           </label>
           <input
             type="text"
@@ -83,7 +88,7 @@ export default function AddEmployee({ roles, currentrole, orgid, error }) {
 
         <div style={{ marginBottom: "20px" }}>
           <label htmlFor="empLastName" style={{ display: "block", marginBottom: "5px" }}>
-            Last Name: 
+            Last Name: *
           </label>
           <input
             type="text"
@@ -102,7 +107,7 @@ export default function AddEmployee({ roles, currentrole, orgid, error }) {
 
         <div style={{ marginBottom: "20px" }}>
           <label htmlFor="email" style={{ display: "block", marginBottom: "5px" }}>
-            Email: 
+            Email: *
           </label>
           <input
             type="email"
@@ -122,7 +127,7 @@ export default function AddEmployee({ roles, currentrole, orgid, error }) {
         {/* Role Dropdown */}
         <div style={{ marginBottom: "20px" }}>
           <label htmlFor="roleid" style={{ display: "block", marginBottom: "5px" }}>
-            Role: 
+            Role: *
           </label>
           <select
             id="roleid"
@@ -182,24 +187,6 @@ export default function AddEmployee({ roles, currentrole, orgid, error }) {
             <option value="Female">Female</option>
             <option value="Other">Other</option>
           </select>
-        </div>
-
-        <div style={{ marginBottom: "20px" }}>
-          <label htmlFor="phoneNumber" style={{ display: "block", marginBottom: "5px" }}>
-            Phone Number:
-          </label>
-          <input
-            type="tel"
-            id="phoneNumber"
-            name="phoneNumber"
-            placeholder="Enter Phone Number"
-            style={{
-              width: "100%",
-              padding: "8px",
-              borderRadius: "5px",
-              border: "1px solid #ccc",
-            }}
-          />
         </div>
 
         <div style={{ marginBottom: "20px" }}>
