@@ -1,5 +1,3 @@
-
-
 import { cookies } from 'next/headers';
 import { savePriorities } from '../serverActions/priorityAction';
 import { getAllFeatures } from '../serverActions/getAllFeatures';
@@ -37,6 +35,7 @@ export default async function PrioritySetting() {
           parentId: feature.id,
           parentName: feature.name,
           name: submenu.name,
+          uniqueKey: `submenu-${feature.id}-${submenu.id}`, // Unique key for submenus
         });
       });
     } else {
@@ -44,6 +43,7 @@ export default async function PrioritySetting() {
         id: feature.id,
         type: 'menu',
         name: feature.name,
+        uniqueKey: `menu-${feature.id}`, // Unique key for menus
       });
     }
   });
@@ -69,26 +69,24 @@ export default async function PrioritySetting() {
             <th style={{ border: '1px solid #ddd', padding: '8px' }}>Priority</th>
           </tr>
         </thead>
-        <tbody>
-          {items.map(item => (
-            <tr key={item.id}>
-              <td style={{ border: '1px solid #ddd', padding: '8px' }}>
-                {item.type === 'submenu' ? `${item.parentName} > ${item.name}` : item.name}
-                <input type="hidden" name={`${item.id}_type`} value={item.type} />
-              </td>
-              <td style={{ border: '1px solid #ddd', padding: '8px' }}>
-                <input
-                  type="number"
-                  name={item.id}
-                  defaultValue={initialPriorities[item.id] || 1}
-                  min="1"
-                  style={{ width: '60px' }}
-                  required
-                />
-              </td>
-            </tr>
-          ))}
-        </tbody>
+        <tbody>{items.map(item => (
+          <tr key={item.uniqueKey}>
+            <td style={{ border: '1px solid #ddd', padding: '8px' }}>
+              {item.type === 'submenu' ? `${item.parentName} > ${item.name}` : item.name}
+              <input type="hidden" name={`${item.id}_type`} value={item.type} />
+            </td>
+            <td style={{ border: '1px solid #ddd', padding: '8px' }}>
+              <input
+                type="number"
+                name={item.id}
+                defaultValue={initialPriorities[item.id] || 1}
+                min="1"
+                style={{ width: '60px' }}
+                required
+              />
+            </td>
+          </tr>
+        ))}</tbody>
       </table>
       <button
         type="submit"

@@ -20,6 +20,20 @@ export default function AddRole({ features, currentRole, orgid, error }) {
         }
       });
     });
+
+    // Client-side validation: Ensure at least one submenu is selected for menus with hassubmenu='yes'
+    const selectedFeaturesIds = Object.keys(expandedFeatures).filter(id => expandedFeatures[id]);
+    const invalidSelections = features
+      .filter(feature => selectedFeaturesIds.includes(String(feature.id)) && feature.hassubmenu === 'yes')
+      .filter(feature => {
+        const selected = selectedSubmenus[feature.id] || [];
+        return selected.length === 0;
+      });
+    if (invalidSelections.length > 0) {
+      setFormError('Please select at least one submenu for each feature with submenus.');
+      return;
+    }
+
     const result = await addRole(formData);
     if (result?.error) {
       setFormError(result.error);
@@ -43,6 +57,10 @@ export default function AddRole({ features, currentRole, orgid, error }) {
   };
 
   const handleSubmenuChange = (menuid, submenuId) => {
+    const feature = features.find(f => f.id === menuid);
+    if (feature && feature.hassubmenu !== 'yes') {
+      return; // Disable submenu selection if hassubmenu != 'yes'
+    }
     setSelectedSubmenus(prev => {
       const currentSubmenus = prev[menuid] || [];
       if (currentSubmenus.includes(submenuId)) {
@@ -122,7 +140,7 @@ export default function AddRole({ features, currentRole, orgid, error }) {
                     type="checkbox"
                     name="features"
                     value={feature.id}
-                    onChange={() => handleFeatureChange(feature.id)} // Toggle feature and submenus
+                    onChange={() => handleFeatureChange(feature.id)}
                     style={{ marginRight: "10px" }}
                   />
                   {feature.name}
@@ -144,9 +162,9 @@ export default function AddRole({ features, currentRole, orgid, error }) {
                     ))}
                   </div>
                 )}
-                {expandedFeatures[feature.id] && feature.hassubmenu !== 'yes' && (
+                {/* {expandedFeatures[feature.id] && feature.hassubmenu !== 'yes' && (
                   <p style={{ marginLeft: "20px", color: "gray" }}>No submenus available.</p>
-                )}
+                )} */}
               </div>
             ))
           )}

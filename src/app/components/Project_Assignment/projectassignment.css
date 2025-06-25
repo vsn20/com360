@@ -1,0 +1,115 @@
+/* Container for the Add Project Assignment form */
+.add-assignment-container {
+  padding: 20px;
+  max-width: 600px;
+  margin: 0 auto;
+  font-family: Arial, sans-serif;
+}
+
+/* Form heading */
+.add-assignment-container h2 {
+  font-size: 24px;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+/* Success message styling */
+.success-message {
+  color: green;
+  margin-bottom: 15px;
+  font-size: 16px;
+}
+
+/* Error message styling */
+.error-message {
+  color: red;
+  margin-bottom: 15px;
+  font-size: 16px;
+}
+
+/* Form styling */
+.add-assignment-container form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Form field container */
+.add-assignment-container div {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Label styling */
+.add-assignment-container label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+  color: #333;
+}
+
+/* Input and select styling */
+.add-assignment-container input,
+.add-assignment-container select {
+  width: 100%;
+  padding: 8px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  font-size: 16px;
+  box-sizing: border-box;
+}
+
+/* Disabled input/select styling */
+.add-assignment-container input:disabled,
+.add-assignment-container select:disabled {
+  background-color: #f0f0f0;
+  cursor: not-allowed;
+}
+
+/* Input focus state */
+.add-assignment-container input:focus,
+.add-assignment-container select:focus {
+  outline: none;
+  border-color: #0070f3;
+  box-shadow: 0 0 5px rgba(0, 112, 243, 0.3);
+}
+
+/* Button styling */
+.add-assignment-container button {
+  padding: 10px 20px;
+  background-color: #0070f3;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: 16px;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+/* Disabled button styling */
+.add-assignment-container button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+/* Button hover state */
+.add-assignment-container button:not(:disabled):hover {
+  background-color: #005bb5;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .add-assignment-container {
+    padding: 10px;
+  }
+
+  .add-assignment-container h2 {
+    font-size: 20px;
+  }
+
+  .add-assignment-container input,
+  .add-assignment-container select,
+  .add-assignment-container button {
+    font-size: 14px;
+  }
+}

@@ -24,18 +24,18 @@ export async function POST(request) {
     // Connect to the database
     const pool = await DBconnection();
 
-    // Fetch isadmin from org_role_table
+    // Fetch isadmin from ORG_ROLE
     let isAdmin = false;
     try {
       const [adminRows] = await pool.query(
-        'SELECT isadmin FROM org_role_table WHERE roleid = ?',
-        [roleid]
+        'SELECT isadmin FROM ORG_ROLE WHERE roleid = ? AND orgid = ?',
+        [roleid, orgid]
       );
       if (adminRows.length > 0) {
         isAdmin = adminRows[0].isadmin === 1;
       }
     } catch (error) {
-      console.error('Error fetching isadmin from org_role_table:', error.message);
+      console.error('Error fetching isadmin from ORG_ROLE:', error.message);
       isAdmin = false; // Fallback to non-admin on error
     }
 
@@ -61,7 +61,7 @@ export async function POST(request) {
       [roleid, orgid]
     );
 
-    // Build accessible items to match LoginPage logic
+    // Build accessible items
     const accessibleItems = [];
     const menuMap = new Map();
 
@@ -82,7 +82,7 @@ export async function POST(request) {
           title: menuname,
           href: menuhref || null,
           submenu: [],
-          priority: priority || 0, // Use priority from org_menu_priority
+          priority: priority || 0,
         });
       }
 
@@ -92,14 +92,15 @@ export async function POST(request) {
         menu.submenu.push({
           title: submenuname,
           href: submenuurl,
-          priority: priority || menu.submenu.length + 1, // Sequential priority for submenus
+          priority: priority || menu.submenu.length + 1,
         });
       } else if (menuhref && !menu.href) {
         menu.href = menuhref;
       }
     }
 
-    // Flatten accessible items like in LoginPage
+    // Flatten accessible items
+    let hasAddEmployee = false;
     menuMap.forEach(menu => {
       if (menu.href) {
         accessibleItems.push({
@@ -114,6 +115,9 @@ export async function POST(request) {
           isMenu: false,
           priority: sub.priority,
         });
+        if (sub.href === '/userscreens/employee/addemployee') {
+          hasAddEmployee = true;
+        }
       });
     });
 
@@ -122,11 +126,20 @@ export async function POST(request) {
       accessibleItems.push({
         href: '/userscreens/prioritysetting',
         isMenu: true,
-        priority: 1000, // High priority to place it last
+        priority: 1000,
       });
     }
 
-    // Sort by priority (ascending, lower is least priority)
+    // Add edit employee permission if user has addemployee submenu
+    if (hasAddEmployee) {
+      accessibleItems.push({
+        href: '/userscreens/employee/edit/:empid',
+        isMenu: true,
+        priority: 1001, // Slightly higher than prioritysetting
+      });
+    }
+
+    // Sort by priority
     accessibleItems.sort((a, b) => a.priority - b.priority);
     console.log("Accessible items for user:", JSON.stringify(accessibleItems, null, 2));
 
@@ -137,6 +150,13 @@ export async function POST(request) {
 
     // Check if the requested path is accessible
     const accessiblePaths = accessibleItems.map(item => item.href);
+    // Handle dynamic edit routes
+    const isEditPath = pathname.match(/^\/userscreens\/employee\/edit\/[^/]+$/);
+    if (isEditPath && accessiblePaths.includes('/userscreens/employee/edit/:empid')) {
+      console.log(`Access granted to ${pathname} for roleid ${roleid} (dynamic edit route)`);
+      return NextResponse.json({ success: true, accessibleItems });
+    }
+
     if (!accessiblePaths.includes(pathname)) {
       console.log(`Access denied to ${pathname} for roleid ${roleid}`);
       return NextResponse.json({ error: 'Access denied', accessibleItems }, { status: 403 });

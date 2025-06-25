@@ -57,11 +57,38 @@ export async function addRole(formData) {
     return { error: 'Please select at least one feature.' };
   }
 
+  // Get the pool and acquire a connection for queries
+  const pool = await DBconnection();
+  let connection;
   try {
-    const pool = await DBconnection();
+    connection = await pool.getConnection();
+    console.log('Acquired connection for queries:', connection);
+
+    // Validate that each selected feature with hassubmenu='yes' has at least one submenu
+    const [menuRows] = await connection.query(
+      'SELECT id, hassubmenu FROM menu WHERE id IN (?)',
+      [selectedFeatures]
+    );
+    const featureMap = menuRows.reduce((map, row) => {
+      map[row.id] = row.hassubmenu;
+      return map;
+    }, {});
+
+    const submenuMap = selectedSubmenus.reduce((map, { menuid }) => {
+      map[menuid] = true;
+      return map;
+    }, {});
+
+    const invalidSelections = selectedFeatures
+      .map(id => Number(id))
+      .filter(id => featureMap[id] === 'yes' && !submenuMap[id]);
+    if (invalidSelections.length > 0) {
+      console.log('Invalid selections:', invalidSelections);
+      return { error: 'Please select at least one submenu for each feature with submenus.' };
+    }
 
     // Check if role name already exists for this orgid
-    const [existingRole] = await pool.query(
+    const [existingRole] = await connection.query(
       'SELECT roleid FROM org_role_table WHERE orgid = ? AND rolename = ?',
       [effectiveOrgid, roleName]
     );
@@ -71,23 +98,12 @@ export async function addRole(formData) {
     }
 
     // Insert into org_role_table
-    const [roleResult] = await pool.query(
+    const [roleResult] = await connection.query(
       'INSERT INTO org_role_table (orgid, rolename, isadmin) VALUES (?, ?, ?)',
       [effectiveOrgid, roleName, isadmin]
     );
     const newRoleId = roleResult.insertId;
     console.log('Role added successfully, newRoleId:', newRoleId);
-
-    // Fetch hassubmenu for the selected features
-    const [menuRows] = await pool.query(
-      'SELECT id, hassubmenu FROM menu WHERE id IN (?)',
-      [selectedFeatures]
-    );
-
-    const featureMap = menuRows.reduce((map, row) => {
-      map[row.id] = row.hassubmenu;
-      return map;
-    }, {});
 
     // Prepare permission values
     const permissionValues = [];
@@ -100,7 +116,7 @@ export async function addRole(formData) {
 
     // Insert permissions into role_menu_permissions
     if (permissionValues.length > 0) {
-      await pool.query(
+      await connection.query(
         'INSERT INTO role_menu_permissions (roleid, menuid, submenuid) VALUES ?',
         [permissionValues]
       );
@@ -110,8 +126,12 @@ export async function addRole(formData) {
   } catch (error) {
     console.error('Error adding role or permissions:', error);
     return { error: `Failed to add role: ${error.message}` };
+  } finally {
+    if (connection) {
+      connection.release(); // Release the connection back to the pool
+    }
+    // Note: Do not call pool.end() here as it would close the pool, which should be managed globally
   }
 
-  // Redirect to the add role page with success
   return redirect(`/userscreens/roles/addroles?success=Role%20added%20successfully`);
 }

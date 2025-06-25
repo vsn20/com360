@@ -1,0 +1,116 @@
+/* Container for the Add Project form */
+.add-account-container {
+  padding: 20px;
+  max-width: 600px;
+  margin: 0 auto;
+  font-family: Arial, sans-serif;
+}
+
+/* Form heading */
+.add-account-container h2 {
+  font-size: 24px;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+/* Success message styling */
+.success-message {
+  color: green;
+  margin-bottom: 15px;
+  font-size: 16px;
+}
+
+/* Error message styling */
+.error-message {
+  color: red;
+  margin-bottom: 15px;
+  font-size: 16px;
+}
+
+/* Form styling */
+.add-account-container form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Form field container */
+.add-account-container div {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Label styling */
+.add-account-container label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+  color: #333;
+}
+
+/* Input and select styling */
+.add-account-container input,
+.add-account-container select {
+  width: 100%;
+  padding: 8px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  font-size: 16px;
+  box-sizing: border-box;
+}
+
+/* Disabled or read-only input/select styling */
+.add-account-container input:disabled,
+.add-account-container select:disabled,
+.add-account-container input[readonly] {
+  background-color: #f0f0f0;
+  cursor: not-allowed;
+}
+
+/* Input focus state */
+.add-account-container input:focus,
+.add-account-container select:focus {
+  outline: none;
+  border-color: #0070f3;
+  box-shadow: 0 0 5px rgba(0, 112, 243, 0.3);
+}
+
+/* Button styling */
+.add-account-container button {
+  padding: 10px 20px;
+  background-color: #0070f3;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: 16px;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+/* Disabled button styling */
+.add-account-container button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+/* Button hover state */
+.add-account-container button:not(:disabled):hover {
+  background-color: #005bb5;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .add-account-container {
+    padding: 10px;
+  }
+
+  .add-account-container h2 {
+    font-size: 20px;
+  }
+
+  .add-account-container input,
+  .add-account-container select,
+  .add-account-container button {
+    font-size: 14px;
+  }
+}
