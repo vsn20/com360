@@ -36,6 +36,10 @@ const EditRole = () => {
           fetchRoleById(roleid),
           fetchMenusAndSubmenus(),
         ]);
+        console.log('Role data permissions:', roleData.permissions);
+        console.log('Available menus:', menuData.menus);
+        console.log('Available submenus:', menuData.submenus);
+
         setFormData({
           roleid: roleData.role.roleid || '',
           orgid: roleData.role.orgid || '',
@@ -50,7 +54,18 @@ const EditRole = () => {
           jobtitle: roleData.role.jobtitle || '',
           keyresponsibilities: roleData.role.keyresponsibilities || '',
         });
-        setPermissions(roleData.permissions);
+
+        // Map roleData.permissions to match availableMenus and availableSubmenus
+        const validMenuIds = new Set(menuData.menus.map(m => m.menuid));
+        const validSubmenuIds = new Set(menuData.submenus.map(sm => sm.submenuid));
+        const mappedPermissions = roleData.permissions
+          .filter(p => validMenuIds.has(p.menuid))
+          .map(p => ({
+            menuid: p.menuid,
+            submenuid: p.submenuid && validSubmenuIds.has(p.submenuid) ? p.submenuid : null,
+          }));
+        setPermissions(mappedPermissions);
+
         setAvailableMenus(menuData.menus);
         setAvailableSubmenus(menuData.submenus);
         setState({ error: null, success: false });
@@ -68,6 +83,12 @@ const EditRole = () => {
   };
 
   const handlePermissionToggle = (menuid, submenuid = null) => {
+    const validSubmenuIds = new Set(availableSubmenus.map(sm => sm.submenuid));
+    if (submenuid && !validSubmenuIds.has(submenuid)) {
+      console.warn(`Invalid submenuid ${submenuid} ignored for menuid ${menuid}`);
+      return;
+    }
+
     setPermissions((prev) => {
       const exists = prev.some(
         (p) => p.menuid === menuid && p.submenuid === submenuid
@@ -84,6 +105,7 @@ const EditRole = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('Submitting permissions:', permissions);
     const formDataToSubmit = new FormData();
     Object.entries(formData).forEach(([key, value]) => {
       formDataToSubmit.append(key, value);

@@ -20,7 +20,11 @@ const Overview = () => {
     }
    };
    loadprojects();
-   },[])
+   },[]);
+
+   const handleEdit=(PRJ_ID)=>{
+    router.push(`/userscreens/project/edit/${PRJ_ID}`)
+   }
 
   return (
     <div className='overview-container'>
@@ -36,15 +40,21 @@ const Overview = () => {
                 <th>Project Name</th>
                 <th>Project Desc</th>
                 <th>Account</th>
+                <th>Action</th>
             </tr>
          </thead>
          <tbody>
             {projects.map((project)=>(
                 <tr key={project.PRJ_ID}>
                     <td>{project.PRJ_ID}</td>
-                    <td>{project.PRJ_NAME}</td>
-                    <td>{project.PRS_DESC}</td>
-                    <td>{project.ACCNT_ID}</td>
+                    <td>{project.PRJ_NAME||'-'}</td>
+                    <td>{project.PRS_DESC||'-'}</td>
+                    <td>{project.ACCNT_ID||'-'}</td>
+                    <td>
+                      <button className='edit-button' onClick={()=>handleEdit(project.PRJ_ID)}>
+                         ✏️
+                      </button>
+                    </td>
                 </tr>
             ))}
          </tbody>

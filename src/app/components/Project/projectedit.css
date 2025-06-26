@@ -1,0 +1,115 @@
+.project-edit-container {
+  max-width: 800px;
+  margin: 20px auto;
+  padding: 20px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.project-edit-container h2 {
+  text-align: center;
+  color: #333;
+  margin-bottom: 20px;
+}
+
+.project-edit-container form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.project-edit-container div {
+  display: flex;
+  flex-direction: column;
+}
+
+.project-edit-container label {
+  font-weight: bold;
+  margin-bottom: 5px;
+  color: #555;
+}
+
+.project-edit-container input,
+.project-edit-container select {
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.project-edit-container input.bg-gray-100 {
+  background-color: #e9ecef;
+  cursor: not-allowed;
+}
+
+.project-edit-container input[type="number"] {
+  appearance: textfield;
+}
+
+.project-edit-container input[type="number"]::-webkit-inner-spin-button,
+.project-edit-container input[type="number"]::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+.project-edit-container select {
+  padding: 8px;
+  cursor: pointer;
+}
+
+.project-edit-container button {
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.3s;
+}
+
+.project-edit-container button:hover {
+  background-color: #0056b3;
+}
+
+.project-edit-container button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.success-message {
+  background-color: #d4edda;
+  color: #155724;
+  padding: 10px;
+  border-radius: 4px;
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.error-message {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 10px;
+  border-radius: 4px;
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+@media (max-width: 600px) {
+  .project-edit-container {
+    margin: 10px;
+    padding: 10px;
+  }
+
+  .project-edit-container input,
+  .project-edit-container select {
+    font-size: 14px;
+  }
+
+  .project-edit-container button {
+    width: 100%;
+  }
+}

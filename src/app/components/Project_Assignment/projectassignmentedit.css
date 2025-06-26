@@ -1,0 +1,139 @@
+.assignment-edit-container {
+  max-width: 800px;
+  margin: 20px auto;
+  padding: 24px;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.assignment-edit-container h2 {
+  text-align: center;
+  color: #1a1a1a;
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin-bottom: 24px;
+}
+
+.assignment-edit-container label {
+  display: block;
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: #333333;
+  margin-bottom: 8px;
+}
+
+.assignment-edit-container select,
+.assignment-edit-container input[type="date"],
+.assignment-edit-container input[type="number"],
+.assignment-edit-container input[type="text"] {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  color: #333333;
+  background-color: #f9fafb;
+  box-sizing: border-box;
+  margin-bottom: 16px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.assignment-edit-container select:focus,
+.assignment-edit-container input[type="date"]:focus,
+.assignment-edit-container input[type="number"]:focus,
+.assignment-edit-container input[type="text"]:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+}
+
+.assignment-edit-container input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #2563eb;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.employee-details {
+  margin-top: 24px;
+  padding: 16px;
+  background-color: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+}
+
+.employee-details h3 {
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: #1a1a1a;
+  margin-bottom: 16px;
+}
+
+.employee-details div {
+  margin-bottom: 16px;
+}
+
+.error-message {
+  background-color: #fee2e2;
+  color: #991b1b;
+  padding: 12px;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 0.875rem;
+  margin-bottom: 16px;
+}
+
+.success-message {
+  background-color: #dcfce7;
+  color: #166534;
+  padding: 12px;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 0.875rem;
+  margin-bottom: 16px;
+}
+
+button[type="submit"] {
+  width: 100%;
+  padding: 10px;
+  background-color: #2563eb;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+button[type="submit"]:hover {
+  background-color: #1d4ed8;
+}
+
+button[type="submit"]:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+}
+
+@media (max-width: 600px) {
+  .assignment-edit-container {
+    margin: 12px;
+    padding: 16px;
+  }
+
+  .assignment-edit-container select,
+  .assignment-edit-container input[type="date"],
+  .assignment-edit-container input[type="number"],
+  .assignment-edit-container input[type="text"] {
+    font-size: 0.85rem;
+    padding: 8px;
+  }
+
+  button[type="submit"] {
+    padding: 8px;
+    font-size: 0.85rem;
+  }
+}

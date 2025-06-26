@@ -67,7 +67,8 @@ export async function POST(request) {
     let hasAddEmployee = false;
     let hasAddRoles = false;
     let hasAddAccount = false;
-
+    let hasAdproject = false;
+    let hasEditProjectAssignment = false; // Flag for project assignment edit
     for (const row of rows) {
       const {
         menuid,
@@ -105,6 +106,12 @@ export async function POST(request) {
         }
         if (submenuurl === '/userscreens/account/addaccount') {
           hasAddAccount = true;
+        }
+        if (submenuurl === '/userscreens/project/addproject') {
+          hasAdproject = true;
+        }
+        if (submenuurl === '/userscreens/Project_Assign/add_project_assign') { // Updated to match case
+          hasEditProjectAssignment = true;
         }
       } else if (menuhref && !menu.href) {
         menu.href = menuhref;
@@ -152,12 +159,27 @@ export async function POST(request) {
       });
     }
 
-    // If user has access to addaccount, grant access to edit account
     if (hasAddAccount) {
       accessibleItems.push({
         href: '/userscreens/account/edit/:accntId',
         isMenu: true,
         priority: 1003,
+      });
+    }
+
+    if (hasAdproject) {
+      accessibleItems.push({
+        href: '/userscreens/project/edit/:PRJ_ID',
+        isMenu: true,
+        priority: 1004,
+      });
+    }
+
+    if (hasEditProjectAssignment) {
+      accessibleItems.push({
+        href: '/userscreens/Project_Assign/edit/:PRJ_ID', // Updated to match case
+        isMenu: true,
+        priority: 1005,
       });
     }
 
@@ -172,9 +194,15 @@ export async function POST(request) {
     const isEditEmployeePath = pathname.match(/^\/userscreens\/employee\/edit\/[^/]+$/);
     const isEditRolePath = pathname.match(/^\/userscreens\/roles\/edit\/[^/]+$/);
     const isEditAccountPath = pathname.match(/^\/userscreens\/account\/edit\/[^/]+$/);
+    const isEditProjectPath = pathname.match(/^\/userscreens\/project\/edit\/[^/]+$/);
+    const isEditProjectAssignmentPath = pathname.match(/^\/userscreens\/Project_Assign\/edit\/[^/]+$/); // Updated to match case
 
     if (isEditEmployeePath && accessiblePaths.includes('/userscreens/employee/edit/:empid')) {
       console.log(`Access granted to ${pathname} for roleid ${roleid} (dynamic employee edit route)`);
+      return NextResponse.json({ success: true, accessibleItems });
+    }
+    if (isEditProjectPath && accessiblePaths.includes('/userscreens/project/edit/:PRJ_ID')) {
+      console.log(`Access granted to ${pathname} for roleid ${roleid} (dynamic project edit route)`);
       return NextResponse.json({ success: true, accessibleItems });
     }
     if (isEditRolePath && accessiblePaths.includes('/userscreens/roles/edit/:roleid')) {
@@ -183,6 +211,10 @@ export async function POST(request) {
     }
     if (isEditAccountPath && accessiblePaths.includes('/userscreens/account/edit/:accntId')) {
       console.log(`Access granted to ${pathname} for roleid ${roleid} (dynamic account edit route)`);
+      return NextResponse.json({ success: true, accessibleItems });
+    }
+    if (isEditProjectAssignmentPath && accessiblePaths.includes('/userscreens/Project_Assign/edit/:PRJ_ID')) {
+      console.log(`Access granted to ${pathname} for roleid ${roleid} (dynamic project assignment edit route)`);
       return NextResponse.json({ success: true, accessibleItems });
     }
 
