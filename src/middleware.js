@@ -14,7 +14,9 @@ export async function middleware(request) {
     '/support',
     '/docs',
     '/login',
-    '/register'
+    '/register',
+    '/jobs/jobslogin'
+
   ];
 
   const { pathname } = request.nextUrl;

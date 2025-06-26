@@ -4,8 +4,8 @@ const page = () => {
   return (
     <div className="homepage-container">
       <div className="main-content">
-        <h1>Welcome to the com360 jobs </h1>
-        <p>Please log in to access your applications and apply</p>
+        <h1>Welcome to the jobs</h1>
+        <p>Please log in to apply and view your applications</p>
       </div>
     </div>
   );
