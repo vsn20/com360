@@ -1,0 +1,91 @@
+/* Container for the Roles Overview */
+.roles-overview-container {
+  padding: 20px;
+  max-width: 1000px;
+  margin: 0 auto;
+  font-family: Arial, sans-serif;
+}
+
+/* Heading */
+.roles-overview-container h2 {
+  font-size: 24px;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+/* Error message */
+.error-message {
+  color: red;
+  margin-bottom: 15px;
+  font-size: 16px;
+}
+
+/* No roles message */
+.roles-overview-container p {
+  font-size: 16px;
+  color: #666;
+}
+
+/* Roles table */
+.roles-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #fff;
+  border: 1px solid #ddd;
+}
+
+/* Table headers */
+.roles-table th {
+  background-color: #f4f4f4;
+  padding: 12px;
+  text-align: left;
+  font-weight: bold;
+  border-bottom: 2px solid #ddd;
+  color: #333;
+}
+
+/* Table cells */
+.roles-table td {
+  padding: 12px;
+  border-bottom: 1px solid #ddd;
+}
+
+/* Table row hover */
+.roles-table tr:hover {
+  background-color: #f9f9f9;
+}
+
+/* Edit button styling */
+.edit-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: #0070f3;
+}
+
+/* Edit button hover */
+.edit-button:hover {
+  color: #005bb5;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .roles-overview-container {
+    padding: 10px;
+  }
+
+  .roles-overview-container h2 {
+    font-size: 20px;
+  }
+
+  .roles-table th,
+  .roles-table td {
+    padding: 8px;
+    font-size: 14px;
+  }
+
+  .edit-button {
+    font-size: 14px;
+  }
+}
