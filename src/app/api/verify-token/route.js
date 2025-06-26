@@ -24,19 +24,19 @@ export async function POST(request) {
     // Connect to the database
     const pool = await DBconnection();
 
-    // Fetch isadmin from ORG_ROLE
+    // Fetch isadmin from org_role_table
     let isAdmin = false;
     try {
       const [adminRows] = await pool.query(
-        'SELECT isadmin FROM ORG_ROLE WHERE roleid = ? AND orgid = ?',
+        'SELECT isadmin FROM org_role_table WHERE roleid = ? AND orgid = ?',
         [roleid, orgid]
       );
       if (adminRows.length > 0) {
         isAdmin = adminRows[0].isadmin === 1;
       }
     } catch (error) {
-      console.error('Error fetching isadmin from ORG_ROLE:', error.message);
-      isAdmin = false; // Fallback to non-admin on error
+      console.error('Error fetching isadmin from org_role_table:', error.message);
+      isAdmin = false;
     }
 
     // Fetch menu permissions for the role and organization
@@ -57,13 +57,16 @@ export async function POST(request) {
           ON rmp.menuid = omp.menuid 
          AND (rmp.submenuid = omp.submenuid OR omp.submenuid IS NULL)
       WHERE rmp.roleid = ? AND omp.orgid = ?
-      ORDER BY omp.priority;`,
+      ORDER BY omp.priority`,
       [roleid, orgid]
     );
 
     // Build accessible items
     const accessibleItems = [];
     const menuMap = new Map();
+    let hasAddEmployee = false;
+    let hasAddRoles = false;
+    let hasAddAccount = false;
 
     for (const row of rows) {
       const {
@@ -94,13 +97,20 @@ export async function POST(request) {
           href: submenuurl,
           priority: priority || menu.submenu.length + 1,
         });
+        if (submenuurl === '/userscreens/employee/addemployee') {
+          hasAddEmployee = true;
+        }
+        if (submenuurl === '/userscreens/roles/addroles') {
+          hasAddRoles = true;
+        }
+        if (submenuurl === '/userscreens/account/addaccount') {
+          hasAddAccount = true;
+        }
       } else if (menuhref && !menu.href) {
         menu.href = menuhref;
       }
     }
 
-    // Flatten accessible items
-    let hasAddEmployee = false;
     menuMap.forEach(menu => {
       if (menu.href) {
         accessibleItems.push({
@@ -109,19 +119,15 @@ export async function POST(request) {
           priority: menu.priority,
         });
       }
-      menu.submenu.forEach((sub, index) => {
+      menu.submenu.forEach((sub) => {
         accessibleItems.push({
           href: sub.href,
           isMenu: false,
           priority: sub.priority,
         });
-        if (sub.href === '/userscreens/employee/addemployee') {
-          hasAddEmployee = true;
-        }
       });
     });
 
-    // Add Priority Setting for admins
     if (isAdmin) {
       accessibleItems.push({
         href: '/userscreens/prioritysetting',
@@ -130,30 +136,53 @@ export async function POST(request) {
       });
     }
 
-    // Add edit employee permission if user has addemployee submenu
     if (hasAddEmployee) {
       accessibleItems.push({
         href: '/userscreens/employee/edit/:empid',
         isMenu: true,
-        priority: 1001, // Slightly higher than prioritysetting
+        priority: 1001,
       });
     }
 
-    // Sort by priority
+    if (hasAddRoles) {
+      accessibleItems.push({
+        href: '/userscreens/roles/edit/:roleid',
+        isMenu: true,
+        priority: 1002,
+      });
+    }
+
+    // If user has access to addaccount, grant access to edit account
+    if (hasAddAccount) {
+      accessibleItems.push({
+        href: '/userscreens/account/edit/:accntId',
+        isMenu: true,
+        priority: 1003,
+      });
+    }
+
     accessibleItems.sort((a, b) => a.priority - b.priority);
     console.log("Accessible items for user:", JSON.stringify(accessibleItems, null, 2));
 
-    // If no pathname provided, return accessible items
     if (!pathname) {
       return NextResponse.json({ success: true, accessibleItems });
     }
 
-    // Check if the requested path is accessible
     const accessiblePaths = accessibleItems.map(item => item.href);
-    // Handle dynamic edit routes
-    const isEditPath = pathname.match(/^\/userscreens\/employee\/edit\/[^/]+$/);
-    if (isEditPath && accessiblePaths.includes('/userscreens/employee/edit/:empid')) {
-      console.log(`Access granted to ${pathname} for roleid ${roleid} (dynamic edit route)`);
+    const isEditEmployeePath = pathname.match(/^\/userscreens\/employee\/edit\/[^/]+$/);
+    const isEditRolePath = pathname.match(/^\/userscreens\/roles\/edit\/[^/]+$/);
+    const isEditAccountPath = pathname.match(/^\/userscreens\/account\/edit\/[^/]+$/);
+
+    if (isEditEmployeePath && accessiblePaths.includes('/userscreens/employee/edit/:empid')) {
+      console.log(`Access granted to ${pathname} for roleid ${roleid} (dynamic employee edit route)`);
+      return NextResponse.json({ success: true, accessibleItems });
+    }
+    if (isEditRolePath && accessiblePaths.includes('/userscreens/roles/edit/:roleid')) {
+      console.log(`Access granted to ${pathname} for roleid ${roleid} (dynamic role edit route)`);
+      return NextResponse.json({ success: true, accessibleItems });
+    }
+    if (isEditAccountPath && accessiblePaths.includes('/userscreens/account/edit/:accntId')) {
+      console.log(`Access granted to ${pathname} for roleid ${roleid} (dynamic account edit route)`);
       return NextResponse.json({ success: true, accessibleItems });
     }
 

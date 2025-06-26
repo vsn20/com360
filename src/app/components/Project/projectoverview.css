@@ -1,0 +1,73 @@
+/* Container for the Employee Overview */
+.overview-container {
+  padding: 20px;
+  max-width: 1000px;
+  margin: 0 auto;
+  font-family: Arial, sans-serif;
+}
+
+/* Heading */
+.overview-container h2 {
+  font-size: 24px;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+/* Error message */
+.error-message {
+  color: red;
+  margin-bottom: 15px;
+  font-size: 16px;
+}
+
+/* No employees message */
+.overview-container p {
+  font-size: 16px;
+  color: #666;
+}
+
+/* Employee table */
+.employee-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #fff;
+  border: 1px solid #ddd;
+}
+
+/* Table headers */
+.employee-table th {
+  background-color: #f4f4f4;
+  padding: 12px;
+  text-align: left;
+  font-weight: bold;
+  border-bottom: 2px solid #ddd;
+  color: #333;
+}
+
+/* Table cells */
+.employee-table td {
+  padding: 12px;
+  border-bottom: 1px solid #ddd;
+}
+
+/* Table row hover */
+.employee-table tr:hover {
+  background-color: #f9f9f9;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .overview-container {
+    padding: 10px;
+  }
+
+  .overview-container h2 {
+    font-size: 20px;
+  }
+
+  .employee-table th,
+  .employee-table td {
+    padding: 8px;
+    font-size: 14px;
+  }
+}

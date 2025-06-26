@@ -1,8 +1,8 @@
 import React from 'react'
-import Overview from '@/app/components/Roles/Overview'
+import EditRole from '@/app/components/Roles/role_edit'
 const page = () => {
   return (
-    <div><Overview/></div>
+    <div><EditRole/></div>
   )
 }
 
