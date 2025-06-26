@@ -4,9 +4,9 @@ import Navbar from '../components/Navbar';
 
 export default function LayoutSelector({ children }) {
   const pathname = usePathname();
-  const isUserScreen = pathname.startsWith('/userscreens');
+  const isUserOrJobScreen = pathname.startsWith('/userscreens') || pathname.startsWith('/jobs');
 
-  if (isUserScreen) return <>{children}</>;
+  if (isUserOrJobScreen) return <>{children}</>;
 
   return (
     <>
