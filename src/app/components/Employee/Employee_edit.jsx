@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { fetchEmployeeById, fetchRolesByOrgId, updateEmployee } from '@/app/serverActions/Employee/overview';
+import { fetchEmployeeById, fetchRolesByOrgId, updateEmployee, fetchEmployeesByOrgId } from '@/app/serverActions/Employee/overview';
 import './editemployee.css';
 
 const EditEmployee = () => {
@@ -26,16 +26,19 @@ const EditEmployee = () => {
     LAST_WORK_DATE: '',
     TERMINATED_DATE: '',
     REJOIN_DATE: '',
+    superior: '', // Added superior field
   });
   const [roles, setRoles] = useState([]);
+  const [employees, setEmployees] = useState([]); // Added employees state for superior dropdown
   const [state, setState] = useState({ error: null, success: false });
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [employee, rolesData] = await Promise.all([
+        const [employee, rolesData, employeesData] = await Promise.all([
           fetchEmployeeById(empid),
           fetchRolesByOrgId(),
+          fetchEmployeesByOrgId(), // Fetch employees for superior dropdown
         ]);
         setFormData({
           empid: employee.empid || '',
@@ -53,8 +56,10 @@ const EditEmployee = () => {
           LAST_WORK_DATE: employee.LAST_WORK_DATE ? new Date(employee.LAST_WORK_DATE).toISOString().split('T')[0] : '',
           TERMINATED_DATE: employee.TERMINATED_DATE ? new Date(employee.TERMINATED_DATE).toISOString().split('T')[0] : '',
           REJOIN_DATE: employee.REJOIN_DATE ? new Date(employee.REJOIN_DATE).toISOString().split('T')[0] : '',
+          superior: employee.superior || '', // Set initial superior value
         });
         setRoles(rolesData);
+        setEmployees(employeesData); // Set employees for superior dropdown
         setState({ error: null, success: false });
       } catch (err) {
         console.error('Error loading data:', err);
@@ -81,6 +86,13 @@ const EditEmployee = () => {
       router.push('/userscreens/employee/overview');
     }
   };
+
+  // Map employees with their roles for the dropdown
+  const employeesWithRoles = employees.map(employee => {
+    const role = roles.find(r => r.roleid === employee.roleid);
+    const rolename = role ? role.rolename : 'Unknown Role';
+    return { ...employee, rolename };
+  });
 
   return (
     <div className="edit-employee-container">
@@ -237,6 +249,21 @@ const EditEmployee = () => {
             value={formData.REJOIN_DATE}
             onChange={handleChange}
           />
+        </div>
+        <div>
+          <label>Superior:</label>
+          <select
+            name="superior"
+            value={formData.superior}
+            onChange={handleChange}
+          >
+            <option value="">Select a Superior (Optional)</option>
+            {employeesWithRoles.map((employee) => (
+              <option key={employee.empid} value={employee.empid}>
+                {`${employee.empid} - ${employee.EMP_FST_NAME} ${employee.EMP_LAST_NAME} (${employee.rolename})`}
+              </option>
+            ))}
+          </select>
         </div>
         <button type="submit">Submit</button>
       </form>

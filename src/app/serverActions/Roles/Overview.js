@@ -238,7 +238,7 @@ export async function fetchRoleById(roleid) {
 
     // Fetch role details
     const [roleRows] = await pool.execute(
-      `SELECT roleid, orgid, rolename, isadmin, issuperadmin, is_active, CREATED_DATE, 
+      `SELECT roleid, orgid, rolename, is_active, CREATED_DATE, 
               salaryrange, type, description, vacantposts, jobtitle, keyresponsibilities 
        FROM org_role_table 
        WHERE roleid = ? AND orgid = ?`,
@@ -321,8 +321,6 @@ export async function updateRole(prevState, formData) {
   try {
     const roleid = formData.get('roleid');
     const rolename = formData.get('rolename');
-    const isadmin = formData.get('isadmin') === '1' ? 1 : 0;
-    const issuperadmin = formData.get('issuperadmin') === '1' ? 1 : 0;
     const is_active = formData.get('is_active') === '1' ? 1 : 0;
     const salaryrange = formData.get('salaryrange') || null;
     const type = formData.get('type') || null;
@@ -333,7 +331,7 @@ export async function updateRole(prevState, formData) {
     const permissions = JSON.parse(formData.get('permissions') || '[]');
 
     console.log("Form data received:", {
-      roleid, rolename, isadmin, issuperadmin, is_active, salaryrange, type, 
+      roleid, rolename, is_active, salaryrange, type, 
       description, vacantposts, jobtitle, keyresponsibilities, permissions
     });
 
@@ -377,12 +375,12 @@ export async function updateRole(prevState, formData) {
     // Update org_role_table
     await pool.query(
       `UPDATE org_role_table 
-       SET rolename = ?, isadmin = ?, issuperadmin = ?, is_active = ?, 
+       SET rolename = ?, is_active = ?, 
            salaryrange = ?, type = ?, description = ?, vacantposts = ?, 
            jobtitle = ?, keyresponsibilities = ?
        WHERE roleid = ? AND orgid = ?`,
       [
-        rolename, isadmin, issuperadmin, is_active, salaryrange, type, 
+        rolename, is_active, salaryrange, type, 
         description, vacantposts, jobtitle, keyresponsibilities, roleid, orgId
       ]
     );

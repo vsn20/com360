@@ -1,15 +1,15 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { addemployee } from '@/app/serverActions/addemployee';
 
-export default function AddEmployee({ roles, currentrole, orgid, error }) {
+export default function AddEmployee({ roles, currentrole, orgid, error, employees }) {
   const router = useRouter();
   const [formError, setFormError] = useState(null);
 
   // Today's date in YYYY-MM-DD format for the input field
-  const today = new Date().toISOString().split('T')[0]; // "2025-06-20"
+  const today = new Date().toISOString().split('T')[0]; // "2025-06-29"
 
   const handleSubmit = async (formData) => {
     formData.append('currentRole', currentrole || ''); // Ensure currentrole is a string
@@ -20,6 +20,13 @@ export default function AddEmployee({ roles, currentrole, orgid, error }) {
       router.push(`/userscreens/employee?success=Employee%20added%20successfully`);
     }
   };
+
+  // Map employees with their roles
+  const employeesWithRoles = employees.map(employee => {
+    const role = roles.find(r => r.roleid === employee.roleid);
+    const rolename = role ? role.rolename : 'Unknown Role';
+    return { ...employee, rolename };
+  });
 
   return (
     <div style={{ padding: "20px", maxWidth: "600px", margin: "0 auto" }}>
@@ -144,6 +151,30 @@ export default function AddEmployee({ roles, currentrole, orgid, error }) {
             {roles.map((role) => (
               <option key={role.roleid} value={role.roleid}>
                 {role.rolename}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Superior Dropdown with Name and Role */}
+        <div style={{ marginBottom: "20px" }}>
+          <label htmlFor="superior" style={{ display: "block", marginBottom: "5px" }}>
+            Superior:
+          </label>
+          <select
+            id="superior"
+            name="superior"
+            style={{
+              width: "100%",
+              padding: "8px",
+              borderRadius: "5px",
+              border: "1px solid #ccc",
+            }}
+          >
+            <option value="">Select a Superior (Optional)</option>
+            {employeesWithRoles.map((employee) => (
+              <option key={employee.empid} value={employee.empid}>
+                {`${employee.empid} - ${employee.EMP_FST_NAME} ${employee.EMP_LAST_NAME} (${employee.rolename})`}
               </option>
             ))}
           </select>

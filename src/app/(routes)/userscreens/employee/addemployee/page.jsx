@@ -23,6 +23,7 @@ export default async function AddEmployeePage({ searchParams }) {
   // Get the orgid and currentrole from the token
   let orgid = null;
   let currentrole = null;
+  let employees = [];
   try {
     const cookieStore = cookies();
     const token = cookieStore.get('jwt_token')?.value;
@@ -42,11 +43,17 @@ export default async function AddEmployeePage({ searchParams }) {
         if (roleRows && roleRows.length > 0) {
           currentrole = roleRows[0].rolename || roleRows[0].roleid.toString(); // Use rolename if available, fallback to roleid
         }
+
+        // Fetch all employees for the given orgid
+        [employees] = await pool.query(
+          'SELECT empid, EMP_FST_NAME, EMP_LAST_NAME, roleid FROM C_EMP WHERE orgid = ?',
+          [orgid]
+        );
       }
     }
   } catch (error) {
-    console.error('Error decoding token or fetching role:', error);
-    // Proceed without currentrole if decoding or query fails, as permission will be handled in middleware
+    console.error('Error decoding token, fetching role, or fetching employees:', error);
+    // Proceed without currentrole or employees if decoding or query fails, as permission will be handled in middleware
   }
 
   // Fetch all roles for the role dropdown
@@ -67,7 +74,7 @@ export default async function AddEmployeePage({ searchParams }) {
       currentrole={currentrole} // Dynamically set based on orgid and roleid
       orgid={orgid}
       error={error}
+      employees={employees} // Pass the fetched employees
     />
   );
 }
-

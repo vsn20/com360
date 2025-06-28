@@ -14,8 +14,6 @@ const EditRole = () => {
     roleid: '',
     orgid: '',
     rolename: '',
-    isadmin: '0',
-    issuperadmin: '0',
     is_active: '1',
     salaryrange: '',
     type: '',
@@ -44,8 +42,6 @@ const EditRole = () => {
           roleid: roleData.role.roleid || '',
           orgid: roleData.role.orgid || '',
           rolename: roleData.role.rolename || '',
-          isadmin: roleData.role.isadmin ? '1' : '0',
-          issuperadmin: roleData.role.issuperadmin ? '1' : '0',
           is_active: roleData.role.is_active ? '1' : '0',
           salaryrange: roleData.role.salaryrange || '',
           type: roleData.role.type || '',
@@ -153,28 +149,6 @@ const EditRole = () => {
             onChange={handleChange}
             required
           />
-        </div>
-        <div>
-          <label>Is Admin:</label>
-          <select
-            name="isadmin"
-            value={formData.isadmin}
-            onChange={handleChange}
-          >
-            <option value="1">Yes</option>
-            <option value="0">No</option>
-          </select>
-        </div>
-        <div>
-          <label>Is Super Admin:</label>
-          <select
-            name="issuperadmin"
-            value={formData.issuperadmin}
-            onChange={handleChange}
-          >
-            <option value="1">Yes</option>
-            <option value="0">No</option>
-          </select>
         </div>
         <div>
           <label>Is Active:</label>

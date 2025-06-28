@@ -29,6 +29,7 @@ export async function addemployee(formData) {
   const mobileNumber = formData.get('mobileNumber') || null;
   const dob = formData.get('dob') || null;
   const hireDate = formData.get('hireDate');
+  const superior = formData.get('superior') || null; // New superior field
 
   // Get the JWT token from cookies
   const cookieStore = cookies();
@@ -39,7 +40,7 @@ export async function addemployee(formData) {
     return { error: 'No token found. Please log in.' };
   }
 
-  // Decode the token to get the orgid (no admin restriction since permissions are in middleware)
+  // Decode the token to get the orgid
   const decoded = decodeJwt(token);
   if (!decoded || !decoded.orgid) {
     console.log('Redirecting: Invalid token or orgid not found');
@@ -74,7 +75,7 @@ export async function addemployee(formData) {
   try {
     const pool = await DBconnection();
 
-    // Check if email already exists (email is UNIQUE in C_EMP)
+    // Check if email already exists
     const [existingEmail] = await pool.query(
       'SELECT empid FROM C_EMP WHERE email = ?',
       [email]
@@ -84,21 +85,32 @@ export async function addemployee(formData) {
       return { error: 'Email already exists.' };
     }
 
+    // Validate superior if provided
+    if (superior) {
+      const [existingSuperior] = await pool.query(
+        'SELECT empid FROM C_EMP WHERE empid = ? AND orgid = ?',
+        [superior, orgid]
+      );
+      if (existingSuperior.length === 0) {
+        return { error: 'Selected superior does not exist in this organization.' };
+      }
+    }
+
     // Get the current number of records in C_EMP and add 1 for empid
-    const [countResult] = await pool.query('SELECT COUNT(*) AS count FROM C_EMP');
+    const [countResult] = await pool.query('SELECT COUNT(*) AS count FROM C_EMP WHERE orgid = ?', [orgid]);
     const empCount = countResult[0].count;
-    const empid = `emp_${empCount + 1}`; // Generate empid as varchar(255) with prefix
+    const empid = `emp_${orgid}_${empCount + 1}`; // Unique empid with orgid prefix
 
     // Insert into C_EMP table
     await pool.query(
       `INSERT INTO C_EMP (
         empid, orgid, EMP_FST_NAME, EMP_MID_NAME, EMP_LAST_NAME, EMP_PREF_NAME, email,
         roleid, GENDER, MOBILE_NUMBER, DOB, HIRE, LAST_WORK_DATE, TERMINATED_DATE,
-        REJOIN_DATE, CREATED_BY, LAST_UPDATED_BY
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        REJOIN_DATE, CREATED_BY, LAST_UPDATED_BY, superior
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         empid, orgid, empFstName, empMidName, empLastName, empPrefName, email,
-        roleid, gender, mobileNumber, dob, hireDate, null, null, null, 'system', 'system'
+        roleid, gender, mobileNumber, dob, hireDate, null, null, null, 'system', 'system', superior
       ]
     );
 

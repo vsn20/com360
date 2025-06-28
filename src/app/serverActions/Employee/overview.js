@@ -91,7 +91,7 @@ export async function fetchEmployeeById(empid) {
     const [rows] = await pool.execute(
       `SELECT empid, orgid, EMP_FST_NAME, EMP_MID_NAME, EMP_LAST_NAME, EMP_PREF_NAME, email, 
               roleid, GENDER, MOBILE_NUMBER, DOB, HIRE, LAST_WORK_DATE, TERMINATED_DATE, 
-              REJOIN_DATE, CREATED_BY, LAST_UPDATED_BY 
+              REJOIN_DATE, CREATED_BY, LAST_UPDATED_BY, superior
        FROM C_EMP 
        WHERE empid = ? AND orgid = ?`,
       [empid, orgId]
@@ -164,11 +164,13 @@ export async function updateEmployee(prevState, formData) {
     const LAST_WORK_DATE = formData.get('LAST_WORK_DATE') || null;
     const TERMINATED_DATE = formData.get('TERMINATED_DATE') || null;
     const REJOIN_DATE = formData.get('REJOIN_DATE') || null;
+    const superior = formData.get('superior') || null; // Added superior field
 
     // Log form data for debugging
     console.log("Form data received:", {
       empid, EMP_FST_NAME, EMP_MID_NAME, EMP_LAST_NAME, EMP_PREF_NAME, email, 
-      roleid, GENDER, MOBILE_NUMBER, DOB, HIRE, LAST_WORK_DATE, TERMINATED_DATE, REJOIN_DATE
+      roleid, GENDER, MOBILE_NUMBER, DOB, HIRE, LAST_WORK_DATE, TERMINATED_DATE, 
+      REJOIN_DATE, superior
     });
 
     const cookieStore = cookies();
@@ -222,18 +224,34 @@ export async function updateEmployee(prevState, formData) {
       }
     }
 
+    // Validate superior if provided
+    if (superior) {
+      const [existingSuperior] = await pool.execute(
+        'SELECT empid FROM C_EMP WHERE empid = ? AND orgid = ? AND LAST_WORK_DATE IS NULL AND TERMINATED_DATE IS NULL',
+        [superior, orgId]
+      );
+      if (existingSuperior.length === 0) {
+        console.log('Invalid superior selected');
+        return { error: 'Selected superior is invalid or not active.' };
+      }
+      if (empid === superior) {
+        console.log('Self-assignment as superior');
+        return { error: 'Employee cannot be their own superior.' };
+      }
+    }
+
     // Update employee
     await pool.query(
       `UPDATE C_EMP 
        SET EMP_FST_NAME = ?, EMP_MID_NAME = ?, EMP_LAST_NAME = ?, EMP_PREF_NAME = ?, 
            email = ?, roleid = ?, GENDER = ?, MOBILE_NUMBER = ?, DOB = ?, HIRE = ?, 
            LAST_WORK_DATE = ?, TERMINATED_DATE = ?, REJOIN_DATE = ?, 
-           LAST_UPDATED_DATE = CURRENT_TIMESTAMP, LAST_UPDATED_BY = ? 
+           LAST_UPDATED_DATE = CURRENT_TIMESTAMP, LAST_UPDATED_BY = ?, superior = ? 
        WHERE empid = ? AND orgid = ?`,
       [
         EMP_FST_NAME, EMP_MID_NAME, EMP_LAST_NAME, EMP_PREF_NAME, email, roleid, 
         GENDER, MOBILE_NUMBER, DOB, HIRE, LAST_WORK_DATE, TERMINATED_DATE, REJOIN_DATE, 
-        'system', empid, orgId
+        'system', superior, empid, orgId
       ]
     );
 
