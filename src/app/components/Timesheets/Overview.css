@@ -145,7 +145,7 @@
 }
 
 .hours-input,
-.comment-input {
+.comment-textarea { /* Updated from comment-input to comment-textarea to match JSX */
   width: 100%;
   padding: 5px;
   border: 1px solid #ccc;
@@ -233,4 +233,26 @@
 .no-employees {
   color: #555;
   margin-top: 10px;
+}
+
+/* New Styles for Comment Display */
+.comment-display {
+  margin-top: 15px;
+}
+
+.comment-display-textarea {
+  width: 100%;
+  min-height: 100px;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  resize: vertical; /* Allows vertical resizing */
+  font-family: Arial, sans-serif;
+  background-color: #fff;
+}
+
+/* Style for selected row */
+.timesheet-table .selected-row {
+  background-color: #e0f7fa;
+  cursor: pointer;
 }

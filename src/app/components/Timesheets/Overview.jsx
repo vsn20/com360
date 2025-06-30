@@ -1,12 +1,11 @@
-// app/components/Timesheets/Overview.jsx
-"use client";
+'use client';
 
-import React, { useState, useEffect } from "react";
-import { fetchTimesheetAndProjects, fetchTimesheetsForSuperior, fetchTimesheetForEmployee, saveTimesheet, removeAttachment } from "@/app/serverActions/Timesheets/Overview";
-import "./Overview.css";
+import React, { useState, useEffect } from 'react';
+import { fetchTimesheetAndProjects, fetchTimesheetsForSuperior, fetchTimesheetForEmployee, saveTimesheet, removeAttachment } from '@/app/serverActions/Timesheets/Overview';
+import './Overview.css';
 
 const Overview = () => {
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [timesheet, setTimesheet] = useState(null);
   const [projects, setProjects] = useState([]);
   const [selectedProject, setSelectedProject] = useState(null);
@@ -20,19 +19,23 @@ const Overview = () => {
   const [success, setSuccess] = useState(false);
   const [tempKeyCounter, setTempKeyCounter] = useState(1);
 
+  // State to track selected day and its comment for display
+  const [selectedDay, setSelectedDay] = useState(null);
+  const [displayComment, setDisplayComment] = useState('');
+
   const getWeekStartDate = (date) => {
     try {
       const d = new Date(date);
-      if (isNaN(d)) throw new Error("Invalid date");
+      if (isNaN(d)) throw new Error('Invalid date');
       const day = d.getDay();
       const diff = d.getDate() - day;
       d.setDate(diff);
-      const formattedDate = d.toISOString().split("T")[0];
-      console.log("Client-side week start date:", formattedDate);
+      const formattedDate = d.toISOString().split('T')[0];
+      console.log('Client-side week start date:', formattedDate);
       return formattedDate;
     } catch (error) {
-      console.error("Error in getWeekStartDate:", error);
-      return new Date().toISOString().split("T")[0];
+      console.error('Error in getWeekStartDate:', error);
+      return new Date().toISOString().split('T')[0];
     }
   };
 
@@ -40,14 +43,14 @@ const Overview = () => {
     const fetchData = async () => {
       if (selectedDate) {
         const weekStart = getWeekStartDate(selectedDate);
-        console.log("Fetching data for week start:", weekStart);
+        console.log('Fetching data for week start:', weekStart);
         const individualResult = await fetchTimesheetAndProjects(weekStart, selectedProject ? selectedProject.PRJ_ID : null);
-        console.log("Individual fetch result:", individualResult);
+        console.log('Individual fetch result:', individualResult);
         if (individualResult.error) {
           setError(individualResult.error);
           setTimesheet({
-            employee_id: "",
-            project_id: selectedProject ? selectedProject.PRJ_ID : "",
+            employee_id: '',
+            project_id: selectedProject ? selectedProject.PRJ_ID : '',
             week_start_date: weekStart,
             year: new Date(weekStart).getFullYear(),
             sun_hours: null,
@@ -57,13 +60,13 @@ const Overview = () => {
             thu_hours: null,
             fri_hours: null,
             sat_hours: null,
-            sun_comment: "",
-            mon_comment: "",
-            tue_comment: "",
-            wed_comment: "",
-            thu_comment: "",
-            fri_comment: "",
-            sat_comment: "",
+            sun_comment: '',
+            mon_comment: '',
+            tue_comment: '',
+            wed_comment: '',
+            thu_comment: '',
+            fri_comment: '',
+            sat_comment: '',
             is_submitted: 0,
             is_approved: 0,
             invoice_path: null,
@@ -79,7 +82,7 @@ const Overview = () => {
           setAttachments({
             [individualResult.timesheet?.timesheet_id || `temp-${tempKeyCounter}`]: individualResult.attachments || [],
           });
-          console.log("Attachments state updated for timesheet_id:", individualResult.timesheet?.timesheet_id, "project_id:", individualResult.timesheet?.project_id, "attachments:", individualResult.attachments);
+          console.log('Attachments state updated for timesheet_id:', individualResult.timesheet?.timesheet_id, 'project_id:', individualResult.timesheet?.project_id, 'attachments:', individualResult.attachments);
           if (!selectedProject && individualResult.projects?.length > 0) {
             setSelectedProject(individualResult.projects[0]);
             setTimesheet((prev) => ({ ...prev, project_id: individualResult.projects[0].PRJ_ID }));
@@ -89,9 +92,9 @@ const Overview = () => {
         }
 
         const superiorResult = await fetchTimesheetsForSuperior(weekStart);
-        console.log("Superior fetch result:", superiorResult);
+        console.log('Superior fetch result:', superiorResult);
         if (superiorResult.error) {
-          console.warn("No superior access or error:", superiorResult.error);
+          console.warn('No superior access or error:', superiorResult.error);
         } else {
           setEmployees(superiorResult.employees || []);
           setTimesheets(superiorResult.timesheets || []);
@@ -110,7 +113,7 @@ const Overview = () => {
             );
           });
           setAttachments((prev) => ({ ...prev, ...newAttachments }));
-          console.log("Superior attachments state updated:", newAttachments);
+          console.log('Superior attachments state updated:', newAttachments);
         }
       }
     };
@@ -118,19 +121,19 @@ const Overview = () => {
   }, [selectedDate, selectedProject]);
 
   const formatDate = (date) => {
-    if (!date || isNaN(new Date(date))) return "";
+    if (!date || isNaN(new Date(date))) return '';
     const d = new Date(date);
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
     return `${month}/${day}/${d.getFullYear()}`;
   };
 
   const getDateForDay = (baseDate, dayOffset) => {
     const d = new Date(baseDate);
     d.setDate(d.getDate() + dayOffset);
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    const dayName = d.toLocaleDateString("en-US", { weekday: "short" });
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
     return `${month}/${day} ${dayName}`;
   };
 
@@ -146,7 +149,7 @@ const Overview = () => {
   const handlePrevWeek = () => {
     const newDate = new Date(selectedDate);
     newDate.setDate(newDate.getDate() - 7);
-    setSelectedDate(newDate.toISOString().split("T")[0]);
+    setSelectedDate(newDate.toISOString().split('T')[0]);
     setSelectedProject(null);
     setSelectedEmployee(null);
     setAttachments({});
@@ -157,7 +160,7 @@ const Overview = () => {
   const handleNextWeek = () => {
     const newDate = new Date(selectedDate);
     newDate.setDate(newDate.getDate() + 7);
-    setSelectedDate(newDate.toISOString().split("T")[0]);
+    setSelectedDate(newDate.toISOString().split('T')[0]);
     setSelectedProject(null);
     setSelectedEmployee(null);
     setAttachments({});
@@ -173,7 +176,7 @@ const Overview = () => {
     if (result.error) {
       setError(result.error);
       setTimesheet({
-        employee_id: "",
+        employee_id: '',
         project_id: project.PRJ_ID,
         week_start_date: weekStart,
         year: new Date(weekStart).getFullYear(),
@@ -184,13 +187,13 @@ const Overview = () => {
         thu_hours: null,
         fri_hours: null,
         sat_hours: null,
-        sun_comment: "",
-        mon_comment: "",
-        tue_comment: "",
-        wed_comment: "",
-        thu_comment: "",
-        fri_comment: "",
-        sat_comment: "",
+        sun_comment: '',
+        mon_comment: '',
+        tue_comment: '',
+        wed_comment: '',
+        thu_comment: '',
+        fri_comment: '',
+        sat_comment: '',
         is_submitted: 0,
         is_approved: 0,
         invoice_path: null,
@@ -204,7 +207,7 @@ const Overview = () => {
       setAttachments({
         [result.timesheet?.timesheet_id || `temp-${tempKeyCounter}`]: result.attachments || [],
       });
-      console.log("Attachments state updated for timesheet_id:", result.timesheet?.timesheet_id, "project_id:", project.PRJ_ID, "attachments:", result.attachments);
+      console.log('Attachments state updated for timesheet_id:', result.timesheet?.timesheet_id, 'project_id:', project.PRJ_ID, 'attachments:', result.attachments);
       setTempKeyCounter((prev) => prev + 1);
     }
     setError(null);
@@ -229,7 +232,7 @@ const Overview = () => {
     );
     if (!result.timesheet?.timesheet_id) {
       const employee = employees.find((e) => e.empid === empId);
-      const employeeName = employee ? `${employee.EMP_FST_NAME} ${employee.EMP_LAST_NAME || ""}` : "";
+      const employeeName = employee ? `${employee.EMP_FST_NAME} ${employee.EMP_LAST_NAME || ''}` : '';
       const newTimesheet = {
         employee_id: empId,
         project_id: project ? project.PRJ_ID : null,
@@ -242,13 +245,13 @@ const Overview = () => {
         thu_hours: null,
         fri_hours: null,
         sat_hours: null,
-        sun_comment: "",
-        mon_comment: "",
-        tue_comment: "",
-        wed_comment: "",
-        thu_comment: "",
-        fri_comment: "",
-        sat_comment: "",
+        sun_comment: '',
+        mon_comment: '',
+        tue_comment: '',
+        wed_comment: '',
+        thu_comment: '',
+        fri_comment: '',
+        sat_comment: '',
         is_submitted: 0,
         is_approved: 0,
         invoice_path: null,
@@ -262,7 +265,7 @@ const Overview = () => {
       ...prev,
       [result.timesheet?.timesheet_id || `temp-${tempKeyCounter}`]: result.attachments || [],
     }));
-    console.log("Attachments state updated for employee_id:", empId, "timesheet_id:", result.timesheet?.timesheet_id, "project_id:", project?.PRJ_ID, "attachments:", result.attachments);
+    console.log('Attachments state updated for employee_id:', empId, 'timesheet_id:', result.timesheet?.timesheet_id, 'project_id:', project?.PRJ_ID, 'attachments:', result.attachments);
     setTempKeyCounter((prev) => prev + 1);
     setError(null);
     setSuccess(false);
@@ -273,13 +276,19 @@ const Overview = () => {
     if (empId) {
       setTimesheets((prev) =>
         prev.map((t) =>
-          t.employee_id === empId ? { ...t, [name]: value === "" ? null : value } : t
+          t.employee_id === empId ? { ...t, [name]: value === '' ? null : value } : t
         )
       );
     } else {
       setTimesheet((prev) =>
-        prev && prev.is_submitted === 0 ? { ...prev, [name]: value === "" ? null : value } : prev
+        prev && prev.is_submitted === 0 ? { ...prev, [name]: value === '' ? null : value } : prev
       );
+      // Update display comment when input changes
+      const day = name.split('_')[0];
+      if (name.endsWith('_comment')) {
+        setDisplayComment(value);
+        setSelectedDay(day);
+      }
     }
   };
 
@@ -294,20 +303,20 @@ const Overview = () => {
 
   const handleSubmit = async () => {
     if (timesheet && timesheet.is_submitted === 0) {
-      if (window.confirm("If you click OK, you cannot edit this timesheet.")) {
+      if (window.confirm('If you click OK, you cannot edit this timesheet.')) {
         const formData = new FormData();
-        formData.append("project_id", timesheet.project_id);
-        formData.append("week_start_date", getWeekStartDate(selectedDate));
-        formData.append("year", timesheet.year);
-        formData.append("timesheet_id", timesheet.timesheet_id || "");
-        ["sun", "mon", "tue", "wed", "thu", "fri", "sat"].forEach((day) => {
-          formData.append(`${day}_hours`, timesheet[`${day}_hours`] ?? "");
-          formData.append(`${day}_comment`, timesheet[`${day}_comment`] ?? "");
+        formData.append('project_id', timesheet.project_id);
+        formData.append('week_start_date', getWeekStartDate(selectedDate));
+        formData.append('year', timesheet.year);
+        formData.append('timesheet_id', timesheet.timesheet_id || '');
+        ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'].forEach((day) => {
+          formData.append(`${day}_hours`, timesheet[`${day}_hours`] ?? '');
+          formData.append(`${day}_comment`, timesheet[`${day}_comment`] ?? '');
         });
-        formData.append("is_submitted", 1);
-        formData.append("submit", "submit");
+        formData.append('is_submitted', 1);
+        formData.append('submit', 'submit');
 
-        console.log("Submitting form with timesheet:", timesheet, "formData:", Object.fromEntries(formData));
+        console.log('Submitting form with timesheet:', timesheet, 'formData:', Object.fromEntries(formData));
         const result = await saveTimesheet(formData);
         if (result.success) {
           const updatedResult = await fetchTimesheetAndProjects(getWeekStartDate(selectedDate), selectedProject ? selectedProject.PRJ_ID : null);
@@ -316,18 +325,18 @@ const Overview = () => {
           setAttachments({
             [updatedResult.timesheet?.timesheet_id || `temp-${tempKeyCounter}`]: updatedResult.attachments || [],
           });
-          console.log("Attachments state updated after submit for timesheet_id:", updatedResult.timesheet?.timesheet_id, "attachments:", updatedResult.attachments);
+          console.log('Attachments state updated after submit for timesheet_id:', updatedResult.timesheet?.timesheet_id, 'attachments:', updatedResult.attachments);
           setTempKeyCounter((prev) => prev + 1);
           setSuccess(true);
         } else {
-          setError(result.error || "Failed to submit timesheet.");
+          setError(result.error || 'Failed to submit timesheet.');
         }
       }
     }
   };
 
   const handleSave = async (formData, empId = null) => {
-    console.log("Saving form data:", Object.fromEntries(formData));
+    console.log('Saving form data:', Object.fromEntries(formData));
     const result = await saveTimesheet(formData);
     if (result.success) {
       if (empId) {
@@ -348,7 +357,7 @@ const Overview = () => {
           );
         });
         setAttachments(newAttachments);
-        console.log("Attachments state updated after save (superior) for employee_id:", empId, "new attachments:", newAttachments);
+        console.log('Attachments state updated after save (superior) for employee_id:', empId, 'new attachments:', newAttachments);
       } else {
         const updatedResult = await fetchTimesheetAndProjects(getWeekStartDate(selectedDate), selectedProject ? selectedProject.PRJ_ID : null);
         setTimesheet(updatedResult.timesheet);
@@ -356,12 +365,12 @@ const Overview = () => {
         setAttachments({
           [updatedResult.timesheet?.timesheet_id || `temp-${tempKeyCounter}`]: updatedResult.attachments || [],
         });
-        console.log("Attachments state updated after save for timesheet_id:", updatedResult.timesheet?.timesheet_id, "attachments:", updatedResult.attachments);
+        console.log('Attachments state updated after save for timesheet_id:', updatedResult.timesheet?.timesheet_id, 'attachments:', updatedResult.attachments);
         setTempKeyCounter((prev) => prev + 1);
       }
       setSuccess(true);
     } else {
-      setError(result.error || "Failed to save timesheet.");
+      setError(result.error || 'Failed to save timesheet.');
     }
   };
 
@@ -372,10 +381,10 @@ const Overview = () => {
         ...prev,
         [timesheetId]: result.attachments || [],
       }));
-      console.log("Attachments state updated after remove for timesheet_id:", timesheetId, "attachments:", result.attachments);
+      console.log('Attachments state updated after remove for timesheet_id:', timesheetId, 'attachments:', result.attachments);
       setSuccess(true);
     } else {
-      setError(result.error || "Failed to remove attachment.");
+      setError(result.error || 'Failed to remove attachment.');
     }
   };
 
@@ -421,7 +430,7 @@ const Overview = () => {
                     <tr
                       key={project.PRJ_ID}
                       onClick={() => handleProjectSelect(project)}
-                      className={selectedProject?.PRJ_ID === project.PRJ_ID ? "selected-project" : ""}
+                      className={selectedProject?.PRJ_ID === project.PRJ_ID ? 'selected-project' : ''}
                     >
                       <td>{project.PRJ_ID}</td>
                       <td>{project.PRJ_NAME}</td>
@@ -446,9 +455,9 @@ const Overview = () => {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                console.log("Submitting form with timesheet:", timesheet);
+                console.log('Submitting form with timesheet:', timesheet);
                 const formData = new FormData(e.target);
-                formData.append("timesheet_id", timesheet.timesheet_id || "");
+                formData.append('timesheet_id', timesheet.timesheet_id || '');
                 handleSave(formData);
               }}
             >
@@ -458,7 +467,7 @@ const Overview = () => {
               <input type="hidden" name="project_id" value={selectedProject.PRJ_ID} />
               <input type="hidden" name="week_start_date" value={getWeekStartDate(selectedDate)} />
               <input type="hidden" name="year" value={timesheet.year} />
-              <input type="hidden" name="timesheet_id" value={timesheet.timesheet_id || ""} />
+              <input type="hidden" name="timesheet_id" value={timesheet.timesheet_id || ''} />
               <table className="timesheet-table">
                 <thead>
                   <tr>
@@ -468,14 +477,21 @@ const Overview = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {["sun", "mon", "tue", "wed", "thu", "fri", "sat"].map((day, index) => (
-                    <tr key={day}>
+                  {['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'].map((day, index) => (
+                    <tr
+                      key={day}
+                      onClick={() => {
+                        setSelectedDay(day);
+                        setDisplayComment(timesheet[`${day}_comment`] || '');
+                      }}
+                      className={selectedDay === day ? 'selected-row' : ''}
+                    >
                       <td>{getDateForDay(getWeekStartDate(selectedDate), index)}</td>
                       <td>
                         <input
                           type="number"
                           name={`${day}_hours`}
-                          value={timesheet[`${day}_hours`] ?? ""}
+                          value={timesheet[`${day}_hours`] ?? ''}
                           onChange={handleInputChange}
                           step="0.25"
                           min="0"
@@ -485,12 +501,11 @@ const Overview = () => {
                         />
                       </td>
                       <td>
-                        <input
-                          type="text"
+                        <textarea
                           name={`${day}_comment`}
-                          value={timesheet[`${day}_comment`] ?? ""}
+                          value={timesheet[`${day}_comment`] ?? ''}
                           onChange={handleInputChange}
-                          className="comment-input"
+                          className="comment-textarea"
                           disabled={timesheet.is_submitted !== 0}
                         />
                       </td>
@@ -498,6 +513,18 @@ const Overview = () => {
                   ))}
                 </tbody>
               </table>
+              {/* Comment Display Box */}
+              {selectedDay && (
+                <div className="comment-display">
+                  <label>Comment:</label>
+                  <textarea
+                    value={displayComment}
+                    readOnly
+                    className="comment-display-textarea"
+                    placeholder="Click a row to see its comment..."
+                  />
+                </div>
+              )}
               <div className="attachment-field">
                 <label>Attachment: </label>
                 <input
@@ -550,7 +577,7 @@ const Overview = () => {
               <div className="employee-selection">
                 <label>Select Employee: </label>
                 <select
-                  value={selectedEmployee || ""}
+                  value={selectedEmployee || ''}
                   onChange={(e) => {
                     const empId = e.target.value;
                     setSelectedEmployee(empId);
@@ -565,7 +592,7 @@ const Overview = () => {
                   <option value="">Select an Employee</option>
                   {employees.map((emp) => (
                     <option key={emp.empid} value={emp.empid}>
-                      {`${emp.EMP_FST_NAME} ${emp.EMP_LAST_NAME || ""}`}
+                      {`${emp.EMP_FST_NAME} ${emp.EMP_LAST_NAME || ''}`}
                     </option>
                   ))}
                 </select>
@@ -577,7 +604,7 @@ const Overview = () => {
                   );
                   return (
                     <div key={employeeTimesheet?.timesheet_id || `temp-${tempKeyCounter}`} className="employee-timesheet">
-                      <h3>{employeeTimesheet?.employeeName || `${emp.EMP_FST_NAME} ${emp.EMP_LAST_NAME || ""}`}s Timesheet</h3>
+                      <h3>{employeeTimesheet?.employeeName || `${emp.EMP_FST_NAME} ${emp.EMP_LAST_NAME || ''}`}s Timesheet</h3>
                       <div className="project-table-container">
                         <table className="project-table">
                           <thead>
@@ -599,7 +626,7 @@ const Overview = () => {
                                 <tr
                                   key={project.PRJ_ID}
                                   onClick={() => handleEmployeeProjectSelect(emp.empid, project)}
-                                  className={selectedEmployeeProjects[emp.empid] === project.PRJ_ID ? "selected-project" : ""}
+                                  className={selectedEmployeeProjects[emp.empid] === project.PRJ_ID ? 'selected-project' : ''}
                                 >
                                   <td>{project.PRJ_ID}</td>
                                   <td>{project.PRJ_NAME}</td>
@@ -625,32 +652,32 @@ const Overview = () => {
                           onSubmit={(e) => {
                             e.preventDefault();
                             const formData = new FormData(e.target);
-                            formData.append("timesheet_id", employeeTimesheet.timesheet_id || "");
+                            formData.append('timesheet_id', employeeTimesheet.timesheet_id || '');
                             handleSave(formData, employeeTimesheet.employee_id);
                           }}
                         >
                           <div className="project-header">
                             <h4>
-                              Project:{" "}
+                              Project:{' '}
                               {(employeeProjects[emp.empid] || []).find(
                                 (p) => p.PRJ_ID === selectedEmployeeProjects[emp.empid]
-                              )?.PRJ_NAME || "Unnamed Project"}
+                              )?.PRJ_NAME || 'Unnamed Project'}
                             </h4>
                           </div>
                           <input type="hidden" name="employee_id" value={employeeTimesheet.employee_id} />
                           <input type="hidden" name="week_start_date" value={getWeekStartDate(selectedDate)} />
                           <input type="hidden" name="year" value={employeeTimesheet.year} />
-                          <input type="hidden" name="timesheet_id" value={employeeTimesheet.timesheet_id || ""} />
+                          <input type="hidden" name="timesheet_id" value={employeeTimesheet.timesheet_id || ''} />
                           <input type="hidden" name="project_id" value={selectedEmployeeProjects[employeeTimesheet.employee_id]} />
                           <input
                             type="hidden"
                             name="is_approved"
                             value={employeeTimesheet.is_approved || 0}
                           />
-                          {["sun", "mon", "tue", "wed", "thu", "fri", "sat"].map((day) => (
+                          {['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'].map((day) => (
                             <React.Fragment key={day}>
-                              <input type="hidden" name={`${day}_hours`} value={employeeTimesheet[`${day}_hours`] ?? ""} />
-                              <input type="hidden" name={`${day}_comment`} value={employeeTimesheet[`${day}_comment`] ?? ""} />
+                              <input type="hidden" name={`${day}_hours`} value={employeeTimesheet[`${day}_hours`] ?? ''} />
+                              <input type="hidden" name={`${day}_comment`} value={employeeTimesheet[`${day}_comment`] ?? ''} />
                             </React.Fragment>
                           ))}
                           <table className="timesheet-table">
@@ -662,14 +689,21 @@ const Overview = () => {
                               </tr>
                             </thead>
                             <tbody>
-                              {["sun", "mon", "tue", "wed", "thu", "fri", "sat"].map((day, index) => (
-                                <tr key={day}>
+                              {['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'].map((day, index) => (
+                                <tr
+                                  key={day}
+                                  onClick={() => {
+                                    setSelectedDay(day);
+                                    setDisplayComment(employeeTimesheet[`${day}_comment`] || '');
+                                  }}
+                                  className={selectedDay === day ? 'selected-row' : ''}
+                                >
                                   <td>{getDateForDay(getWeekStartDate(selectedDate), index)}</td>
                                   <td>
                                     <input
                                       type="number"
                                       name={`${day}_hours`}
-                                      value={employeeTimesheet[`${day}_hours`] ?? ""}
+                                      value={employeeTimesheet[`${day}_hours`] ?? ''}
                                       onChange={(e) => handleInputChange(e, employeeTimesheet.employee_id)}
                                       step="0.25"
                                       min="0"
@@ -678,18 +712,29 @@ const Overview = () => {
                                     />
                                   </td>
                                   <td>
-                                    <input
-                                      type="text"
+                                    <textarea
                                       name={`${day}_comment`}
-                                      value={employeeTimesheet[`${day}_comment`] ?? ""}
+                                      value={employeeTimesheet[`${day}_comment`] ?? ''}
                                       onChange={(e) => handleInputChange(e, employeeTimesheet.employee_id)}
-                                      className="comment-input"
+                                      className="comment-textarea"
                                     />
                                   </td>
                                 </tr>
                               ))}
                             </tbody>
                           </table>
+                          {/* Comment Display Box */}
+                          {selectedDay && (
+                            <div className="comment-display">
+                              <label>Comment:</label>
+                              <textarea
+                                value={displayComment}
+                                readOnly
+                                className="comment-display-textarea"
+                                placeholder="Click a row to see its comment..."
+                              />
+                            </div>
+                          )}
                           <div className="attachment-field">
                             <label>Attachment: </label>
                             <input
