@@ -125,14 +125,15 @@
 .timesheet-table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 10px;
+  margin: 1rem 0;
 }
 
 .timesheet-table th,
 .timesheet-table td {
   border: 1px solid #ddd;
   padding: 8px;
-  text-align: left;
+  text-align: center;
+  vertical-align: top;
 }
 
 .timesheet-table th {
@@ -140,17 +141,51 @@
   color: #333;
 }
 
-.timesheet-table td:first-child {
-  white-space: nowrap;
+.timesheet-table td {
+  background-color: #fff;
 }
 
-.hours-input,
-.comment-textarea { /* Updated from comment-input to comment-textarea to match JSX */
-  width: 100%;
+.hours-input {
+  width: 60px;
   padding: 5px;
   border: 1px solid #ccc;
   border-radius: 4px;
   box-sizing: border-box;
+}
+
+.comment-textarea {
+  width: 100px;
+  height: 50px;
+  padding: 5px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.timesheet-comment-section {
+  margin: 15px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.day-select {
+  padding: 5px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  width: 150px;
+}
+
+.comment-display-textarea {
+  width: 100%;
+  min-height: 100px;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  resize: vertical;
+  font-family: Arial, sans-serif;
+  background-color: #fff;
 }
 
 .attachment-field {
@@ -180,7 +215,18 @@
 .attached-files li {
   display: flex;
   align-items: center;
-  margin: 5px 0;
+  gap: 10px;
+  margin-bottom: 5px;
+}
+
+.attachment-link {
+  color: #007bff;
+  text-decoration: none;
+  margin-right: 10px;
+}
+
+.attachment-link:hover {
+  text-decoration: underline;
 }
 
 .remove-button {
@@ -220,6 +266,22 @@
   cursor: not-allowed;
 }
 
+.submit-button {
+  padding: 8px 15px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  background-color: #007bff;
+  color: white;
+  margin-left: 10px;
+}
+
+.submit-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
 .error-message {
   color: red;
   margin-top: 10px;
@@ -235,24 +297,26 @@
   margin-top: 10px;
 }
 
-/* New Styles for Comment Display */
-.comment-display {
-  margin-top: 15px;
-}
-
-.comment-display-textarea {
-  width: 100%;
-  min-height: 100px;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  resize: vertical; /* Allows vertical resizing */
-  font-family: Arial, sans-serif;
-  background-color: #fff;
-}
-
-/* Style for selected row */
-.timesheet-table .selected-row {
-  background-color: #e0f7fa;
-  cursor: pointer;
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .timesheet-table {
+    font-size: 12px;
+  }
+  .hours-input {
+    width: 50px;
+  }
+  .comment-textarea {
+    width: 80px;
+    height: 40px;
+  }
+  .timesheet-table th,
+  .timesheet-table td {
+    padding: 4px;
+  }
+  .day-select {
+    width: 100%;
+  }
+  .timesheet-comment-section {
+    margin: 10px 0;
+  }
 }
