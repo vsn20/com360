@@ -176,7 +176,6 @@
   gap: 0.5rem;
   background: #f8fafc;
   padding: 0.3rem 0.8rem;
- Turk: nowrap;
   border-radius: 12px;
 }
 
@@ -228,7 +227,6 @@
   color: #1a1a1a;
   margin-bottom: 1.2rem;
   background: linear-gradient(90deg, #0070f3, #00c4b4);
-  -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
