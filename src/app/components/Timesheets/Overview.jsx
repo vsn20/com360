@@ -260,6 +260,21 @@ const Overview = () => {
       }
     }
 
+    // Validation for comments when submitting
+    if (isSubmit) {
+      const invalidTimesheets = targetTimesheets.filter((ts) => {
+        return ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'].some((day) => {
+          const hours = parseFloat(ts[`${day}_hours`] || 0);
+          const comment = ts[`${day}_comment`] || '';
+          return hours > 0 && (!comment || comment.trim() === '');
+        });
+      });
+      if (invalidTimesheets.length > 0) {
+        setError('A comment is required for any day with hours greater than 0 before submitting.');
+        return;
+      }
+    }
+
     const formDataArray = targetTimesheets.map((ts) => {
       const formData = new FormData();
       formData.append('project_id', ts.project_id);
