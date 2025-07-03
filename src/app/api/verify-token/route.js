@@ -68,6 +68,7 @@ export async function POST(request) {
     let hasAddRoles = false;
     let hasAddAccount = false;
     let hasAdproject = false;
+    let hastimesheet=false;
     let hasEditProjectAssignment = false; // Flag for project assignment edit
     for (const row of rows) {
       const {
@@ -91,7 +92,9 @@ export async function POST(request) {
       }
 
       const menu = menuMap.get(menuid);
-
+if (menuhref === '/userscreens/timesheets') { // Updated to match case
+          hastimesheet = true;
+        }
       if (hassubmenu === 'yes' && submenuid && submenuurl) {
         menu.submenu.push({
           title: submenuname,
@@ -117,7 +120,6 @@ export async function POST(request) {
         menu.href = menuhref;
       }
     }
-
     menuMap.forEach(menu => {
       if (menu.href) {
         accessibleItems.push({
@@ -135,6 +137,7 @@ export async function POST(request) {
       });
     });
 
+  
     if (isAdmin) {
       accessibleItems.push({
         href: '/userscreens/prioritysetting',
@@ -182,7 +185,13 @@ export async function POST(request) {
         priority: 1005,
       });
     }
-
+ if (hastimesheet) {
+      accessibleItems.push({
+        href: '/userscreens/timesheets/pendingapproval',
+        isMenu: true,
+        priority: 10000,
+      });
+    }
     accessibleItems.sort((a, b) => a.priority - b.priority);
     console.log("Accessible items for user:", JSON.stringify(accessibleItems, null, 2));
 
@@ -196,9 +205,13 @@ export async function POST(request) {
     const isEditAccountPath = pathname.match(/^\/userscreens\/account\/edit\/[^/]+$/);
     const isEditProjectPath = pathname.match(/^\/userscreens\/project\/edit\/[^/]+$/);
     const isEditProjectAssignmentPath = pathname.match(/^\/userscreens\/Project_Assign\/edit\/[^/]+$/); // Updated to match case
-
+    const ispendingapproval=pathname.match(/^\/userscreens\/timesheets\/pendingapproval$/)
     if (isEditEmployeePath && accessiblePaths.includes('/userscreens/employee/edit/:empid')) {
       console.log(`Access granted to ${pathname} for roleid ${roleid} (dynamic employee edit route)`);
+      return NextResponse.json({ success: true, accessibleItems });
+    }
+    if(ispendingapproval&&accessiblePaths.includes('/userscreens/timesheets/pendingapproval')){
+       console.log(`Access granted to ${pathname} for roleid ${roleid} (dynamic employee edit route)`);
       return NextResponse.json({ success: true, accessibleItems });
     }
     if (isEditProjectPath && accessiblePaths.includes('/userscreens/project/edit/:PRJ_ID')) {

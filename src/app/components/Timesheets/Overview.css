@@ -320,3 +320,19 @@
     margin: 10px 0;
   }
 }
+.pending-approve-button {
+  background-color: rgb(108, 108, 218);
+  color: white;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-left: 10px;
+}
+.pending-approve-button:hover {
+  background-color: #1e2c8d;
+}
+.pending-approve-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
