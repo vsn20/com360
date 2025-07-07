@@ -43,7 +43,7 @@ export default function Navbar() {
       <a href="/jobs">COM@360 jobs</a>
       <a href="/" className={pathname === '/' ? 'active' : ''}>Home</a>
       <a href="/jobs" className={pathname === '/jobs' ? 'active' : ''}>Jobs</a>
-      <a href="/jobs/applications" className={pathname === '/jobs/applications' ? 'active' : ''}>Applications</a>
+      <a href="/jobs/jobapplications" className={pathname === '/jobs/jobapplications' ? 'active' : ''}>Applications</a>
       <a href="#"><MdApps className="menu-icon" /></a>
       {user ? (
         <div
@@ -55,8 +55,8 @@ export default function Navbar() {
           <div
             className="profile-icon"
             style={{
-              width: '40px',
-              height: '40px',
+              width: '25px',
+              height: '25px',
               borderRadius: '50%',
               backgroundColor: '#007bff',
               color: 'white',

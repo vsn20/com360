@@ -27,6 +27,44 @@ export async function middleware(request) {
   // Get the token from cookies
   const token = request.cookies.get('jwt_token')?.value;
 
+
+    // Special handling for job candidate login paths
+  // Special handling for job candidate paths
+const isJobCandidatePath = pathname.startsWith('/jobs/jobapplications') || pathname.startsWith('/jobs/apply/');
+if (isJobCandidatePath) {
+  const jobToken = request.cookies.get('job_jwt_token')?.value;
+
+  if (!jobToken) {
+    console.log("No job_jwt_token found for job candidate path, redirecting to jobs login");
+    return NextResponse.redirect(new URL('/jobs/jobslogin', request.url));
+  }
+
+  try {
+    const verifyResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/jobs/verify-token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: `job_jwt_token=${jobToken}`,
+      },
+      body: JSON.stringify({ token: jobToken }),
+    });
+
+    const result = await verifyResponse.json();
+
+    if (verifyResponse.ok && result.success) {
+      console.log("Job token verified, access granted to:", pathname);
+      return NextResponse.next();
+    }
+
+    console.log("Invalid job_jwt_token, redirecting to jobs login");
+    return NextResponse.redirect(new URL('/jobs/jobslogin', request.url));
+  } catch (error) {
+    console.error("Error verifying job_jwt_token:", error.message);
+    return NextResponse.redirect(new URL('/jobs/jobslogin', request.url));
+  }
+}
+
+
   // Allow public paths without a token
   if (!token) {
     if (publicPaths.includes(pathname)) {
