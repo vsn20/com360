@@ -1,0 +1,181 @@
+/* Container for the ConfigHub Overview */
+.config-container {
+  padding: 20px;
+  max-width: 1000px;
+  margin: 0 auto;
+  font-family: Arial, sans-serif;
+}
+
+/* Heading for category sections */
+.category-section h3 {
+  font-size: 20px;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+/* Add button */
+.add-button {
+  padding: 8px 15px;
+  border: none;
+  border-radius: 4px;
+  background-color: #007bff;
+  color: white;
+  cursor: pointer;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.add-button:hover {
+  background-color: #0056b3;
+}
+
+.add-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+/* Edit button */
+.edit-button {
+  padding: 5px 10px;
+  border: none;
+  border-radius: 4px;
+  background-color: #007bff;
+  color: white;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.edit-button:hover {
+  background-color: #0056b3;
+}
+
+.edit-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+/* Error message */
+.error-message {
+  color: red;
+  margin-bottom: 15px;
+  font-size: 16px;
+}
+
+/* Loading or no data message */
+.config-container p {
+  font-size: 16px;
+  color: #666;
+  margin-bottom: 15px;
+}
+
+/* Configuration table */
+.config-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  margin-bottom: 20px;
+}
+
+/* Table headers */
+.config-table th {
+  background-color: #f4f4f4;
+  padding: 12px;
+  text-align: left;
+  font-weight: bold;
+  border-bottom: 2px solid #ddd;
+  color: #333;
+}
+
+/* Table cells */
+.config-table td {
+  padding: 12px;
+  border-bottom: 1px solid #ddd;
+}
+
+/* Table row hover */
+.config-table tr:hover {
+  background-color: #f9f9f9;
+}
+
+/* Input field for new/edit value */
+.value-input {
+  padding: 5px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 14px;
+}
+
+.value-input:disabled {
+  background-color: #f4f4f4;
+  cursor: not-allowed;
+}
+
+/* Select dropdown for active status */
+.active-select {
+  padding: 5px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  width: 100px;
+  font-size: 14px;
+}
+
+.active-select:disabled {
+  background-color: #f4f4f4;
+  cursor: not-allowed;
+}
+
+/* Save button */
+.save-button {
+  padding: 8px 15px;
+  border: none;
+  border-radius: 4px;
+  background-color: #28a745;
+  color: white;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.save-button:hover {
+  background-color: #218838;
+}
+
+.save-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .config-container {
+    padding: 10px;
+  }
+
+  .category-section h3 {
+    font-size: 18px;
+  }
+
+  .config-table th,
+  .config-table td {
+    padding: 8px;
+    font-size: 14px;
+  }
+
+  .add-button,
+  .edit-button,
+  .save-button {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .value-input {
+    font-size: 12px;
+  }
+
+  .active-select {
+    width: 80px;
+    font-size: 12px;
+  }
+}
