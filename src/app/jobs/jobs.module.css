@@ -9,6 +9,15 @@
   min-height: 100vh;
 }
 
+/* Add to existing jobs.module.css */
+.disabled {
+  background-color: #a0aec0; /* Gray background */
+  color: #fff;
+  cursor: not-allowed;
+  opacity: 0.6;
+  border: none;
+}
+
 .topFilter {
   display: flex;
   flex-wrap: wrap;

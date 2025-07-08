@@ -1,0 +1,88 @@
+.applications-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.applications-title {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #1a202c;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.no-applications {
+  text-align: center;
+  color: #718096;
+  font-size: 1.25rem;
+  margin-top: 2rem;
+}
+
+.applications-table-container {
+  overflow-x: auto;
+  background: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.applications-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.applications-table th,
+.applications-table td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.applications-table th {
+  background: #f7fafc;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.applications-table tr:hover {
+  background: #f7fafc;
+}
+
+.status-submitted {
+  color: #2b6cb0;
+  font-weight: 500;
+}
+
+.status-accepted {
+  color: #2f855a;
+  font-weight: 500;
+}
+
+.status-rejected {
+  color: #c53030;
+  font-weight: 500;
+}
+
+.resume-link {
+  color: #3182ce;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.resume-link:hover {
+  text-decoration: underline;
+}
+
+.loading {
+  text-align: center;
+  padding: 2  rem;
+  color: #4a5568;
+  font-size: 1.25rem;
+}
+
+.error {
+  text-align: center;
+  padding: 2rem;
+  color: #c53030;
+  font-size: 1.25rem;
+}
