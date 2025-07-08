@@ -2,20 +2,32 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
+import Link from 'next/link';
 import styles from './submenubar.module.css';
 
 function SubmenuBar() {
   const pathname = usePathname();
   const [menuItems, setMenuItems] = useState([]);
+  const [isFetched, setIsFetched] = useState(false); // Flag to prevent re-fetching
 
   useEffect(() => {
-    async function fetchData() {
-      const res = await fetch('/api/menu');
-      const data = await res.json();
-      setMenuItems(data);
+    if (!isFetched) {
+      async function fetchData() {
+        try {
+          const res = await fetch('/api/menu', { credentials: 'include' });
+          if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+          const data = await res.json();
+          setMenuItems(data);
+          setIsFetched(true); // Mark as fetched after successful load
+        } catch (error) {
+          console.error('Error fetching menu items:', error.message);
+          setMenuItems([]);
+          setIsFetched(true); // Still mark as fetched to avoid retries on error
+        }
+      }
+      fetchData();
     }
-    fetchData();
-  }, []);
+  }, [isFetched]); // Dependency on isFetched to run only once
 
   const activeMenu = menuItems.find(
     item => item.submenu?.some(sub => pathname === sub.href)
@@ -26,15 +38,14 @@ function SubmenuBar() {
   return (
     <div className={styles.submenuBar}>
       {activeMenu.submenu.map((sub) => (
-        <a
+        <Link
           key={sub.href}
           href={sub.href}
           className={`${styles.submenuItem} ${pathname === sub.href ? styles.active : ''}`}
         >
           {sub.title}
-        </a>
+        </Link>
       ))}
-      
     </div>
   );
 }

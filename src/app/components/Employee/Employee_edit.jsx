@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { fetchEmployeeById, fetchRolesByOrgId, updateEmployee, fetchEmployeesByOrgId } from '@/app/serverActions/Employee/overview';
+import { fetchEmployeeById, fetchRolesByOrgId, updateEmployee, fetchEmployeesByOrgId, fetchLeaveAssignments } from '@/app/serverActions/Employee/overview';
 import './editemployee.css';
 
-const EditEmployee = () => {
+const EditEmployee = ({ leaveTypes }) => {
   const router = useRouter();
   const params = useParams();
   const empid = params.empid;
@@ -26,19 +26,21 @@ const EditEmployee = () => {
     LAST_WORK_DATE: '',
     TERMINATED_DATE: '',
     REJOIN_DATE: '',
-    superior: '', // Added superior field
+    superior: '',
   });
+  const [leaves, setLeaves] = useState({});
   const [roles, setRoles] = useState([]);
-  const [employees, setEmployees] = useState([]); // Added employees state for superior dropdown
+  const [employees, setEmployees] = useState([]);
   const [state, setState] = useState({ error: null, success: false });
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [employee, rolesData, employeesData] = await Promise.all([
+        const [employee, rolesData, employeesData, leaveAssignments] = await Promise.all([
           fetchEmployeeById(empid),
           fetchRolesByOrgId(),
-          fetchEmployeesByOrgId(), // Fetch employees for superior dropdown
+          fetchEmployeesByOrgId(),
+          fetchLeaveAssignments(empid),
         ]);
         setFormData({
           empid: employee.empid || '',
@@ -56,10 +58,11 @@ const EditEmployee = () => {
           LAST_WORK_DATE: employee.LAST_WORK_DATE ? new Date(employee.LAST_WORK_DATE).toISOString().split('T')[0] : '',
           TERMINATED_DATE: employee.TERMINATED_DATE ? new Date(employee.TERMINATED_DATE).toISOString().split('T')[0] : '',
           REJOIN_DATE: employee.REJOIN_DATE ? new Date(employee.REJOIN_DATE).toISOString().split('T')[0] : '',
-          superior: employee.superior || '', // Set initial superior value
+          superior: employee.superior || '',
         });
         setRoles(rolesData);
-        setEmployees(employeesData); // Set employees for superior dropdown
+        setEmployees(employeesData);
+        setLeaves(leaveAssignments);
         setState({ error: null, success: false });
       } catch (err) {
         console.error('Error loading data:', err);
@@ -74,11 +77,18 @@ const EditEmployee = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleLeaveChange = (leaveid, value) => {
+    setLeaves(prev => ({ ...prev, [leaveid]: value }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const formDataToSubmit = new FormData();
     Object.entries(formData).forEach(([key, value]) => {
-      formDataToSubmit.append(key, value);
+      formDataToSubmit.append(key, value || '');
+    });
+    Object.entries(leaves).forEach(([leaveid, noofleaves]) => {
+      if (noofleaves !== '') formDataToSubmit.append(`leaves[${leaveid}]`, noofleaves || '0');
     });
     const result = await updateEmployee({}, formDataToSubmit);
     setState(result);
@@ -87,7 +97,6 @@ const EditEmployee = () => {
     }
   };
 
-  // Map employees with their roles for the dropdown
   const employeesWithRoles = employees.map(employee => {
     const role = roles.find(r => r.roleid === employee.roleid);
     const rolename = role ? role.rolename : 'Unknown Role';
@@ -265,6 +274,28 @@ const EditEmployee = () => {
             ))}
           </select>
         </div>
+        {leaveTypes.map((leave) => (
+          <div key={leave.id} style={{ marginBottom: "20px" }}>
+            <label htmlFor={`noofleaves_${leave.id}`} style={{ display: "block", marginBottom: "5px" }}>
+              {leave.Name} (Number of Leaves):
+            </label>
+            <input
+              type="number"
+              id={`noofleaves_${leave.id}`}
+              name={`noofleaves_${leave.id}`}
+              value={leaves[leave.id] || ''}
+              onChange={(e) => handleLeaveChange(leave.id, e.target.value)}
+              min="0"
+              step="any"
+              style={{
+                width: "100%",
+                padding: "8px",
+                borderRadius: "5px",
+                border: "1px solid #ccc",
+              }}
+            />
+          </div>
+        ))}
         <button type="submit">Submit</button>
       </form>
     </div>

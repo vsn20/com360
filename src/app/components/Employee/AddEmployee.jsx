@@ -1,18 +1,21 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { addemployee } from '@/app/serverActions/addemployee';
 
-export default function AddEmployee({ roles, currentrole, orgid, error, employees }) {
+export default function AddEmployee({ roles, currentrole, orgid, error, employees, leaveTypes }) {
   const router = useRouter();
   const [formError, setFormError] = useState(null);
+  const [leaves, setLeaves] = useState({});
 
-  // Today's date in YYYY-MM-DD format for the input field
-  const today = new Date().toISOString().split('T')[0]; // "2025-06-29"
+  const today = new Date().toISOString().split('T')[0];
 
   const handleSubmit = async (formData) => {
-    formData.append('currentRole', currentrole || ''); // Ensure currentrole is a string
+    formData.append('currentRole', currentrole || '');
+    Object.entries(leaves).forEach(([leaveid, noofleaves]) => {
+      if (noofleaves !== '') formData.append(`leaves[${leaveid}]`, noofleaves || '0');
+    });
     const result = await addemployee(formData);
     if (result?.error) {
       setFormError(result.error);
@@ -21,7 +24,10 @@ export default function AddEmployee({ roles, currentrole, orgid, error, employee
     }
   };
 
-  // Map employees with their roles
+  const handleLeaveChange = (leaveid, value) => {
+    setLeaves(prev => ({ ...prev, [leaveid]: value }));
+  };
+
   const employeesWithRoles = employees.map(employee => {
     const role = roles.find(r => r.roleid === employee.roleid);
     const rolename = role ? role.rolename : 'Unknown Role';
@@ -34,7 +40,6 @@ export default function AddEmployee({ roles, currentrole, orgid, error, employee
       {error && <p style={{ color: "red" }}>{error}</p>}
       {formError && <p style={{ color: "red" }}>{formError}</p>}
       <form action={handleSubmit}>
-        {/* Organization ID (Non-editable) */}
         <div style={{ marginBottom: "20px" }}>
           <label htmlFor="orgid" style={{ display: "block", marginBottom: "5px" }}>
             Organization ID:
@@ -54,8 +59,6 @@ export default function AddEmployee({ roles, currentrole, orgid, error, employee
             disabled
           />
         </div>
-
-        {/* Required Fields */}
         <div style={{ marginBottom: "20px" }}>
           <label htmlFor="empFstName" style={{ display: "block", marginBottom: "5px" }}>
             First Name: *
@@ -74,7 +77,6 @@ export default function AddEmployee({ roles, currentrole, orgid, error, employee
             required
           />
         </div>
-
         <div style={{ marginBottom: "20px" }}>
           <label htmlFor="empMidName" style={{ display: "block", marginBottom: "5px" }}>
             Middle Name:
@@ -92,7 +94,6 @@ export default function AddEmployee({ roles, currentrole, orgid, error, employee
             }}
           />
         </div>
-
         <div style={{ marginBottom: "20px" }}>
           <label htmlFor="empLastName" style={{ display: "block", marginBottom: "5px" }}>
             Last Name: *
@@ -111,7 +112,6 @@ export default function AddEmployee({ roles, currentrole, orgid, error, employee
             required
           />
         </div>
-
         <div style={{ marginBottom: "20px" }}>
           <label htmlFor="email" style={{ display: "block", marginBottom: "5px" }}>
             Email: *
@@ -130,8 +130,6 @@ export default function AddEmployee({ roles, currentrole, orgid, error, employee
             required
           />
         </div>
-
-        {/* Role Dropdown */}
         <div style={{ marginBottom: "20px" }}>
           <label htmlFor="roleid" style={{ display: "block", marginBottom: "5px" }}>
             Role: *
@@ -155,8 +153,6 @@ export default function AddEmployee({ roles, currentrole, orgid, error, employee
             ))}
           </select>
         </div>
-
-        {/* Superior Dropdown with Name and Role */}
         <div style={{ marginBottom: "20px" }}>
           <label htmlFor="superior" style={{ display: "block", marginBottom: "5px" }}>
             Superior:
@@ -179,8 +175,6 @@ export default function AddEmployee({ roles, currentrole, orgid, error, employee
             ))}
           </select>
         </div>
-
-        {/* Optional Fields */}
         <div style={{ marginBottom: "20px" }}>
           <label htmlFor="empPrefName" style={{ display: "block", marginBottom: "5px" }}>
             Preferred Name:
@@ -198,7 +192,6 @@ export default function AddEmployee({ roles, currentrole, orgid, error, employee
             }}
           />
         </div>
-
         <div style={{ marginBottom: "20px" }}>
           <label htmlFor="gender" style={{ display: "block", marginBottom: "5px" }}>
             Gender:
@@ -219,7 +212,6 @@ export default function AddEmployee({ roles, currentrole, orgid, error, employee
             <option value="Other">Other</option>
           </select>
         </div>
-
         <div style={{ marginBottom: "20px" }}>
           <label htmlFor="mobileNumber" style={{ display: "block", marginBottom: "5px" }}>
             Mobile Number:
@@ -237,7 +229,6 @@ export default function AddEmployee({ roles, currentrole, orgid, error, employee
             }}
           />
         </div>
-
         <div style={{ marginBottom: "20px" }}>
           <label htmlFor="dob" style={{ display: "block", marginBottom: "5px" }}>
             Date of Birth:
@@ -254,7 +245,6 @@ export default function AddEmployee({ roles, currentrole, orgid, error, employee
             }}
           />
         </div>
-
         <div style={{ marginBottom: "20px" }}>
           <label htmlFor="hireDate" style={{ display: "block", marginBottom: "5px" }}>
             Hire Date: *
@@ -273,7 +263,28 @@ export default function AddEmployee({ roles, currentrole, orgid, error, employee
             required
           />
         </div>
-
+        {leaveTypes.map((leave) => (
+          <div key={leave.id} style={{ marginBottom: "20px" }}>
+            <label htmlFor={`noofleaves_${leave.id}`} style={{ display: "block", marginBottom: "5px" }}>
+              {leave.Name} (Number of Leaves):
+            </label>
+            <input
+              type="number"
+              id={`noofleaves_${leave.id}`}
+              name={`noofleaves_${leave.id}`}
+              value={leaves[leave.id] || ''}
+              onChange={(e) => handleLeaveChange(leave.id, e.target.value)}
+              min="0"
+              step="any"
+              style={{
+                width: "100%",
+                padding: "8px",
+                borderRadius: "5px",
+                border: "1px solid #ccc",
+              }}
+            />
+          </div>
+        ))}
         <button
           type="submit"
           style={{

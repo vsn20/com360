@@ -2,6 +2,7 @@ import { getAllroles } from "@/app/serverActions/getAllroles";
 import AddEmployee from "@/app/components/Employee/AddEmployee";
 import { cookies } from "next/headers";
 import DBconnection from "@/app/utils/config/db";
+import { fetchLeaveTypes } from "@/app/serverActions/Employee/overview";
 
 // Simple function to decode JWT without verification
 const decodeJwt = (token) => {
@@ -68,13 +69,23 @@ export default async function AddEmployeePage({ searchParams }) {
     );
   }
 
+  // Fetch leave types
+  let leaveTypes = [];
+  try {
+    leaveTypes = await fetchLeaveTypes();
+  } catch (err) {
+    console.error('Error fetching leave types:', err);
+    // Proceed without leaveTypes, as it's optional
+  }
+
   return (
     <AddEmployee
       roles={roles}
-      currentrole={currentrole} // Dynamically set based on orgid and roleid
+      currentrole={currentrole}
       orgid={orgid}
       error={error}
-      employees={employees} // Pass the fetched employees
+      employees={employees}
+      leaveTypes={leaveTypes} // Pass leave types to the component
     />
   );
 }

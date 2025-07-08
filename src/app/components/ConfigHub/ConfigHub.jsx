@@ -1,4 +1,5 @@
-'use client'
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import { fetchConfigData, addConfigValue, updateConfigValue } from '@/app/serverActions/Confighub/Overview';
 import './ConfigHub.css'; // Import the CSS file
@@ -10,6 +11,7 @@ const ConfigHub = () => {
   const [newRow, setNewRow] = useState({});
   const [editRow, setEditRow] = useState(null); // Track editing row { category, index, value, isactive }
   const [loading, setLoading] = useState(false); // Add loading state
+  const [refreshKey, setRefreshKey] = useState(0); // Force re-render key
 
   useEffect(() => {
     console.log('useEffect triggered');
@@ -22,7 +24,7 @@ const ConfigHub = () => {
             configData[row.category] = { g_id: row.g_id, values: [] };
           }
           if (row.value && row.id) {
-            configData[row.category].values.push({ id: row.id, value: row.value, isactive: row.isactive });
+            configData[row.category].values.push({ id: row.id, value: row.value, isactive: row.isactive === 1 });
           }
         });
         setConfigData(configData);
@@ -35,22 +37,23 @@ const ConfigHub = () => {
 
   const handleAddRow = (category) => {
     console.log(`Adding row for category: ${category}`);
-    if (!newRow[category] && !editRow && !loading) { // Prevent adding if editing or loading
+    if (!newRow[category] && !editRow && !loading) {
       setNewRow(prev => ({ ...prev, [category]: { value: '', isactive: true } }));
     }
   };
 
   const handleEditRow = (category, index) => {
-    console.log(`Editing row for category: ${category}, index: ${index}`);
-    if (!newRow[category] && !editRow && !loading) { // Prevent editing if adding or loading
+    console.log(`Editing row for category: ${category}, index: ${index}, isactive: ${configData[category].values[index].isactive}`);
+    if (!newRow[category] && !editRow && !loading) {
       const { id, value, isactive } = configData[category].values[index];
       setEditRow({ category, index, id, value, isactive });
+      setRefreshKey(prev => prev + 1); // Force re-render
     }
   };
 
   const handleSaveRow = async (category, isEdit = false, index = null) => {
-    console.log(`Saving row for category: ${category}, isEdit: ${isEdit}, index: ${index}`);
-    if (loading) return; // Prevent multiple saves
+    console.log(`Saving row for category: ${category}, isEdit: ${isEdit}, index: ${index}, isactive: ${isEdit ? editRow?.isactive : newRow[category]?.isactive}`);
+    if (loading) return;
     setLoading(true);
     setError(null);
 
@@ -83,16 +86,18 @@ const ConfigHub = () => {
       if (result.error) {
         setError(result.error);
       } else {
-        setConfigData(prev => {
-          const newData = { ...prev };
-          if (!isEdit && !newData[category]) newData[category] = { g_id, values: [] };
-          if (isEdit) {
-            newData[category].values[index] = { id, value, isactive };
-          } else {
-            newData[category].values.push({ value, isactive });
+        const rows = await fetchConfigData();
+        const updatedConfigData = {};
+        rows.forEach(row => {
+          if (!updatedConfigData[row.category]) {
+            updatedConfigData[row.category] = { g_id: row.g_id, values: [] };
           }
-          return newData;
+          if (row.value && row.id) {
+            updatedConfigData[row.category].values.push({ id: row.id, value: row.value, isactive: row.isactive === 1 });
+          }
         });
+        setConfigData(updatedConfigData);
+
         if (isEdit) {
           setEditRow(null);
         } else {
@@ -102,10 +107,10 @@ const ConfigHub = () => {
             return updated;
           });
         }
-        window.location.reload(); // Refresh page on successful save
       }
     } catch (err) {
       setError(`Failed to save: ${err.message}`);
+      console.error(`Save error for ${category}:`, err);
     } finally {
       setLoading(false);
     }
@@ -161,7 +166,8 @@ const ConfigHub = () => {
                         </td>
                         <td>
                           <select
-                            value={editRow.isactive}
+                            key={refreshKey} // Force re-render
+                            value={editRow.isactive.toString()} // Ensure boolean is converted to string
                             onChange={(e) => handleInputChange(category, 'isactive', e.target.value, true)}
                             disabled={loading}
                             className="active-select"
@@ -212,7 +218,7 @@ const ConfigHub = () => {
                   </td>
                   <td>
                     <select
-                      value={newRow[category].isactive}
+                      value={newRow[category].isactive.toString()} // Ensure boolean is converted to string
                       onChange={(e) => handleInputChange(category, 'isactive', e.target.value)}
                       disabled={loading}
                       className="active-select"
