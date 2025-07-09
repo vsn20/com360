@@ -12,6 +12,7 @@ const JobsPage = () => {
   const [selectedOrgType, setSelectedOrgType] = useState('');
   const [selectedLocation, setSelectedLocation] = useState('');
   const [selectedJob, setSelectedJob] = useState(null);
+  const [appliedJobs, setAppliedJobs] = useState([]);
 
   useEffect(() => {
     fetch('/api/jobs')
@@ -23,6 +24,7 @@ const JobsPage = () => {
         );
         setOrgs(data.orgs);
         setJobs(activeJobs);
+        setAppliedJobs(data.appliedJobs || []);
         if (activeJobs.length > 0) setSelectedJob(activeJobs[0]);
       })
       .catch((error) => console.error('Error fetching jobs:', error));
@@ -31,43 +33,44 @@ const JobsPage = () => {
   const handleOrgChange = (e) => {
     const orgid = e.target.value;
     setSelectedOrg(orgid);
-    setSelectedOrgType(''); // Reset type filter
-    setSelectedLocation(''); // Reset location filter
+    setSelectedOrgType('');
+    setSelectedLocation('');
     const filtered = jobs.filter((job) => (!orgid || job.orgid == orgid));
     setSelectedJob(filtered.length ? filtered[0] : null);
   };
 
   const handleOrgTypeChange = (type) => {
     setSelectedOrgType(type);
-    const filtered = jobs.filter((job) => job.orgid == selectedOrg &&
-                                         (!type || job.type === type) &&
-                                         (!selectedLocation || job.country_value === selectedLocation));
+    const filtered = jobs.filter(
+      (job) =>
+        job.orgid == selectedOrg &&
+        (!type || job.type === type) &&
+        (!selectedLocation || job.country_value === selectedLocation)
+    );
     setSelectedJob(filtered.length ? filtered[0] : null);
   };
 
   const handleLocationChange = (location) => {
     setSelectedLocation(location);
-    const filtered = jobs.filter((job) => job.orgid == selectedOrg &&
-                                         (!selectedOrgType || job.type === selectedOrgType) &&
-                                         (!location || job.country_value === location));
+    const filtered = jobs.filter(
+      (job) =>
+        job.orgid == selectedOrg &&
+        (!selectedOrgType || job.type === selectedOrgType) &&
+        (!location || job.country_value === location)
+    );
     setSelectedJob(filtered.length ? filtered[0] : null);
   };
 
-  // Get unique types and locations for the selected organization
   const filteredJobs = selectedOrg ? jobs.filter((job) => job.orgid == selectedOrg) : jobs;
-  const uniqueOrgTypes = [...new Set(filteredJobs.map(job => job.type))];
-  const uniqueLocations = [...new Set(filteredJobs.map(job => job.country_value).filter(loc => loc))];
+  const uniqueOrgTypes = [...new Set(filteredJobs.map((job) => job.type))];
+  const uniqueLocations = [...new Set(filteredJobs.map((job) => job.country_value).filter((loc) => loc))];
 
   return (
     <div className={styles.container}>
       <div className={styles.topFilter}>
         <div className={styles.filterGroup}>
           <label className={styles.filterLabel}><Filter size={16} /> Organization</label>
-          <select
-            className={styles.orgSelect}
-            value={selectedOrg}
-            onChange={handleOrgChange}
-          >
+          <select className={styles.orgSelect} value={selectedOrg} onChange={handleOrgChange}>
             <option value="">All Organizations</option>
             {orgs.map((org) => (
               <option key={org.orgid} value={org.orgid}>{org.orgname}</option>
@@ -124,8 +127,11 @@ const JobsPage = () => {
         <div className={styles.jobsList}>
           {filteredJobs.length > 0 ? (
             filteredJobs
-              .filter((job) => (!selectedOrgType || job.type === selectedOrgType) &&
-                              (!selectedLocation || job.country_value === selectedLocation))
+              .filter(
+                (job) =>
+                  (!selectedOrgType || job.type === selectedOrgType) &&
+                  (!selectedLocation || job.country_value === selectedLocation)
+              )
               .map((job) => (
                 <div
                   key={job.jobid}
@@ -145,9 +151,13 @@ const JobsPage = () => {
                     </span>
                   </div>
                   <div className={styles.jobDate}><Calendar size={14} /> Apply by: {job.lastdate_for_application}</div>
-                  <Link href={`/jobs/apply/${job.jobid}`}>
-                    <button className={styles.applyInline}>Apply Now</button>
-                  </Link>
+                  {appliedJobs.includes(job.jobid) ? (
+                    <div className={styles.alreadyApplied}>Already Applied</div>
+                  ) : (
+                    <Link href={`/jobs/apply/${job.jobid}`}>
+                      <button className={styles.applyInline}>Apply Now</button>
+                    </Link>
+                  )}
                 </div>
               ))
           ) : (
@@ -174,9 +184,13 @@ const JobsPage = () => {
               <p className={styles.jobDetailsText}>{selectedJob.description}</p>
               <h3 className={styles.jobDetailsHeading}>Key Responsibilities</h3>
               <p className={styles.jobDetailsText}>{selectedJob.keyresponsibilities}</p>
-              <Link href={`/jobs/apply/${selectedJob.jobid}`}>
-                <button className={styles.applyBtn}>Apply Now</button>
-              </Link>
+              {appliedJobs.includes(selectedJob.jobid) ? (
+                <div className={styles.alreadyApplied}>Already Applied</div>
+              ) : (
+                <Link href={`/jobs/apply/${selectedJob.jobid}`}>
+                  <button className={styles.applyBtn}>Apply Now</button>
+                </Link>
+              )}
             </div>
           ) : (
             <p className={styles.noJobs}>No job selected</p>
