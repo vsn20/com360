@@ -9,15 +9,6 @@
   min-height: 100vh;
 }
 
-/* Add to existing jobs.module.css */
-.disabled {
-  background-color: #a0aec0; /* Gray background */
-  color: #fff;
-  cursor: not-allowed;
-  opacity: 0.6;
-  border: none;
-}
-
 .topFilter {
   display: flex;
   flex-wrap: wrap;
@@ -218,6 +209,21 @@
   color: white;
 }
 
+.alreadyApplied {
+  margin-top: 0.8rem;
+  background-color: #a0aec0;
+  color: #ffffff;
+  padding: 5px 10px;
+  border: none;
+  border-radius: 5px;
+  font-size: 14px;
+  font-family: Arial, sans-serif;
+  text-align: center;
+  opacity: 0.8;
+  cursor: not-allowed;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
 .jobDetails {
   width: 60%;
   padding: 1.5rem;
@@ -233,10 +239,12 @@
 .jobDetailsTitle {
   font-size: 1.8rem;
   font-weight: 700;
-  color: #1a1a1a;
   margin-bottom: 1.2rem;
   background: linear-gradient(90deg, #0070f3, #00c4b4);
+  -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-fill-color: transparent;
 }
 
 .jobDetailsWrapper {
@@ -293,6 +301,21 @@
   background-color: #0CB25A;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   color: white;
+}
+
+.alreadyApplied {
+  margin-top: 1.5rem;
+  background-color: #a0aec0;
+  color: #ffffff;
+  padding: 5px 10px;
+  border: none;
+  border-radius: 5px;
+  font-size: 14px;
+  font-family: Arial, sans-serif;
+  text-align: center;
+  opacity: 0.8;
+  cursor: not-allowed;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .noJobs {
