@@ -107,7 +107,23 @@
   position: relative;
   transition: background-color 0.3s;
 }
+.sidebarArrow {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  margin-left: 8px;
+  vertical-align: middle;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 5px solid #fff; /* Adjust color to match your design */
+  transition: transform 0.3s ease;
+}
 
+/* Rotate arrow when the menu item is active or submenu is expanded */
+.sidebarMenuItem.active .sidebarArrow,
+.sidebarMenuItem:hover .sidebarArrow {
+  transform: rotate(90deg); /* Rotates to a down arrow when active/hovered */
+}
 .sidebarLink::before {
   content: '';
   position: absolute;
@@ -164,7 +180,7 @@
 }
 
 .sidebarSubmenuLink:hover {
-  background-color: #d1d5db;
+  background-color:#0FD46C;
 }
 
 .com360_logo {
