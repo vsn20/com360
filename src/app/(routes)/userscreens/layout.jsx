@@ -55,7 +55,7 @@ export default async function userscreenLayout({ children }) {
   console.log('Decoded user data:', userData);
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
+    <div>
       <Sidebar isAdmin={userData.isAdmin} /> {/* Pass isAdmin as prop */}
       <div className={styles.rightContent}>
         <Navbar
