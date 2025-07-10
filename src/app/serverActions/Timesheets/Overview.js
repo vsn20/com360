@@ -262,10 +262,8 @@ export async function saveTimesheet(formData) {
     existingTimesheet = rows[0];
   }
 
-  // Check if user is superior
   const isUserSuperior = await isSuperior(pool, currentUserEmpId, employeeId);
 
-  // Restrict updates for non-superiors if timesheet is submitted or approved
   if (!isUserSuperior && existingTimesheet && (existingTimesheet.is_submitted === 1 || existingTimesheet.is_approved === 1)) {
     return { error: "Only superiors can edit submitted or approved timesheets." };
   }
@@ -319,19 +317,45 @@ export async function saveTimesheet(formData) {
     finalTimesheetId = result.insertId;
   }
 
-  // Handle attachments for this specific timesheet
+  // Enhanced file-saving logic to process each file only once
   const attachmentFiles = formData.getAll('attachment');
   const updatedAttachments = [];
+  const processedFiles = new Set(); // Track processed files by their unique identifier
+  const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf', 'text/plain'];
+  const maxFileSize = 5 * 1024 * 1024; // 5MB limit
+
   if (attachmentFiles.length > 0 && attachmentFiles[0].size > 0) {
     const uploadDir = path.join(process.cwd(), "public", "uploads", employeeId, weekStartDate.replace(/-/g, ""));
-    await fs.mkdir(uploadDir, { recursive: true });
+    try {
+      await fs.mkdir(uploadDir, { recursive: true });
 
-    for (const attachmentFile of attachmentFiles) {
-      if (attachmentFile.size > 0) {
+      for (const attachmentFile of attachmentFiles) {
+        // Use a unique identifier for the file (e.g., file name + size) to avoid duplicates
+        const fileIdentifier = `${attachmentFile.name}-${attachmentFile.size}`;
+        if (attachmentFile.size === 0 || processedFiles.has(fileIdentifier)) {
+          console.log(`Skipping duplicate or empty file: ${attachmentFile.name} (size: ${attachmentFile.size})`);
+          continue;
+        }
+
+        if (!allowedTypes.includes(attachmentFile.type)) {
+          console.log(`Invalid file type for ${attachmentFile.name}: ${attachmentFile.type}`);
+          return { error: `Invalid file type for ${attachmentFile.name}. Allowed types: ${allowedTypes.join(', ')}` };
+        }
+        if (attachmentFile.size > maxFileSize) {
+          console.log(`File ${attachmentFile.name} exceeds size limit: ${attachmentFile.size} bytes`);
+          return { error: `File ${attachmentFile.name} exceeds the 5MB size limit.` };
+        }
+
         const fileExtension = path.extname(attachmentFile.name) || '.bin';
         const uniqueFileName = `${uuidv4()}${fileExtension}`;
         const filePath = path.join(uploadDir, uniqueFileName);
+
+        console.log(`Saving file: ${attachmentFile.name} as ${uniqueFileName} to ${filePath}`);
+
+        // Save file to filesystem
         await fs.writeFile(filePath, Buffer.from(await attachmentFile.arrayBuffer()));
+
+        // Insert attachment metadata into database
         const [insertResult] = await pool.execute(
           "INSERT INTO timesheet_attachments (employee_id, week_start_date, year, timesheet_id, file_path, file_name, uploaded_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
           [
@@ -343,6 +367,9 @@ export async function saveTimesheet(formData) {
             attachmentFile.name
           ]
         );
+
+        console.log(`Inserted attachment: attachment_id=${insertResult.insertId}, file_name=${attachmentFile.name}`);
+
         updatedAttachments.push({
           attachment_id: insertResult.insertId,
           employee_id: employeeId,
@@ -353,8 +380,15 @@ export async function saveTimesheet(formData) {
           file_name: attachmentFile.name,
           uploaded_at: new Date().toISOString()
         });
+
+        processedFiles.add(fileIdentifier); // Mark this file as processed
       }
+    } catch (error) {
+      console.error("Error saving attachment:", error);
+      return { error: `Failed to save attachment: ${error.message}` };
     }
+  } else {
+    console.log("No valid attachment files provided.");
   }
 
   const [attachmentRows] = await pool.execute(
@@ -362,5 +396,76 @@ export async function saveTimesheet(formData) {
     [employeeId, weekStartDate, finalTimesheetId]
   );
 
+  console.log(`Fetched attachments for timesheet_id=${finalTimesheetId}:`, attachmentRows);
+
   return { success: true, timesheetId: finalTimesheetId, attachments: attachmentRows };
+}
+
+export async function removeAttachment(attachmentId, timesheetId) {
+  const token = cookies().get("jwt_token")?.value;
+  if (!token) return { error: "No token found. Please log in." };
+
+  const decoded = decodeJwt(token);
+  if (!decoded || !decoded.userId) return { error: "Invalid token or user ID not found." };
+
+  const pool = await DBconnection();
+  const [userRows] = await pool.execute("SELECT empid FROM C_USER WHERE username = ?", [decoded.userId]);
+  if (!userRows.length) return { error: "User not found in C_USER table." };
+  const currentUserEmpId = userRows[0].empid;
+
+  try {
+    // Fetch attachment and timesheet details
+    const [attachmentRows] = await pool.execute(
+      "SELECT employee_id, file_path FROM timesheet_attachments WHERE attachment_id = ? AND timesheet_id = ?",
+      [attachmentId, timesheetId]
+    );
+    if (!attachmentRows.length) return { error: "Attachment not found." };
+
+    const { employee_id: employeeId, file_path: filePath } = attachmentRows[0];
+
+    // Fetch timesheet to check submission/approval status
+    const [timesheetRows] = await pool.execute(
+      "SELECT is_submitted, is_approved FROM timesheets WHERE timesheet_id = ? AND employee_id = ?",
+      [timesheetId, employeeId]
+    );
+    if (!timesheetRows.length) return { error: "Timesheet not found." };
+
+    const { is_submitted, is_approved } = timesheetRows[0];
+
+    // Check if user is superior or the owner
+    const isUserSuperior = await isSuperior(pool, currentUserEmpId, employeeId);
+    const isOwner = currentUserEmpId === employeeId;
+
+    if (!isUserSuperior && !isOwner) {
+      return { error: "You are not authorized to remove this attachment." };
+    }
+
+    if (!isUserSuperior && (is_submitted === 1 || is_approved === 1)) {
+      return { error: "Cannot remove attachments from submitted or approved timesheets." };
+    }
+
+    // Delete attachment from database
+    const [deleteResult] = await pool.execute(
+      "DELETE FROM timesheet_attachments WHERE attachment_id = ? AND timesheet_id = ?",
+      [attachmentId, timesheetId]
+    );
+    if (deleteResult.affectedRows === 0) {
+      return { error: "Failed to delete attachment from database." };
+    }
+
+    // Delete file from filesystem
+    const absolutePath = path.join(process.cwd(), "public", filePath);
+    try {
+      await fs.unlink(absolutePath);
+      console.log(`Deleted file: ${absolutePath}`);
+    } catch (error) {
+      console.warn(`Failed to delete file at ${absolutePath}: ${error.message}`);
+      // Continue even if file deletion fails (e.g., file already deleted)
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error removing attachment:", error);
+    return { error: `Failed to remove attachment: ${error.message}` };
+  }
 }

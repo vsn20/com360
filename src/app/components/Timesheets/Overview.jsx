@@ -21,6 +21,7 @@ const Overview = () => {
   const [selectedComment, setSelectedComment] = useState({ timesheetId: null, day: null });
   const [superiorName, setSuperiorName] = useState('');
   const [isSuperior, setIsSuperior] = useState(false);
+  const [isSaving, setIsSaving] = useState(false); // New loading state
   const fileInputRef = useRef(null);
 
   const getWeekStartDate = (date) => {
@@ -183,6 +184,8 @@ const Overview = () => {
   };
 
   const handleApprovedChange = async (e, empId) => {
+    if (isSaving) return; // Prevent multiple submissions
+    setIsSaving(true);
     const isApproved = e.target.checked ? 1 : 0;
     const weekStart = getWeekStartDate(selectedDate);
     const formDataArray = employeeTimesheets
@@ -200,52 +203,61 @@ const Overview = () => {
           formData.append(`${day}_comment`, ts[`${day}_comment`] ?? '');
         });
         formData.append('is_submitted', ts.is_submitted || 0);
-        if (fileInputRef.current?.files.length > 0 && !noAttachmentFlag) {
-          Array.from(fileInputRef.current.files).forEach((file) => {
-            formData.append('attachment', file);
-          });
-        }
         return { formData, timesheetId: ts.timesheet_id || ts.temp_key };
       });
 
     try {
       const updatedAttachments = { ...attachments };
-      for (const { formData, timesheetId } of formDataArray) {
-        const result = await saveTimesheet(formData);
-        if (result.error) {
-          setError(result.error || 'Failed to approve timesheet.');
-          return;
+      // Append files only once, outside the loop
+      const files = fileInputRef.current?.files || [];
+      const formDataWithFiles = new FormData();
+      formDataArray.forEach(({ formData }) => {
+        for (let [key, value] of formData.entries()) {
+          formDataWithFiles.append(key, value);
         }
+      });
+      if (files.length > 0 && !noAttachmentFlag) {
+        Array.from(files).forEach((file) => formDataWithFiles.append('attachment', file));
+      }
+
+      const result = await saveTimesheet(formDataWithFiles);
+      if (result.error) {
+        setError(result.error || 'Failed to approve timesheet.');
+      } else {
         if (result.attachments && result.timesheetId) {
           updatedAttachments[result.timesheetId] = result.attachments;
-          if (result.timesheetId !== timesheetId) {
+          if (result.timesheetId !== formDataArray[0].timesheetId) {
             setEmployeeTimesheets((prev) =>
               prev.map((t) =>
-                t.temp_key === timesheetId ? { ...t, timesheet_id: result.timesheetId, temp_key: undefined } : t
+                t.temp_key === formDataArray[0].timesheetId ? { ...t, timesheet_id: result.timesheetId, temp_key: undefined } : t
               )
             );
           }
         }
-      }
-      setAttachments(updatedAttachments);
-      setNoAttachmentFlag(Object.values(updatedAttachments).every((atts) => !atts.length));
-      if (fileInputRef.current) fileInputRef.current.value = '';
-      setEmployeeTimesheets((prev) =>
-        prev.map((t) => (t.employee_id === empId ? { ...t, is_approved: isApproved } : t))
-      );
-      setSuccess(true);
-      if (isApproved) {
-        const data = await fetchSuperiorName(empId);
-        if (data.superiorName) {
-          setSuperiorName(data.superiorName);
+        setAttachments(updatedAttachments);
+        setNoAttachmentFlag(Object.values(updatedAttachments).every((atts) => !atts.length));
+        setEmployeeTimesheets((prev) =>
+          prev.map((t) => (t.employee_id === empId ? { ...t, is_approved: isApproved } : t))
+        );
+        setSuccess(true);
+        if (isApproved) {
+          const data = await fetchSuperiorName(empId);
+          if (data.superiorName) {
+            setSuperiorName(data.superiorName);
+          }
         }
       }
     } catch (error) {
       setError(error.message || 'Failed to process approval.');
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      setIsSaving(false);
     }
   };
 
   const handleSave = async (isSubmit = false) => {
+    if (isSaving) return; // Prevent multiple submissions
+    setIsSaving(true);
     const weekStart = getWeekStartDate(selectedDate);
     const targetTimesheets = selectedEmployee ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee) : timesheets;
 
@@ -256,11 +268,11 @@ const Overview = () => {
       });
       if (invalidTimesheets.length > 0) {
         setError('All timesheets must have an attachment when "No Attachment" is not checked.');
+        setIsSaving(false);
         return;
       }
     }
 
-    // Validation for comments when submitting
     if (isSubmit) {
       const invalidTimesheets = targetTimesheets.filter((ts) => {
         return ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'].some((day) => {
@@ -271,6 +283,7 @@ const Overview = () => {
       });
       if (invalidTimesheets.length > 0) {
         setError('A comment is required for any day with hours greater than 0 before submitting.');
+        setIsSaving(false);
         return;
       }
     }
@@ -288,84 +301,92 @@ const Overview = () => {
         formData.append(`${day}_comment`, ts[`${day}_comment`] ?? '');
       });
       formData.append('is_submitted', isSubmit ? 1 : ts.is_submitted || 0);
-      if (fileInputRef.current?.files.length > 0 && !noAttachmentFlag) {
-        Array.from(fileInputRef.current.files).forEach((file) => {
-          formData.append('attachment', file);
-        });
-      }
       return { formData, timesheetId: ts.timesheet_id || ts.temp_key };
     });
 
     if (!formDataArray.length) {
       setError('No editable timesheets to save or submit.');
+      setIsSaving(false);
       return;
     }
 
     try {
       const updatedAttachments = { ...attachments };
-      for (const { formData, timesheetId } of formDataArray) {
-        const result = await saveTimesheet(formData);
-        if (result.error) {
-          setError(result.error || 'Failed to save timesheet.');
-          return;
+      // Append files only once, outside the loop
+      const files = fileInputRef.current?.files || [];
+      const formDataWithFiles = new FormData();
+      formDataArray.forEach(({ formData }) => {
+        for (let [key, value] of formData.entries()) {
+          formDataWithFiles.append(key, value);
         }
+      });
+      if (files.length > 0 && !noAttachmentFlag) {
+        Array.from(files).forEach((file) => formDataWithFiles.append('attachment', file));
+      }
+
+      const result = await saveTimesheet(formDataWithFiles);
+      if (result.error) {
+        setError(result.error || 'Failed to save timesheet.');
+      } else {
         if (result.attachments && result.timesheetId) {
           updatedAttachments[result.timesheetId] = result.attachments;
-          if (result.timesheetId !== timesheetId) {
+          if (result.timesheetId !== formDataArray[0].timesheetId) {
             setTimesheets((prev) =>
               prev.map((t) =>
-                t.temp_key === timesheetId ? { ...t, timesheet_id: result.timesheetId, temp_key: undefined } : t
+                t.temp_key === formDataArray[0].timesheetId ? { ...t, timesheet_id: result.timesheetId, temp_key: undefined } : t
               )
             );
             setEmployeeTimesheets((prev) =>
               prev.map((t) =>
-                t.temp_key === timesheetId ? { ...t, timesheet_id: result.timesheetId, temp_key: undefined } : t
+                t.temp_key === formDataArray[0].timesheetId ? { ...t, timesheet_id: result.timesheetId, temp_key: undefined } : t
               )
             );
           }
         }
-      }
-      setAttachments(updatedAttachments);
-      setNoAttachmentFlag(Object.values(updatedAttachments).every((atts) => !atts.length));
-      if (fileInputRef.current) fileInputRef.current.value = '';
+        setAttachments(updatedAttachments);
+        setNoAttachmentFlag(Object.values(updatedAttachments).every((atts) => !atts.length));
 
-      const updatedResult = selectedEmployee
-        ? await fetchTimesheetsForSuperior(weekStart)
-        : await fetchTimesheetAndProjects(weekStart);
+        const updatedResult = selectedEmployee
+          ? await fetchTimesheetsForSuperior(weekStart)
+          : await fetchTimesheetAndProjects(weekStart);
 
-      if (updatedResult.error) {
-        setError(updatedResult.error);
-      } else {
-        if (selectedEmployee) {
-          setEmployeeTimesheets(updatedResult.timesheets || []);
-          setEmployeeProjects(updatedResult.projects || {});
-          setAttachments(updatedResult.attachments || {});
-          setNoAttachmentFlag(Object.values(updatedResult.attachments || {}).every((atts) => !atts.length));
-          if (updatedResult.timesheets?.some((ts) => ts.is_approved === 1)) {
-            const data = await fetchSuperiorName(selectedEmployee);
-            if (data.superiorName) {
-              setSuperiorName(data.superiorName);
-            }
-          }
-          setIsSuperior(updatedResult.employees.length > 0);
-          console.log(`handleSave: selectedEmployee=${selectedEmployee}, isSuperior=${updatedResult.employees.length > 0}`);
+        if (updatedResult.error) {
+          setError(updatedResult.error);
         } else {
-          setTimesheets(updatedResult.timesheets || []);
-          setProjects(updatedResult.projects || []);
-          setAttachments(updatedResult.attachments || {});
-          setNoAttachmentFlag(Object.values(updatedResult.attachments || {}).every((atts) => !atts.length));
-          if (!isSuperior && updatedResult.timesheets?.some((ts) => ts.is_approved === 1)) {
-            const employeeId = updatedResult.timesheets[0].employee_id;
-            const data = await fetchSuperiorName(employeeId);
-            if (data.superiorName) {
-              setSuperiorName(data.superiorName);
+          if (selectedEmployee) {
+            setEmployeeTimesheets(updatedResult.timesheets || []);
+            setEmployeeProjects(updatedResult.projects || {});
+            setAttachments(updatedResult.attachments || {});
+            setNoAttachmentFlag(Object.values(updatedResult.attachments || {}).every((atts) => !atts.length));
+            if (updatedResult.timesheets?.some((ts) => ts.is_approved === 1)) {
+              const data = await fetchSuperiorName(selectedEmployee);
+              if (data.superiorName) {
+                setSuperiorName(data.superiorName);
+              }
+            }
+            setIsSuperior(updatedResult.employees.length > 0);
+            console.log(`handleSave: selectedEmployee=${selectedEmployee}, isSuperior=${updatedResult.employees.length > 0}`);
+          } else {
+            setTimesheets(updatedResult.timesheets || []);
+            setProjects(updatedResult.projects || []);
+            setAttachments(updatedResult.attachments || {});
+            setNoAttachmentFlag(Object.values(updatedResult.attachments || {}).every((atts) => !atts.length));
+            if (!isSuperior && updatedResult.timesheets?.some((ts) => ts.is_approved === 1)) {
+              const employeeId = updatedResult.timesheets[0].employee_id;
+              const data = await fetchSuperiorName(employeeId);
+              if (data.superiorName) {
+                setSuperiorName(data.superiorName);
+              }
             }
           }
+          setSuccess(true);
         }
-        setSuccess(true);
       }
     } catch (error) {
       setError(error.message || 'Failed to process timesheets.');
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      setIsSaving(false);
     }
   };
 
@@ -587,7 +608,7 @@ const Overview = () => {
                   <button
                     type="submit"
                     className="save-button"
-                    disabled={selectedEmployee ? !isSuperior : timesheets.some((t) => t.is_submitted === 1 || t.is_approved === 1)}
+                    disabled={isSaving || (selectedEmployee ? !isSuperior : timesheets.some((t) => t.is_submitted === 1 || t.is_approved === 1))}
                   >
                     Save All
                   </button>
@@ -600,7 +621,7 @@ const Overview = () => {
                           handleSave(true);
                         }
                       }}
-                      disabled={timesheets.some((ts) => ts.is_submitted === 1 || ts.is_approved === 1)}
+                      disabled={isSaving || timesheets.some((ts) => ts.is_submitted === 1 || ts.is_approved === 1)}
                     >
                       Submit All
                     </button>
@@ -613,7 +634,7 @@ const Overview = () => {
                         type="checkbox"
                         checked={employeeTimesheets.filter((t) => t.employee_id === selectedEmployee).every((t) => t.is_approved === 1)}
                         onChange={(e) => handleApprovedChange(e, selectedEmployee)}
-                        disabled={!isSuperior}
+                        disabled={isSaving || !isSuperior}
                       />
                       Approve All
                     </label>
