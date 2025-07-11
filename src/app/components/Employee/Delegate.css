@@ -1,0 +1,137 @@
+.delegate-container {
+  max-width: 600px;
+  margin: 24px auto;
+  padding: 24px;
+  background-color: #ffffff;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+}
+
+.delegate-container h2 {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 16px;
+  color: #333333;
+}
+
+.delegate-container h3 {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 12px;
+  color: #333333;
+}
+
+.error-message {
+  color: #d32f2f;
+  background-color: #ffebee;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+
+.success-message {
+  color: #2e7d32;
+  background-color: #e8f5e9;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+
+.delegate-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.delegate-form label {
+  display: flex;
+  flex-direction: column;
+  color: #333333;
+  font-size: 16px;
+}
+
+.delegate-form select,
+.delegate-form input[type="checkbox"] {
+  margin-top: 4px;
+  padding: 8px;
+  border: 1px solid #cccccc;
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+.delegate-form select:focus,
+.delegate-form input[type="checkbox"]:focus {
+  outline: none;
+  border-color: #1976d2;
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2);
+}
+
+.delegate-form select:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+}
+
+.delegate-form button {
+  background-color: #1976d2;
+  color: #ffffff;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.delegate-form button:hover:not(:disabled) {
+  background-color: #1565c0;
+}
+
+.delegate-form button:disabled {
+  background-color: #bdbdbd;
+  cursor: not-allowed;
+}
+
+.active-delegations {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.active-delegations ul {
+  list-style: none;
+  padding: 0;
+}
+
+.active-delegations li {
+  display: flex;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.active-delegations label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #333333;
+  font-size: 16px;
+}
+
+.active-delegations button {
+  background-color: #1976d2;
+  color: #ffffff;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.active-delegations button:hover:not(:disabled) {
+  background-color: #1565c0;
+}
+
+.delegate-form p {
+  color: #666666;
+  font-style: italic;
+  font-size: 14px;
+}

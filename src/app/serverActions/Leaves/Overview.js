@@ -1,8 +1,8 @@
 "use server";
 
 import DBconnection from "@/app/utils/config/db";
-import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
+import jwt from "jsonwebtoken";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -11,7 +11,8 @@ const decodeJwt = (token) => {
     const base64Url = token.split(".")[1];
     const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
     return JSON.parse(Buffer.from(base64, "base64").toString("utf8"));
-  } catch {
+  } catch (error) {
+    console.error("JWT decoding error:", error);
     return null;
   }
 };
@@ -25,6 +26,7 @@ const getAllSubordinates = async (pool, superiorEmpId, visited = new Set()) => {
       "SELECT empid, EMP_FST_NAME, EMP_LAST_NAME FROM C_EMP WHERE superior = ?",
       [superiorEmpId]
     );
+    console.log("Direct subordinates for:", superiorEmpId, directSubordinates);
 
     let allSubordinates = [...directSubordinates];
     for (const subordinate of directSubordinates) {
@@ -32,11 +34,14 @@ const getAllSubordinates = async (pool, superiorEmpId, visited = new Set()) => {
       allSubordinates = allSubordinates.concat(nestedSubordinates);
     }
 
+    // Exclude the superiorEmpId itself from the subordinates list
     const [self] = await pool.execute(
       "SELECT empid, EMP_FST_NAME, EMP_LAST_NAME FROM C_EMP WHERE empid = ?",
       [superiorEmpId]
     );
-    if (self.length > 0) allSubordinates.unshift(self[0]);
+    if (self.length > 0) {
+      allSubordinates = allSubordinates.filter(sub => sub.empid !== superiorEmpId);
+    }
 
     const uniqueSubordinates = allSubordinates.reduce((unique, item) => {
       return unique.findIndex(existing => existing.empid === item.empid) === -1
@@ -49,6 +54,41 @@ const getAllSubordinates = async (pool, superiorEmpId, visited = new Set()) => {
     console.error("Error in getAllSubordinates:", error);
     return [];
   }
+};
+
+const getDelegatedSubordinates = async (pool, userEmpId) => {
+  const [delegateRows] = await pool.execute(
+    "SELECT senderempid FROM delegate WHERE receiverempid = ? AND menuid = (SELECT id FROM menu WHERE name = 'Leaves') AND isactive = 1 AND (submenuid IS NULL OR submenuid = 0)",
+    [userEmpId]
+  );
+  const delegatedSuperiors = delegateRows.map(row => row.senderempid);
+  console.log("Delegated superiors for Leaves:", delegatedSuperiors);
+
+  let allSubordinates = [];
+  for (const superiorId of delegatedSuperiors) {
+    const subordinates = await getAllSubordinates(pool, superiorId, new Set());
+    allSubordinates = allSubordinates.concat(subordinates);
+  }
+
+  if (delegatedSuperiors.length > 0) {
+    const placeholders = delegatedSuperiors.map(() => '?').join(',');
+    const [hierarchyRows] = await pool.execute(
+      `SELECT empid, superior FROM C_EMP WHERE superior IN (${placeholders})`,
+      [...delegatedSuperiors]
+    );
+    const subordinateIds = hierarchyRows.map(row => row.empid);
+    for (const subId of subordinateIds) {
+      const nestedSubordinates = await getAllSubordinates(pool, subId, new Set());
+      allSubordinates = allSubordinates.concat(nestedSubordinates);
+    }
+  }
+
+  // Exclude the userEmpId (receiver) and delegated superiors from the subordinates list
+  return allSubordinates.filter((sub, index, self) =>
+    index === self.findIndex((s) => s.empid === sub.empid) &&
+    sub.empid !== userEmpId &&
+    !delegatedSuperiors.includes(sub.empid)
+  ); // Deduplicate and exclude superiors
 };
 
 export async function fetchEmployeeLeaves(empId) {
@@ -72,12 +112,19 @@ export async function fetchEmployeeLeaves(empId) {
     const orgId = decoded.orgid;
     if (!orgId) throw new Error("Organization ID is missing or invalid.");
 
+    const directSubordinates = await getAllSubordinates(pool, currentEmpId);
+    const delegatedSubordinates = await getDelegatedSubordinates(pool, currentEmpId);
+    const allSubordinates = [...directSubordinates, ...delegatedSubordinates]
+      .filter((sub, index, self) => index === self.findIndex((s) => s.empid === sub.empid) && sub.empid !== currentEmpId);
+
+    const authorizedEmpIds = [currentEmpId, ...allSubordinates.map(sub => sub.empid)].includes(empId) ? [empId] : [currentEmpId];
+
     const [rows] = await pool.execute(
       `SELECT l.id, l.empid, l.orgid, l.g_id, gv.Name AS leave_name, l.startdate, l.enddate, l.status, l.noofnoons, l.am_pm, l.description, l.approved_by, l.approved_role 
        FROM employee_leaves l
        LEFT JOIN generic_values gv ON l.leaveid = gv.id AND gv.g_id = 1 AND gv.orgid = l.orgid AND gv.isactive = 1
-       WHERE l.empid = ? AND l.orgid = ?`,
-      [empId || currentEmpId, orgId]
+       WHERE l.empid IN (${authorizedEmpIds.map(() => '?').join(',')}) AND l.orgid = ?`,
+      [...authorizedEmpIds, orgId]
     );
 
     const formattedRows = rows.map(row => {
@@ -118,12 +165,14 @@ export async function fetchPendingLeaves() {
   if (!userRows.length) return { error: "User not found in C_USER table." };
   const superiorEmpId = userRows[0].empid;
 
-  const subordinates = await getAllSubordinates(pool, superiorEmpId);
-  if (!subordinates.length) return { error: "You are not authorized to view pending leaves." };
+  const directSubordinates = await getAllSubordinates(pool, superiorEmpId);
+  const delegatedSubordinates = await getDelegatedSubordinates(pool, superiorEmpId);
+  const allSubordinates = [...directSubordinates, ...delegatedSubordinates]
+    .filter((sub, index, self) => index === self.findIndex((s) => s.empid === sub.empid) && sub.empid !== superiorEmpId);
 
-  const employeeIds = subordinates.map(emp => emp.empid).filter(empId => empId !== superiorEmpId);
-  if (employeeIds.length === 0) return { leaves: [], employees: subordinates };
+  if (!allSubordinates.length) return { error: "You are not authorized to view pending leaves." };
 
+  const employeeIds = allSubordinates.map(emp => emp.empid);
   const [leaveRows] = await pool.execute(
     `SELECT l.id, l.empid, l.orgid, l.g_id, gv.Name AS leave_name, l.startdate, l.enddate, l.status, l.noofnoons, l.am_pm, l.description,
             e.EMP_FST_NAME, e.EMP_LAST_NAME
@@ -139,7 +188,7 @@ export async function fetchPendingLeaves() {
     employee_name: `${leave.EMP_FST_NAME} ${leave.EMP_LAST_NAME || ''}`.trim(),
   }));
 
-  return { leaves, employees: subordinates };
+  return { leaves, employees: allSubordinates };
 }
 
 export async function fetchEmployeesUnderSuperior() {
@@ -154,8 +203,38 @@ export async function fetchEmployeesUnderSuperior() {
   if (!userRows.length) return { error: "User not found in C_USER table." };
   const superiorEmpId = userRows[0].empid;
 
-  const employees = await getAllSubordinates(pool, superiorEmpId);
-  return { employees };
+  // Fetch the logged-in employee's details
+  const [selfRows] = await pool.execute(
+    "SELECT empid, EMP_FST_NAME, EMP_LAST_NAME FROM C_EMP WHERE empid = ?",
+    [superiorEmpId]
+  );
+  const currentEmployee = selfRows[0] || {};
+
+  // Fetch direct and delegated subordinates
+  const directSubordinates = await getAllSubordinates(pool, superiorEmpId);
+  const delegatedSubordinates = await getDelegatedSubordinates(pool, superiorEmpId);
+
+  // Combine all employees, starting with the logged-in employee
+  let allEmployees = [currentEmployee, ...directSubordinates, ...delegatedSubordinates];
+
+  // Deduplicate and sort alphabetically by full name
+  allEmployees = allEmployees.reduce((unique, item) => {
+    return unique.findIndex(existing => existing.empid === item.empid) === -1
+      ? [...unique, item]
+      : unique;
+  }, []).sort((a, b) => {
+    const nameA = `${a.EMP_FST_NAME} ${a.EMP_LAST_NAME || ''}`.toLowerCase();
+    const nameB = `${b.EMP_FST_NAME} ${b.EMP_LAST_NAME || ''}`.toLowerCase();
+    return nameA.localeCompare(nameB);
+  });
+
+  // Ensure the logged-in employee is first
+  const loggedInEmployee = allEmployees.find(emp => emp.empid === superiorEmpId);
+  if (loggedInEmployee) {
+    allEmployees = [loggedInEmployee, ...allEmployees.filter(emp => emp.empid !== superiorEmpId)];
+  }
+
+  return { employees: allEmployees };
 }
 
 export async function fetchLeaveAssignments(empid) {
@@ -174,7 +253,6 @@ export async function fetchLeaveAssignments(empid) {
     console.log(`Fetching leave assignments for empid: ${empid} and orgId: ${orgId}`);
 
     const pool = await DBconnection();
-    console.log("MySQL connection pool acquired");
     const [rows] = await pool.execute(
       `SELECT ela.leaveid, ela.noofleaves, gv.Name as name
        FROM employee_leaves_assign ela

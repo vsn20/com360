@@ -1,7 +1,7 @@
-'use server'
+"use server";
+
 import DBconnection from '@/app/utils/config/db';
 import { cookies } from 'next/headers';
-import { fetchEmployeesUnderSuperior } from '@/app/serverActions/Leaves/Overview';
 
 const decodeJwt = (token) => {
   try {
@@ -15,7 +15,63 @@ const decodeJwt = (token) => {
   }
 };
 
+const getAllSubordinates = async (pool, superiorEmpId, visited = new Set()) => {
+  if (visited.has(superiorEmpId)) return [];
+  visited.add(superiorEmpId);
+
+  try {
+    const [directSubordinates] = await pool.execute(
+      "SELECT empid, EMP_FST_NAME, EMP_LAST_NAME FROM C_EMP WHERE superior = ?",
+      [superiorEmpId]
+    );
+    console.log("Direct subordinates for:", superiorEmpId, directSubordinates);
+
+    let allSubordinates = [...directSubordinates];
+    for (const subordinate of directSubordinates) {
+      const nestedSubordinates = await getAllSubordinates(pool, subordinate.empid, visited);
+      allSubordinates = allSubordinates.concat(nestedSubordinates);
+    }
+    return allSubordinates;
+  } catch (error) {
+    console.error("Error in getAllSubordinates:", error);
+    return [];
+  }
+};
+
+const getDelegatedSubordinates = async (pool, userEmpId) => {
+  const [delegateRows] = await pool.execute(
+    "SELECT senderempid FROM delegate WHERE receiverempid = ? AND menuid = (SELECT id FROM menu WHERE name = 'Leaves') AND isactive = 1 AND (submenuid IS NULL OR submenuid = 0)",
+    [userEmpId]
+  );
+  const delegatedSuperiors = delegateRows.map(row => row.senderempid);
+  console.log("Delegated superiors for Leaves:", delegatedSuperiors);
+
+  let allSubordinates = [];
+  for (const superiorId of delegatedSuperiors) {
+    const subordinates = await getAllSubordinates(pool, superiorId, new Set());
+    allSubordinates = allSubordinates.concat(subordinates);
+  }
+
+  if (delegatedSuperiors.length > 0) {
+    const placeholders = delegatedSuperiors.map(() => '?').join(',');
+    const [hierarchyRows] = await pool.execute(
+      `SELECT empid, superior FROM C_EMP WHERE superior IN (${placeholders})`,
+      [...delegatedSuperiors]
+    );
+    const subordinateIds = hierarchyRows.map(row => row.empid);
+    for (const subId of subordinateIds) {
+      const nestedSubordinates = await getAllSubordinates(pool, subId, new Set());
+      allSubordinates = allSubordinates.concat(nestedSubordinates);
+    }
+  }
+
+  return allSubordinates.filter((sub, index, self) =>
+    index === self.findIndex((s) => s.empid === sub.empid)
+  ); // Deduplicate
+};
+
 export async function addEmployeeLeave(formData) {
+  // [Existing implementation remains unchanged]
   try {
     const cookieStore = cookies();
     const token = cookieStore.get('jwt_token')?.value;
@@ -53,7 +109,6 @@ export async function addEmployeeLeave(formData) {
 
     const pool = await DBconnection();
 
-    // Verify empid exists in C_EMP
     const [empRows] = await pool.execute(
       'SELECT empid FROM C_EMP WHERE empid = ? AND orgid = ?',
       [empid, orgid]
@@ -63,7 +118,6 @@ export async function addEmployeeLeave(formData) {
       return { error: 'Employee not found.' };
     }
 
-    // Verify leaveid is valid
     const [leaveTypeRows] = await pool.execute(
       'SELECT id FROM generic_values WHERE g_id = ? AND orgid = ? AND id = ? AND isactive = 1',
       [1, orgid, leaveid]
@@ -73,7 +127,6 @@ export async function addEmployeeLeave(formData) {
       return { error: 'Invalid or inactive leave type selected.' };
     }
 
-    // Validate dates
     const startDateObj = new Date(startdate);
     const endDateObj = new Date(enddate);
 
@@ -86,12 +139,10 @@ export async function addEmployeeLeave(formData) {
       return { error: 'Start date must not be after end date.' };
     }
 
-    // Calculate noofnoons
     const daysDiff = Math.ceil((endDateObj - startDateObj) / (1000 * 60 * 60 * 24)) + 1;
     const requestedDays = am_pm === 'both' ? daysDiff : daysDiff * 0.5;
     const noofnoons = am_pm === 'both' ? daysDiff * 2 : daysDiff;
 
-    // Check available leaves
     const [assignRows] = await pool.execute(
       'SELECT noofleaves FROM employee_leaves_assign WHERE empid = ? AND orgid = ? AND leaveid = ?',
       [empid, orgid, leaveid]
@@ -101,7 +152,6 @@ export async function addEmployeeLeave(formData) {
       return { error: 'You do not have sufficient leaves available.' };
     }
 
-    // Insert into employee_leaves
     const [result] = await pool.execute(
       `INSERT INTO employee_leaves (empid, orgid, g_id, leaveid, startdate, enddate, status, noofnoons, am_pm, description)
        VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)`,
@@ -122,6 +172,7 @@ export async function addEmployeeLeave(formData) {
 }
 
 export async function fetchLeaveTypes() {
+  // [Existing implementation remains unchanged]
   try {
     const cookieStore = cookies();
     const token = cookieStore.get('jwt_token')?.value;
@@ -179,7 +230,6 @@ export async function approveEmployeeLeave(leaveId, action) {
 
     const pool = await DBconnection();
 
-    // Get current user's empid
     const [userRows] = await pool.execute(
       'SELECT empid FROM C_USER WHERE username = ? AND orgid = ?',
       [userId, orgid]
@@ -190,15 +240,16 @@ export async function approveEmployeeLeave(leaveId, action) {
     }
     const currentEmpId = userRows[0].empid;
 
-    // Verify user is authorized to approve (is superior)
-    const { employees } = await fetchEmployeesUnderSuperior();
-    const subordinateEmpIds = employees.map(emp => emp.empid).filter(id => id !== currentEmpId);
-    if (!subordinateEmpIds.length) {
+    const directSubordinates = await getAllSubordinates(pool, currentEmpId);
+    const delegatedSubordinates = await getDelegatedSubordinates(pool, currentEmpId);
+    const allSubordinates = [...directSubordinates, ...delegatedSubordinates]
+      .filter((sub, index, self) => index === self.findIndex((s) => s.empid === sub.empid) && sub.empid !== currentEmpId);
+
+    if (!allSubordinates.length) {
       console.log('User is not authorized to approve leaves - no subordinates found for empid:', currentEmpId);
       return { error: 'You are not authorized to approve leaves.' };
     }
 
-    // Fetch leave request
     const [leaveRows] = await pool.execute(
       'SELECT empid, leaveid, noofnoons, am_pm, status FROM employee_leaves WHERE id = ? AND orgid = ?',
       [leaveId, orgid]
@@ -210,8 +261,7 @@ export async function approveEmployeeLeave(leaveId, action) {
     }
     const leave = leaveRows[0];
 
-    // Verify the leave belongs to a subordinate
-    if (!subordinateEmpIds.includes(leave.empid)) {
+    if (!allSubordinates.some(sub => sub.empid === leave.empid)) {
       console.log('User is not authorized to approve leave for empid:', leave.empid, 'leaveId:', leaveId);
       return { error: 'You are not authorized to approve this leave request.' };
     }
@@ -224,7 +274,6 @@ export async function approveEmployeeLeave(leaveId, action) {
     const noofnoons = leave.noofnoons || 0;
     const leaveDays = leave.am_pm === 'both' ? 1.0 * noofnoons : 0.5 * noofnoons;
 
-    // Get superior's details
     const [superiorInfo] = await pool.execute(
       'SELECT EMP_FST_NAME, EMP_LAST_NAME, roleid FROM C_EMP WHERE empid = ?',
       [currentEmpId]
@@ -238,7 +287,6 @@ export async function approveEmployeeLeave(leaveId, action) {
 
     const newStatus = action === 'accept' ? 'accepted' : 'rejected';
 
-    // Update employee_leaves
     const [updateResult] = await pool.execute(
       `UPDATE employee_leaves SET status = ?, approved_by = ?, approved_role = ? WHERE id = ?`,
       [newStatus, superiorName, superiorRole, leaveId]
@@ -249,14 +297,12 @@ export async function approveEmployeeLeave(leaveId, action) {
       return { error: 'Failed to update leave request.' };
     }
 
-    // If accepted, update leave balance
     if (newStatus === 'accepted') {
       const [assignRows] = await pool.execute(
         'SELECT noofleaves FROM employee_leaves_assign WHERE empid = ? AND orgid = ? AND leaveid = ?',
         [leave.empid, orgid, leave.leaveid]
       );
       if (assignRows.length === 0 || assignRows[0].noofleaves < leaveDays) {
-        // Revert status if insufficient leaves
         await pool.execute(
           `UPDATE employee_leaves SET status = 'pending', approved_by = NULL, approved_role = NULL WHERE id = ?`,
           [leaveId]

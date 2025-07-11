@@ -1,13 +1,12 @@
-'use client'
+'use client';
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { fetchEmployeeLeaves, fetchPendingLeaves, fetchEmployeesUnderSuperior, fetchLeaveAssignments } from '@/app/serverActions/Leaves/Overview';
+import { fetchEmployeeLeaves, fetchEmployeesUnderSuperior, fetchLeaveAssignments } from '@/app/serverActions/Leaves/Overview';
 import { approveEmployeeLeave } from '@/app/serverActions/Leaves/Addleave';
 import './overview.css';
 
 export default function Overview() {
   const [leaves, setLeaves] = useState([]);
-  const [pendingLeaves, setPendingLeaves] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [selectedEmployee, setSelectedEmployee] = useState('');
   const [availableLeaves, setAvailableLeaves] = useState({});
@@ -25,44 +24,37 @@ export default function Overview() {
 
       const employeesResult = await fetchEmployeesUnderSuperior();
       if (employeesResult.error) {
-        alert(employeesResult.error);
-        window.location.reload();
+        setError(employeesResult.error);
         setEmployees([]);
         setIsSuperior(false);
       } else {
-        setEmployees(employeesResult.employees);
-        const currentEmpId = employeesResult.employees[0]?.empid;
+        const currentEmpId = employeesResult.employees[0]?.empid; // Logged-in employee
         setSelectedEmployee(currentEmpId || '');
-        setIsSuperior(employeesResult.employees.length > 1);
+        // Sort employees: current employee first, others sorted alphabetically by name
+        const sortedEmployees = [
+          ...employeesResult.employees.filter(emp => emp.empid === currentEmpId),
+          ...employeesResult.employees.filter(emp => emp.empid !== currentEmpId).sort((a, b) =>
+            `${a.EMP_FST_NAME} ${a.EMP_LAST_NAME || ''}`.localeCompare(`${b.EMP_FST_NAME} ${b.EMP_LAST_NAME || ''}`)
+          ),
+        ];
+        setEmployees(sortedEmployees);
+        setIsSuperior(sortedEmployees.length > 1 || sortedEmployees.some(emp => emp.empid !== currentEmpId));
         if (currentEmpId) {
           const [leavesResult, availableLeavesResult] = await Promise.all([
             fetchEmployeeLeaves(currentEmpId),
             fetchLeaveAssignments(currentEmpId),
           ]);
           if (leavesResult.error) {
-            alert(leavesResult.error);
-            window.location.reload();
+            setError(leavesResult.error);
           } else {
             setLeaves(leavesResult);
           }
           if (availableLeavesResult.error) {
-            alert(availableLeavesResult.error);
-            window.location.reload();
+            setError(availableLeavesResult.error);
           } else {
             setAvailableLeaves(availableLeavesResult);
           }
         }
-      }
-
-      const pendingResult = await fetchPendingLeaves();
-      if (pendingResult.error) {
-        setPendingLeaves([]);
-        if (!pendingResult.error.includes('You are not authorized')) {
-          alert(pendingResult.error);
-          window.location.reload();
-        }
-      } else {
-        setPendingLeaves(pendingResult.leaves);
       }
 
       setLoading(false);
@@ -79,14 +71,12 @@ export default function Overview() {
         fetchLeaveAssignments(empId),
       ]);
       if (leavesResult.error) {
-        alert(leavesResult.error);
-        window.location.reload();
+        setError(leavesResult.error);
       } else {
         setLeaves(leavesResult);
       }
       if (availableLeavesResult.error) {
-        alert(availableLeavesResult.error);
-        window.location.reload();
+        setError(availableLeavesResult.error);
       } else {
         setAvailableLeaves(availableLeavesResult);
       }
@@ -98,8 +88,7 @@ export default function Overview() {
 
   const handleAddLeave = () => {
     if (!selectedEmployee) {
-      alert('Please select an employee.');
-      window.location.reload();
+      setError('Please select an employee.');
       return;
     }
     router.push(`/userscreens/leaves/addleave?empid=${selectedEmployee}`);
@@ -111,8 +100,7 @@ export default function Overview() {
     setSuccess(false);
     const result = await approveEmployeeLeave(leaveId, action);
     if (result.error) {
-      alert(result.error);
-      window.location.reload();
+      setError(result.error);
     } else {
       if (selectedEmployee) {
         const [leavesResult, availableLeavesResult] = await Promise.all([
@@ -120,19 +108,16 @@ export default function Overview() {
           fetchLeaveAssignments(selectedEmployee),
         ]);
         if (leavesResult.error) {
-          alert(leavesResult.error);
-          window.location.reload();
+          setError(leavesResult.error);
         } else {
           setLeaves(leavesResult);
         }
         if (availableLeavesResult.error) {
-          alert(availableLeavesResult.error);
-          window.location.reload();
+          setError(availableLeavesResult.error);
         } else {
           setAvailableLeaves(availableLeavesResult);
         }
       }
-      setPendingLeaves(prev => prev.filter(l => l.id !== leaveId));
       setSuccess(true);
     }
   };
@@ -149,6 +134,7 @@ export default function Overview() {
     <div className="container">
       {loading && <div className="loading">Loading leaves...</div>}
       {success && <div className="success-message">Action successful!</div>}
+      {error && <div className="error-message">{error}</div>}
       {!loading && !error && (
         <div className="content-wrapper">
           <div className="main-content">
@@ -181,14 +167,12 @@ export default function Overview() {
                 </button>
               )}
             </div>
-            {leaves.length === 0 ? (
-              <p className="no-leaves">No leaves assigned for selected employee.</p>
-            ) : (
+            {leaves.length > 0 && (
               <div className="table-container">
+                <h3>My Leaves</h3>
                 <table className="table">
                   <thead>
                     <tr>
-                     
                       <th>Leave Name</th>
                       <th>Start Date</th>
                       <th>End Date</th>
@@ -202,7 +186,6 @@ export default function Overview() {
                   <tbody>
                     {leaves.map((leave) => (
                       <tr key={leave.id}>
-                        
                         <td>{leave.leave_name || 'Unknown Leave Type'}</td>
                         <td>{formatDate(leave.startdate)}</td>
                         <td>{formatDate(leave.enddate)}</td>
@@ -229,7 +212,10 @@ export default function Overview() {
                               : `Rejected by ${leave.approved_by}(${leave.approved_role})`}
                           </td>
                         )}
-                        {leave.status === 'pending' && leave.empid !== employees[0]?.empid && isSuperior && (
+                        {leave.status === 'pending' && leave.empid === employees[0]?.empid && (
+                          <td>Pending</td>
+                        )}
+                        {leave.status === 'pending' && leave.empid !== employees[0]?.empid && (
                           <td>
                             <select
                               onChange={(e) => handleApproveChange(leave.id, leave.empid, e.target.value)}
@@ -241,15 +227,13 @@ export default function Overview() {
                             </select>
                           </td>
                         )}
-                        {leave.status === 'pending' && leave.empid === employees[0]?.empid && (
-                          <td>Pending</td>
-                        )}
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             )}
+            {leaves.length === 0 && <p className="no-leaves">No leaves assigned for selected employee.</p>}
           </div>
           <div className="available-leaves-box">
             <h3>Available Leaves</h3>

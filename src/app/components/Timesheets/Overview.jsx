@@ -21,8 +21,13 @@ const Overview = () => {
   const [selectedComment, setSelectedComment] = useState({ timesheetId: null, day: null });
   const [superiorName, setSuperiorName] = useState('');
   const [isSuperior, setIsSuperior] = useState(false);
-  const [isSaving, setIsSaving] = useState(false); // New loading state
+  const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef(null);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true); // Ensure rendering only after client-side hydration
+  }, []);
 
   const getWeekStartDate = (date) => {
     try {
@@ -31,13 +36,15 @@ const Overview = () => {
       const day = d.getDay();
       d.setDate(d.getDate() - day);
       return d.toISOString().split('T')[0];
-    } catch {
+    } catch (error) {
+      console.error("Invalid date error:", error);
       return new Date().toISOString().split('T')[0];
     }
   };
 
   useEffect(() => {
     const fetchData = async () => {
+      console.log("Fetching data for date:", selectedDate, "selectedEmployee:", selectedEmployee);
       setError(null);
       setSuccess(false);
       setNoAttachmentFlag(true);
@@ -45,9 +52,10 @@ const Overview = () => {
       setSelectedComment({ timesheetId: null, day: null });
       setSuperiorName('');
       if (fileInputRef.current) fileInputRef.current.value = '';
-      const weekStart = getWeekStartDate(selectedDate);
+      const weekStart = getWeekStartDate(selectedDate); // Use client date for initial render
 
       const individualResult = await fetchTimesheetAndProjects(weekStart);
+      console.log("Individual timesheet result:", individualResult);
       if (individualResult.error) {
         setError(individualResult.error);
         setTimesheets([]);
@@ -60,13 +68,13 @@ const Overview = () => {
         if (!selectedEmployee && individualResult.timesheets?.length > 0 && individualResult.timesheets.some((ts) => ts.is_approved === 1)) {
           const employeeId = individualResult.timesheets[0].employee_id;
           const data = await fetchSuperiorName(employeeId);
-          if (data.superiorName) {
-            setSuperiorName(data.superiorName);
-          }
+          console.log("Superior name data:", data);
+          if (data.superiorName) setSuperiorName(data.superiorName);
         }
       }
 
       const superiorResult = await fetchTimesheetsForSuperior(weekStart);
+      console.log("Superior timesheet result:", superiorResult);
       if (superiorResult.error) {
         setEmployees([]);
         setEmployeeTimesheets([]);
@@ -82,12 +90,10 @@ const Overview = () => {
         });
         const isSuperiorResult = superiorResult.employees.length > 0;
         setIsSuperior(isSuperiorResult);
-        console.log(`useEffect: selectedEmployee=${selectedEmployee}, isSuperior=${isSuperiorResult}, employees=`, superiorResult.employees.map(e => e.empid));
         if (selectedEmployee && superiorResult.timesheets?.length > 0 && superiorResult.timesheets.some((ts) => ts.is_approved === 1)) {
           const data = await fetchSuperiorName(selectedEmployee);
-          if (data.superiorName) {
-            setSuperiorName(data.superiorName);
-          }
+          console.log("Superior name data for selected employee:", data);
+          if (data.superiorName) setSuperiorName(data.superiorName);
         }
       }
     };
@@ -112,6 +118,7 @@ const Overview = () => {
   };
 
   const handleDateChange = (e) => {
+    console.log("Date changed to:", e.target.value);
     setSelectedDate(e.target.value);
     setError(null);
     setSuccess(false);
@@ -125,6 +132,7 @@ const Overview = () => {
   const handlePrevWeek = () => {
     const newDate = new Date(selectedDate);
     newDate.setDate(newDate.getDate() - 7);
+    console.log("Previous week selected:", newDate.toISOString().split('T')[0]);
     setSelectedDate(newDate.toISOString().split('T')[0]);
     setError(null);
     setSuccess(false);
@@ -138,6 +146,7 @@ const Overview = () => {
   const handleNextWeek = () => {
     const newDate = new Date(selectedDate);
     newDate.setDate(newDate.getDate() + 7);
+    console.log("Next week selected:", newDate.toISOString().split('T')[0]);
     setSelectedDate(newDate.toISOString().split('T')[0]);
     setError(null);
     setSuccess(false);
@@ -153,8 +162,8 @@ const Overview = () => {
     const isEmployee = !empId && !selectedEmployee;
     const targetTimesheets = selectedEmployee ? employeeTimesheets : timesheets;
     const ts = targetTimesheets.find((t) => t.timesheet_id === timesheetId || t.temp_key === timesheetId);
+    console.log("Input changed:", { name, value, timesheetId, empId, day, isEmployee, ts });
     if (ts && (isSuperior || (isEmployee && !ts.is_submitted && !ts.is_approved))) {
-      console.log(`handleInputChange: timesheetId=${timesheetId}, isSuperior=${isSuperior}, isEmployee=${isEmployee}, is_submitted=${ts.is_submitted}, is_approved=${ts.is_approved}`);
       const updateTimesheets = (prev) =>
         prev.map((t) =>
           (t.timesheet_id === timesheetId || t.temp_key === timesheetId)
@@ -173,10 +182,12 @@ const Overview = () => {
   };
 
   const handleCommentFocus = (timesheetId, day) => {
+    console.log("Comment focused:", { timesheetId, day });
     setSelectedComment({ timesheetId, day });
   };
 
   const handleNoAttachmentChange = (checked) => {
+    console.log("No attachment changed to:", checked);
     setNoAttachmentFlag(checked);
     if (checked && fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -184,10 +195,11 @@ const Overview = () => {
   };
 
   const handleApprovedChange = async (e, empId) => {
-    if (isSaving) return; // Prevent multiple submissions
+    if (isSaving) return;
     setIsSaving(true);
     const isApproved = e.target.checked ? 1 : 0;
-    const weekStart = getWeekStartDate(selectedDate);
+    console.log("Approval changed for empId:", empId, "to:", isApproved);
+    const weekStart = getWeekStartDate(selectedDate); // Use client date for approval
     const formDataArray = employeeTimesheets
       .filter((t) => t.employee_id === empId)
       .map((ts) => {
@@ -208,7 +220,6 @@ const Overview = () => {
 
     try {
       const updatedAttachments = { ...attachments };
-      // Append files only once, outside the loop
       const files = fileInputRef.current?.files || [];
       const formDataWithFiles = new FormData();
       formDataArray.forEach(({ formData }) => {
@@ -221,6 +232,7 @@ const Overview = () => {
       }
 
       const result = await saveTimesheet(formDataWithFiles);
+      console.log("Save timesheet result:", result);
       if (result.error) {
         setError(result.error || 'Failed to approve timesheet.');
       } else {
@@ -242,12 +254,12 @@ const Overview = () => {
         setSuccess(true);
         if (isApproved) {
           const data = await fetchSuperiorName(empId);
-          if (data.superiorName) {
-            setSuperiorName(data.superiorName);
-          }
+          console.log("Superior name after approval:", data);
+          if (data.superiorName) setSuperiorName(data.superiorName);
         }
       }
     } catch (error) {
+      console.error("Approval error:", error);
       setError(error.message || 'Failed to process approval.');
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -256,9 +268,10 @@ const Overview = () => {
   };
 
   const handleSave = async (isSubmit = false) => {
-    if (isSaving) return; // Prevent multiple submissions
+    if (isSaving) return;
     setIsSaving(true);
-    const weekStart = getWeekStartDate(selectedDate);
+    console.log("Saving timesheets, submit:", isSubmit);
+    const weekStart = getWeekStartDate(selectedDate); // Use client date for save
     const targetTimesheets = selectedEmployee ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee) : timesheets;
 
     if (isSubmit && !noAttachmentFlag) {
@@ -267,6 +280,7 @@ const Overview = () => {
         return !attachments[timesheetId]?.length && !fileInputRef.current?.files.length;
       });
       if (invalidTimesheets.length > 0) {
+        console.log("Invalid timesheets without attachments:", invalidTimesheets);
         setError('All timesheets must have an attachment when "No Attachment" is not checked.');
         setIsSaving(false);
         return;
@@ -282,6 +296,7 @@ const Overview = () => {
         });
       });
       if (invalidTimesheets.length > 0) {
+        console.log("Invalid timesheets without comments:", invalidTimesheets);
         setError('A comment is required for any day with hours greater than 0 before submitting.');
         setIsSaving(false);
         return;
@@ -305,6 +320,7 @@ const Overview = () => {
     });
 
     if (!formDataArray.length) {
+      console.log("No editable timesheets to save or submit");
       setError('No editable timesheets to save or submit.');
       setIsSaving(false);
       return;
@@ -312,7 +328,6 @@ const Overview = () => {
 
     try {
       const updatedAttachments = { ...attachments };
-      // Append files only once, outside the loop
       const files = fileInputRef.current?.files || [];
       const formDataWithFiles = new FormData();
       formDataArray.forEach(({ formData }) => {
@@ -325,6 +340,7 @@ const Overview = () => {
       }
 
       const result = await saveTimesheet(formDataWithFiles);
+      console.log("Save timesheet result:", result);
       if (result.error) {
         setError(result.error || 'Failed to save timesheet.');
       } else {
@@ -349,7 +365,7 @@ const Overview = () => {
         const updatedResult = selectedEmployee
           ? await fetchTimesheetsForSuperior(weekStart)
           : await fetchTimesheetAndProjects(weekStart);
-
+        console.log("Updated timesheet result:", updatedResult);
         if (updatedResult.error) {
           setError(updatedResult.error);
         } else {
@@ -360,12 +376,10 @@ const Overview = () => {
             setNoAttachmentFlag(Object.values(updatedResult.attachments || {}).every((atts) => !atts.length));
             if (updatedResult.timesheets?.some((ts) => ts.is_approved === 1)) {
               const data = await fetchSuperiorName(selectedEmployee);
-              if (data.superiorName) {
-                setSuperiorName(data.superiorName);
-              }
+              console.log("Superior name after update:", data);
+              if (data.superiorName) setSuperiorName(data.superiorName);
             }
             setIsSuperior(updatedResult.employees.length > 0);
-            console.log(`handleSave: selectedEmployee=${selectedEmployee}, isSuperior=${updatedResult.employees.length > 0}`);
           } else {
             setTimesheets(updatedResult.timesheets || []);
             setProjects(updatedResult.projects || []);
@@ -374,15 +388,15 @@ const Overview = () => {
             if (!isSuperior && updatedResult.timesheets?.some((ts) => ts.is_approved === 1)) {
               const employeeId = updatedResult.timesheets[0].employee_id;
               const data = await fetchSuperiorName(employeeId);
-              if (data.superiorName) {
-                setSuperiorName(data.superiorName);
-              }
+              console.log("Superior name for individual:", data);
+              if (data.superiorName) setSuperiorName(data.superiorName);
             }
           }
           setSuccess(true);
         }
       }
     } catch (error) {
+      console.error("Save error:", error);
       setError(error.message || 'Failed to process timesheets.');
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -391,7 +405,9 @@ const Overview = () => {
   };
 
   const handleRemoveAttachment = async (attachmentId, timesheetId) => {
+    console.log("Removing attachment:", { attachmentId, timesheetId });
     const result = await removeAttachment(attachmentId, timesheetId);
+    console.log("Remove attachment result:", result);
     if (result.success) {
       setAttachments((prev) => {
         const newAttachments = { ...prev };
@@ -409,12 +425,15 @@ const Overview = () => {
   };
 
   const handlePendingApproveSheet = () => {
+    console.log("Navigating to pending approval");
     router.push('/userscreens/timesheets/pendingapproval');
   };
 
+  if (!isClient) return null; // Prevent rendering on server to avoid hydration mismatch
+
   return (
     <div className="timesheet-container">
-      <h2 className="timesheet-title">Timesheets</h2>
+      <h2 className="timesheet-title">TimeSheets</h2>
       <div className="date-navigation">
         <button className="nav-button" onClick={handlePrevWeek}>Prev</button>
         <label className="date-label">Select Date: </label>
@@ -432,7 +451,7 @@ const Overview = () => {
           className="pending-approve-button"
           onClick={handlePendingApproveSheet}
         >
-          Pending Approve Sheet
+          Pending Approve TimeSheet
         </button>
       )}
       {selectedDate && (
@@ -443,6 +462,7 @@ const Overview = () => {
             <select
               value={selectedEmployee}
               onChange={(e) => {
+                console.log("Employee selected:", e.target.value);
                 setSelectedEmployee(e.target.value);
                 setError(null);
                 setSuccess(false);
@@ -451,7 +471,7 @@ const Overview = () => {
               }}
               className="employee-dropdown"
             >
-              <option value="">Your Timesheets</option>
+              <option value="">Your TimeSheets</option>
               {employees.map((emp) => (
                 <option key={emp.empid} value={emp.empid}>
                   {`${emp.EMP_FST_NAME} ${emp.EMP_LAST_NAME || ''}`}
@@ -527,8 +547,8 @@ const Overview = () => {
                       const newValue = e.target.value;
                       const targetTimesheets = selectedEmployee ? employeeTimesheets : timesheets;
                       const ts = targetTimesheets.find((t) => t.timesheet_id === selectedComment.timesheetId || t.temp_key === selectedComment.timesheetId);
+                      console.log("Comment update:", { timesheetId: selectedComment.timesheetId, day: selectedComment.day, newValue, ts });
                       if (ts && (isSuperior || (!selectedEmployee && !ts.is_submitted && !ts.is_approved))) {
-                        console.log(`Comment textarea: timesheetId=${selectedComment.timesheetId}, isSuperior=${isSuperior}, is_submitted=${ts.is_submitted}, is_approved=${ts.is_approved}`);
                         const updateTimesheets = (prev) =>
                           prev.map((t) =>
                             (t.timesheet_id === selectedComment.timesheetId || t.temp_key === selectedComment.timesheetId)
@@ -617,7 +637,7 @@ const Overview = () => {
                       type="button"
                       className="submit-button"
                       onClick={() => {
-                        if (window.confirm('Submitting will save and lock all timesheets for this week. Proceed?')) {
+                        if (window.confirm('Submitting will save and lock all TimeSheets for this week. Proceed?')) {
                           handleSave(true);
                         }
                       }}
@@ -644,10 +664,10 @@ const Overview = () => {
             </div>
           )}
           {(!selectedEmployee && timesheets.length === 0) && (
-            <p className="no-employees">No timesheets available.</p>
+            <p className="no-employees">No TimeSheets available.</p>
           )}
           {(selectedEmployee && employeeTimesheets.filter((t) => t.employee_id === selectedEmployee).length === 0) && (
-            <p className="no-employees">No timesheets available for selected employee.</p>
+            <p className="no-employees">No TimeSheets available for selected employee.</p>
           )}
           {employees.length === 0 && !selectedEmployee && (
             <p className="no-employees">No employees found under your supervision.</p>

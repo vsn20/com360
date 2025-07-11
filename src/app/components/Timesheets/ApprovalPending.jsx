@@ -13,9 +13,11 @@ const ApprovalPending = () => {
 
   useEffect(() => {
     const fetchData = async () => {
+      console.log("Fetching pending timesheets");
       setError(null);
       setSuccess(false);
       const result = await fetchPendingTimesheets();
+      console.log("Pending timesheets result:", result);
       if (result.error) {
         setError(result.error);
         setTimesheets([]);
@@ -23,7 +25,6 @@ const ApprovalPending = () => {
           router.push('/userscreens/timesheets');
         }
       } else {
-        // Group timesheets by employee_id and week_start_date
         const groupedTimesheets = {};
         result.timesheets.forEach(ts => {
           const key = `${ts.employee_id}_${ts.week_start_date}`;
@@ -48,11 +49,12 @@ const ApprovalPending = () => {
   }, [router]);
 
   const handleApproveChange = async (employeeId, weekStartDate, timesheetIds) => {
+    console.log("Approving timesheets:", { employeeId, weekStartDate, timesheetIds });
     setError(null);
     setSuccess(false);
-    // Approve all timesheets for the week
     for (const timesheetId of timesheetIds) {
       const result = await approveTimesheet(timesheetId, employeeId);
+      console.log("Approve result for timesheetId:", timesheetId, result);
       if (result.error) {
         setError(result.error);
         if (result.error.includes('You are not authorized to approve this timesheet')) {
@@ -76,11 +78,11 @@ const ApprovalPending = () => {
   return (
     <div className="timesheet-container">
       <div className="content-wrapper">
-        <h2 className="timesheet-title">Pending Timesheet Approvals</h2>
+        <h2 className="timesheet-title">Pending TimeSheets Approvals</h2>
         {error && <p className="error-message">{error}</p>}
-        {success && <p className="success-message">Timesheet approved successfully!</p>}
+        {success && <p className="success-message">TimeSheet approved successfully!</p>}
         {timesheets.length === 0 ? (
-          <p className="no-timesheets-message">No pending timesheets for approval.</p>
+          <p className="no-timesheets-message">No pending TimeSheets for approval.</p>
         ) : (
           <div className="table-wrapper">
             <table className="timesheet-table">
