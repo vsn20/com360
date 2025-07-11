@@ -18,69 +18,88 @@ const decodeJwt = (token) => {
 };
 
 export async function addemployee(formData) {
-  const empFstName = formData.get('empFstName');
+  const empFstName = formData.get('empFstName') || '';
   const empMidName = formData.get('empMidName') || null;
-  const empLastName = formData.get('empLastName');
-  const roleid = formData.get('roleid');
-  const currentRole = formData.get('currentRole');
+  const empLastName = formData.get('empLastName') || '';
   const empPrefName = formData.get('empPrefName') || null;
-  const email = formData.get('email');
+  const email = formData.get('email') || '';
+  const roleid = formData.get('roleid') || null;
   const gender = formData.get('gender') || null;
   const mobileNumber = formData.get('mobileNumber') || null;
+  const phoneNumber = formData.get('phoneNumber') || null;
   const dob = formData.get('dob') || null;
-  const hireDate = formData.get('hireDate');
+  const hireDate = formData.get('hireDate') || null;
+  const ssn = formData.get('ssn') || null;
+  const linkedinUrl = formData.get('linkedinUrl') || null;
+  const status = formData.get('status') || 'ACTIVE';
+  const jobTitle = formData.get('jobTitle') || null;
+  const payFrequency = formData.get('payFrequency') || null;
+  const deptId = formData.get('deptId') || null;
+  const workCompClass = formData.get('workCompClass') || null;
   const superior = formData.get('superior') || null;
+  const workAddrLine1 = formData.get('workAddrLine1') || '';
+  const workAddrLine2 = formData.get('workAddrLine2') || null;
+  const workAddrLine3 = formData.get('workAddrLine3') || null;
+  const workCity = formData.get('workCity') || '';
+  const workStateId = formData.get('workStateId') || null;
+  const workStateNameCustom = formData.get('workStateNameCustom') || null;
+  const workCountryId = formData.get('workCountryId') || 185;
+  const workPostalCode = formData.get('workPostalCode') || '';
+  const homeAddrLine1 = formData.get('homeAddrLine1') || '';
+  const homeAddrLine2 = formData.get('homeAddrLine2') || null;
+  const homeAddrLine3 = formData.get('homeAddrLine3') || null;
+  const homeCity = formData.get('homeCity') || '';
+  const homeStateId = formData.get('homeStateId') || null;
+  const homeStateNameCustom = formData.get('homeStateNameCustom') || null;
+  const homeCountryId = formData.get('homeCountryId') || 185;
+  const homePostalCode = formData.get('homePostalCode') || '';
+  const emergCnctName = formData.get('emergCnctName') || null;
+  const emergCnctPhoneNumber = formData.get('emergCnctPhoneNumber') || null;
+  const emergCnctEmail = formData.get('emergCnctEmail') || null;
+  const emergCnctAddrLine1 = formData.get('emergCnctAddrLine1') || null;
+  const emergCnctAddrLine2 = formData.get('emergCnctAddrLine2') || null;
+  const emergCnctAddrLine3 = formData.get('emergCnctAddrLine3') || null;
+  const emergCnctCity = formData.get('emergCnctCity') || null;
+  const emergCnctStateId = formData.get('emergCnctStateId') || null;
+  const emergCnctStateNameCustom = formData.get('emergCnctStateNameCustom') || null;
+  const emergCnctCountryId = formData.get('emergCnctCountryId') || null;
+  const emergCnctPostalCode = formData.get('emergCnctPostalCode') || null;
+  const adminEmpFlag = formData.get('adminEmpFlag') ? 1 : 0;
+  const superUserFlag = formData.get('superUserFlag') ? 1 : 0;
 
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const token = cookieStore.get('jwt_token')?.value;
 
-  if (!token) {
-    console.log('Redirecting: No token found');
-    return { error: 'No token found. Please log in.' };
-  }
-
+  if (!token) return { error: 'No token found. Please log in.' };
   const decoded = decodeJwt(token);
-  if (!decoded || !decoded.orgid) {
-    console.log('Redirecting: Invalid token or orgid not found');
-    return { error: 'Invalid token or orgid not found.' };
-  }
+  if (!decoded || !decoded.orgid) return { error: 'Invalid token or orgid not found.' };
 
   const orgid = decoded.orgid;
 
-  if (!empFstName || empFstName.trim() === '') {
-    console.log('Redirecting: First name is required');
-    return { error: 'First name is required.' };
-  }
-  if (!empLastName || empLastName.trim() === '') {
-    console.log('Redirecting: Last name is required');
-    return { error: 'Last name is required.' };
-  }
-  if (!email || email.trim() === '') {
-    console.log('Redirecting: Email is required');
-    return { error: 'Email is required.' };
-  }
-  if (!roleid) {
-    console.log('Redirecting: Role is required');
-    return { error: 'Role is required.' };
-  }
-  if (!hireDate) {
-    console.log('Redirecting: Hire date is required');
-    return { error: 'Hire date is required.' };
-  }
+  // Validation
+  if (!empFstName.trim()) return { error: 'First name is required.' };
+  if (!empLastName.trim()) return { error: 'Last name is required.' };
+  if (!email.trim()) return { error: 'Email is required.' };
+  if (!roleid) return { error: 'Role is required.' };
+  if (!hireDate) return { error: 'Hire date is required.' };
+  if (!status) return { error: 'Status is required.' };
 
   let redirectPath = `/userscreens/employee/addemployee`;
+  let empid = null;
+
   try {
     const pool = await DBconnection();
 
+    // Check if email already exists
     const [existingEmail] = await pool.query(
-      'SELECT empid FROM C_EMP WHERE email = ?',
-      [email]
+      'SELECT empid FROM C_EMP WHERE email = ? AND orgid = ?',
+      [email, orgid]
     );
     if (existingEmail.length > 0) {
-      console.log('Redirecting: Email already exists');
       return { error: 'Email already exists.' };
     }
 
+    // Validate superior if provided
     if (superior) {
       const [existingSuperior] = await pool.query(
         'SELECT empid FROM C_EMP WHERE empid = ? AND orgid = ?',
@@ -91,22 +110,75 @@ export async function addemployee(formData) {
       }
     }
 
+    // Get department name if department ID is provided
+    let deptName = null;
+    if (deptId) {
+      const [deptResult] = await pool.query(
+        'SELECT name FROM org_departments WHERE id = ? AND orgid = ? AND isactive = 1',
+        [deptId, orgid]
+      );
+      if (deptResult.length > 0) {
+        deptName = deptResult[0].name;
+      } else {
+        return { error: 'Invalid department ID.' };
+      }
+    }
+
+    // Generate employee ID
     const [countResult] = await pool.query('SELECT COUNT(*) AS count FROM C_EMP WHERE orgid = ?', [orgid]);
     const empCount = countResult[0].count;
-    const empid = `emp_${orgid}_${empCount + 1}`;
+    empid = `${orgid}_${empCount + 1}`;
 
+    // Define insert columns and values
+    const insertColumns = [
+      'empid', 'orgid', 'EMP_FST_NAME', 'EMP_MID_NAME', 'EMP_LAST_NAME', 'EMP_PREF_NAME', 'email',
+      'roleid', 'GENDER', 'MOBILE_NUMBER', 'DOB', 'HIRE', 'LAST_WORK_DATE',
+      'TERMINATED_DATE', 'REJOIN_DATE', 'CREATED_BY', 'LAST_UPDATED_BY', 'superior', 
+      'SSN', 'STATUS', 'PHONE_NUMBER', 'LINKEDIN_URL', 'ADMIN_EMP_FLAG',
+      'SUPER_USER_FLAG', 'JOB_TITLE', 'PAY_FREQUENCY', 'WORK_ADDR_LINE1', 'WORK_ADDR_LINE2',
+      'WORK_ADDR_LINE3', 'WORK_CITY', 'WORK_STATE_ID', 'WORK_STATE_NAME_CUSTOM',
+      'WORK_COUNTRY_ID', 'WORK_POSTAL_CODE', 'HOME_ADDR_LINE1', 'HOME_ADDR_LINE2',
+      'HOME_ADDR_LINE3', 'HOME_CITY', 'HOME_STATE_ID', 'HOME_STATE_NAME_CUSTOM',
+      'HOME_COUNTRY_ID', 'HOME_POSTAL_CODE', 'DEPT_ID', 'DEPT_NAME', 'WORK_COMP_CLASS',
+      'EMERG_CNCT_NAME', 'EMERG_CNCT_PHONE_NUMBER', 'EMERG_CNCT_EMAIL',
+      'EMERG_CNCT_ADDR_LINE1', 'EMERG_CNCT_ADDR_LINE2', 'EMERG_CNCT_ADDR_LINE3',
+      'EMERG_CNCT_CITY', 'EMERG_CNCT_STATE_ID', 'EMERG_CNCT_STATE_NAME_CUSTOM',
+      'EMERG_CNCT_COUNTRY_ID', 'EMERG_CNCT_POSTAL_CODE', 'MODIFICATION_NUM'
+    ];
+
+    const values = [
+      empid, orgid, empFstName, empMidName, empLastName, empPrefName, email,
+      roleid, gender, mobileNumber, dob, hireDate, null, null, null, 
+      'system', 'system', superior, ssn, status, phoneNumber, linkedinUrl, 
+      adminEmpFlag, superUserFlag, jobTitle, payFrequency, workAddrLine1, 
+      workAddrLine2, workAddrLine3, workCity, workStateId, workStateNameCustom, 
+      workCountryId, workPostalCode, homeAddrLine1, homeAddrLine2, homeAddrLine3, 
+      homeCity, homeStateId, homeStateNameCustom, homeCountryId, homePostalCode, 
+      deptId, deptName, workCompClass, emergCnctName, emergCnctPhoneNumber, 
+      emergCnctEmail, emergCnctAddrLine1, emergCnctAddrLine2, emergCnctAddrLine3, 
+      emergCnctCity, emergCnctStateId, emergCnctStateNameCustom, emergCnctCountryId, 
+      emergCnctPostalCode, 1
+    ];
+
+    console.log("Inserting employee with", values.length, "values");
+    console.log("Column count:", insertColumns.length);
+
+    if (values.length !== insertColumns.length) {
+      console.error("Mismatch: values length =", values.length, "columns length =", insertColumns.length);
+      return { error: 'Internal error: column count mismatch' };
+    }
+
+    const placeholders = values.map(() => '?').join(', ');
+    
+    // Insert employee
     await pool.query(
-      `INSERT INTO C_EMP (
-        empid, orgid, EMP_FST_NAME, EMP_MID_NAME, EMP_LAST_NAME, EMP_PREF_NAME, email,
-        roleid, GENDER, MOBILE_NUMBER, DOB, HIRE, LAST_WORK_DATE, TERMINATED_DATE,
-        REJOIN_DATE, CREATED_BY, LAST_UPDATED_BY, superior
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        empid, orgid, empFstName, empMidName, empLastName, empPrefName, email,
-        roleid, gender, mobileNumber, dob, hireDate, null, null, null, 'system', 'system', superior
-      ]
+      `INSERT INTO C_EMP (${insertColumns.join(', ')}) VALUES (${placeholders})`,
+      values
     );
 
+    console.log(`Employee ${empid} inserted successfully`);
+
+    // Process leaves after successful employee insertion
     const leaves = {};
     for (let [key, value] of formData.entries()) {
       if (key.startsWith('leaves[') && key.endsWith(']')) {
@@ -115,23 +187,71 @@ export async function addemployee(formData) {
       }
     }
 
+    console.log('Parsed leaves:', leaves);
+
+    // Get valid leave types
     const [validLeaveTypes] = await pool.execute(
       'SELECT id FROM generic_values WHERE g_id = ? AND orgid = ? AND isactive = 1',
       [1, orgid]
     );
     const validLeaveIds = validLeaveTypes.map(leave => leave.id.toString());
+    
+    console.log('Valid leave IDs:', validLeaveIds);
 
+    // Assign leaves with proper error handling
+    const leaveAssignmentPromises = [];
     for (const [leaveid, noofleaves] of Object.entries(leaves)) {
       if (noofleaves >= 0 && validLeaveIds.includes(leaveid)) {
-        await assignLeaves(empid, leaveid, noofleaves, orgid);
+        console.log(`Preparing to assign ${noofleaves} leaves of type ${leaveid} to employee ${empid}`);
+        leaveAssignmentPromises.push(
+          assignLeaves(empid, leaveid, noofleaves, orgid)
+        );
+      } else {
+        console.log(`Skipping leave assignment: leaveid=${leaveid}, noofleaves=${noofleaves}, valid=${validLeaveIds.includes(leaveid)}`);
       }
     }
 
-    console.log(`Employee added with empid: ${empid}`);
+    console.log('Leave assignment promises count:', leaveAssignmentPromises.length);
+
+    // Wait for all leave assignments to complete
+    if (leaveAssignmentPromises.length > 0) {
+      await Promise.all(leaveAssignmentPromises);
+      console.log('All leave assignments completed successfully');
+    } else {
+      console.log('No leaves to assign');
+    }
+
+    // Success - redirect to employee list
     redirectPath = `/userscreens/employee?success=Employee%20added%20successfully`;
+    
   } catch (error) {
-    console.error('Error adding employee:', error);
-    redirectPath = `/userscreens/employee/addemployee?error=Failed%20to%20add%20employee:%20${encodeURIComponent(error.message)}`;
+    console.error('Error adding employee or assigning leaves:', error);
+    
+    // If employee was inserted but leaves failed, we should still redirect with a warning
+    if (empid) {
+      try {
+        const pool = await DBconnection();
+        const [empExists] = await pool.query(
+          'SELECT empid FROM C_EMP WHERE empid = ? AND orgid = ?',
+          [empid, orgid]
+        );
+        
+        if (empExists.length > 0) {
+          // Employee was created but leaves failed
+          redirectPath = `/userscreens/employee?warning=Employee%20added%20but%20some%20leaves%20failed%20to%20assign:%20${encodeURIComponent(error.message)}`;
+        } else {
+          // Employee creation failed
+          redirectPath = `/userscreens/employee/addemployee?error=Failed%20to%20add%20employee:%20${encodeURIComponent(error.message)}`;
+        }
+      } catch (checkError) {
+        // If we can't even check, assume employee creation failed
+        redirectPath = `/userscreens/employee/addemployee?error=Failed%20to%20add%20employee:%20${encodeURIComponent(error.message)}`;
+      }
+    } else {
+      // Employee creation failed
+      redirectPath = `/userscreens/employee/addemployee?error=Failed%20to%20add%20employee:%20${encodeURIComponent(error.message)}`;
+    }
+    
     return { error: `Failed to add employee: ${error.message}` };
   }
 

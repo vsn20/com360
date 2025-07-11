@@ -21,11 +21,23 @@ export default async function AddEmployeePage({ searchParams }) {
   const { error: queryError } = searchParams || {};
   const error = queryError ? decodeURIComponent(queryError) : null;
 
-  // Get the orgid and currentrole from the token
+  // Initialize variables
   let orgid = null;
   let currentrole = null;
   let employees = [];
+  let countries = [];
+  let states = [];
+  let departments = [];
+  let payFrequencies = [];
+  let jobTitles = [];
+  let statuses = [];
+  let workerCompClasses = [];
+
   try {
+    // Establish database connection
+    const pool = await DBconnection();
+
+    // Get orgid and currentrole from token
     const cookieStore = cookies();
     const token = cookieStore.get('jwt_token')?.value;
 
@@ -35,14 +47,13 @@ export default async function AddEmployeePage({ searchParams }) {
         orgid = decoded.orgid;
 
         // Fetch the current role based on orgid and roleid from the token
-        const pool = await DBconnection();
         const [roleRows] = await pool.query(
           'SELECT roleid, rolename FROM org_role_table WHERE orgid = ? AND roleid = ? LIMIT 1',
           [orgid, decoded.roleid]
         );
 
         if (roleRows && roleRows.length > 0) {
-          currentrole = roleRows[0].rolename || roleRows[0].roleid.toString(); // Use rolename if available, fallback to roleid
+          currentrole = roleRows[0].rolename || roleRows[0].roleid.toString();
         }
 
         // Fetch all employees for the given orgid
@@ -50,11 +61,51 @@ export default async function AddEmployeePage({ searchParams }) {
           'SELECT empid, EMP_FST_NAME, EMP_LAST_NAME, roleid FROM C_EMP WHERE orgid = ?',
           [orgid]
         );
+
+        // Fetch active departments for the organization
+        [departments] = await pool.query(
+          'SELECT id, name FROM org_departments WHERE orgid = ? AND isactive = 1',
+          [orgid]
+        );
+
+        // Fetch active pay frequencies for the organization
+        [payFrequencies] = await pool.query(
+          'SELECT id, Name FROM generic_values WHERE g_id = 4 AND orgid = ? AND isactive = 1',
+          [orgid]
+        );
+
+        // Fetch active job titles for the organization
+        [jobTitles] = await pool.query(
+          'SELECT job_title, level FROM org_jobtitles WHERE orgid = ? AND is_active = 1',
+          [orgid]
+        );
+
+        // Fetch active statuses for the organization
+        [statuses] = await pool.query(
+          'SELECT id, Name FROM generic_values WHERE g_id = 3 AND cutting = 1 AND orgid = ? AND isactive = 1',
+          [orgid]
+        );
       }
     }
+
+    // Fetch active countries
+    [countries] = await pool.query(
+      'SELECT ID, VALUE FROM C_COUNTRY WHERE ACTIVE = 1'
+    );
+
+    // Fetch active states
+    [states] = await pool.query(
+      'SELECT ID, VALUE FROM C_STATE WHERE ACTIVE = 1'
+    );
+
+    // Fetch worker compensation classes
+    [workerCompClasses] = await pool.query(
+      'SELECT class_code, phraseology FROM worker_comp'
+    );
+
   } catch (error) {
-    console.error('Error decoding token, fetching role, or fetching employees:', error);
-    // Proceed without currentrole or employees if decoding or query fails, as permission will be handled in middleware
+    console.error('Error fetching data:', error);
+    // Proceed with partial data
   }
 
   // Fetch all roles for the role dropdown
@@ -85,7 +136,14 @@ export default async function AddEmployeePage({ searchParams }) {
       orgid={orgid}
       error={error}
       employees={employees}
-      leaveTypes={leaveTypes} // Pass leave types to the component
+      leaveTypes={leaveTypes}
+      countries={countries}
+      states={states}
+      departments={departments}
+      payFrequencies={payFrequencies}
+      jobTitles={jobTitles}
+      statuses={statuses}
+      workerCompClasses={workerCompClasses}
     />
   );
 }
