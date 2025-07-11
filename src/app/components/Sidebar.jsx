@@ -35,6 +35,7 @@ function Sidebar({ isAdmin }) {
   return (
     <aside className={styles.sidebarContainer}>
       <ul className={styles.sidebarMenu}>
+        <li className={styles.com360_logo}>COM@360</li>
         {finalMenuItems.map((item) => {
           const safeSubmenu = Array.isArray(item.submenu) ? item.submenu : [];
           const isActive = pathname === item.href || (safeSubmenu.length > 0 && safeSubmenu.some(sub => pathname === sub.href));

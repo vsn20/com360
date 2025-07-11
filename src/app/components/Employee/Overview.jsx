@@ -31,7 +31,6 @@ const Overview = () => {
 
   return (
     <div className="overview-container">
-      <h2>Employee Overview</h2>
       {error && <div className="error-message">{error}</div>}
       {employees.length === 0 && !error ? (
         <p>No active employees found.</p>

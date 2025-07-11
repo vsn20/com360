@@ -1,20 +1,27 @@
+/* Updated CSS for fixed navbar and submenu with proper z-index hierarchy */
+
 .navbar {
+  font-size: 14px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 12px 20px;
-  background-color: white;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  margin-left: 200px;
   height: 30px;
-
-
+  
+  /* Fixed positioning */
+  position: fixed;
+  top: 0;
+  left: 200px; /* Account for sidebar width */
+  right: 0;
+  z-index: 1000; /* Increased z-index to stay on top */
+  background-color: white; /* Ensure navbar has solid background */
 }
 
 .left {
   display: flex;
   align-items: center;
   gap: 12px;
+  font-size: 10px;
 }
 
 .logoContainer {
@@ -24,9 +31,9 @@
 }
 
 .logo {
-  background-color:green;
+  background-color: #0fd46c;
   color: white;
-  padding: 10px 14px;
+  padding: 6px 10px;
   border-radius: 50%;
   font-weight: bold;
   user-select: none;
@@ -40,8 +47,8 @@
   background-color: white;
   border: 1px solid #ccc;
   padding: 12px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-  z-index: 10;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  z-index: 1001; /* Higher than navbar and submenu */
   min-width: 200px;
 }
 
@@ -49,9 +56,8 @@
   display: block;
 }
 
-
 .orgName {
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 600;
   color: #1f2937;
 }
@@ -68,14 +74,16 @@
   width: 200px;
   height: 100vh;
   background-color: black;
-  padding: 16px;
+  padding: 5px;
   box-sizing: border-box;
-  
-}
-.rightContent {
-  margin-left: 200px; /* shifts everything right */
+  z-index: 998; /* Lower than navbar and submenu but higher than content */
+  font-size: 13px;
 }
 
+.rightContent {
+  margin-left: 200px; /* Account for sidebar width */
+  margin-top: 104px; /* Account for navbar height (54px) + submenu height (50px) */
+}
 
 .sidebarMenu {
   list-style: none;
@@ -92,7 +100,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 12px;
+  padding: 3px 12px;
   text-decoration: none;
   color: white;
   font-weight: 500;
@@ -100,6 +108,24 @@
   cursor: pointer;
   position: relative;
   transition: background-color 0.3s;
+}
+
+.sidebarArrow {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  margin-left: 8px;
+  vertical-align: middle;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 5px solid #fff; /* Adjust color to match your design */
+  transition: transform 0.3s ease;
+}
+
+/* Rotate arrow when the menu item is active or submenu is expanded */
+.sidebarMenuItem.active .sidebarArrow,
+.sidebarMenuItem:hover .sidebarArrow {
+  transform: rotate(90deg); /* Rotates to a down arrow when active/hovered */
 }
 
 .sidebarLink::before {
@@ -114,28 +140,23 @@
 }
 
 .sidebarLink:hover::before {
-  background-color: #0FD46C; /* sky blue hover line */
+  background-color: #0FD46C;
 }
 
 .sidebarLink:hover {
-  background-color: #1f2937; /* darker gray on hover */
+  background-color: #1f2937;
 }
 
 .sidebarLink.active::before {
-  background-color: #0FD46C; /* active left line */
+  background-color: #0FD46C;
 }
-
-
-
-
-
-
 
 .sidebarArrow {
   margin-left: 8px;
   font-size: 12px;
 }
 
+/* FIXED: Sidebar submenu with highest z-index to appear above navbar */
 .sidebarSubmenu {
   display: none;
   position: absolute;
@@ -146,11 +167,13 @@
   list-style: none;
   border: 1px solid #e5e7eb;
   min-width: 160px;
-  z-index: 100;
+  z-index: 1100; /* HIGHEST z-index to appear above navbar and submenu */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); /* Added shadow for better visibility */
 }
 
 .sidebarMenuItem:hover .sidebarSubmenu {
   display: block;
+  z-index: 1100;
 }
 
 .sidebarSubmenuItem {
@@ -161,38 +184,48 @@
   text-decoration: none;
   color: white;
   display: block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.3s;
+  z-index: 1100;
 }
 
 .sidebarSubmenuLink:hover {
-  background-color: #d1d5db;
+  background-color: #0FD46C;
 }
 
-
-
-.left {
-  display: flex;
+.com360_logo {
   align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #51ec99;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  margin-left: 35px;
+  margin-bottom: 45px;
 }
 
-
-
-.logoContainer {
-  position: relative;
-  cursor: pointer;
+.com360_logo:hover {
+  transform: scale(1.1);
 }
 
-
+/* Updated dropdown styles for navbar */
 .dropdown {
   position: absolute;
   top: 100%;
   right: 0;
-  background-color: white;
+  background-color: black;
+  color: white;
   border: 1px solid #ddd;
   border-radius: 5px;
   padding: 10px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   min-width: 150px;
-  z-index: 1000;
+  z-index: 1001; /* Higher than submenu bar */
 }
 
 .dropdown p {
@@ -203,7 +236,7 @@
 .dropdown button {
   width: 100%;
   padding: 5px;
-  background-color: #ff4444;
+  background-color: #0fd46c;
   color: white;
   border: none;
   border-radius: 3px;
@@ -211,6 +244,84 @@
 }
 
 .dropdown button:hover {
-  background-color: #cc0000;
+  background-color: #cc0000 !important;
 }
 
+/* Fixed submenu bar styling */
+.submenuBar {
+  position: fixed;
+  top: 26px; /* Position right below navbar */
+  left: 200px; /* Account for sidebar width */
+  right: 0;
+  z-index: 999; /* Just below navbar dropdown */
+  background-color: white; /* Solid white background */
+  border-bottom: 1px solid #e5e7eb; /* Small border under submenu */
+  padding: 10px 20px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 65px; /* Fixed height for submenu */
+  box-shadow: 0 2px 4px rgba(169, 159, 159, 0.333); /* Added box shadow */
+}
+
+.activeMenuTitle {
+  font-size: 15px;
+  font-weight: bold;
+  color: #333;
+}
+
+.submenuContainer {
+  display: flex;
+  gap: 20px;
+  background-color: white;
+}
+
+.submenuItem {
+  color: black;
+  text-decoration: none;
+  font-weight: bold;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.submenuItem:hover {
+  background-color: #e5e7eb;
+}
+
+.subactive {
+  border-bottom: 2px solid #0fd46c;
+}
+
+/* Additional styles for main content to prevent overlap */
+.main {
+  padding: 20px;
+  min-height: calc(100vh - 104px); /* Account for navbar + submenu height */
+  background-color: #f9fafb; /* Light background to ensure content doesn't blend */
+  font-size: 12px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .navbar {
+    left: 0;
+    padding: 8px 16px;
+  }
+  
+  .submenuBar {
+    left: 0;
+  }
+  
+  .rightContent {
+    margin-left: 0;
+  }
+  
+  .sidebarContainer {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+  
+  .sidebarContainer.open {
+    transform: translateX(0);
+  }
+}

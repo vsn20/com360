@@ -38,7 +38,6 @@ const Overview = () => {
 
   return (
     <div className="roles-overview-container">
-      <h2>Roles Overview</h2>
       {error && <div className="error-message">{error}</div>}
       {roles.length === 0 && !error ? (
         <p>No active roles found.</p>
