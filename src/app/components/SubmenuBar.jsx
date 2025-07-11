@@ -3,12 +3,12 @@
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import styles from './submenubar.module.css';
+import styles from '../(routes)/userscreens/userscreens.module.css';
 
 function SubmenuBar() {
   const pathname = usePathname();
   const [menuItems, setMenuItems] = useState([]);
-  const [isFetched, setIsFetched] = useState(false); // Flag to prevent re-fetching
+  const [isFetched, setIsFetched] = useState(false);
 
   useEffect(() => {
     if (!isFetched) {
@@ -18,34 +18,39 @@ function SubmenuBar() {
           if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
           const data = await res.json();
           setMenuItems(data);
-          setIsFetched(true); // Mark as fetched after successful load
+          setIsFetched(true);
         } catch (error) {
           console.error('Error fetching menu items:', error.message);
           setMenuItems([]);
-          setIsFetched(true); // Still mark as fetched to avoid retries on error
+          setIsFetched(true);
         }
       }
       fetchData();
     }
-  }, [isFetched]); // Dependency on isFetched to run only once
+  }, [isFetched]);
 
   const activeMenu = menuItems.find(
-    item => item.submenu?.some(sub => pathname === sub.href)
+    item => item.href === pathname || item.submenu?.some(sub => pathname === sub.href)
   );
 
-  if (!activeMenu || !activeMenu.submenu) return null;
+  if (!activeMenu) return null;
 
   return (
     <div className={styles.submenuBar}>
-      {activeMenu.submenu.map((sub) => (
-        <Link
-          key={sub.href}
-          href={sub.href}
-          className={`${styles.submenuItem} ${pathname === sub.href ? styles.active : ''}`}
-        >
-          {sub.title}
-        </Link>
-      ))}
+      <div className={styles.activeMenuTitle}>{activeMenu.title.toUpperCase()}</div>
+      {activeMenu.submenu && activeMenu.submenu.length > 0 && (
+        <div className={styles.submenuContainer}>
+          {activeMenu.submenu.map((sub) => (
+            <Link
+              key={sub.href}
+              href={sub.href}
+              className={`${styles.submenuItem} ${pathname === sub.href ? styles.subactive : ''}`}
+            >
+              {sub.title}
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

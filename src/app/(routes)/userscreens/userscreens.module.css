@@ -1,12 +1,10 @@
-/* Updated CSS for fixed navbar without overlapping issues */
+/* Updated CSS for fixed navbar and submenu as single unit */
 
 .navbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 12px 20px;
-  background-color: white;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   height: 30px;
   
   /* Fixed positioning */
@@ -15,6 +13,7 @@
   left: 200px; /* Account for sidebar width */
   right: 0;
   z-index: 1000; /* High z-index to stay on top */
+  background-color: white; /* Ensure navbar has solid background */
 }
 
 .left {
@@ -80,7 +79,7 @@
 
 .rightContent {
   margin-left: 200px; /* Account for sidebar width */
-  margin-top: 54px; /* Account for navbar height (30px height + 12px padding top/bottom) */
+  margin-top: 104px; /* Account for navbar height (54px) + submenu height (50px) */
 }
 
 .sidebarMenu {
@@ -107,6 +106,7 @@
   position: relative;
   transition: background-color 0.3s;
 }
+
 .sidebarArrow {
   display: inline-block;
   width: 0;
@@ -124,6 +124,7 @@
 .sidebarMenuItem:hover .sidebarArrow {
   transform: rotate(90deg); /* Rotates to a down arrow when active/hovered */
 }
+
 .sidebarLink::before {
   content: '';
   position: absolute;
@@ -235,10 +236,57 @@
   background-color: #cc0000;
 }
 
+/* Fixed submenu bar styling */
+.submenuBar {
+  position: fixed;
+  top: 26px; /* Position right below navbar */
+  left: 200px; /* Account for sidebar width */
+  right: 0;
+  z-index: 999; /* Just below navbar */
+  background-color: white; /* Solid white background */
+  border-bottom: 1px solid #e5e7eb; /* Small border under submenu */
+  padding: 10px 20px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 75px; /* Fixed height for submenu */
+  box-shadow: 0 2px 4px rgba(169, 159, 159, 0.333); /* Added box shadow */
+}
+
+.activeMenuTitle {
+  font-size: 1 rem;
+  font-weight: bold;
+  color: #333;
+}
+
+.submenuContainer {
+  display: flex;
+  gap: 20px;
+  background-color: white;
+}
+
+.submenuItem {
+  color: black;
+  text-decoration: none;
+  font-weight: bold;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.submenuItem:hover {
+  background-color: #e5e7eb;
+}
+
+.subactive {
+  border-bottom: 2px solid #0fd46c;
+}
+
 /* Additional styles for main content to prevent overlap */
 .main {
   padding: 20px;
-  min-height: calc(100vh - 54px); /* Account for navbar height */
+  min-height: calc(100vh - 104px); /* Account for navbar + submenu height */
+  background-color: #f9fafb; /* Light background to ensure content doesn't blend */
 }
 
 /* Responsive adjustments */
@@ -246,6 +294,10 @@
   .navbar {
     left: 0;
     padding: 8px 16px;
+  }
+  
+  .submenuBar {
+    left: 0;
   }
   
   .rightContent {
