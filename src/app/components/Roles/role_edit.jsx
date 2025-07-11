@@ -25,7 +25,7 @@ const EditRole = () => {
   const [permissions, setPermissions] = useState([]);
   const [availableMenus, setAvailableMenus] = useState([]);
   const [availableSubmenus, setAvailableSubmenus] = useState([]);
-  const [state, setState] = useState({ error: null, success: false });
+  const [state, setState] = useState({ error: null, success: false, isAdmin: false });
 
   useEffect(() => {
     const loadData = async () => {
@@ -34,9 +34,15 @@ const EditRole = () => {
           fetchRoleById(roleid),
           fetchMenusAndSubmenus(),
         ]);
-        console.log('Role data permissions:', roleData.permissions);
+        console.log('Role data:', roleData);
         console.log('Available menus:', menuData.menus);
         console.log('Available submenus:', menuData.submenus);
+
+        // Check if role is admin (isadmin=1)
+        if (roleData.role.isadmin === 1) {
+          setState({ error: 'Cannot edit admin role.', success: false, isAdmin: true });
+          return;
+        }
 
         setFormData({
           roleid: roleData.role.roleid || '',
@@ -64,10 +70,10 @@ const EditRole = () => {
 
         setAvailableMenus(menuData.menus);
         setAvailableSubmenus(menuData.submenus);
-        setState({ error: null, success: false });
+        setState({ error: null, success: false, isAdmin: false });
       } catch (err) {
         console.error('Error loading data:', err);
-        setState({ error: err.message, success: false });
+        setState({ error: err.message, success: false, isAdmin: false });
       }
     };
     if (roleid) loadData();
@@ -85,22 +91,56 @@ const EditRole = () => {
       return;
     }
 
+    const menu = availableMenus.find(m => m.menuid === menuid);
+    if (!menu) return;
+
     setPermissions((prev) => {
       const exists = prev.some(
         (p) => p.menuid === menuid && p.submenuid === submenuid
       );
-      if (exists) {
-        return prev.filter(
-          (p) => !(p.menuid === menuid && p.submenuid === submenuid)
-        );
+      let updatedPermissions;
+      if (submenuid) {
+        // Handle submenu toggle
+        if (exists) {
+          updatedPermissions = prev.filter(
+            (p) => !(p.menuid === menuid && p.submenuid === submenuid)
+          );
+        } else {
+          updatedPermissions = [...prev, { menuid, submenuid }];
+        }
+        // If no submenus are selected for this menu, remove the menu permission
+        if (menu.hassubmenu === 'yes') {
+          const remainingSubmenus = updatedPermissions.filter(p => p.menuid === menuid && p.submenuid);
+          if (remainingSubmenus.length === 0) {
+            updatedPermissions = updatedPermissions.filter(p => p.menuid !== menuid);
+          }
+        }
       } else {
-        return [...prev, { menuid, submenuid }];
+        // Handle menu toggle
+        if (exists) {
+          // Remove menu and all its submenus
+          updatedPermissions = prev.filter(p => p.menuid !== menuid);
+        } else {
+          // Add menu and all its submenus (if hassubmenu='yes')
+          updatedPermissions = [...prev, { menuid, submenuid: null }];
+          if (menu.hassubmenu === 'yes') {
+            const submenus = availableSubmenus
+              .filter(sm => sm.menuid === menuid)
+              .map(sm => ({ menuid, submenuid: sm.submenuid }));
+            updatedPermissions = [...updatedPermissions, ...submenus];
+          }
+        }
       }
+      return updatedPermissions;
     });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (state.isAdmin) {
+      setState({ error: 'Cannot edit admin role.', success: false, isAdmin: true });
+      return;
+    }
     console.log('Submitting permissions:', permissions);
     const formDataToSubmit = new FormData();
     Object.entries(formData).forEach(([key, value]) => {
@@ -110,9 +150,18 @@ const EditRole = () => {
     const result = await updateRole({}, formDataToSubmit);
     setState(result);
     if (result.success) {
-      router.push('/roles');
+      router.push('/userscreens/roles');
     }
   };
+
+  if (state.isAdmin) {
+    return (
+      <div className="edit-role-container">
+        <h2>Edit Role</h2>
+        <div className="error-message">Cannot edit admin role.</div>
+      </div>
+    );
+  }
 
   return (
     <div className="edit-role-container">
@@ -226,7 +275,7 @@ const EditRole = () => {
                   />
                   {menu.menuname} ({menu.menuurl})
                 </label>
-                {availableSubmenus
+                {menu.hassubmenu === 'yes' && availableSubmenus
                   .filter((sm) => sm.menuid === menu.menuid)
                   .map((submenu) => (
                     <div key={submenu.submenuid} className="permission-subitem">
@@ -238,7 +287,7 @@ const EditRole = () => {
                           )}
                           onChange={() => handlePermissionToggle(menu.menuid, submenu.submenuid)}
                         />
-                        {submenu.submenuname} ({submenu.submenuurl})
+                        {submenu.submenuname} 
                       </label>
                     </div>
                   ))}

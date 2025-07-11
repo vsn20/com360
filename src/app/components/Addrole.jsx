@@ -1,33 +1,46 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
-import { addRole } from '../serverActions/addRole';
+import { useState, useEffect } from 'react';
+import { addRole, fetchMenusAndSubmenus } from '@/app/serverActions/Roles/Overview';
 
-export default function AddRole({ features, currentRole, orgid, error }) {
+export default function AddRole({ currentRole, orgid, error }) {
   const router = useRouter();
   const [formError, setFormError] = useState(error || null);
-  const [expandedFeatures, setExpandedFeatures] = useState({}); // Track which features are expanded
-  const [selectedSubmenus, setSelectedSubmenus] = useState({}); // Track multiple selected submenus per menuid
+  const [permissions, setPermissions] = useState([]); // Track selected menus and submenus
+  const [availableMenus, setAvailableMenus] = useState([]);
+  const [availableSubmenus, setAvailableSubmenus] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const menuData = await fetchMenusAndSubmenus();
+        console.log('Fetched menus:', menuData.menus, 'Fetched submenus:', menuData.submenus);
+        setAvailableMenus(menuData.menus);
+        setAvailableSubmenus(menuData.submenus);
+      } catch (err) {
+        console.error('Error loading menus and submenus:', err);
+        setFormError(err.message || 'Failed to load features.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, []);
 
   const handleSubmit = async (formData) => {
-    formData.append('currentRole', currentRole || ''); // Ensure currentRole is a string
-    // Append all selected submenus
-    Object.entries(selectedSubmenus).forEach(([menuid, submenuIds]) => {
-      submenuIds.forEach(submenuId => {
-        if (submenuId) {
-          formData.append('submenus', `${menuid}:${submenuId}`);
-        }
-      });
-    });
+    formData.append('currentRole', currentRole || '');
+    formData.append('permissions', JSON.stringify(permissions));
 
     // Client-side validation: Ensure at least one submenu is selected for menus with hassubmenu='yes'
-    const selectedFeaturesIds = Object.keys(expandedFeatures).filter(id => expandedFeatures[id]);
-    const invalidSelections = features
-      .filter(feature => selectedFeaturesIds.includes(String(feature.id)) && feature.hassubmenu === 'yes')
-      .filter(feature => {
-        const selected = selectedSubmenus[feature.id] || [];
-        return selected.length === 0;
+    const invalidSelections = permissions
+      .filter(p => !p.submenuid) // Filter menu-level permissions
+      .map(p => availableMenus.find(m => m.menuid === p.menuid))
+      .filter(menu => menu && menu.hassubmenu === 'yes')
+      .filter(menu => {
+        const selectedSubmenus = permissions.filter(p => p.menuid === menu.menuid && p.submenuid);
+        return selectedSubmenus.length === 0;
       });
     if (invalidSelections.length > 0) {
       setFormError('Please select at least one submenu for each feature with submenus.');
@@ -42,43 +55,59 @@ export default function AddRole({ features, currentRole, orgid, error }) {
     }
   };
 
-  const handleFeatureChange = (menuid) => {
-    setExpandedFeatures(prev => ({
-      ...prev,
-      [menuid]: !prev[menuid] // Toggle expansion
-    }));
-    // If unchecking, clear selected submenus for this feature
-    if (!expandedFeatures[menuid] || !selectedSubmenus[menuid]) {
-      setSelectedSubmenus(prev => ({
-        ...prev,
-        [menuid]: []
-      }));
-    }
-  };
+  const handlePermissionToggle = (menuid, submenuid = null) => {
+    const menu = availableMenus.find(m => m.menuid === menuid);
+    if (!menu) return;
 
-  const handleSubmenuChange = (menuid, submenuId) => {
-    const feature = features.find(f => f.id === menuid);
-    if (feature && feature.hassubmenu !== 'yes') {
-      return; // Disable submenu selection if hassubmenu != 'yes'
-    }
-    setSelectedSubmenus(prev => {
-      const currentSubmenus = prev[menuid] || [];
-      if (currentSubmenus.includes(submenuId)) {
-        return {
-          ...prev,
-          [menuid]: currentSubmenus.filter(id => id !== submenuId)
-        };
+    setPermissions(prev => {
+      const exists = prev.some(
+        (p) => p.menuid === menuid && p.submenuid === submenuid
+      );
+      let updatedPermissions;
+      if (submenuid) {
+        // Handle submenu toggle
+        if (exists) {
+          updatedPermissions = prev.filter(
+            (p) => !(p.menuid === menuid && p.submenuid === submenuid)
+          );
+        } else {
+          updatedPermissions = [...prev, { menuid, submenuid }];
+        }
+        // If no submenus are selected for this menu, remove the menu permission
+        if (menu.hassubmenu === 'yes') {
+          const remainingSubmenus = updatedPermissions.filter(p => p.menuid === menuid && p.submenuid);
+          if (remainingSubmenus.length === 0) {
+            updatedPermissions = updatedPermissions.filter(p => p.menuid !== menuid);
+          }
+        }
       } else {
-        return {
-          ...prev,
-          [menuid]: [...currentSubmenus, submenuId]
-        };
+        // Handle menu toggle
+        if (exists) {
+          // Remove menu and all its submenus
+          updatedPermissions = prev.filter(p => p.menuid !== menuid);
+        } else {
+          // Add menu and all its submenus (if hassubmenu='yes')
+          updatedPermissions = [...prev, { menuid, submenuid: null }];
+          if (menu.hassubmenu === 'yes') {
+            const submenus = availableSubmenus
+              .filter(sm => sm.menuid === menuid)
+              .map(sm => ({ menuid, submenuid: sm.submenuid }));
+            updatedPermissions = [...updatedPermissions, ...submenus];
+          }
+        }
       }
+      console.log('Updated permissions:', updatedPermissions);
+      return updatedPermissions;
     });
   };
 
-  console.log('Features received:', JSON.stringify(features, null, 2)); // Debug features data
-  console.log('Selected Submenus:', JSON.stringify(selectedSubmenus, null, 2)); // Debug selected submenus
+  console.log('Available Menus:', JSON.stringify(availableMenus, null, 2));
+  console.log('Available Submenus:', JSON.stringify(availableSubmenus, null, 2));
+  console.log('Permissions:', JSON.stringify(permissions, null, 2));
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div style={{ padding: "20px", maxWidth: "600px", margin: "0 auto" }}>
@@ -130,41 +159,37 @@ export default function AddRole({ features, currentRole, orgid, error }) {
         {/* Feature Checkboxes with Submenus */}
         <div style={{ marginBottom: "20px" }}>
           <h3>Select Features: *</h3>
-          {features.length === 0 ? (
+          {availableMenus.length === 0 ? (
             <p>No features available.</p>
           ) : (
-            features.map((feature) => (
-              <div key={feature.id} style={{ margin: "10px 0" }}>
+            availableMenus.map((menu) => (
+              <div key={`menu-${menu.menuid}`} style={{ margin: "10px 0" }}>
                 <label style={{ display: "flex", alignItems: "center" }}>
                   <input
                     type="checkbox"
-                    name="features"
-                    value={feature.id}
-                    onChange={() => handleFeatureChange(feature.id)}
+                    checked={permissions.some((p) => p.menuid === menu.menuid && !p.submenuid)}
+                    onChange={() => handlePermissionToggle(menu.menuid)}
                     style={{ marginRight: "10px" }}
                   />
-                  {feature.name}
+                  {menu.menuname} ({menu.menuurl})
                 </label>
-                {expandedFeatures[feature.id] && feature.hassubmenu === 'yes' && feature.submenu && feature.submenu.length > 0 && (
-                  <div style={{ marginLeft: "20px" }}>
-                    {feature.submenu.map((sub) => (
-                      <div key={sub.id} style={{ margin: "5px 0" }}>
-                        <label style={{ display: "flex", alignItems: "center" }}>
-                          <input
-                            type="checkbox"
-                            checked={(selectedSubmenus[feature.id] || []).includes(sub.id)}
-                            onChange={() => handleSubmenuChange(feature.id, sub.id)}
-                            style={{ marginRight: "10px" }}
-                          />
-                          {sub.name}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {/* {expandedFeatures[feature.id] && feature.hassubmenu !== 'yes' && (
-                  <p style={{ marginLeft: "20px", color: "gray" }}>No submenus available.</p>
-                )} */}
+                {menu.hassubmenu === 'yes' && availableSubmenus
+                  .filter((sm) => sm.menuid === menu.menuid)
+                  .map((submenu) => (
+                    <div key={`submenu-${submenu.submenuid}`} style={{ margin: "5px 0", marginLeft: "20px" }}>
+                      <label style={{ display: "flex", alignItems: "center" }}>
+                        <input
+                          type="checkbox"
+                          checked={permissions.some(
+                            (p) => p.menuid === menu.menuid && p.submenuid === submenu.submenuid
+                          )}
+                          onChange={() => handlePermissionToggle(menu.menuid, submenu.submenuid)}
+                          style={{ marginRight: "10px" }}
+                        />
+                        {submenu.submenuname} 
+                      </label>
+                    </div>
+                  ))}
               </div>
             ))
           )}

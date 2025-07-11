@@ -568,23 +568,25 @@ const Overview = () => {
                   >
                     Save
                   </button>
-                  <button
-                    type="button"
-                    className="submit-button"
-                    onClick={() => handleSave(true)}
-                    disabled={isSaving || (selectedEmployee ? employeeTimesheets.some((t) => t.employee_id === selectedEmployee && (t.is_submitted === 1 || t.is_approved === 1)) : timesheets.some((ts) => ts.is_submitted === 1 || ts.is_approved === 1))}
-                    style={{
-                      cursor:
-                        isSaving ||
-                        (selectedEmployee
-                          ? employeeTimesheets.some((t) => t.employee_id === selectedEmployee && (t.is_submitted === 1 || t.is_approved === 1))
-                          : timesheets.some((ts) => ts.is_submitted === 1 || ts.is_approved === 1))
-                          ? "not-allowed"
-                          : "pointer",
-                    }}
-                  >
-                    Submit
-                  </button>
+                  {!selectedEmployee && (
+                    <button
+                      type="button"
+                      className="submit-button"
+                      onClick={() => handleSave(true)}
+                      disabled={isSaving || (selectedEmployee ? employeeTimesheets.some((t) => t.employee_id === selectedEmployee && (t.is_submitted === 1 || t.is_approved === 1)) : timesheets.some((ts) => ts.is_submitted === 1 || ts.is_approved === 1))}
+                      style={{
+                        cursor:
+                          isSaving ||
+                          (selectedEmployee
+                            ? employeeTimesheets.some((t) => t.employee_id === selectedEmployee && (t.is_submitted === 1 || t.is_approved === 1))
+                            : timesheets.some((ts) => ts.is_submitted === 1 || ts.is_approved === 1))
+                            ? "not-allowed"
+                            : "pointer",
+                      }}
+                    >
+                      Submit
+                    </button>
+                  )}
                 </div>
               </form>
               {selectedEmployee &&
