@@ -1,4 +1,4 @@
-'use server';
+"use server";
 
 import DBconnection from "@/app/utils/config/db";
 import { cookies } from "next/headers";
@@ -58,7 +58,7 @@ const getDelegatedSubordinates = async (pool, userEmpId) => {
     "SELECT senderempid FROM delegate WHERE receiverempid = ? AND menuid = (SELECT id FROM menu WHERE name = 'TimeSheets') AND isactive = 1 AND (submenuid IS NULL OR submenuid = 0)",
     [userEmpId]
   );
-  const delegatedSuperiors = delegateRows.map(row => row.senderempid);
+  const delegatedSuperiors = delegateRows.map((row) => row.senderempid);
   console.log("Delegated superiors:", delegatedSuperiors);
 
   let allSubordinates = [];
@@ -68,44 +68,36 @@ const getDelegatedSubordinates = async (pool, userEmpId) => {
   }
 
   if (delegatedSuperiors.length > 0) {
-    const placeholders = delegatedSuperiors.map(() => '?').join(',');
+    const placeholders = delegatedSuperiors.map(() => "?").join(",");
     const [hierarchyRows] = await pool.execute(
       `SELECT empid, superior FROM C_EMP WHERE superior IN (${placeholders})`,
       [...delegatedSuperiors]
     );
-    const subordinateIds = hierarchyRows.map(row => row.empid);
+    const subordinateIds = hierarchyRows.map((row) => row.empid);
     for (const subId of subordinateIds) {
       const nestedSubordinates = await getAllSubordinates(pool, subId, new Set());
       allSubordinates = allSubordinates.concat(nestedSubordinates);
     }
   }
 
-  return allSubordinates.filter((sub, index, self) =>
-    index === self.findIndex((s) => s.empid === sub.empid)
-  ); // Deduplicate
+  return allSubordinates.filter(
+    (sub, index, self) => index === self.findIndex((s) => s.empid === sub.empid)
+  );
 };
 
 const isSuperior = async (pool, userEmpId, employeeId) => {
   if (!userEmpId || !employeeId || userEmpId === employeeId) return false;
   const subordinates = await getAllSubordinates(pool, userEmpId);
-  const isSuperiorResult = subordinates.some((sub) => sub.empid === employeeId);
-  console.log(`isSuperior check: userEmpId=${userEmpId}, employeeId=${employeeId}, result=${isSuperiorResult}, subordinates=`, subordinates.map(s => s.empid));
-  return isSuperiorResult;
+  const delegatedSubordinates = await getDelegatedSubordinates(pool, userEmpId);
+  return subordinates.some((sub) => sub.empid === employeeId) || delegatedSubordinates.some((sub) => sub.empid === employeeId);
 };
 
 export async function fetchSuperiorName(empId) {
-  if (!empId) {
-    console.log("Employee ID is required");
-    return { error: "Employee ID is required." };
-  }
+  if (!empId) return { error: "Employee ID is required." };
 
   try {
     const pool = await DBconnection();
-    const [employeeRows] = await pool.execute(
-      "SELECT superior FROM C_EMP WHERE empid = ?",
-      [empId]
-    );
-    console.log("Employee rows for superior:", employeeRows);
+    const [employeeRows] = await pool.execute("SELECT superior FROM C_EMP WHERE empid = ?", [empId]);
     if (!employeeRows.length) return { error: "Employee not found." };
 
     const superiorId = employeeRows[0].superior;
@@ -115,10 +107,9 @@ export async function fetchSuperiorName(empId) {
       "SELECT EMP_FST_NAME, EMP_LAST_NAME FROM C_EMP WHERE empid = ?",
       [superiorId]
     );
-    console.log("Superior rows:", superiorRows);
     if (!superiorRows.length) return { superiorName: "" };
 
-    const superiorName = `${superiorRows[0].EMP_FST_NAME} ${superiorRows[0].EMP_LAST_NAME || ''}`.trim();
+    const superiorName = `${superiorRows[0].EMP_FST_NAME} ${superiorRows[0].EMP_LAST_NAME || ""}`.trim();
     return { superiorName };
   } catch (error) {
     console.error("Error fetching superior name:", error);
@@ -128,27 +119,17 @@ export async function fetchSuperiorName(empId) {
 
 export async function fetchTimesheetAndProjects(selectedDate) {
   const token = cookies().get("jwt_token")?.value;
-  if (!token) {
-    console.log("No token found");
-    return { error: "No token found. Please log in." };
-  }
+  if (!token) return { error: "No token found. Please log in." };
 
   const decoded = decodeJwt(token);
-  if (!decoded || !decoded.userId) {
-    console.log("Invalid token or user ID not found:", decoded);
-    return { error: "Invalid token or user ID not found." };
-  }
+  if (!decoded || !decoded.userId) return { error: "Invalid token or user ID not found." };
 
   const pool = await DBconnection();
   const [userRows] = await pool.execute("SELECT empid FROM C_USER WHERE username = ?", [decoded.userId]);
-  if (!userRows.length) {
-    console.log("User not found in C_USER table for userId:", decoded.userId);
-    return { error: "User not found in C_USER table." };
-  }
-  const employeeId = userRows[0].empid;
-  console.log("Fetching timesheets for employeeId:", employeeId);
+  if (!userRows.length) return { error: "User not found in C_USER table." };
 
-  const weekStart = getWeekStartDate(selectedDate || new Date().toISOString());
+  const employeeId = userRows[0].empid;
+  const weekStart = getWeekStartDate(selectedDate);
   const year = new Date(weekStart).getFullYear();
 
   const [projRows] = await pool.execute(
@@ -158,7 +139,6 @@ export async function fetchTimesheetAndProjects(selectedDate) {
      WHERE pe.EMP_ID = ? AND ? BETWEEN pe.START_DT AND COALESCE(pe.END_DT, '9999-12-31')`,
     [employeeId, weekStart]
   );
-  console.log("Project rows:", projRows);
 
   const timesheets = [];
   const attachments = {};
@@ -190,16 +170,15 @@ export async function fetchTimesheetAndProjects(selectedDate) {
       is_approved: 0,
       invoice_path: null,
       invoice_generated_at: null,
-      temp_key: `temp-${Date.now()}-${project.PRJ_ID}`
+      temp_key: `temp-${Date.now()}-${project.PRJ_ID}`,
     };
     timesheets.push(timesheet);
 
     const [attachmentRows] = await pool.execute(
-      "SELECT attachment_id, employee_id, week_start_date, year, timesheet_id, file_path, file_name, uploaded_at FROM timesheet_attachments WHERE employee_id = ? AND week_start_date = ? AND timesheet_id = ?",
-      [employeeId, weekStart, timesheet.timesheet_id || timesheet.temp_key]
+      "SELECT DISTINCT attachment_id, employee_id, week_start_date, year, timesheet_id, file_path, file_name, uploaded_at FROM timesheet_attachments WHERE employee_id = ? AND week_start_date = ?",
+      [employeeId, weekStart]
     );
     attachments[timesheet.timesheet_id || timesheet.temp_key] = attachmentRows;
-    console.log("Timesheet and attachments for project:", project.PRJ_ID, { timesheet, attachments: attachmentRows });
   }
 
   return { timesheets, projects: projRows, attachments, serverWeekStart: weekStart, currentUserEmpId: employeeId };
@@ -207,36 +186,24 @@ export async function fetchTimesheetAndProjects(selectedDate) {
 
 export async function fetchTimesheetsForSuperior(selectedDate) {
   const token = cookies().get("jwt_token")?.value;
-  if (!token) {
-    console.log("No token found");
-    return { error: "No token found. Please log in." };
-  }
+  if (!token) return { error: "No token found. Please log in." };
 
   const decoded = decodeJwt(token);
-  if (!decoded || !decoded.userId) {
-    console.log("Invalid token or user ID not found:", decoded);
-    return { error: "Invalid token or user ID not found." };
-  }
+  if (!decoded || !decoded.userId) return { error: "Invalid token or user ID not found." };
 
   const pool = await DBconnection();
   const [userRows] = await pool.execute("SELECT empid FROM C_USER WHERE username = ?", [decoded.userId]);
-  if (!userRows.length) {
-    console.log("User not found in C_USER table for userId:", decoded.userId);
-    return { error: "User not found in C_USER table." };
-  }
-  const superiorEmpId = userRows[0].empid;
-  console.log("Fetching timesheets for superior empid:", superiorEmpId);
+  if (!userRows.length) return { error: "User not found in C_USER table." };
 
-  const weekStart = getWeekStartDate(selectedDate || new Date().toISOString());
+  const superiorEmpId = userRows[0].empid;
+  const weekStart = getWeekStartDate(selectedDate);
   const year = new Date(weekStart).getFullYear();
 
   const directSubordinates = await getAllSubordinates(pool, superiorEmpId);
   const delegatedSubordinates = await getDelegatedSubordinates(pool, superiorEmpId);
-  const allSubordinates = [...directSubordinates, ...delegatedSubordinates]
-    .filter((sub, index, self) => 
-      index === self.findIndex((s) => s.empid === sub.empid) && sub.empid !== superiorEmpId
-    );
-  console.log("All subordinates after deduplication and self-exclusion:", allSubordinates);
+  const allSubordinates = [...directSubordinates, ...delegatedSubordinates].filter(
+    (sub, index, self) => index === self.findIndex((s) => s.empid === sub.empid) && sub.empid !== superiorEmpId
+  );
 
   const timesheets = [];
   const projects = {};
@@ -250,7 +217,6 @@ export async function fetchTimesheetsForSuperior(selectedDate) {
       [employee.empid, weekStart]
     );
     projects[employee.empid] = projRows;
-    console.log("Projects for employee:", employee.empid, projRows);
 
     for (const project of projRows) {
       const [timesheetRows] = await pool.execute(
@@ -281,16 +247,15 @@ export async function fetchTimesheetsForSuperior(selectedDate) {
         invoice_path: null,
         invoice_generated_at: null,
         temp_key: `temp-${Date.now()}-${project.PRJ_ID}`,
-        employeeName: `${employee.EMP_FST_NAME} ${employee.EMP_LAST_NAME || ""}`
+        employeeName: `${employee.EMP_FST_NAME} ${employee.EMP_LAST_NAME || ""}`,
       };
       timesheets.push(ts);
 
       const [attachmentRows] = await pool.execute(
-        "SELECT attachment_id, employee_id, week_start_date, year, timesheet_id, file_path, file_name, uploaded_at FROM timesheet_attachments WHERE employee_id = ? AND week_start_date = ? AND timesheet_id = ?",
-        [employee.empid, weekStart, ts.timesheet_id || ts.temp_key]
+        "SELECT DISTINCT attachment_id, employee_id, week_start_date, year, timesheet_id, file_path, file_name, uploaded_at FROM timesheet_attachments WHERE employee_id = ? AND week_start_date = ?",
+        [employee.empid, weekStart]
       );
       attachments[ts.timesheet_id || ts.temp_key] = attachmentRows;
-      console.log("Timesheet for employee:", employee.empid, { ts, attachments: attachmentRows });
     }
   }
 
@@ -298,227 +263,200 @@ export async function fetchTimesheetsForSuperior(selectedDate) {
 }
 
 export async function saveTimesheet(formData) {
-  if (!formData) {
-    console.log("Invalid form data received");
-    return { error: "Invalid form data received." };
-  }
+  if (!formData) return { error: "Invalid form data received." };
 
   const token = cookies().get("jwt_token")?.value;
-  if (!token) {
-    console.log("No token found");
-    return { error: "No token found. Please log in." };
-  }
+  if (!token) return { error: "No token found. Please log in." };
 
   const decoded = decodeJwt(token);
-  if (!decoded || !decoded.userId) {
-    console.log("Invalid token or user ID not found:", decoded);
-    return { error: "Invalid token or user ID not found." };
-  }
+  if (!decoded || !decoded.userId) return { error: "Invalid token or user ID not found." };
 
   const pool = await DBconnection();
   const [userRows] = await pool.execute("SELECT empid FROM C_USER WHERE username = ?", [decoded.userId]);
-  if (!userRows.length) {
-    console.log("User not found in C_USER table for userId:", decoded.userId);
-    return { error: "User not found in C_USER table." };
-  }
+  if (!userRows.length) return { error: "User not found in C_USER table." };
+
   const currentUserEmpId = userRows[0].empid;
-  console.log("Current user empid:", currentUserEmpId);
+  const timesheetsData = [];
+  const updatedAttachments = {};
 
-  const employeeId = formData.get("employee_id") || currentUserEmpId;
-  const projectId = formData.get("project_id");
-  const timesheetId = formData.get("timesheet_id");
-  const weekStartDate = getWeekStartDate(formData.get("week_start_date") || new Date().toISOString());
-  const year = new Date(weekStartDate).getFullYear();
-  console.log("Save timesheet data:", { employeeId, projectId, timesheetId, weekStartDate, year });
-
-  if (!projectId || !weekStartDate) return { error: "Project ID and week start date are required." };
-
-  let existingTimesheet = null;
-  if (timesheetId) {
-    const [rows] = await pool.execute("SELECT * FROM timesheets WHERE timesheet_id = ? AND employee_id = ?", [timesheetId, employeeId]);
-    existingTimesheet = rows[0];
-  } else {
-    const [rows] = await pool.execute(
-      "SELECT * FROM timesheets WHERE employee_id = ? AND week_start_date = ? AND project_id = ?",
-      [employeeId, weekStartDate, projectId]
-    );
-    existingTimesheet = rows[0];
-  }
-  console.log("Existing timesheet:", existingTimesheet);
-
-  if (existingTimesheet?.is_approved === 1 && formData.get("is_approved") !== "0") {
-    return { error: "Cannot edit an approved timesheet. Please unapprove it first." };
-  }
-
-  if (currentUserEmpId === employeeId && existingTimesheet?.is_submitted === 1) {
-    return { error: "You cannot edit your own timesheet once it is submitted." };
-  }
-
-  const fields = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-  const hours = fields.map((day) => ({
-    hours: formData.get(`${day}_hours`) !== null ? parseFloat(formData.get(`${day}_hours`)) || null : existingTimesheet?.[`${day}_hours`] || null,
-    comment: formData.get(`${day}_comment`) !== null ? formData.get(`${day}_comment`) || "" : existingTimesheet?.[`${day}_comment`] || ""
-  }));
-  const isSubmitted = formData.get("is_submitted") !== null ? parseInt(formData.get("is_submitted") || "0") : existingTimesheet?.is_submitted || 0;
-  const isApproved = formData.get("is_approved") !== null ? parseInt(formData.get("is_approved") || "0") : existingTimesheet?.is_approved || 0;
-
-  let finalTimesheetId = timesheetId || existingTimesheet?.timesheet_id;
-
-  if (finalTimesheetId) {
-    const [result] = await pool.execute(
-      `UPDATE timesheets SET 
-        sun_hours = ?, mon_hours = ?, tue_hours = ?, wed_hours = ?, thu_hours = ?, fri_hours = ?, sat_hours = ?, 
-        sun_comment = ?, mon_comment = ?, tue_comment = ?, wed_comment = ?, thu_comment = ?, fri_comment = ?, sat_comment = ?, 
-        is_submitted = ?, is_approved = ?, updated_at = CURRENT_TIMESTAMP 
-        WHERE timesheet_id = ? AND employee_id = ?`,
-      [
-        ...hours.map((h) => h.hours),
-        ...hours.map((h) => h.comment),
-        isSubmitted,
-        isApproved,
-        finalTimesheetId,
-        employeeId
-      ]
-    );
-    if (result.affectedRows === 0) {
-      console.log("No rows updated for timesheetId:", finalTimesheetId);
-      return { error: "Failed to update timesheet." };
+  const timesheetIndices = [];
+  for (let key of formData.keys()) {
+    const match = key.match(/^timesheets\[(\d+)\]/);
+    if (match && !timesheetIndices.includes(match[1])) {
+      timesheetIndices.push(match[1]);
     }
-  } else {
-    const [result] = await pool.execute(
-      `INSERT INTO timesheets (
-        employee_id, project_id, week_start_date, year, 
-        sun_hours, mon_hours, tue_hours, wed_hours, thu_hours, fri_hours, sat_hours, 
-        sun_comment, mon_comment, tue_comment, wed_comment, thu_comment, fri_comment, sat_comment, 
-        is_submitted, is_approved, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-      [
-        employeeId,
-        projectId,
-        weekStartDate,
-        year,
-        ...hours.map((h) => h.hours),
-        ...hours.map((h) => h.comment),
-        isSubmitted,
-        isApproved
-      ]
-    );
-    finalTimesheetId = result.insertId;
-    console.log("New timesheet inserted, id:", finalTimesheetId);
   }
 
-  const attachmentFiles = formData.getAll('attachment');
-  const updatedAttachments = [];
-  const processedFiles = new Set();
-  const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf', 'text/plain'];
-  const maxFileSize = 5 * 1024 * 1024;
+  for (const index of timesheetIndices) {
+    const timesheetId = formData.get(`timesheets[${index}][timesheet_id]`) || null;
+    const employeeId = formData.get(`timesheets[${index}][employee_id]`);
+    const projectId = formData.get(`timesheets[${index}][project_id]`);
+    const weekStartDate = formData.get(`timesheets[${index}][week_start_date]`);
+    const year = formData.get(`timesheets[${index}][year]`);
+    if (!projectId || !weekStartDate) continue;
 
-  if (attachmentFiles.length > 0 && attachmentFiles[0].size > 0 && isApproved !== 1) {
-    const uploadDir = path.join(process.cwd(), "public", "uploads", employeeId, weekStartDate.replace(/-/g, ""));
+    let existingTimesheet = null;
+    if (timesheetId) {
+      const [rows] = await pool.execute("SELECT * FROM timesheets WHERE timesheet_id = ? AND employee_id = ?", [timesheetId, employeeId]);
+      existingTimesheet = rows[0];
+    } else {
+      const [rows] = await pool.execute(
+        "SELECT * FROM timesheets WHERE employee_id = ? AND week_start_date = ? AND project_id = ?",
+        [employeeId, weekStartDate, projectId]
+      );
+      existingTimesheet = rows[0];
+    }
+
+    const isSuperiorUser = await isSuperior(pool, currentUserEmpId, employeeId);
+
+    if (existingTimesheet) {
+      if (existingTimesheet.is_approved === 1 && currentUserEmpId === employeeId && !isSuperiorUser) continue; // Employee can't edit approved
+      if (existingTimesheet.is_submitted === 1 && currentUserEmpId === employeeId && !isSuperiorUser) continue; // Employee can't edit submitted
+    }
+
+    const fields = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+    const hours = fields.map((day) => ({
+      hours: formData.get(`timesheets[${index}][${day}_hours]`) !== null ? parseFloat(formData.get(`timesheets[${index}][${day}_hours]`)) || null : existingTimesheet?.[`${day}_hours`] || null,
+      comment: formData.get(`timesheets[${index}][${day}_comment]`) !== null ? formData.get(`timesheets[${index}][${day}_comment]`) || "" : existingTimesheet?.[`${day}_comment`] || "",
+    }));
+    const isSubmitted = formData.get(`timesheets[${index}][is_submitted]`) !== null ? parseInt(formData.get(`timesheets[${index}][is_submitted]`) || "0") : existingTimesheet?.is_submitted || 0;
+    const isApproved = formData.get(`timesheets[${index}][is_approved]`) !== null ? parseInt(formData.get(`timesheets[${index}][is_approved]`) || "0") : existingTimesheet?.is_approved || 0;
+
+    let finalTimesheetId = timesheetId || existingTimesheet?.timesheet_id;
+
+    if (finalTimesheetId) {
+      await pool.execute(
+        `UPDATE timesheets SET 
+          sun_hours = ?, mon_hours = ?, tue_hours = ?, wed_hours = ?, thu_hours = ?, fri_hours = ?, sat_hours = ?, 
+          sun_comment = ?, mon_comment = ?, tue_comment = ?, wed_comment = ?, thu_comment = ?, fri_comment = ?, sat_comment = ?, 
+          is_submitted = ?, is_approved = ?, approved_by = ?, updated_at = CURRENT_TIMESTAMP 
+          WHERE timesheet_id = ? AND employee_id = ?`,
+        [
+          ...hours.map((h) => h.hours),
+          ...hours.map((h) => h.comment),
+          isSubmitted,
+          isApproved,
+          isApproved ? currentUserEmpId : null,
+          finalTimesheetId,
+          employeeId,
+        ]
+      );
+    } else {
+      const [result] = await pool.execute(
+        `INSERT INTO timesheets (
+          employee_id, project_id, week_start_date, year, 
+          sun_hours, mon_hours, tue_hours, wed_hours, thu_hours, fri_hours, sat_hours, 
+          sun_comment, mon_comment, tue_comment, wed_comment, thu_comment, fri_comment, sat_comment, 
+          is_submitted, is_approved, approved_by, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+        [
+          employeeId,
+          projectId,
+          weekStartDate,
+          year,
+          ...hours.map((h) => h.hours),
+          ...hours.map((h) => h.comment),
+          isSubmitted,
+          isApproved,
+          isApproved ? currentUserEmpId : null,
+        ]
+      );
+      finalTimesheetId = result.insertId;
+    }
+
+    timesheetsData.push({ timesheetId: finalTimesheetId, employeeId, weekStartDate, year, isSubmitted });
+  }
+
+  // Handle attachments once for the week, using the first timesheet ID
+  const attachmentFiles = formData.getAll("attachment");
+  const firstTimesheetId = timesheetsData.length > 0 ? timesheetsData[0].timesheetId : null;
+  if (attachmentFiles.length > 0 && attachmentFiles[0].size > 0) {
+    const allowedTypes = ["image/jpeg", "image/png", "application/pdf", "text/plain"];
+    const maxFileSize = 5 * 1024 * 1024;
+
+    const uploadDir = path.join(process.cwd(), "public", "uploads", currentUserEmpId, timesheetsData[0].weekStartDate.replace(/-/g, ""));
     try {
       await fs.mkdir(uploadDir, { recursive: true });
-      console.log("Upload directory created:", uploadDir);
-
       for (const attachmentFile of attachmentFiles) {
-        const fileIdentifier = `${attachmentFile.name}-${attachmentFile.size}`;
-        if (attachmentFile.size === 0 || processedFiles.has(fileIdentifier)) {
-          console.log(`Skipping duplicate or empty file: ${attachmentFile.name} (size: ${attachmentFile.size})`);
-          continue;
-        }
+        if (!allowedTypes.includes(attachmentFile.type)) return { error: `Invalid file type for ${attachmentFile.name}. Allowed types: ${allowedTypes.join(", ")}` };
+        if (attachmentFile.size > maxFileSize) return { error: `File ${attachmentFile.name} exceeds the 5MB size limit.` };
 
-        if (!allowedTypes.includes(attachmentFile.type)) {
-          console.log(`Invalid file type for ${attachmentFile.name}: ${attachmentFile.type}`);
-          return { error: `Invalid file type for ${attachmentFile.name}. Allowed types: ${allowedTypes.join(', ')}` };
-        }
-        if (attachmentFile.size > maxFileSize) {
-          console.log(`File ${attachmentFile.name} exceeds size limit: ${attachmentFile.size} bytes`);
-          return { error: `File ${attachmentFile.name} exceeds the 5MB size limit.` };
-        }
-
-        const fileExtension = path.extname(attachmentFile.name) || '.bin';
+        const fileExtension = path.extname(attachmentFile.name) || ".bin";
         const uniqueFileName = `${uuidv4()}${fileExtension}`;
         const filePath = path.join(uploadDir, uniqueFileName);
 
-        console.log(`Saving file: ${attachmentFile.name} as ${uniqueFileName} to ${filePath}`);
-
         await fs.writeFile(filePath, Buffer.from(await attachmentFile.arrayBuffer()));
-
         const [insertResult] = await pool.execute(
           "INSERT INTO timesheet_attachments (employee_id, week_start_date, year, timesheet_id, file_path, file_name, uploaded_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
           [
-            employeeId,
-            weekStartDate,
-            year,
-            finalTimesheetId,
-            `/uploads/${employeeId}/${weekStartDate.replace(/-/g, "")}/${uniqueFileName}`,
-            attachmentFile.name
+            currentUserEmpId,
+            timesheetsData[0].weekStartDate,
+            timesheetsData[0].year,
+            firstTimesheetId,
+            `/uploads/${currentUserEmpId}/${timesheetsData[0].weekStartDate.replace(/-/g, "")}/${uniqueFileName}`,
+            attachmentFile.name,
           ]
         );
 
-        console.log(`Inserted attachment: attachment_id=${insertResult.insertId}, file_name=${attachmentFile.name}`);
-
-        updatedAttachments.push({
+        updatedAttachments[firstTimesheetId] = updatedAttachments[firstTimesheetId] || [];
+        updatedAttachments[firstTimesheetId].push({
           attachment_id: insertResult.insertId,
-          employee_id: employeeId,
-          week_start_date: weekStartDate,
-          year,
-          timesheet_id: finalTimesheetId,
-          file_path: `/uploads/${employeeId}/${weekStartDate.replace(/-/g, "")}/${uniqueFileName}`,
+          employee_id: currentUserEmpId,
+          week_start_date: timesheetsData[0].weekStartDate,
+          year: timesheetsData[0].year,
+          timesheet_id: firstTimesheetId,
+          file_path: `/uploads/${currentUserEmpId}/${timesheetsData[0].weekStartDate.replace(/-/g, "")}/${uniqueFileName}`,
           file_name: attachmentFile.name,
-          uploaded_at: new Date().toISOString()
+          uploaded_at: new Date().toISOString(),
         });
-
-        processedFiles.add(fileIdentifier);
       }
     } catch (error) {
-      console.error("Error saving attachment:", error);
       return { error: `Failed to save attachment: ${error.message}` };
     }
-  } else {
-    console.log("No valid attachment files provided or timesheet is approved.");
+  } else if (timesheetsData.length > 0 && formData.get("timesheets[0][is_submitted]") === "1" && !attachmentFiles.length) {
+    const [existingAttachments] = await pool.execute(
+      "SELECT COUNT(*) as count FROM timesheet_attachments WHERE employee_id = ? AND week_start_date = ?",
+      [currentUserEmpId, timesheetsData[0].weekStartDate]
+    );
+    if (existingAttachments[0].count === 0) {
+      return { error: "No attachments found. Please check 'No Attachment' or upload at least one attachment." };
+    }
   }
 
-  const [attachmentRows] = await pool.execute(
-    "SELECT attachment_id, employee_id, week_start_date, year, timesheet_id, file_path, file_name, uploaded_at FROM timesheet_attachments WHERE employee_id = ? AND week_start_date = ? AND timesheet_id = ?",
-    [employeeId, weekStartDate, finalTimesheetId]
-  );
-  console.log(`Fetched attachments for timesheet_id=${finalTimesheetId}:`, attachmentRows);
+  const attachmentRows = timesheetsData.length > 0
+    ? await pool.execute(
+        "SELECT DISTINCT attachment_id, employee_id, week_start_date, year, timesheet_id, file_path, file_name, uploaded_at FROM timesheet_attachments WHERE employee_id = ? AND week_start_date = ?",
+        [currentUserEmpId, timesheetsData[0].weekStartDate]
+      )[0]
+    : [];
 
-  return { success: true, timesheetId: finalTimesheetId, attachments: attachmentRows };
+  return {
+    success: true,
+    timesheetIds: timesheetsData.map((td) => td.timesheetId),
+    attachments: attachmentRows,
+  };
 }
 
 export async function removeAttachment(attachmentId, timesheetId) {
   const token = cookies().get("jwt_token")?.value;
-  if (!token) {
-    console.log("No token found");
-    return { error: "No token found. Please log in." };
-  }
+  if (!token) return { error: "No token found. Please log in." };
 
   const decoded = decodeJwt(token);
-  if (!decoded || !decoded.userId) {
-    console.log("Invalid token or user ID not found:", decoded);
-    return { error: "Invalid token or user ID not found." };
-  }
+  if (!decoded || !decoded.userId) return { error: "Invalid token or user ID not found." };
 
   const pool = await DBconnection();
   const [userRows] = await pool.execute("SELECT empid FROM C_USER WHERE username = ?", [decoded.userId]);
-  if (!userRows.length) {
-    console.log("User not found in C_USER table for userId:", decoded.userId);
-    return { error: "User not found in C_USER table." };
-  }
-  const currentUserEmpId = userRows[0].empid;
-  console.log("Current user empid for removal:", currentUserEmpId);
+  if (!userRows.length) return { error: "User not found in C_USER table." };
 
+  const currentUserEmpId = userRows[0].empid;
   try {
     const [attachmentRows] = await pool.execute(
-      "SELECT employee_id, file_path FROM timesheet_attachments WHERE attachment_id = ? AND timesheet_id = ?",
+      "SELECT employee_id, file_path, timesheet_id FROM timesheet_attachments WHERE attachment_id = ? AND timesheet_id = ?",
       [attachmentId, timesheetId]
     );
-    console.log("Attachment rows:", attachmentRows);
     if (!attachmentRows.length) return { error: "Attachment not found." };
 
-    const { employee_id: employeeId, file_path: filePath } = attachmentRows[0];
-
+    const { employee_id: employeeId, file_path: filePath, timesheet_id } = attachmentRows[0];
     const [timesheetRows] = await pool.execute(
       "SELECT is_submitted, is_approved FROM timesheets WHERE timesheet_id = ? AND employee_id = ?",
       [timesheetId, employeeId]
@@ -526,147 +464,103 @@ export async function removeAttachment(attachmentId, timesheetId) {
     if (!timesheetRows.length) return { error: "Timesheet not found." };
 
     const { is_submitted, is_approved } = timesheetRows[0];
-    console.log("Timesheet status:", { is_submitted, is_approved });
+    const isSuperiorUser = await isSuperior(pool, currentUserEmpId, employeeId);
+    if (is_approved === 1 && currentUserEmpId === employeeId && !isSuperiorUser) return { error: "You cannot remove attachments from your own approved timesheet." };
+    if (is_submitted === 1 && currentUserEmpId === employeeId && !isSuperiorUser) return { error: "You cannot remove attachments from your own submitted timesheet." };
+    if (is_submitted === 1 && !isSuperiorUser && currentUserEmpId !== employeeId) return { error: "Only a superior can remove attachments from a submitted timesheet." };
 
-    if (is_approved === 1) {
-      return { error: "Cannot remove attachment from an approved timesheet." };
-    }
-
-    if (currentUserEmpId === employeeId && is_submitted === 1) {
-      return { error: "You cannot remove attachments from your own submitted timesheet." };
-    }
-
-    const [deleteResult] = await pool.execute(
-      "DELETE FROM timesheet_attachments WHERE attachment_id = ? AND timesheet_id = ?",
-      [attachmentId, timesheetId]
-    );
-    if (deleteResult.affectedRows === 0) {
-      console.log("No rows deleted for attachmentId:", attachmentId);
-      return { error: "Failed to delete attachment from database." };
-    }
-
+    await pool.execute("DELETE FROM timesheet_attachments WHERE attachment_id = ? AND timesheet_id = ?", [attachmentId, timesheetId]);
     const absolutePath = path.join(process.cwd(), "public", filePath);
     try {
       await fs.unlink(absolutePath);
-      console.log(`Deleted file: ${absolutePath}`);
     } catch (error) {
       console.warn(`Failed to delete file at ${absolutePath}: ${error.message}`);
     }
 
     return { success: true };
   } catch (error) {
-    console.error("Error removing attachment:", error);
     return { error: `Failed to remove attachment: ${error.message}` };
   }
 }
 
 export async function fetchPendingTimesheets() {
   const token = cookies().get("jwt_token")?.value;
-  if (!token) {
-    console.log("No token found");
-    return { error: "No token found. Please log in." };
-  }
+  if (!token) return { error: "No token found. Please log in." };
 
   const decoded = decodeJwt(token);
-  if (!decoded || !decoded.userId) {
-    console.log("Invalid token or user ID not found:", decoded);
-    return { error: "Invalid token or user ID not found." };
-  }
+  if (!decoded || !decoded.userId) return { error: "Invalid token or user ID not found." };
 
   const pool = await DBconnection();
   const [userRows] = await pool.execute("SELECT empid FROM C_USER WHERE username = ?", [decoded.userId]);
-  if (!userRows.length) {
-    console.log("User not found in C_USER table for userId:", decoded.userId);
-    return { error: "User not found in C_USER table." };
-  }
-  const userEmpId = userRows[0].empid;
-  console.log("Fetching pending timesheets for user empid:", userEmpId);
+  if (!userRows.length) return { error: "User not found in C_USER table." };
 
+  const userEmpId = userRows[0].empid;
   const directSubordinates = await getAllSubordinates(pool, userEmpId);
   const delegatedSubordinates = await getDelegatedSubordinates(pool, userEmpId);
-  const allSubordinates = [...directSubordinates, ...delegatedSubordinates].filter((sub, index, self) =>
-    index === self.findIndex((s) => s.empid === sub.empid) && sub.empid !== userEmpId
+  const allSubordinates = [...directSubordinates, ...delegatedSubordinates].filter(
+    (sub, index, self) => index === self.findIndex((s) => s.empid === sub.empid) && sub.empid !== userEmpId
   );
-  console.log("All subordinates after deduplication and self-exclusion:", allSubordinates);
 
-  if (!allSubordinates.length) {
-    console.log("No subordinates found for user empid:", userEmpId);
-    return { error: "You are not authorized to view pending timesheets." };
-  }
+  if (!allSubordinates.length) return { error: "You are not authorized to view pending timesheets." };
 
-  const employeeIds = allSubordinates.map(emp => emp.empid);
+  const employeeIds = allSubordinates.map((emp) => emp.empid);
   const [timesheetRows] = await pool.execute(
-    `SELECT t.*, 
-            COALESCE(p.PRJ_NAME, 'Unnamed Project') AS project_name,
-            e.EMP_FST_NAME, e.EMP_LAST_NAME
+    `SELECT t.*, COALESCE(p.PRJ_NAME, 'Unnamed Project') AS project_name, e.EMP_FST_NAME, e.EMP_LAST_NAME
      FROM timesheets t
      LEFT JOIN C_PROJECT p ON t.project_id = p.PRJ_ID
      LEFT JOIN C_EMP e ON t.employee_id = e.empid
-     WHERE t.employee_id IN (${employeeIds.map(() => '?').join(',')})
-     AND t.is_submitted = 1 AND t.is_approved = 0`,
+     WHERE t.employee_id IN (${employeeIds.map(() => "?").join(",")}) AND t.is_submitted = 1 AND t.is_approved = 0`,
     employeeIds
   );
-  console.log("Pending timesheet rows:", timesheetRows);
 
-  const timesheets = timesheetRows.map(ts => ({
+  const timesheets = timesheetRows.map((ts) => ({
     ...ts,
-    employee_name: `${ts.EMP_FST_NAME} ${ts.EMP_LAST_NAME || ''}`.trim(),
-    total_hours: ['sun_hours', 'mon_hours', 'tue_hours', 'wed_hours', 'thu_hours', 'fri_hours', 'sat_hours']
-      .reduce((sum, day) => sum + (parseFloat(ts[day]) || 0), 0),
+    employee_name: `${ts.EMP_FST_NAME} ${ts.EMP_LAST_NAME || ""}`.trim(),
+    total_hours: ["sun_hours", "mon_hours", "tue_hours", "wed_hours", "thu_hours", "fri_hours", "sat_hours"].reduce(
+      (sum, day) => sum + (parseFloat(ts[day]) || 0),
+      0
+    ),
   }));
 
   return { timesheets, employees: allSubordinates };
 }
 
-export async function approveTimesheet(timesheetId, employeeId) {
+export async function approveTimesheet(timesheetId, employeeId, isApproved) {
   const token = cookies().get("jwt_token")?.value;
-  if (!token) {
-    console.log("No token found");
-    return { error: "No token found. Please log in." };
-  }
+  if (!token) return { error: "No token found. Please log in." };
 
   const decoded = decodeJwt(token);
-  if (!decoded || !decoded.userId) {
-    console.log("Invalid token or user ID not found:", decoded);
-    return { error: "Invalid token or user ID not found." };
-  }
+  if (!decoded || !decoded.userId) return { error: "Invalid token or user ID not found." };
 
   const pool = await DBconnection();
   const [userRows] = await pool.execute("SELECT empid FROM C_USER WHERE username = ?", [decoded.userId]);
-  if (!userRows.length) {
-    console.log("User not found in C_USER table for userId:", decoded.userId);
-    return { error: "User not found in C_USER table." };
-  }
-  const currentUserEmpId = userRows[0].empid;
-  console.log("Approving timesheet for user empid:", currentUserEmpId, "timesheetId:", timesheetId, "employeeId:", employeeId);
+  if (!userRows.length) return { error: "User not found in C_USER table." };
 
+  const currentUserEmpId = userRows[0].empid;
   const [timesheetRows] = await pool.execute(
     "SELECT * FROM timesheets WHERE timesheet_id = ? AND employee_id = ?",
     [timesheetId, employeeId]
   );
-  if (!timesheetRows.length) {
-    console.log("Timesheet not found for id:", timesheetId);
-    return { error: "Timesheet not found." };
-  }
+  if (!timesheetRows.length) return { error: "Timesheet not found." };
 
-  const isDirectSuperior = (await getAllSubordinates(pool, currentUserEmpId)).some(sub => sub.empid === employeeId);
-  const isDelegatedSuperior = (await getDelegatedSubordinates(pool, currentUserEmpId)).some(sub => sub.empid === employeeId);
-  console.log("Superior checks:", { isDirectSuperior, isDelegatedSuperior });
+  const isSuperiorUser = await isSuperior(pool, currentUserEmpId, employeeId);
+  if (!isSuperiorUser && currentUserEmpId !== employeeId) return { error: "You are not authorized to approve or unapprove this timesheet." };
+  if (currentUserEmpId === employeeId) return { error: "You cannot approve or unapprove your own timesheet." };
 
-  if (!isDirectSuperior && !isDelegatedSuperior) return { error: "You are not authorized to approve this timesheet. Redirecting to timesheets." };
-
-  if (currentUserEmpId === employeeId) return { error: "You cannot approve your own timesheet." };
-
-  const [result] = await pool.execute(
-    `UPDATE timesheets SET is_approved = 1, updated_at = CURRENT_TIMESTAMP 
-     WHERE timesheet_id = ? AND employee_id = ?`,
-    [timesheetId, employeeId]
+  await pool.execute(
+    `UPDATE timesheets SET is_approved = ?, approved_by = ?, updated_at = CURRENT_TIMESTAMP WHERE timesheet_id = ? AND employee_id = ?`,
+    [isApproved ? 1 : 0, isApproved ? currentUserEmpId : null, timesheetId, employeeId]
   );
 
-  if (result.affectedRows === 0) {
-    console.log("No rows updated for approval:", { timesheetId, employeeId });
-    return { error: "Failed to approve timesheet." };
+  // Verify the update
+  const [updatedRows] = await pool.execute(
+    "SELECT is_approved, approved_by FROM timesheets WHERE timesheet_id = ? AND employee_id = ?",
+    [timesheetId, employeeId]
+  );
+  if (updatedRows.length && updatedRows[0].is_approved !== isApproved) {
+    console.error("Approval update failed to persist:", updatedRows[0]);
+    return { error: "Failed to update approval status." };
   }
 
-  return { success: true, timesheetId };
+  return { success: true, timesheetId, isApproved: updatedRows[0].is_approved, approvedBy: updatedRows[0].approved_by };
 }
