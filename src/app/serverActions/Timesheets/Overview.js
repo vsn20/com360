@@ -26,7 +26,7 @@ const getWeekStartDate = (date) => {
     return d.toISOString().split("T")[0];
   } catch (error) {
     console.error("Invalid date error:", error);
-    return new Date().toISOString().split("T")[0]; // Fallback to current date
+    return new Date().toISOString().split("T")[0];
   }
 };
 
@@ -67,7 +67,6 @@ const getDelegatedSubordinates = async (pool, userEmpId) => {
     allSubordinates = allSubordinates.concat(subordinates);
   }
 
-  // Include all subordinates of the delegator's hierarchy for the receiver
   if (delegatedSuperiors.length > 0) {
     const placeholders = delegatedSuperiors.map(() => '?').join(',');
     const [hierarchyRows] = await pool.execute(
@@ -149,7 +148,7 @@ export async function fetchTimesheetAndProjects(selectedDate) {
   const employeeId = userRows[0].empid;
   console.log("Fetching timesheets for employeeId:", employeeId);
 
-  const weekStart = getWeekStartDate(selectedDate || new Date().toISOString()); // Use server time or provided date
+  const weekStart = getWeekStartDate(selectedDate || new Date().toISOString());
   const year = new Date(weekStart).getFullYear();
 
   const [projRows] = await pool.execute(
@@ -203,7 +202,7 @@ export async function fetchTimesheetAndProjects(selectedDate) {
     console.log("Timesheet and attachments for project:", project.PRJ_ID, { timesheet, attachments: attachmentRows });
   }
 
-  return { timesheets, projects: projRows, attachments, serverWeekStart: weekStart }; // Pass server-calculated weekStart
+  return { timesheets, projects: projRows, attachments, serverWeekStart: weekStart, currentUserEmpId: employeeId };
 }
 
 export async function fetchTimesheetsForSuperior(selectedDate) {
@@ -228,12 +227,11 @@ export async function fetchTimesheetsForSuperior(selectedDate) {
   const superiorEmpId = userRows[0].empid;
   console.log("Fetching timesheets for superior empid:", superiorEmpId);
 
-  const weekStart = getWeekStartDate(selectedDate || new Date().toISOString()); // Use server time or provided date
+  const weekStart = getWeekStartDate(selectedDate || new Date().toISOString());
   const year = new Date(weekStart).getFullYear();
 
   const directSubordinates = await getAllSubordinates(pool, superiorEmpId);
   const delegatedSubordinates = await getDelegatedSubordinates(pool, superiorEmpId);
-  // Filter out the current user's empid from subordinates to avoid duplication
   const allSubordinates = [...directSubordinates, ...delegatedSubordinates]
     .filter((sub, index, self) => 
       index === self.findIndex((s) => s.empid === sub.empid) && sub.empid !== superiorEmpId
@@ -296,7 +294,7 @@ export async function fetchTimesheetsForSuperior(selectedDate) {
     }
   }
 
-  return { timesheets, employees: allSubordinates, projects, attachments, serverWeekStart: weekStart }; // Pass server-calculated weekStart
+  return { timesheets, employees: allSubordinates, projects, attachments, serverWeekStart: weekStart, currentUserEmpId: superiorEmpId };
 }
 
 export async function saveTimesheet(formData) {
@@ -348,11 +346,12 @@ export async function saveTimesheet(formData) {
   }
   console.log("Existing timesheet:", existingTimesheet);
 
-  const isUserSuperior = await isSuperior(pool, currentUserEmpId, employeeId);
-  console.log("Is user superior:", isUserSuperior);
+  if (existingTimesheet?.is_approved === 1 && formData.get("is_approved") !== "0") {
+    return { error: "Cannot edit an approved timesheet. Please unapprove it first." };
+  }
 
-  if (!isUserSuperior && existingTimesheet && (existingTimesheet.is_submitted === 1 || existingTimesheet.is_approved === 1)) {
-    return { error: "Only superiors can edit submitted or approved timesheets." };
+  if (currentUserEmpId === employeeId && existingTimesheet?.is_submitted === 1) {
+    return { error: "You cannot edit your own timesheet once it is submitted." };
   }
 
   const fields = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
@@ -414,7 +413,7 @@ export async function saveTimesheet(formData) {
   const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf', 'text/plain'];
   const maxFileSize = 5 * 1024 * 1024;
 
-  if (attachmentFiles.length > 0 && attachmentFiles[0].size > 0) {
+  if (attachmentFiles.length > 0 && attachmentFiles[0].size > 0 && isApproved !== 1) {
     const uploadDir = path.join(process.cwd(), "public", "uploads", employeeId, weekStartDate.replace(/-/g, ""));
     try {
       await fs.mkdir(uploadDir, { recursive: true });
@@ -476,7 +475,7 @@ export async function saveTimesheet(formData) {
       return { error: `Failed to save attachment: ${error.message}` };
     }
   } else {
-    console.log("No valid attachment files provided.");
+    console.log("No valid attachment files provided or timesheet is approved.");
   }
 
   const [attachmentRows] = await pool.execute(
@@ -529,16 +528,12 @@ export async function removeAttachment(attachmentId, timesheetId) {
     const { is_submitted, is_approved } = timesheetRows[0];
     console.log("Timesheet status:", { is_submitted, is_approved });
 
-    const isUserSuperior = await isSuperior(pool, currentUserEmpId, employeeId);
-    const isOwner = currentUserEmpId === employeeId;
-    console.log("Authorization check:", { isUserSuperior, isOwner });
-
-    if (!isUserSuperior && !isOwner) {
-      return { error: "You are not authorized to remove this attachment." };
+    if (is_approved === 1) {
+      return { error: "Cannot remove attachment from an approved timesheet." };
     }
 
-    if (!isUserSuperior && (is_submitted === 1 || is_approved === 1)) {
-      return { error: "Cannot remove attachments from submitted or approved timesheets." };
+    if (currentUserEmpId === employeeId && is_submitted === 1) {
+      return { error: "You cannot remove attachments from your own submitted timesheet." };
     }
 
     const [deleteResult] = await pool.execute(

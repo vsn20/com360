@@ -24,9 +24,10 @@ const Overview = () => {
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef(null);
   const [isClient, setIsClient] = useState(false);
+  const [currentUserEmpId, setCurrentUserEmpId] = useState('');
 
   useEffect(() => {
-    setIsClient(true); // Ensure rendering only after client-side hydration
+    setIsClient(true);
   }, []);
 
   const getWeekStartDate = (date) => {
@@ -52,10 +53,9 @@ const Overview = () => {
       setSelectedComment({ timesheetId: null, day: null });
       setSuperiorName('');
       if (fileInputRef.current) fileInputRef.current.value = '';
-      const weekStart = getWeekStartDate(selectedDate); // Use client date for initial render
+      const weekStart = getWeekStartDate(selectedDate);
 
       const individualResult = await fetchTimesheetAndProjects(weekStart);
-      console.log("Individual timesheet result:", individualResult);
       if (individualResult.error) {
         setError(individualResult.error);
         setTimesheets([]);
@@ -68,13 +68,12 @@ const Overview = () => {
         if (!selectedEmployee && individualResult.timesheets?.length > 0 && individualResult.timesheets.some((ts) => ts.is_approved === 1)) {
           const employeeId = individualResult.timesheets[0].employee_id;
           const data = await fetchSuperiorName(employeeId);
-          console.log("Superior name data:", data);
           if (data.superiorName) setSuperiorName(data.superiorName);
         }
+        setCurrentUserEmpId(individualResult.currentUserEmpId || '');
       }
 
       const superiorResult = await fetchTimesheetsForSuperior(weekStart);
-      console.log("Superior timesheet result:", superiorResult);
       if (superiorResult.error) {
         setEmployees([]);
         setEmployeeTimesheets([]);
@@ -92,9 +91,9 @@ const Overview = () => {
         setIsSuperior(isSuperiorResult);
         if (selectedEmployee && superiorResult.timesheets?.length > 0 && superiorResult.timesheets.some((ts) => ts.is_approved === 1)) {
           const data = await fetchSuperiorName(selectedEmployee);
-          console.log("Superior name data for selected employee:", data);
           if (data.superiorName) setSuperiorName(data.superiorName);
         }
+        setCurrentUserEmpId(superiorResult.currentUserEmpId || '');
       }
     };
     fetchData();
@@ -163,7 +162,7 @@ const Overview = () => {
     const targetTimesheets = selectedEmployee ? employeeTimesheets : timesheets;
     const ts = targetTimesheets.find((t) => t.timesheet_id === timesheetId || t.temp_key === timesheetId);
     console.log("Input changed:", { name, value, timesheetId, empId, day, isEmployee, ts });
-    if (ts && (isSuperior || (isEmployee && !ts.is_submitted && !ts.is_approved))) {
+    if (ts && ts.is_approved !== 1 && (currentUserEmpId !== ts.employee_id || ts.is_submitted !== 1)) {
       const updateTimesheets = (prev) =>
         prev.map((t) =>
           (t.timesheet_id === timesheetId || t.temp_key === timesheetId)
@@ -199,7 +198,7 @@ const Overview = () => {
     setIsSaving(true);
     const isApproved = e.target.checked ? 1 : 0;
     console.log("Approval changed for empId:", empId, "to:", isApproved);
-    const weekStart = getWeekStartDate(selectedDate); // Use client date for approval
+    const weekStart = getWeekStartDate(selectedDate);
     const formDataArray = employeeTimesheets
       .filter((t) => t.employee_id === empId)
       .map((ts) => {
@@ -232,7 +231,6 @@ const Overview = () => {
       }
 
       const result = await saveTimesheet(formDataWithFiles);
-      console.log("Save timesheet result:", result);
       if (result.error) {
         setError(result.error || 'Failed to approve timesheet.');
       } else {
@@ -254,7 +252,6 @@ const Overview = () => {
         setSuccess(true);
         if (isApproved) {
           const data = await fetchSuperiorName(empId);
-          console.log("Superior name after approval:", data);
           if (data.superiorName) setSuperiorName(data.superiorName);
         }
       }
@@ -271,7 +268,7 @@ const Overview = () => {
     if (isSaving) return;
     setIsSaving(true);
     console.log("Saving timesheets, submit:", isSubmit);
-    const weekStart = getWeekStartDate(selectedDate); // Use client date for save
+    const weekStart = getWeekStartDate(selectedDate);
     const targetTimesheets = selectedEmployee ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee) : timesheets;
 
     if (isSubmit && !noAttachmentFlag) {
@@ -340,7 +337,6 @@ const Overview = () => {
       }
 
       const result = await saveTimesheet(formDataWithFiles);
-      console.log("Save timesheet result:", result);
       if (result.error) {
         setError(result.error || 'Failed to save timesheet.');
       } else {
@@ -365,7 +361,6 @@ const Overview = () => {
         const updatedResult = selectedEmployee
           ? await fetchTimesheetsForSuperior(weekStart)
           : await fetchTimesheetAndProjects(weekStart);
-        console.log("Updated timesheet result:", updatedResult);
         if (updatedResult.error) {
           setError(updatedResult.error);
         } else {
@@ -376,7 +371,6 @@ const Overview = () => {
             setNoAttachmentFlag(Object.values(updatedResult.attachments || {}).every((atts) => !atts.length));
             if (updatedResult.timesheets?.some((ts) => ts.is_approved === 1)) {
               const data = await fetchSuperiorName(selectedEmployee);
-              console.log("Superior name after update:", data);
               if (data.superiorName) setSuperiorName(data.superiorName);
             }
             setIsSuperior(updatedResult.employees.length > 0);
@@ -388,7 +382,6 @@ const Overview = () => {
             if (!isSuperior && updatedResult.timesheets?.some((ts) => ts.is_approved === 1)) {
               const employeeId = updatedResult.timesheets[0].employee_id;
               const data = await fetchSuperiorName(employeeId);
-              console.log("Superior name for individual:", data);
               if (data.superiorName) setSuperiorName(data.superiorName);
             }
           }
@@ -407,7 +400,6 @@ const Overview = () => {
   const handleRemoveAttachment = async (attachmentId, timesheetId) => {
     console.log("Removing attachment:", { attachmentId, timesheetId });
     const result = await removeAttachment(attachmentId, timesheetId);
-    console.log("Remove attachment result:", result);
     if (result.success) {
       setAttachments((prev) => {
         const newAttachments = { ...prev };
@@ -429,7 +421,7 @@ const Overview = () => {
     router.push('/userscreens/timesheets/pendingapproval');
   };
 
-  if (!isClient) return null; // Prevent rendering on server to avoid hydration mismatch
+  if (!isClient) return null;
 
   return (
     <div className="timesheet-container">
@@ -515,7 +507,7 @@ const Overview = () => {
                                 min="0"
                                 max="24"
                                 className="hours-input"
-                                disabled={selectedEmployee ? !isSuperior : (ts.is_submitted === 1 || ts.is_approved === 1)}
+                                disabled={ts.is_approved === 1}
                               />
                               <textarea
                                 name={`${day}_comment`}
@@ -523,7 +515,7 @@ const Overview = () => {
                                 onChange={(e) => handleInputChange(e, ts.timesheet_id || ts.temp_key, selectedEmployee ? ts.employee_id : null, day)}
                                 onFocus={() => handleCommentFocus(ts.timesheet_id || ts.temp_key, day)}
                                 className="comment-textarea"
-                                disabled={selectedEmployee ? !isSuperior : (ts.is_submitted === 1 || ts.is_approved === 1)}
+                                disabled={ts.is_approved === 1}
                               />
                             </td>
                           ))}
@@ -547,8 +539,7 @@ const Overview = () => {
                       const newValue = e.target.value;
                       const targetTimesheets = selectedEmployee ? employeeTimesheets : timesheets;
                       const ts = targetTimesheets.find((t) => t.timesheet_id === selectedComment.timesheetId || t.temp_key === selectedComment.timesheetId);
-                      console.log("Comment update:", { timesheetId: selectedComment.timesheetId, day: selectedComment.day, newValue, ts });
-                      if (ts && (isSuperior || (!selectedEmployee && !ts.is_submitted && !ts.is_approved))) {
+                      if (ts && ts.is_approved !== 1) {
                         const updateTimesheets = (prev) =>
                           prev.map((t) =>
                             (t.timesheet_id === selectedComment.timesheetId || t.temp_key === selectedComment.timesheetId)
@@ -565,12 +556,7 @@ const Overview = () => {
                     onFocus={() => selectedComment.timesheetId && selectedComment.day && handleCommentFocus(selectedComment.timesheetId, selectedComment.day)}
                     className="comment-display-textarea"
                     placeholder="Select a comment in the table to edit it here..."
-                    disabled={
-                      !selectedComment.timesheetId ||
-                      !selectedComment.day ||
-                      (selectedEmployee ? !isSuperior : timesheets.find((t) => t.timesheet_id === selectedComment.timesheetId || t.temp_key === selectedComment.timesheetId)?.is_submitted === 1 ||
-                        timesheets.find((t) => t.timesheet_id === selectedComment.timesheetId || t.temp_key === selectedComment.timesheetId)?.is_approved === 1)
-                    }
+                    disabled={!selectedComment.timesheetId || !selectedComment.day || ts.is_approved === 1}
                   />
                 </div>
                 <div className="attachment-field">
@@ -580,7 +566,7 @@ const Overview = () => {
                     ref={fileInputRef}
                     className="file-input"
                     multiple
-                    disabled={noAttachmentFlag || (selectedEmployee ? !isSuperior : timesheets.some((t) => t.is_submitted === 1 || t.is_approved === 1))}
+                    disabled={noAttachmentFlag || ts.is_approved === 1}
                     onChange={() => setNoAttachmentFlag(false)}
                   />
                   <label className="no-attachment-label">
@@ -588,7 +574,7 @@ const Overview = () => {
                       type="checkbox"
                       checked={noAttachmentFlag}
                       onChange={(e) => handleNoAttachmentChange(e.target.checked)}
-                      disabled={Object.values(attachments).some((atts) => atts.length > 0) || (selectedEmployee ? !isSuperior : timesheets.some((t) => t.is_submitted === 1 || t.is_approved === 1))}
+                      disabled={Object.values(attachments).some((atts) => atts.length > 0) || ts.is_approved === 1}
                     />
                     No Attachment
                   </label>
@@ -612,7 +598,7 @@ const Overview = () => {
                                 type="button"
                                 className="remove-button"
                                 onClick={() => handleRemoveAttachment(attachment.attachment_id, attachment.timesheet_id)}
-                                disabled={selectedEmployee ? !isSuperior : timesheets.some((t) => t.is_submitted === 1 || t.is_approved === 1)}
+                                disabled={ts.is_approved === 1}
                               >
                                 Remove
                               </button>
@@ -628,7 +614,7 @@ const Overview = () => {
                   <button
                     type="submit"
                     className="save-button"
-                    disabled={isSaving || (selectedEmployee ? !isSuperior : timesheets.some((t) => t.is_submitted === 1 || t.is_approved === 1))}
+                    disabled={isSaving || ts.is_approved === 1}
                   >
                     Save All
                   </button>
@@ -641,7 +627,7 @@ const Overview = () => {
                           handleSave(true);
                         }
                       }}
-                      disabled={isSaving || timesheets.some((ts) => ts.is_submitted === 1 || ts.is_approved === 1)}
+                      disabled={isSaving || ts.is_approved === 1}
                     >
                       Submit All
                     </button>
@@ -654,7 +640,7 @@ const Overview = () => {
                         type="checkbox"
                         checked={employeeTimesheets.filter((t) => t.employee_id === selectedEmployee).every((t) => t.is_approved === 1)}
                         onChange={(e) => handleApprovedChange(e, selectedEmployee)}
-                        disabled={isSaving || !isSuperior}
+                        disabled={isSaving}
                       />
                       Approve All
                     </label>

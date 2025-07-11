@@ -68,9 +68,9 @@ export async function POST(request) {
     let hasAddRoles = false;
     let hasAddAccount = false;
     let hasAdproject = false;
-    let hastimesheet=false;
+    let hastimesheet = false;
     let hasEditProjectAssignment = false;
-    let hasleaves=false; // Flag for project assignment edit
+    let hasleaves = false;
 
     for (const row of rows) {
       const {
@@ -94,12 +94,12 @@ export async function POST(request) {
       }
 
       const menu = menuMap.get(menuid);
-         if (menuhref === '/userscreens/timesheets') { // Updated to match case
-          hastimesheet = true;
-        }
-         if (menuhref === '/userscreens/leaves') { // Updated to match case
-          hasleaves = true;
-        }
+      if (menuhref === '/userscreens/timesheets') {
+        hastimesheet = true;
+      }
+      if (menuhref === '/userscreens/leaves') {
+        hasleaves = true;
+      }
       if (hassubmenu === 'yes' && submenuid && submenuurl) {
         menu.submenu.push({
           title: submenuname,
@@ -118,13 +118,14 @@ export async function POST(request) {
         if (submenuurl === '/userscreens/project/addproject') {
           hasAdproject = true;
         }
-        if (submenuurl === '/userscreens/Project_Assign/add_project_assign') { // Updated to match case
+        if (submenuurl === '/userscreens/Project_Assign/add_project_assign') {
           hasEditProjectAssignment = true;
         }
       } else if (menuhref && !menu.href) {
         menu.href = menuhref;
       }
     }
+
     menuMap.forEach(menu => {
       if (menu.href) {
         accessibleItems.push({
@@ -142,7 +143,6 @@ export async function POST(request) {
       });
     });
 
-  
     if (isAdmin) {
       accessibleItems.push({
         href: '/userscreens/prioritysetting',
@@ -185,32 +185,39 @@ export async function POST(request) {
 
     if (hasEditProjectAssignment) {
       accessibleItems.push({
-        href: '/userscreens/Project_Assign/edit/:PRJ_ID', // Updated to match case
+        href: '/userscreens/Project_Assign/edit/:PRJ_ID',
         isMenu: true,
         priority: 1005,
       });
     }
- if (hastimesheet) {
+
+    if (hastimesheet) {
       accessibleItems.push({
         href: '/userscreens/timesheets/pendingapproval',
         isMenu: true,
         priority: 10000,
       });
-    }
-    if(hasleaves){
+      // Add access to /uploads for users with timesheet permission
       accessibleItems.push({
-        href: '/userscreens/leaves/addleave',
-        isMenu: true,
+        href: '/uploads/:employeeId/:date/:filename',
+        isMenu: false,
         priority: 10001,
       });
     }
-     if(hasleaves){
+
+    if (hasleaves) {
       accessibleItems.push({
-        href: '/userscreens/leaves/pending',
+        href: '/userscreens/leaves/addleave',
         isMenu: true,
         priority: 10002,
       });
+      accessibleItems.push({
+        href: '/userscreens/leaves/pending',
+        isMenu: true,
+        priority: 10003,
+      });
     }
+
     accessibleItems.sort((a, b) => a.priority - b.priority);
     console.log("Accessible items for user:", JSON.stringify(accessibleItems, null, 2));
 
@@ -223,24 +230,26 @@ export async function POST(request) {
     const isEditRolePath = pathname.match(/^\/userscreens\/roles\/edit\/[^/]+$/);
     const isEditAccountPath = pathname.match(/^\/userscreens\/account\/edit\/[^/]+$/);
     const isEditProjectPath = pathname.match(/^\/userscreens\/project\/edit\/[^/]+$/);
-    const isEditProjectAssignmentPath = pathname.match(/^\/userscreens\/Project_Assign\/edit\/[^/]+$/); // Updated to match case
-    const ispendingapproval=pathname.match(/^\/userscreens\/timesheets\/pendingapproval$/)
-    const isaddleave=pathname.match(/^\/userscreens\/leaves\/addleave$/)
-    const ispendingleaves=pathname.match(/^\/userscreens\/leaves\/pending$/)
+    const isEditProjectAssignmentPath = pathname.match(/^\/userscreens\/Project_Assign\/edit\/[^/]+$/);
+    const ispendingapproval = pathname.match(/^\/userscreens\/timesheets\/pendingapproval$/);
+    const isaddleave = pathname.match(/^\/userscreens\/leaves\/addleave$/);
+    const ispendingleaves = pathname.match(/^\/userscreens\/leaves\/pending$/);
+    const isUploadPath = pathname.match(/^\/uploads\/[^/]+\/[^/]+\/[^/]+$/); // Match /uploads/employeeId/date/filename
+
     if (isEditEmployeePath && accessiblePaths.includes('/userscreens/employee/edit/:empid')) {
       console.log(`Access granted to ${pathname} for roleid ${roleid} (dynamic employee edit route)`);
       return NextResponse.json({ success: true, accessibleItems });
     }
-     if (isaddleave && accessiblePaths.includes('/userscreens/leaves/addleave')) {
-      console.log(`Access granted to ${pathname} for roleid ${roleid} (dynamic employee edit route)`);
+    if (isaddleave && accessiblePaths.includes('/userscreens/leaves/addleave')) {
+      console.log(`Access granted to ${pathname} for roleid ${roleid} (dynamic add leave route)`);
       return NextResponse.json({ success: true, accessibleItems });
     }
-     if (ispendingleaves && accessiblePaths.includes('/userscreens/leaves/pending')) {
-      console.log(`Access granted to ${pathname} for roleid ${roleid} (dynamic employee edit route)`);
+    if (ispendingleaves && accessiblePaths.includes('/userscreens/leaves/pending')) {
+      console.log(`Access granted to ${pathname} for roleid ${roleid} (dynamic pending leaves route)`);
       return NextResponse.json({ success: true, accessibleItems });
     }
-    if(ispendingapproval&&accessiblePaths.includes('/userscreens/timesheets/pendingapproval')){
-       console.log(`Access granted to ${pathname} for roleid ${roleid} (dynamic employee edit route)`);
+    if (ispendingapproval && accessiblePaths.includes('/userscreens/timesheets/pendingapproval')) {
+      console.log(`Access granted to ${pathname} for roleid ${roleid} (dynamic pending approval route)`);
       return NextResponse.json({ success: true, accessibleItems });
     }
     if (isEditProjectPath && accessiblePaths.includes('/userscreens/project/edit/:PRJ_ID')) {
@@ -257,6 +266,10 @@ export async function POST(request) {
     }
     if (isEditProjectAssignmentPath && accessiblePaths.includes('/userscreens/Project_Assign/edit/:PRJ_ID')) {
       console.log(`Access granted to ${pathname} for roleid ${roleid} (dynamic project assignment edit route)`);
+      return NextResponse.json({ success: true, accessibleItems });
+    }
+    if (isUploadPath && accessiblePaths.includes('/uploads/:employeeId/:date/:filename')) {
+      console.log(`Access granted to ${pathname} for roleid ${roleid} (upload path)`);
       return NextResponse.json({ success: true, accessibleItems });
     }
 
