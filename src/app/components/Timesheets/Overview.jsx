@@ -375,6 +375,7 @@ const Overview = () => {
               ))}
             </select>
           </div>
+          
           {!selectedEmployee && !isSuperior && timesheets.some((ts) => ts.is_approved === 1) && superiorName && <p className="approval-message">Approved by {superiorName}</p>}
           {((!selectedEmployee && timesheets.length > 0) || (selectedEmployee && employeeTimesheets.filter((t) => t.employee_id === selectedEmployee).length > 0)) && (
             <div>

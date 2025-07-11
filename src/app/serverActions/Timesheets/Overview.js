@@ -370,11 +370,12 @@ export async function saveTimesheet(formData) {
   // Handle attachments once for the week, using the first timesheet ID
   const attachmentFiles = formData.getAll("attachment");
   const firstTimesheetId = timesheetsData.length > 0 ? timesheetsData[0].timesheetId : null;
-  if (attachmentFiles.length > 0 && attachmentFiles[0].size > 0) {
+  const employeeId = timesheetsData.length > 0 ? timesheetsData[0].employeeId : null; // Use the employeeId from the timesheet
+  if (attachmentFiles.length > 0 && attachmentFiles[0].size > 0 && employeeId) {
     const allowedTypes = ["image/jpeg", "image/png", "application/pdf", "text/plain"];
     const maxFileSize = 5 * 1024 * 1024;
 
-    const uploadDir = path.join(process.cwd(), "public", "uploads", currentUserEmpId, timesheetsData[0].weekStartDate.replace(/-/g, ""));
+    const uploadDir = path.join(process.cwd(), "public", "uploads", employeeId, timesheetsData[0].weekStartDate.replace(/-/g, ""));
     try {
       await fs.mkdir(uploadDir, { recursive: true });
       for (const attachmentFile of attachmentFiles) {
@@ -389,11 +390,11 @@ export async function saveTimesheet(formData) {
         const [insertResult] = await pool.execute(
           "INSERT INTO timesheet_attachments (employee_id, week_start_date, year, timesheet_id, file_path, file_name, uploaded_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
           [
-            currentUserEmpId,
+            employeeId,
             timesheetsData[0].weekStartDate,
             timesheetsData[0].year,
             firstTimesheetId,
-            `/uploads/${currentUserEmpId}/${timesheetsData[0].weekStartDate.replace(/-/g, "")}/${uniqueFileName}`,
+            `/uploads/${employeeId}/${timesheetsData[0].weekStartDate.replace(/-/g, "")}/${uniqueFileName}`,
             attachmentFile.name,
           ]
         );
@@ -401,11 +402,11 @@ export async function saveTimesheet(formData) {
         updatedAttachments[firstTimesheetId] = updatedAttachments[firstTimesheetId] || [];
         updatedAttachments[firstTimesheetId].push({
           attachment_id: insertResult.insertId,
-          employee_id: currentUserEmpId,
+          employee_id: employeeId,
           week_start_date: timesheetsData[0].weekStartDate,
           year: timesheetsData[0].year,
           timesheet_id: firstTimesheetId,
-          file_path: `/uploads/${currentUserEmpId}/${timesheetsData[0].weekStartDate.replace(/-/g, "")}/${uniqueFileName}`,
+          file_path: `/uploads/${employeeId}/${timesheetsData[0].weekStartDate.replace(/-/g, "")}/${uniqueFileName}`,
           file_name: attachmentFile.name,
           uploaded_at: new Date().toISOString(),
         });
@@ -416,7 +417,7 @@ export async function saveTimesheet(formData) {
   } else if (timesheetsData.length > 0 && formData.get("timesheets[0][is_submitted]") === "1" && !attachmentFiles.length) {
     const [existingAttachments] = await pool.execute(
       "SELECT COUNT(*) as count FROM timesheet_attachments WHERE employee_id = ? AND week_start_date = ?",
-      [currentUserEmpId, timesheetsData[0].weekStartDate]
+      [employeeId || currentUserEmpId, timesheetsData[0].weekStartDate]
     );
     if (existingAttachments[0].count === 0) {
       return { error: "No attachments found. Please check 'No Attachment' or upload at least one attachment." };
@@ -426,7 +427,7 @@ export async function saveTimesheet(formData) {
   const attachmentRows = timesheetsData.length > 0
     ? await pool.execute(
         "SELECT DISTINCT attachment_id, employee_id, week_start_date, year, timesheet_id, file_path, file_name, uploaded_at FROM timesheet_attachments WHERE employee_id = ? AND week_start_date = ?",
-        [currentUserEmpId, timesheetsData[0].weekStartDate]
+        [employeeId || currentUserEmpId, timesheetsData[0].weekStartDate]
       )[0]
     : [];
 
