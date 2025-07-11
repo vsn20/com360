@@ -66,15 +66,12 @@ export async function delegateAction(action, data = {}) {
        WHERE orgid = ? 
        AND empid != ? 
        AND empid IN (
-         SELECT empid 
-         FROM C_EMP 
-         WHERE empid IN (
-           SELECT empid 
-           FROM role_menu_permissions rmp 
-           JOIN C_EMP ce ON rmp.roleid = ce.roleid 
-           WHERE rmp.menuid = (SELECT id FROM menu WHERE name = ?)
-           AND (rmp.submenuid IS NULL OR rmp.submenuid = 0)
-         )
+         SELECT ce.empid 
+         FROM C_EMP ce
+         JOIN role_menu_permissions rmp ON rmp.roleid = ce.roleid 
+         WHERE rmp.menuid = (SELECT id FROM menu WHERE name = ?)
+         AND ce.orgid = ?
+         AND (rmp.submenuid IS NULL OR rmp.submenuid = 0)
        )
        AND empid NOT IN (
          SELECT receiverempid 
@@ -84,7 +81,7 @@ export async function delegateAction(action, data = {}) {
          AND isactive = 1 
          AND (submenuid IS NULL OR submenuid = 0)
        )`,
-      [orgId, senderEmpId, menuName, senderEmpId, menuName]
+      [orgId, senderEmpId, menuName, orgId, senderEmpId, menuName]
     );
     console.log("Eligible employees for", menuName, ":", empRows);
     return { employees: empRows };
@@ -194,7 +191,7 @@ export async function delegateAction(action, data = {}) {
       for (const id of delegationIds) {
         const enddate = new Date().toISOString().split('T')[0];
         const [result] = await pool.execute(
-          "UPDATE delegate SET isactive = 0, enddate = ?, last_updated_date = CURRENT_TIMESTAMP, last_updated_by = ? WHERE id = ? AND senderempid = ?",
+          "UPDATE delegate SET isactive = 0, enddate = ?, last_updated_date = CURRENT ribbons, last_updated_by = ? WHERE id = ? AND senderempid = ?",
           [enddate, 'SYSTEM', id, userEmpId]
         );
         if (result.affectedRows === 0) {
