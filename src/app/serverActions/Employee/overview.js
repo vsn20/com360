@@ -1,7 +1,7 @@
-"use server";
+'use server';
 
-import DBconnection from "@/app/utils/config/db";
-import { cookies } from "next/headers";
+import DBconnection from '@/app/utils/config/db';
+import { cookies } from 'next/headers';
 
 const decodeJwt = (token) => {
   try {
@@ -14,6 +14,597 @@ const decodeJwt = (token) => {
     return null;
   }
 };
+
+export async function updateEmployee(prevState, formData) {
+  try {
+    const empid = formData.get('empid');
+    let orgid = formData.get('orgid');
+    const section = formData.get('section');
+
+    console.log('updateEmployee FormData:', {
+      empid,
+      orgid,
+      orgidType: typeof orgid,
+      section,
+      formData: Object.fromEntries(formData),
+    });
+
+    const cookieStore = cookies();
+    const token = cookieStore.get('jwt_token')?.value;
+
+    if (!token) {
+      console.log('No token found');
+      return { error: 'No token found. Please log in.' };
+    }
+
+    const decoded = decodeJwt(token);
+    if (!decoded || !decoded.orgid) {
+      console.log('Invalid token or orgid not found in JWT');
+      return { error: 'Invalid token or orgid not found.' };
+    }
+
+    const jwtOrgId = decoded.orgid;
+    console.log(`JWT orgid: ${jwtOrgId}, type: ${typeof jwtOrgId}`);
+
+    const pool = await DBconnection();
+    console.log('MySQL connection pool acquired');
+
+    // Fetch orgid from C_EMP if missing
+    if (!orgid || orgid === '') {
+      console.log('orgid missing or empty in FormData, fetching from C_EMP for empid:', empid);
+      const [employee] = await pool.execute('SELECT orgid FROM C_EMP WHERE empid = ?', [empid]);
+      if (employee.length === 0) {
+        console.log('Employee not found');
+        return { error: 'Employee not found.' };
+      }
+      orgid = String(employee[0].orgid);
+      console.log(`Fetched orgid from C_EMP: ${orgid}, type: ${typeof orgid}`);
+    }
+
+    // Validate orgid
+    if (!orgid || orgid === '' || String(orgid) !== String(jwtOrgId)) {
+      console.log(`Invalid or mismatched orgid. FormData orgid: ${orgid} (${typeof orgid}), JWT orgid: ${jwtOrgId} (${typeof jwtOrgId})`);
+      return { error: 'Organization ID is missing or invalid.' };
+    }
+
+    // Validate empid
+    if (!empid) {
+      console.log('empid is missing');
+      return { error: 'Employee ID is required.' };
+    }
+
+    const [existing] = await pool.execute('SELECT empid FROM C_EMP WHERE empid = ? AND orgid = ?', [empid, orgid]);
+    if (existing.length === 0) {
+      console.log('Employee not found');
+      return { error: 'Employee not found.' };
+    }
+
+    let affectedRows = 0;
+
+    if (section === 'personal') {
+      const empFstName = formData.get('empFstName');
+      const empMidName = formData.get('empMidName') || null;
+      const empLastName = formData.get('empLastName');
+      const empPrefName = formData.get('empPrefName') || null;
+      const email = formData.get('email');
+      const gender = formData.get('gender') || null;
+      const mobileNumber = formData.get('mobileNumber') || null;
+      const phoneNumber = formData.get('phoneNumber') || null;
+      const dob = formData.get('dob') || null;
+      const ssn = formData.get('ssn') || null;
+      const linkedinUrl = formData.get('linkedinUrl') || null;
+
+      console.log('Personal details:', {
+        empFstName, empMidName, empLastName, empPrefName, email, gender,
+        mobileNumber, phoneNumber, dob, ssn, linkedinUrl,
+      });
+
+      if (!empFstName) {
+        console.log('First name is missing');
+        return { error: 'First name is required.' };
+      }
+      if (!empLastName) {
+        console.log('Last name is missing');
+        return { error: 'Last name is required.' };
+      }
+      if (!email) {
+        console.log('Email is missing');
+        return { error: 'Email is required.' };
+      }
+
+      // Check for email uniqueness (excluding current employee)
+      const [emailCheck] = await pool.execute(
+        'SELECT empid FROM C_EMP WHERE email = ? AND orgid = ? AND empid != ?',
+        [email, orgid, empid]
+      );
+      if (emailCheck.length > 0) {
+        console.log('Email already in use');
+        return { error: 'Email is already in use by another employee.' };
+      }
+
+      const [result] = await pool.query(
+        `UPDATE C_EMP 
+         SET 
+           EMP_FST_NAME = ?, 
+           EMP_MID_NAME = ?, 
+           EMP_LAST_NAME = ?, 
+           EMP_PREF_NAME = ?, 
+           email = ?, 
+           GENDER = ?, 
+           MOBILE_NUMBER = ?, 
+           PHONE_NUMBER = ?, 
+           DOB = ?, 
+           SSN = ?, 
+           LINKEDIN_URL = ?, 
+           LAST_UPDATED_DATE = CURRENT_TIMESTAMP, 
+           LAST_UPDATED_BY = ? 
+         WHERE empid = ? AND orgid = ?`,
+        [
+          empFstName, empMidName, empLastName, empPrefName, email,
+          gender, mobileNumber, phoneNumber, dob, ssn, linkedinUrl,
+          'system', empid, orgid,
+        ]
+      );
+
+      affectedRows += result.affectedRows;
+      console.log(`Personal details update result: ${result.affectedRows} rows affected for empid ${empid}`);
+    } else if (section === 'employment') {
+      const roleid = formData.get('roleid') || null;
+      const hireDate = formData.get('hireDate') || null;
+      const lastWorkDate = formData.get('lastWorkDate') || null;
+      const terminatedDate = formData.get('terminatedDate') || null;
+      const rejoinDate = formData.get('rejoinDate') || null;
+      const superior = formData.get('superior') || null;
+      const status = formData.get('status') || null;
+      const jobTitle = formData.get('jobTitle') || null;
+      const payFrequency = formData.get('payFrequency') || null;
+      const deptId = formData.get('deptId') || null;
+      const workCompClass = formData.get('workCompClass') || null;
+
+      console.log('Employment details:', {
+        roleid, hireDate, lastWorkDate, terminatedDate, rejoinDate, superior,
+        status, jobTitle, payFrequency, deptId, workCompClass,
+      });
+
+      if (!roleid) {
+        console.log('Role is missing');
+        return { error: 'Role is required.' };
+      }
+      if (!hireDate) {
+        console.log('Hire date is missing');
+        return { error: 'Hire date is required.' };
+      }
+      if (!status) {
+        console.log('Status is missing');
+        return { error: 'Status is required.' };
+      }
+
+      // Validate role
+      if (roleid) {
+        const [role] = await pool.execute(
+          'SELECT roleid FROM org_role_table WHERE roleid = ? AND orgid = ? AND is_active = 1',
+          [roleid, orgid]
+        );
+        if (role.length === 0) {
+          console.log('Invalid or inactive role selected');
+          return { error: 'Selected role is invalid or inactive.' };
+        }
+      }
+
+      // Validate superior
+      if (superior) {
+        const [existingSuperior] = await pool.execute(
+          'SELECT empid FROM C_EMP WHERE empid = ? AND orgid = ? AND LAST_WORK_DATE IS NULL AND TERMINATED_DATE IS NULL',
+          [superior, orgid]
+        );
+        if (existingSuperior.length === 0) {
+          console.log('Invalid superior selected');
+          return { error: 'Selected superior is invalid or not active.' };
+        }
+        if (empid === superior) {
+          console.log('Self-assignment as superior');
+          return { error: 'Employee cannot be their own superior.' };
+        }
+      }
+
+      // Validate status
+      if (status) {
+        const [statusCheck] = await pool.execute(
+          'SELECT id FROM generic_values WHERE g_id = 3 AND Name = ? AND cutting = 1 AND orgid = ? AND isactive = 1',
+          [status, orgid]
+        );
+        if (statusCheck.length === 0) {
+          console.log('Invalid status selected');
+          return { error: 'Selected status is invalid or inactive.' };
+        }
+      }
+
+      // Validate job title
+      if (jobTitle) {
+        const [jobTitleCheck] = await pool.execute(
+          'SELECT job_title FROM org_jobtitles WHERE job_title = ? AND orgid = ? AND is_active = 1',
+          [jobTitle, orgid]
+        );
+        if (jobTitleCheck.length === 0) {
+          console.log('Invalid job title selected');
+          return { error: 'Selected job title is invalid or inactive.' };
+        }
+      }
+
+      // Validate pay frequency
+      if (payFrequency) {
+        const [payFrequencyCheck] = await pool.execute(
+          'SELECT id FROM generic_values WHERE g_id = 4 AND Name = ? AND orgid = ? AND isactive = 1',
+          [payFrequency, orgid]
+        );
+        if (payFrequencyCheck.length === 0) {
+          console.log('Invalid pay frequency selected');
+          return { error: 'Selected pay frequency is invalid or inactive.' };
+        }
+      }
+
+      // Validate department and set DEPT_NAME
+      let deptName = null;
+      if (deptId) {
+        const [deptCheck] = await pool.execute(
+          'SELECT id, name FROM org_departments WHERE id = ? AND orgid = ? AND isactive = 1',
+          [deptId, orgid]
+        );
+        if (deptCheck.length === 0) {
+          console.log('Invalid department selected:', deptId);
+          return { error: 'Selected department is invalid or inactive.' };
+        }
+        deptName = deptCheck[0].name; // Set DEPT_NAME from org_departments.name
+      }
+
+      const [result] = await pool.query(
+        `UPDATE C_EMP 
+         SET 
+           roleid = ?, 
+           HIRE = ?, 
+           LAST_WORK_DATE = ?, 
+           TERMINATED_DATE = ?, 
+           REJOIN_DATE = ?, 
+           superior = ?, 
+           STATUS = ?, 
+           JOB_TITLE = ?, 
+           PAY_FREQUENCY = ?, 
+           DEPT_ID = ?, 
+           DEPT_NAME = ?, 
+           WORK_COMP_CLASS = ?, 
+           LAST_UPDATED_DATE = CURRENT_TIMESTAMP, 
+           LAST_UPDATED_BY = ? 
+         WHERE empid = ? AND orgid = ?`,
+        [
+          roleid, hireDate, lastWorkDate, terminatedDate, rejoinDate, superior,
+          status, jobTitle, payFrequency, deptId, deptName, workCompClass,
+          'system', empid, orgid,
+        ]
+      );
+
+      affectedRows += result.affectedRows;
+      console.log(`Employment details update result: ${result.affectedRows} rows affected for empid ${empid}, deptId: ${deptId}, deptName: ${deptName}`);
+    } else if (section === 'leaves') {
+      const leaves = {};
+      for (let [key, value] of formData.entries()) {
+        if (key.startsWith('leaves[') && key.endsWith(']')) {
+          const leaveid = key.match(/\[(.*?)\]/)[1];
+          leaves[leaveid] = parseFloat(value) || 0;
+        }
+      }
+
+      console.log('Leave assignments:', leaves);
+
+      if (Object.keys(leaves).length === 0) {
+        console.log('No leaves provided');
+        return { error: 'No leave assignments provided.' };
+      }
+
+      const [validLeaveTypes] = await pool.execute(
+        'SELECT id FROM generic_values WHERE g_id = 1 AND orgid = ? AND isactive = 1',
+        [orgid]
+      );
+      const validLeaveIds = validLeaveTypes.map(leave => String(leave.id));
+
+      for (const [leaveid, noofleaves] of Object.entries(leaves)) {
+        if (noofleaves < 0) {
+          console.log(`Negative leaves for leaveid ${leaveid}`);
+          return { error: `Number of leaves cannot be negative for leave type ${leaveid}.` };
+        }
+        if (!validLeaveIds.includes(leaveid)) {
+          console.log(`Invalid leaveid ${leaveid}`);
+          return { error: `Selected leave type ${leaveid} is invalid or inactive.` };
+        }
+        const result = await assignLeaves(empid, leaveid, noofleaves, orgid);
+        if (result.error) {
+          console.log(`Failed to assign leave ${leaveid}: ${result.error || 'Unknown error'}`);
+          return { error: `Failed to assign leave ${leaveid}: ${result.error || 'Unknown error'}` };
+        }
+        affectedRows += result.affectedRows || 1;
+      }
+    } else if (section === 'workAddress') {
+      const workAddrLine1 = formData.get('workAddrLine1') || null;
+      const workAddrLine2 = formData.get('workAddrLine2') || null;
+      const workAddrLine3 = formData.get('workAddrLine3') || null;
+      const workCity = formData.get('workCity') || null;
+      const workStateId = formData.get('workStateId') || null;
+      const workStateNameCustom = formData.get('workStateNameCustom') || null;
+      const workCountryId = formData.get('workCountryId') || null;
+      const workPostalCode = formData.get('workPostalCode') || null;
+
+      console.log('Work address details:', {
+        workAddrLine1, workAddrLine2, workAddrLine3, workCity,
+        workStateId, workStateNameCustom, workCountryId, workPostalCode,
+      });
+
+      // Validate country
+      if (workCountryId) {
+        const [countryCheck] = await pool.execute(
+          'SELECT ID FROM C_COUNTRY WHERE ID = ? AND ACTIVE = 1',
+          [workCountryId]
+        );
+        if (countryCheck.length === 0) {
+          console.log('Invalid country selected');
+          return { error: 'Selected country is invalid or inactive.' };
+        }
+      }
+
+      // Validate state
+      if (workStateId && workCountryId === '185') {
+        const [stateCheck] = await pool.execute(
+          'SELECT ID FROM C_STATE WHERE ID = ? AND ACTIVE = 1',
+          [workStateId]
+        );
+        if (stateCheck.length === 0) {
+          console.log('Invalid state selected');
+          return { error: 'Selected state is invalid or inactive.' };
+        }
+      }
+
+      const [result] = await pool.query(
+        `UPDATE C_EMP 
+         SET 
+           WORK_ADDR_LINE1 = ?, 
+           WORK_ADDR_LINE2 = ?, 
+           WORK_ADDR_LINE3 = ?, 
+           WORK_CITY = ?, 
+           WORK_STATE_ID = ?, 
+           WORK_STATE_NAME_CUSTOM = ?, 
+           WORK_COUNTRY_ID = ?, 
+           WORK_POSTAL_CODE = ?, 
+           LAST_UPDATED_DATE = CURRENT_TIMESTAMP, 
+           LAST_UPDATED_BY = ? 
+         WHERE empid = ? AND orgid = ?`,
+        [
+          workAddrLine1, workAddrLine2, workAddrLine3, workCity,
+          workStateId, workStateNameCustom, workCountryId, workPostalCode,
+          'system', empid, orgid,
+        ]
+      );
+
+      affectedRows += result.affectedRows;
+      console.log(`Work address update result: ${result.affectedRows} rows affected for empid ${empid}`);
+    } else if (section === 'homeAddress') {
+      const homeAddrLine1 = formData.get('homeAddrLine1') || null;
+      const homeAddrLine2 = formData.get('homeAddrLine2') || null;
+      const homeAddrLine3 = formData.get('homeAddrLine3') || null;
+      const homeCity = formData.get('homeCity') || null;
+      const homeStateId = formData.get('homeStateId') || null;
+      const homeStateNameCustom = formData.get('homeStateNameCustom') || null;
+      const homeCountryId = formData.get('homeCountryId') || null;
+      const homePostalCode = formData.get('homePostalCode') || null;
+
+      console.log('Home address details:', {
+        homeAddrLine1, homeAddrLine2, homeAddrLine3, homeCity,
+        homeStateId, homeStateNameCustom, homeCountryId, homePostalCode,
+      });
+
+      // Validate country
+      if (homeCountryId) {
+        const [countryCheck] = await pool.execute(
+          'SELECT ID FROM C_COUNTRY WHERE ID = ? AND ACTIVE = 1',
+          [homeCountryId]
+        );
+        if (countryCheck.length === 0) {
+          console.log('Invalid country selected');
+          return { error: 'Selected country is invalid or inactive.' };
+        }
+      }
+
+      // Validate state
+      if (homeStateId && homeCountryId === '185') {
+        const [stateCheck] = await pool.execute(
+          'SELECT ID FROM C_STATE WHERE ID = ? AND ACTIVE = 1',
+          [homeStateId]
+        );
+        if (stateCheck.length === 0) {
+          console.log('Invalid state selected');
+          return { error: 'Selected state is invalid or inactive.' };
+        }
+      }
+
+      const [result] = await pool.query(
+        `UPDATE C_EMP 
+         SET 
+           HOME_ADDR_LINE1 = ?, 
+           HOME_ADDR_LINE2 = ?, 
+           HOME_ADDR_LINE3 = ?, 
+           HOME_CITY = ?, 
+           HOME_STATE_ID = ?, 
+           HOME_STATE_NAME_CUSTOM = ?, 
+           HOME_COUNTRY_ID = ?, 
+           HOME_POSTAL_CODE = ?, 
+           LAST_UPDATED_DATE = CURRENT_TIMESTAMP, 
+           LAST_UPDATED_BY = ? 
+         WHERE empid = ? AND orgid = ?`,
+        [
+          homeAddrLine1, homeAddrLine2, homeAddrLine3, homeCity,
+          homeStateId, homeStateNameCustom, homeCountryId, homePostalCode,
+          'system', empid, orgid,
+        ]
+      );
+
+      affectedRows += result.affectedRows;
+      console.log(`Home address update result: ${result.affectedRows} rows affected for empid ${empid}`);
+    } else if (section === 'emergencyContact') {
+      const emergCnctName = formData.get('emergCnctName') || null;
+      const emergCnctPhoneNumber = formData.get('emergCnctPhoneNumber') || null;
+      const emergCnctEmail = formData.get('emergCnctEmail') || null;
+      const emergCnctAddrLine1 = formData.get('emergCnctAddrLine1') || null;
+      const emergCnctAddrLine2 = formData.get('emergCnctAddrLine2') || null;
+      const emergCnctAddrLine3 = formData.get('emergCnctAddrLine3') || null;
+      const emergCnctCity = formData.get('emergCnctCity') || null;
+      const emergCnctStateId = formData.get('emergCnctStateId') || null;
+      const emergCnctStateNameCustom = formData.get('emergCnctStateNameCustom') || null;
+      const emergCnctCountryId = formData.get('emergCnctCountryId') || null;
+      const emergCnctPostalCode = formData.get('emergCnctPostalCode') || null;
+
+      console.log('Emergency contact details:', {
+        emergCnctName, emergCnctPhoneNumber, emergCnctEmail, emergCnctAddrLine1,
+        emergCnctAddrLine2, emergCnctAddrLine3, emergCnctCity, emergCnctStateId,
+        emergCnctStateNameCustom, emergCnctCountryId, emergCnctPostalCode,
+      });
+
+      // Validate country
+      if (emergCnctCountryId) {
+        const [countryCheck] = await pool.execute(
+          'SELECT ID FROM C_COUNTRY WHERE ID = ? AND ACTIVE = 1',
+          [emergCnctCountryId]
+        );
+        if (countryCheck.length === 0) {
+          console.log('Invalid country selected');
+          return { error: 'Selected country is invalid or inactive.' };
+        }
+      }
+
+      // Validate state
+      if (emergCnctStateId && emergCnctCountryId === '185') {
+        const [stateCheck] = await pool.execute(
+          'SELECT ID FROM C_STATE WHERE ID = ? AND ACTIVE = 1',
+          [emergCnctStateId]
+        );
+        if (stateCheck.length === 0) {
+          console.log('Invalid state selected');
+          return { error: 'Selected state is invalid or inactive.' };
+        }
+      }
+
+      const [result] = await pool.query(
+        `UPDATE C_EMP 
+         SET 
+           EMERG_CNCT_NAME = ?, 
+           EMERG_CNCT_PHONE_NUMBER = ?, 
+           EMERG_CNCT_EMAIL = ?, 
+           EMERG_CNCT_ADDR_LINE1 = ?, 
+           EMERG_CNCT_ADDR_LINE2 = ?, 
+           EMERG_CNCT_ADDR_LINE3 = ?, 
+           EMERG_CNCT_CITY = ?, 
+           EMERG_CNCT_STATE_ID = ?, 
+           EMERG_CNCT_STATE_NAME_CUSTOM = ?, 
+           EMERG_CNCT_COUNTRY_ID = ?, 
+           EMERG_CNCT_POSTAL_CODE = ?, 
+           LAST_UPDATED_DATE = CURRENT_TIMESTAMP, 
+           LAST_UPDATED_BY = ? 
+         WHERE empid = ? AND orgid = ?`,
+        [
+          emergCnctName, emergCnctPhoneNumber, emergCnctEmail, emergCnctAddrLine1,
+          emergCnctAddrLine2, emergCnctAddrLine3, emergCnctCity, emergCnctStateId,
+          emergCnctStateNameCustom, emergCnctCountryId, emergCnctPostalCode,
+          'system', empid, orgid,
+        ]
+      );
+
+      affectedRows += result.affectedRows;
+      console.log(`Emergency contact update result: ${result.affectedRows} rows affected for empid ${empid}`);
+    } else {
+      console.log('Invalid section:', section);
+      return { error: 'Invalid section specified.' };
+    }
+
+    if (affectedRows === 0) {
+      console.log('No rows updated for empid:', empid);
+      return { error: 'No changes were applied.' };
+    }
+
+    console.log(`Employee updated: empid ${empid}, section ${section}, affectedRows: ${affectedRows}`);
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating employee:', error.message);
+    return { error: `Failed to update employee: ${error.message}` };
+  }
+}
+
+// Other functions remain unchanged
+export async function assignLeaves(empid, leaveid, noofleaves, orgid) {
+  try {
+    const cookieStore = cookies();
+    const token = cookieStore.get('jwt_token')?.value;
+
+    if (!token) {
+      console.log('No token found');
+      return { error: 'No token found. Please log in.' };
+    }
+
+    const decoded = decodeJwt(token);
+    if (!decoded || !decoded.orgid) {
+      console.log('Invalid token or orgid not found');
+      return { error: 'Invalid token or orgid not found.' };
+    }
+
+    if (!orgid || String(orgid) !== String(decoded.orgid)) {
+      console.log(`Invalid or mismatched orgid. Provided orgid: ${orgid} (${typeof orgid}), JWT orgid: ${decoded.orgid} (${typeof decoded.orgid})`);
+      return { error: 'Organization ID is missing or invalid.' };
+    }
+
+    if (!empid) {
+      console.log('empid is missing');
+      return { error: 'Employee ID is required.' };
+    }
+    if (!leaveid) {
+      console.log('leaveid is missing');
+      return { error: 'Leave ID is required.' };
+    }
+    if (noofleaves < 0) {
+      console.log('noofleaves is invalid');
+      return { error: 'Number of leaves cannot be negative.' };
+    }
+
+    const pool = await DBconnection();
+    console.log('MySQL connection pool acquired');
+
+    const [leaveCheck] = await pool.execute(
+      'SELECT id FROM generic_values WHERE id = ? AND g_id = 1 AND orgid = ? AND isactive = 1',
+      [leaveid, orgid]
+    );
+    if (leaveCheck.length === 0) {
+      console.log('Invalid or inactive leave type:', leaveid);
+      return { error: 'Selected leave type is invalid or inactive.' };
+    }
+
+    const [existing] = await pool.execute(
+      'SELECT id FROM employee_leaves_assign WHERE empid = ? AND leaveid = ? AND orgid = ? AND g_id = 1',
+      [empid, leaveid, orgid]
+    );
+    let result;
+    if (existing.length > 0) {
+      [result] = await pool.query(
+        'UPDATE employee_leaves_assign SET noofleaves = ? WHERE empid = ? AND leaveid = ? AND orgid = ? AND g_id = 1',
+        [noofleaves, empid, leaveid, orgid]
+      );
+    } else {
+      [result] = await pool.query(
+        'INSERT INTO employee_leaves_assign (empid, orgid, g_id, leaveid, noofleaves) VALUES (?, ?, ?, ?, ?)',
+        [empid, orgid, 1, leaveid, noofleaves]
+      );
+    }
+
+    console.log(`Leave assigned/updated: empid ${empid}, leaveid ${leaveid}, noofleaves ${noofleaves}, affectedRows: ${result.affectedRows}`);
+    return { success: true, affectedRows: result.affectedRows };
+  } catch (error) {
+    console.error('Error assigning leaves:', error.message);
+    return { error: `Failed to assign leaves: ${error.message}` };
+  }
+}
 
 export async function fetchEmployeesByOrgId() {
   try {
@@ -40,12 +631,11 @@ export async function fetchEmployeesByOrgId() {
     console.log(`Fetching employees for orgId: ${orgId}`);
 
     const pool = await DBconnection();
-    console.log("MySQL connection pool acquired");
+    console.log('MySQL connection pool acquired');
     const [rows] = await pool.execute(
-      `SELECT empid, EMP_FST_NAME, EMP_MID_NAME, EMP_LAST_NAME, EMP_PREF_NAME, email, 
-              roleid, GENDER, MOBILE_NUMBER, DOB, HIRE, LAST_WORK_DATE, TERMINATED_DATE 
+      `SELECT empid, EMP_FST_NAME, EMP_LAST_NAME, roleid, email, HIRE, MOBILE_NUMBER, GENDER 
        FROM C_EMP 
-       WHERE orgid = ? AND LAST_WORK_DATE IS NULL AND TERMINATED_DATE IS NULL`,
+       WHERE orgid = ?`,
       [orgId]
     );
     console.log('Fetched employees:', rows);
@@ -86,11 +676,20 @@ export async function fetchEmployeeById(empid) {
     console.log(`Fetching employee with empid: ${empid} for orgId: ${orgId}`);
 
     const pool = await DBconnection();
-    console.log("MySQL connection pool acquired");
+    console.log('MySQL connection pool acquired');
     const [rows] = await pool.execute(
       `SELECT empid, orgid, EMP_FST_NAME, EMP_MID_NAME, EMP_LAST_NAME, EMP_PREF_NAME, email, 
-              roleid, GENDER, MOBILE_NUMBER, DOB, HIRE, LAST_WORK_DATE, TERMINATED_DATE, 
-              REJOIN_DATE, CREATED_BY, LAST_UPDATED_BY, superior
+              roleid, GENDER, MOBILE_NUMBER, PHONE_NUMBER, DOB, HIRE, LAST_WORK_DATE, 
+              TERMINATED_DATE, REJOIN_DATE, CREATED_BY, LAST_UPDATED_BY, superior, 
+              STATUS, JOB_TITLE, PAY_FREQUENCY, DEPT_ID, DEPT_NAME, WORK_COMP_CLASS, 
+              SSN, LINKEDIN_URL,
+              WORK_ADDR_LINE1, WORK_ADDR_LINE2, WORK_ADDR_LINE3, WORK_CITY, WORK_STATE_ID,
+              WORK_STATE_NAME_CUSTOM, WORK_COUNTRY_ID, WORK_POSTAL_CODE,
+              HOME_ADDR_LINE1, HOME_ADDR_LINE2, HOME_ADDR_LINE3, HOME_CITY, HOME_STATE_ID,
+              HOME_STATE_NAME_CUSTOM, HOME_COUNTRY_ID, HOME_POSTAL_CODE,
+              EMERG_CNCT_NAME, EMERG_CNCT_PHONE_NUMBER, EMERG_CNCT_EMAIL, EMERG_CNCT_ADDR_LINE1,
+              EMERG_CNCT_ADDR_LINE2, EMERG_CNCT_ADDR_LINE3, EMERG_CNCT_CITY, EMERG_CNCT_STATE_ID,
+              EMERG_CNCT_STATE_NAME_CUSTOM, EMERG_CNCT_COUNTRY_ID, EMERG_CNCT_POSTAL_CODE
        FROM C_EMP 
        WHERE empid = ? AND orgid = ?`,
       [empid, orgId]
@@ -132,7 +731,7 @@ export async function fetchRolesByOrgId() {
     console.log(`Fetching roles for orgId: ${orgId}`);
 
     const pool = await DBconnection();
-    console.log("MySQL connection pool acquired");
+    console.log('MySQL connection pool acquired');
     const [rows] = await pool.execute(
       `SELECT roleid, rolename 
        FROM org_role_table 
@@ -147,209 +746,6 @@ export async function fetchRolesByOrgId() {
   }
 }
 
-export async function updateEmployee(prevState, formData) {
-  try {
-    const empid = formData.get('empid');
-    const EMP_FST_NAME = formData.get('EMP_FST_NAME');
-    const EMP_MID_NAME = formData.get('EMP_MID_NAME') || null;
-    const EMP_LAST_NAME = formData.get('EMP_LAST_NAME');
-    const EMP_PREF_NAME = formData.get('EMP_PREF_NAME') || null;
-    const email = formData.get('email');
-    const roleid = formData.get('roleid') || null;
-    const GENDER = formData.get('GENDER') || null;
-    const MOBILE_NUMBER = formData.get('MOBILE_NUMBER') || null;
-    const DOB = formData.get('DOB') || null;
-    const HIRE = formData.get('HIRE') || null;
-    const LAST_WORK_DATE = formData.get('LAST_WORK_DATE') || null;
-    const TERMINATED_DATE = formData.get('TERMINATED_DATE') || null;
-    const REJOIN_DATE = formData.get('REJOIN_DATE') || null;
-    const superior = formData.get('superior') || null;
-
-    console.log("Form data received:", {
-      empid, EMP_FST_NAME, EMP_MID_NAME, EMP_LAST_NAME, EMP_PREF_NAME, email,
-      roleid, GENDER, MOBILE_NUMBER, DOB, HIRE, LAST_WORK_DATE, TERMINATED_DATE,
-      REJOIN_DATE, superior
-    });
-
-    const cookieStore = cookies();
-    const token = cookieStore.get('jwt_token')?.value;
-
-    if (!token) {
-      console.log('No token found');
-      return { error: 'No token found. Please log in.' };
-    }
-
-    const decoded = decodeJwt(token);
-    if (!decoded || !decoded.orgid) {
-      console.log('Invalid token or orgid not found');
-      return { error: 'Invalid token or orgid not found.' };
-    }
-
-    const orgId = decoded.orgid;
-    if (!orgId) {
-      console.log('orgId is undefined or invalid');
-      return { error: 'Organization ID is missing or invalid.' };
-    }
-
-    if (!empid) return { error: 'Employee ID is required.' };
-    if (!EMP_FST_NAME) return { error: 'First name is required.' };
-    if (!EMP_LAST_NAME) return { error: 'Last name is required.' };
-    if (!email) return { error: 'Email is required.' };
-
-    const pool = await DBconnection();
-    console.log("MySQL connection pool acquired");
-
-    const [existing] = await pool.execute(
-      'SELECT empid FROM C_EMP WHERE empid = ? AND orgid = ?',
-      [empid, orgId]
-    );
-    if (existing.length === 0) {
-      console.log('Employee not found');
-      return { error: 'Employee not found.' };
-    }
-
-    if (roleid) {
-      const [role] = await pool.execute(
-        'SELECT roleid FROM org_role_table WHERE roleid = ? AND orgid = ? AND is_active = 1',
-        [roleid, orgId]
-      );
-      if (role.length === 0) {
-        console.log('Invalid or inactive role selected');
-        return { error: 'Selected role is invalid or inactive.' };
-      }
-    }
-
-    if (superior) {
-      const [existingSuperior] = await pool.execute(
-        'SELECT empid FROM C_EMP WHERE empid = ? AND orgid = ? AND LAST_WORK_DATE IS NULL AND TERMINATED_DATE IS NULL',
-        [superior, orgId]
-      );
-      if (existingSuperior.length === 0) {
-        console.log('Invalid superior selected');
-        return { error: 'Selected superior is invalid or not active.' };
-      }
-      if (empid === superior) {
-        console.log('Self-assignment as superior');
-        return { error: 'Employee cannot be their own superior.' };
-      }
-    }
-
-    await pool.query(
-      `UPDATE C_EMP 
-       SET EMP_FST_NAME = ?, EMP_MID_NAME = ?, EMP_LAST_NAME = ?, EMP_PREF_NAME = ?, 
-           email = ?, roleid = ?, GENDER = ?, MOBILE_NUMBER = ?, DOB = ?, HIRE = ?, 
-           LAST_WORK_DATE = ?, TERMINATED_DATE = ?, REJOIN_DATE = ?, 
-           LAST_UPDATED_DATE = CURRENT_TIMESTAMP, LAST_UPDATED_BY = ?, superior = ? 
-       WHERE empid = ? AND orgid = ?`,
-      [
-        EMP_FST_NAME, EMP_MID_NAME, EMP_LAST_NAME, EMP_PREF_NAME, email, roleid,
-        GENDER, MOBILE_NUMBER, DOB, HIRE, LAST_WORK_DATE, TERMINATED_DATE, REJOIN_DATE,
-        'system', superior, empid, orgId
-      ]
-    );
-
-    const leaves = {};
-    for (let [key, value] of formData.entries()) {
-      if (key.startsWith('leaves[') && key.endsWith(']')) {
-        const leaveid = key.match(/\[(.*?)\]/)[1];
-        leaves[leaveid] = parseFloat(value) || 0;
-      }
-    }
-
-    const [validLeaveTypes] = await pool.execute(
-      'SELECT id FROM generic_values WHERE g_id = ? AND orgid = ? AND isactive = 1',
-      [1, orgId]
-    );
-    const validLeaveIds = validLeaveTypes.map(leave => leave.id.toString());
-
-    for (const [leaveid, noofleaves] of Object.entries(leaves)) {
-      if (noofleaves >= 0 && validLeaveIds.includes(leaveid)) {
-        const result = await assignLeaves(empid, leaveid, noofleaves, orgId);
-        if (result.error) {
-          console.log(`Failed to assign leave ${leaveid}: ${result.error}`);
-          return { error: `Failed to assign leaves: ${result.error}` };
-        }
-      }
-    }
-
-    console.log(`Employee updated: empid ${empid}`);
-    return { success: true };
-  } catch (error) {
-    console.error('Error updating employee:', error.message);
-    return { error: `Failed to update employee: ${error.message}` };
-  }
-}
-
-export async function assignLeaves(empid, leaveid, noofleaves, orgid) {
-  try {
-    const cookieStore = cookies();
-    const token = cookieStore.get('jwt_token')?.value;
-
-    if (!token) {
-      console.log('No token found');
-      return { error: 'No token found. Please log in.' };
-    }
-
-    const decoded = decodeJwt(token);
-    if (!decoded || !decoded.orgid) {
-      console.log('Invalid token or orgid not found');
-      return { error: 'Invalid token or orgid not found.' };
-    }
-
-    if (!orgid) {
-      console.log('orgId is undefined or invalid');
-      return { error: 'Organization ID is missing or invalid.' };
-    }
-
-    if (!empid) {
-      console.log('empid is missing');
-      return { error: 'Employee ID is required.' };
-    }
-    if (!leaveid) {
-      console.log('leaveid is missing');
-      return { error: 'Leave ID is required.' };
-    }
-    if (noofleaves < 0) {
-      console.log('noofleaves is invalid');
-      return { error: 'Number of leaves cannot be negative.' };
-    }
-
-    const pool = await DBconnection();
-    console.log("MySQL connection pool acquired");
-
-    const [leaveCheck] = await pool.execute(
-      'SELECT id FROM generic_values WHERE id = ? AND g_id = ? AND orgid = ? AND isactive = 1',
-      [leaveid, 1, orgid]
-    );
-    if (leaveCheck.length === 0) {
-      console.log('Invalid or inactive leave type:', leaveid);
-      return { error: 'Selected leave type is invalid or inactive.' };
-    }
-
-    const [existing] = await pool.execute(
-      'SELECT id FROM employee_leaves_assign WHERE empid = ? AND leaveid = ? AND orgid = ? AND g_id = 1',
-      [empid, leaveid, orgid]
-    );
-    if (existing.length > 0) {
-      await pool.query(
-        'UPDATE employee_leaves_assign SET noofleaves = ? WHERE empid = ? AND leaveid = ? AND orgid = ? AND g_id = 1',
-        [noofleaves, empid, leaveid, orgid]
-      );
-    } else {
-      await pool.query(
-        'INSERT INTO employee_leaves_assign (empid, orgid, g_id, leaveid, noofleaves) VALUES (?, ?, ?, ?, ?)',
-        [empid, orgid, 1, leaveid, noofleaves]
-      );
-    }
-
-    console.log(`Leave assigned/updated: empid ${empid}, leaveid ${leaveid}, noofleaves ${noofleaves}`);
-    return { success: true };
-  } catch (error) {
-    console.error('Error assigning leaves:', error.message);
-    return { error: `Failed to assign leaves: ${error.message}` };
-  }
-}
-
 export async function fetchLeaveTypes() {
   try {
     const cookieStore = cookies();
@@ -357,34 +753,34 @@ export async function fetchLeaveTypes() {
 
     if (!token) {
       console.log('No token found');
-      return { error: 'No token found. Please log in.' };
+      return [];
     }
 
     const decoded = decodeJwt(token);
     if (!decoded || !decoded.orgid) {
       console.log('Invalid token or orgid not found');
-      return { error: 'Invalid token or orgid not found.' };
+      return [];
     }
 
     const orgId = decoded.orgid;
     if (!orgId) {
       console.log('orgId is undefined or invalid');
-      return { error: 'Organization ID is missing or invalid.' };
+      return [];
     }
 
     console.log(`Fetching leave types for orgId: ${orgId}`);
 
     const pool = await DBconnection();
-    console.log("MySQL connection pool acquired");
+    console.log('MySQL connection pool acquired');
     const [rows] = await pool.execute(
-      `SELECT id, Name FROM generic_values WHERE g_id = ? AND orgid = ? AND isactive = 1`,
-      [1, orgId]
+      `SELECT id, Name FROM generic_values WHERE g_id = 1 AND orgid = ? AND isactive = 1`,
+      [orgId]
     );
     console.log('Fetched leave types:', rows);
     return rows;
   } catch (error) {
     console.error('Error fetching leave types:', error.message);
-    return { error: `Failed to fetch leave types: ${error.message}` };
+    return [];
   }
 }
 
@@ -395,30 +791,30 @@ export async function fetchLeaveAssignments(empid) {
 
     if (!token) {
       console.log('No token found');
-      return { error: 'No token found. Please log in.' };
+      return {};
     }
 
     const decoded = decodeJwt(token);
     if (!decoded || !decoded.orgid) {
       console.log('Invalid token or orgid not found');
-      return { error: 'Invalid token or orgid not found.' };
+      return {};
     }
 
     const orgId = decoded.orgid;
     if (!orgId) {
       console.log('orgId is undefined or invalid');
-      return { error: 'Organization ID is missing or invalid.' };
+      return {};
     }
 
     if (!empid) {
       console.log('empid is missing');
-      return { error: 'Employee ID is required.' };
+      return {};
     }
 
     console.log(`Fetching leave assignments for empid: ${empid} and orgId: ${orgId}`);
 
     const pool = await DBconnection();
-    console.log("MySQL connection pool acquired");
+    console.log('MySQL connection pool acquired');
     const [rows] = await pool.execute(
       `SELECT ela.leaveid, ela.noofleaves 
        FROM employee_leaves_assign ela
@@ -430,6 +826,152 @@ export async function fetchLeaveAssignments(empid) {
     return rows.reduce((acc, row) => ({ ...acc, [row.leaveid]: row.noofleaves }), {});
   } catch (error) {
     console.error('Error fetching leave assignments:', error.message);
-    return { error: `Failed to fetch leave assignments: ${error.message}` };
+    return {};
+  }
+}
+
+export async function fetchUserPermissions() {
+  try {
+    const cookieStore = cookies();
+    const token = cookieStore.get('jwt_token')?.value;
+
+    if (!token) {
+      console.log('No token found');
+      throw new Error('No token found. Please log in.');
+    }
+
+    const decoded = decodeJwt(token);
+    if (!decoded || !decoded.orgid || !decoded.roleid) {
+      console.log('Invalid token or orgid/roleid not found');
+      throw new Error('Invalid token or orgid/roleid not found.');
+    }
+
+    const orgId = decoded.orgid;
+    const roleid = decoded.roleid;
+    if (!orgId || !roleid) {
+      console.log('orgId or roleid is undefined or invalid');
+      throw new Error('Organization ID or Role ID is missing or invalid.');
+    }
+
+    console.log(`Fetching permissions for roleid: ${roleid}, orgId: ${orgId}`);
+
+    const pool = await DBconnection();
+    console.log('MySQL connection pool acquired');
+
+    let isAdmin = false;
+    try {
+      const [adminRows] = await pool.query(
+        'SELECT isadmin FROM org_role_table WHERE roleid = ? AND orgid = ?',
+        [roleid, orgId]
+      );
+      if (adminRows.length > 0) {
+        isAdmin = adminRows[0].isadmin === 1;
+      }
+    } catch (error) {
+      console.error('Error fetching isadmin from org_role_table:', error.message);
+      isAdmin = false;
+    }
+
+    const [rows] = await pool.query(
+      `SELECT 
+        m.id AS menuid,
+        m.name AS menuname,
+        m.url AS menuhref,
+        m.hassubmenu,
+        sm.id AS submenuid,
+        sm.name AS submenuname,
+        sm.url AS submenuurl,
+        omp.priority
+      FROM org_menu_priority omp
+      JOIN menu m ON m.id = omp.menuid AND m.is_active = 1
+      LEFT JOIN submenu sm ON sm.id = omp.submenuid AND sm.is_active = 1
+      JOIN role_menu_permissions rmp 
+          ON rmp.menuid = omp.menuid 
+         AND (rmp.submenuid = omp.submenuid OR omp.submenuid IS NULL)
+      WHERE rmp.roleid = ? AND omp.orgid = ?
+      ORDER BY omp.priority`,
+      [roleid, orgId]
+    );
+
+    const accessibleItems = [];
+    const menuMap = new Map();
+    let hasAddRoles = false;
+    let hasAddEmployee = false;
+
+    for (const row of rows) {
+      const { menuid, menuname, menuhref, hassubmenu, submenuid, submenuname, submenuurl, priority } = row;
+      if (!menuMap.has(menuid)) {
+        menuMap.set(menuid, {
+          title: menuname,
+          href: menuhref || null,
+          submenu: [],
+          priority: priority || 0,
+        });
+      }
+      const menu = menuMap.get(menuid);
+      if (hassubmenu === 'yes' && submenuid && submenuurl) {
+        menu.submenu.push({
+          title: submenuname,
+          href: submenuurl,
+          priority: priority || menu.submenu.length + 1,
+        });
+        if (submenuurl === '/userscreens/roles/addroles') {
+          hasAddRoles = true;
+        }
+        if (submenuurl === '/userscreens/employee/addemployee') {
+          hasAddEmployee = true;
+        }
+      } else if (menuhref && !menu.href) {
+        menu.href = menuhref;
+      }
+    }
+
+    menuMap.forEach(menu => {
+      if (menu.href) {
+        accessibleItems.push({
+          href: menu.href,
+          isMenu: true,
+          priority: menu.priority,
+        });
+      }
+      menu.submenu.forEach((sub) => {
+        accessibleItems.push({
+          href: sub.href,
+          isMenu: false,
+          priority: sub.priority,
+        });
+      });
+    });
+
+    if (isAdmin) {
+      accessibleItems.push({
+        href: '/userscreens/prioritysetting',
+        isMenu: true,
+        priority: 1000,
+      });
+    }
+
+    if (hasAddEmployee) {
+      accessibleItems.push({
+        href: '/userscreens/employee/edit/:empid',
+        isMenu: true,
+        priority: 1001,
+      });
+    }
+
+    if (hasAddRoles) {
+      accessibleItems.push({
+        href: '/userscreens/roles/edit/:roleid',
+        isMenu: true,
+        priority: 1002,
+      });
+    }
+
+    accessibleItems.sort((a, b) => a.priority - b.priority);
+    console.log('Fetched permissions:', accessibleItems);
+    return accessibleItems;
+  } catch (error) {
+    console.error('Error fetching permissions:', error.message);
+    throw new Error(`Failed to fetch permissions: ${error.message}`);
   }
 }
