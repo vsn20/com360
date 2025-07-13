@@ -222,7 +222,7 @@ export async function addemployee(formData) {
     }
 
     // Success - redirect to employee list
-    redirectPath = `/userscreens/employee?success=Employee%20added%20successfully`;
+    redirectPath = `/userscreens/employee/overview`;
     
   } catch (error) {
     console.error('Error adding employee or assigning leaves:', error);

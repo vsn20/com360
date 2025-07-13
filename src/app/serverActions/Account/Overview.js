@@ -1,18 +1,49 @@
-"use server";
+'use server';
 
-import DBconnection from "@/app/utils/config/db";
-import { cookies } from "next/headers";
+import DBconnection from '@/app/utils/config/db';
+import { cookies } from 'next/headers';
+import jwt from 'jsonwebtoken';
 
-// Simple function to decode JWT without verification
+const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
+
 const decodeJwt = (token) => {
   try {
-    const base64Url = token.split('.')[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = Buffer.from(base64, 'base64').toString('utf8');
-    return JSON.parse(jsonPayload);
+    return jwt.verify(token, JWT_SECRET);
   } catch (error) {
-    console.error('Error decoding JWT:', error);
+    console.error('Error decoding JWT:', error.message);
     return null;
+  }
+};
+
+const getCurrentUserEmpIdName = async (pool, userId, orgId) => {
+  try {
+    const [userRows] = await pool.execute(
+      'SELECT empid FROM C_USER WHERE username = ? AND orgid = ?',
+      [userId, orgId]
+    );
+    if (userRows.length === 0) {
+      console.error('User not found in C_USER for username:', userId);
+      return 'system';
+    }
+    const empid = userRows[0].empid;
+
+    const [empRows] = await pool.execute(
+      'SELECT EMP_FST_NAME, EMP_LAST_NAME,roleid FROM C_EMP WHERE empid = ? AND orgid = ?',
+      [empid, orgId]
+    );
+    if (empRows.length === 0) {
+      console.error('Employee not found in C_EMP for empid:', empid);
+      return `${empid}-unknown`;
+    }
+     const { EMP_FST_NAME, EMP_LAST_NAME,roleid } = empRows[0];
+    const[rolerows]=await pool.execute(
+      'SELECT rolename from org_role_table where roleid=? AND orgid=?',
+      [roleid,orgId]
+    );
+   const {rolename}=rolerows[0];
+    return `${empid}-${EMP_FST_NAME} ${EMP_LAST_NAME}(${rolename})`;} catch (error) {
+    console.error('Error fetching empid-name:', error.message);
+    return 'system';
   }
 };
 
@@ -41,27 +72,22 @@ export async function fetchAccountByOrgId() {
     console.log(`Fetching accounts for orgId: ${orgId}`);
 
     const pool = await DBconnection();
-    console.log("MySQL connection pool acquired");
+    console.log('MySQL connection pool acquired');
 
     const [rows] = await pool.execute(
       `SELECT ACCNT_ID, ACCT_TYPE_CD, EMAIL, ALIAS_NAME FROM C_ACCOUNT WHERE ORGID = ?`,
       [orgId]
     );
 
-    if (rows.length === 0) {
-      console.log('No accounts found for orgId:', orgId);
-      throw new Error('No accounts found for the given organization.');
-    }
-
     console.log('Fetched accounts:', rows);
     return rows;
   } catch (error) {
-    console.error('Error fetching account:', error.message);
-    throw new Error(`Failed to fetch account: ${error.message}`);
+    console.error('Error fetching accounts:', error.message);
+    throw new Error(`Failed to fetch accounts: ${error.message}`);
   }
 }
 
-export async function fetchAccountByAccntId(accntId) {
+export async function fetchAccountById(accntId) {
   try {
     const cookieStore = cookies();
     const token = cookieStore.get('jwt_token')?.value;
@@ -83,13 +109,25 @@ export async function fetchAccountByAccntId(accntId) {
       throw new Error('Organization ID is missing or invalid.');
     }
 
+    if (!accntId) {
+      console.log('accntId is missing');
+      throw new Error('Account ID is required.');
+    }
+
     console.log(`Fetching account with ACCNT_ID: ${accntId} for orgId: ${orgId}`);
 
     const pool = await DBconnection();
-    console.log("MySQL connection pool acquired");
+    console.log('MySQL connection pool acquired');
 
     const [rows] = await pool.execute(
-      `SELECT * FROM C_ACCOUNT WHERE ACCNT_ID = ? AND ORGID = ?`,
+      `SELECT ACCNT_ID, ORGID, ACTIVE_FLAG, ACCT_TYPE_CD, EMAIL, ALIAS_NAME, 
+              BUSINESS_ADDR_LINE1, BUSINESS_ADDR_LINE2, BUSINESS_ADDR_LINE3, BUSINESS_CITY, 
+              BUSINESS_STATE_ID, BUSINESS_COUNTRY_ID, BUSINESS_POSTAL_CODE,
+              MAILING_ADDR_LINE1, MAILING_ADDR_LINE2, MAILING_ADDR_LINE3, MAILING_CITY,
+              MAILING_STATE_ID, MAILING_COUNTRY_ID, MAILING_POSTAL_CODE,
+              LAST_LOGIN_DATE, CREATED_BY, LAST_UPDATED_BY, BRANCH_TYPE,LAST_UPDATED_DATE
+       FROM C_ACCOUNT 
+       WHERE ACCNT_ID = ? AND ORGID = ?`,
       [accntId, orgId]
     );
 
@@ -109,38 +147,14 @@ export async function fetchAccountByAccntId(accntId) {
 export async function updateAccount(formData) {
   try {
     const accntId = formData.get('ACCNT_ID');
-    const activeFlag = formData.get('ACTIVE_FLAG') === '1' ? 1 : 0;
-    const acctTypeCd = formData.get('ACCT_TYPE_CD');
-    const email = formData.get('EMAIL');
-    const aliasName = formData.get('ALIAS_NAME');
-    const businessAddrLine1 = formData.get('BUSINESS_ADDR_LINE1') || null;
-    const businessAddrLine2 = formData.get('BUSINESS_ADDR_LINE2') || null;
-    const businessAddrLine3 = formData.get('BUSINESS_ADDR_LINE3') || null;
-    const businessCity = formData.get('BUSINESS_CITY') || null;
-    const businessStateId = formData.get('BUSINESS_STATE_ID') || null;
-    const businessCountryId = formData.get('BUSINESS_COUNTRY_ID') || null;
-    const businessPostalCode = formData.get('BUSINESS_POSTAL_CODE') || null;
-    const mailingAddrLine1 = formData.get('MAILING_ADDR_LINE1') || null;
-    const mailingAddrLine2 = formData.get('MAILING_ADDR_LINE2') || null;
-    const mailingAddrLine3 = formData.get('MAILING_ADDR_LINE3') || null;
-    const mailingCity = formData.get('MAILING_CITY') || null;
-    const mailingStateId = formData.get('MAILING_STATE_ID') || null;
-    const mailingCountryId = formData.get('MAILING_COUNTRY_ID') || null;
-    const mailingPostalCode = formData.get('MAILING_POSTAL_CODE') || null;
-    const failAttemptsCnt = parseInt(formData.get('FAIL_ATTEMPTS_CNT')) || 0;
-    const lastLoginDate = formData.get('LAST_LOGIN_DATE') || null;
-    const createdBy = formData.get('CREATED_BY') || null;
-    const lastUpdatedBy = formData.get('LAST_UPDATED_BY') || null;
-    const orgId = parseInt(formData.get('ORGID'));
-    const branchType = formData.get('BRANCH_TYPE') || null;
+    const orgId = formData.get('ORGID');
+    const section = formData.get('section');
 
-    console.log("Form data received:", {
-      accntId, activeFlag, acctTypeCd, email, aliasName, businessAddrLine1,
-      businessAddrLine2, businessAddrLine3, businessCity, businessStateId,
-      businessCountryId, businessPostalCode, mailingAddrLine1, mailingAddrLine2,
-      mailingAddrLine3, mailingCity, mailingStateId, mailingCountryId,
-      mailingPostalCode, failAttemptsCnt, lastLoginDate, createdBy,
-      lastUpdatedBy, orgId, branchType
+    console.log('updateAccount FormData:', {
+      accntId,
+      orgId,
+      section,
+      formData: Object.fromEntries(formData)
     });
 
     const cookieStore = cookies();
@@ -152,22 +166,27 @@ export async function updateAccount(formData) {
     }
 
     const decoded = decodeJwt(token);
-    if (!decoded || !decoded.orgid) {
-      console.log('Invalid token or orgid not found');
-      return { error: 'Invalid token or orgid not found.' };
+    if (!decoded || !decoded.orgid || !decoded.userId) {
+      console.log('Invalid token or orgid/userId not found');
+      return { error: 'Invalid token or orgid/userId not found.' };
     }
 
-    const currentOrgId = decoded.orgid;
-    if (!currentOrgId || currentOrgId !== orgId) {
-      console.log('OrgID mismatch or invalid');
-      return { error: 'Organization ID mismatch or invalid.' };
+    const jwtOrgId = decoded.orgid;
+    if (!orgId || String(orgId) !== String(jwtOrgId)) {
+      console.log(`Invalid or mismatched orgid. FormData orgid: ${orgId}, JWT orgid: ${jwtOrgId}`);
+      return { error: 'Organization ID is missing or invalid.' };
+    }
+
+    if (!accntId) {
+      console.log('accntId is missing');
+      return { error: 'Account ID is required.' };
     }
 
     const pool = await DBconnection();
-    console.log("MySQL connection pool acquired");
+    console.log('MySQL connection pool acquired');
 
     const [existing] = await pool.execute(
-      'SELECT ROW_ID FROM C_ACCOUNT WHERE ACCNT_ID = ? AND ORGID = ?',
+      'SELECT ACCNT_ID FROM C_ACCOUNT WHERE ACCNT_ID = ? AND ORGID = ?',
       [accntId, orgId]
     );
     if (existing.length === 0) {
@@ -175,30 +194,501 @@ export async function updateAccount(formData) {
       return { error: 'Account not found.' };
     }
 
-    await pool.query(
-      `UPDATE C_ACCOUNT 
-       SET ACTIVE_FLAG = ?, ACCT_TYPE_CD = ?, EMAIL = ?, ALIAS_NAME = ?, 
-           BUSINESS_ADDR_LINE1 = ?, BUSINESS_ADDR_LINE2 = ?, BUSINESS_ADDR_LINE3 = ?, 
-           BUSINESS_CITY = ?, BUSINESS_STATE_ID = ?, BUSINESS_COUNTRY_ID = ?, 
-           BUSINESS_POSTAL_CODE = ?, MAILING_ADDR_LINE1 = ?, MAILING_ADDR_LINE2 = ?, 
-           MAILING_ADDR_LINE3 = ?, MAILING_CITY = ?, MAILING_STATE_ID = ?, 
-           MAILING_COUNTRY_ID = ?, MAILING_POSTAL_CODE = ?, FAIL_ATTEMPTS_CNT = ?, 
-           LAST_LOGIN_DATE = ?, CREATED_BY = ?, LAST_UPDATED_BY = ?, BRANCH_TYPE = ?
-       WHERE ACCNT_ID = ? AND ORGID = ?`,
-      [
-        activeFlag, acctTypeCd, email, aliasName, businessAddrLine1, businessAddrLine2,
-        businessAddrLine3, businessCity, businessStateId, businessCountryId,
-        businessPostalCode, mailingAddrLine1, mailingAddrLine2, mailingAddrLine3,
-        mailingCity, mailingStateId, mailingCountryId, mailingPostalCode,
-        failAttemptsCnt, lastLoginDate, createdBy, lastUpdatedBy, branchType,
-        accntId, orgId
-      ]
-    );
+    const lastUpdatedBy = await getCurrentUserEmpIdName(pool, decoded.userId, orgId);
+    let affectedRows = 0;
 
-    console.log(`Account updated: ACCNT_ID ${accntId}`);
+    if (section === 'basic') {
+      const activeFlag = formData.get('ACTIVE_FLAG') === '1' ? 1 : 0;
+      const acctTypeCd = formData.get('ACCT_TYPE_CD');
+      const email = formData.get('EMAIL');
+      const aliasName = formData.get('ALIAS_NAME') || null;
+      const branchType = formData.get('BRANCH_TYPE') || null;
+
+      console.log('Basic details:', {
+        activeFlag, acctTypeCd, email, aliasName, branchType, lastUpdatedBy
+      });
+
+      if (!acctTypeCd) {
+        console.log('Account Type is missing');
+        return { error: 'Account Type is required.' };
+      }
+      if (!email) {
+        console.log('Email is missing');
+        return { error: 'Email is required.' };
+      }
+
+      const [emailCheck] = await pool.execute(
+        'SELECT ACCNT_ID FROM C_ACCOUNT WHERE EMAIL = ? AND ORGID = ? AND ACCNT_ID != ?',
+        [email, orgId, accntId]
+      );
+      if (emailCheck.length > 0) {
+        console.log('Email already in use');
+        return { error: 'Email is already in use by another account.' };
+      }
+
+      if (acctTypeCd) {
+        const [typeCheck] = await pool.execute(
+          'SELECT id FROM generic_values WHERE g_id = 5 AND Name = ? AND orgid = ? AND isactive = 1',
+          [acctTypeCd, orgId]
+        );
+        if (typeCheck.length === 0) {
+          console.log('Invalid account type selected');
+          return { error: 'Selected account type is invalid or inactive.' };
+        }
+      }
+
+      if (branchType) {
+        const [branchCheck] = await pool.execute(
+          'SELECT id FROM generic_values WHERE g_id = 6 AND Name = ? AND orgid = ? AND isactive = 1',
+          [branchType, orgId]
+        );
+        if (branchCheck.length === 0) {
+          console.log('Invalid branch type selected');
+          return { error: 'Selected branch type is invalid or inactive.' };
+        }
+      }
+
+      const [result] = await pool.query(
+        `UPDATE C_ACCOUNT 
+         SET ACTIVE_FLAG = ?, ACCT_TYPE_CD = ?, EMAIL = ?, ALIAS_NAME = ?, 
+             BRANCH_TYPE = ?, LAST_UPDATED_BY = ?, LAST_UPDATED_DATE = CURRENT_TIMESTAMP
+         WHERE ACCNT_ID = ? AND ORGID = ?`,
+        [
+          activeFlag, acctTypeCd, email, aliasName, branchType,
+          lastUpdatedBy, accntId, orgId
+        ]
+      );
+
+      affectedRows += result.affectedRows;
+      console.log(`Basic details update result: ${result.affectedRows} rows affected for ACCNT_ID ${accntId}`);
+    } else if (section === 'businessAddress') {
+      const businessAddrLine1 = formData.get('BUSINESS_ADDR_LINE1') || null;
+      const businessAddrLine2 = formData.get('BUSINESS_ADDR_LINE2') || null;
+      const businessAddrLine3 = formData.get('BUSINESS_ADDR_LINE3') || null;
+      const businessCity = formData.get('BUSINESS_CITY') || null;
+      const businessStateId = formData.get('BUSINESS_STATE_ID') || null;
+      const businessCountryId = formData.get('BUSINESS_COUNTRY_ID') || null;
+      const businessPostalCode = formData.get('BUSINESS_POSTAL_CODE') || null;
+
+      console.log('Business address details:', {
+        businessAddrLine1, businessAddrLine2, businessAddrLine3, businessCity,
+        businessStateId, businessCountryId, businessPostalCode, lastUpdatedBy
+      });
+
+      if (businessCountryId) {
+        const [countryCheck] = await pool.execute(
+          'SELECT ID FROM C_COUNTRY WHERE ID = ? AND ACTIVE = 1',
+          [businessCountryId]
+        );
+        if (countryCheck.length === 0) {
+          console.log('Invalid country selected');
+          return { error: 'Selected country is invalid or inactive.' };
+        }
+      }
+
+      if (businessStateId) {
+        const [stateCheck] = await pool.execute(
+          'SELECT ID FROM C_STATE WHERE ID = ? AND ACTIVE = 1',
+          [businessStateId]
+        );
+        if (stateCheck.length === 0) {
+          console.log('Invalid state selected');
+          return { error: 'Selected state is invalid or inactive.' };
+        }
+      }
+
+      const [result] = await pool.query(
+        `UPDATE C_ACCOUNT 
+         SET BUSINESS_ADDR_LINE1 = ?, BUSINESS_ADDR_LINE2 = ?, BUSINESS_ADDR_LINE3 = ?, 
+             BUSINESS_CITY = ?, BUSINESS_STATE_ID = ?, 
+             BUSINESS_COUNTRY_ID = ?, BUSINESS_POSTAL_CODE = ?, 
+             LAST_UPDATED_BY = ?, LAST_UPDATED_DATE = CURRENT_TIMESTAMP
+         WHERE ACCNT_ID = ? AND ORGID = ?`,
+        [
+          businessAddrLine1, businessAddrLine2, businessAddrLine3, businessCity,
+          businessStateId, businessCountryId, businessPostalCode,
+          lastUpdatedBy, accntId, orgId
+        ]
+      );
+
+      affectedRows += result.affectedRows;
+      console.log(`Business address update result: ${result.affectedRows} rows affected for ACCNT_ID ${accntId}`);
+    } else if (section === 'mailingAddress') {
+      const mailingAddrLine1 = formData.get('MAILING_ADDR_LINE1') || null;
+      const mailingAddrLine2 = formData.get('MAILING_ADDR_LINE2') || null;
+      const mailingAddrLine3 = formData.get('MAILING_ADDR_LINE3') || null;
+      const mailingCity = formData.get('MAILING_CITY') || null;
+      const mailingStateId = formData.get('MAILING_STATE_ID') || null;
+      const mailingCountryId = formData.get('MAILING_COUNTRY_ID') || null;
+      const mailingPostalCode = formData.get('MAILING_POSTAL_CODE') || null;
+
+      console.log('Mailing address details:', {
+        mailingAddrLine1, mailingAddrLine2, mailingAddrLine3, mailingCity,
+        mailingStateId, mailingCountryId, mailingPostalCode, lastUpdatedBy
+      });
+
+      if (mailingCountryId) {
+        const [countryCheck] = await pool.execute(
+          'SELECT ID FROM C_COUNTRY WHERE ID = ? AND ACTIVE = 1',
+          [mailingCountryId]
+        );
+        if (countryCheck.length === 0) {
+          console.log('Invalid country selected');
+          return { error: 'Selected country is invalid or inactive.' };
+        }
+      }
+
+      if (mailingStateId) {
+        const [stateCheck] = await pool.execute(
+          'SELECT ID FROM C_STATE WHERE ID = ? AND ACTIVE = 1',
+          [mailingStateId]
+        );
+        if (stateCheck.length === 0) {
+          console.log('Invalid state selected');
+          return { error: 'Selected state is invalid or inactive.' };
+        }
+      }
+
+      const [result] = await pool.query(
+        `UPDATE C_ACCOUNT 
+         SET MAILING_ADDR_LINE1 = ?, MAILING_ADDR_LINE2 = ?, MAILING_ADDR_LINE3 = ?, 
+             MAILING_CITY = ?, MAILING_STATE_ID = ?, 
+             MAILING_COUNTRY_ID = ?, MAILING_POSTAL_CODE = ?, 
+             LAST_UPDATED_BY = ?, LAST_UPDATED_DATE = CURRENT_TIMESTAMP
+         WHERE ACCNT_ID = ? AND ORGID = ?`,
+        [
+          mailingAddrLine1, mailingAddrLine2, mailingAddrLine3, mailingCity,
+          mailingStateId, mailingCountryId, mailingPostalCode,
+          lastUpdatedBy, accntId, orgId
+        ]
+      );
+
+      affectedRows += result.affectedRows;
+      console.log(`Mailing address update result: ${result.affectedRows} rows affected for ACCNT_ID ${accntId}`);
+    } else {
+      console.log('Invalid section:', section);
+      return { error: 'Invalid section specified.' };
+    }
+
+    if (affectedRows === 0) {
+      console.log('No rows updated for ACCNT_ID:', accntId);
+      return { error: 'No changes were applied.' };
+    }
+
+    console.log(`Account updated: ACCNT_ID ${accntId}, section ${section}, affectedRows: ${affectedRows}`);
     return { success: true };
   } catch (error) {
     console.error('Error updating account:', error.message);
     return { error: `Failed to update account: ${error.message}` };
+  }
+}
+
+export async function addAccount(formData) {
+  try {
+    const orgId = formData.get('orgid');
+    const accountName = formData.get('accountName');
+    const acctTypeCd = formData.get('acctTypeCd');
+    const branchType = formData.get('branchType');
+    const email = formData.get('email');
+    const aliasName = formData.get('aliasName') || null;
+    const businessAddrLine1 = formData.get('businessAddrLine1') || null;
+    const businessAddrLine2 = formData.get('businessAddrLine2') || null;
+    const businessAddrLine3 = formData.get('businessAddrLine3') || null;
+    const businessCity = formData.get('businessCity') || null;
+    const businessStateId = formData.get('businessStateId') || null;
+    const businessCountryId = formData.get('businessCountryId') || null;
+    const businessPostalCode = formData.get('businessPostalCode') || null;
+    const mailingAddrLine1 = formData.get('mailingAddrLine1') || null;
+    const mailingAddrLine2 = formData.get('mailingAddrLine2') || null;
+    const mailingAddrLine3 = formData.get('mailingAddrLine3') || null;
+    const mailingCity = formData.get('mailingCity') || null;
+    const mailingStateId = formData.get('mailingStateId') || null;
+    const mailingCountryId = formData.get('mailingCountryId') || null;
+    const mailingPostalCode = formData.get('mailingPostalCode') || null;
+
+    console.log('addAccount FormData:', {
+      orgId, accountName, acctTypeCd, branchType, email, aliasName,
+      businessAddrLine1, businessAddrLine2, businessAddrLine3, businessCity,
+      businessStateId, businessCountryId, businessPostalCode,
+      mailingAddrLine1, mailingAddrLine2, mailingAddrLine3, mailingCity,
+      mailingStateId, mailingCountryId, mailingPostalCode
+    });
+
+    const cookieStore = cookies();
+    const token = cookieStore.get('jwt_token')?.value;
+
+    if (!token) {
+      console.log('No token found');
+      return { error: 'No token found. Please log in.' };
+    }
+
+    const decoded = decodeJwt(token);
+    if (!decoded || !decoded.orgid || !decoded.userId) {
+      console.log('Invalid token or orgid/userId not found');
+      return { error: 'Invalid token or orgid/userId not found.' };
+    }
+
+    const jwtOrgId = decoded.orgid;
+    if (!orgId || String(orgId) !== String(jwtOrgId)) {
+      console.log(`Invalid or mismatched orgid. FormData orgid: ${orgId}, JWT orgid: ${jwtOrgId}`);
+      return { error: 'Organization ID is missing or invalid.' };
+    }
+
+    if (!accountName) {
+      console.log('Account Name is missing');
+      return { error: 'Account Name is required.' };
+    }
+    if (!acctTypeCd) {
+      console.log('Account Type is missing');
+      return { error: 'Account Type is required.' };
+    }
+    if (!branchType) {
+      console.log('Branch Type is missing');
+      return { error: 'Branch Type is required.' };
+    }
+    if (!email) {
+      console.log('Email is missing');
+      return { error: 'Email is required.' };
+    }
+
+    const pool = await DBconnection();
+    console.log('MySQL connection pool acquired');
+
+    const [emailCheck] = await pool.execute(
+      'SELECT ACCNT_ID FROM C_ACCOUNT WHERE EMAIL = ? AND ORGID = ?',
+      [email, orgId]
+    );
+    if (emailCheck.length > 0) {
+      console.log('Email already in use');
+      return { error: 'Email is already in use by another account.' };
+    }
+
+    if (acctTypeCd) {
+      const [typeCheck] = await pool.execute(
+        'SELECT id FROM generic_values WHERE g_id = 5 AND Name = ? AND orgid = ? AND isactive = 1',
+        [acctTypeCd, orgId]
+      );
+      if (typeCheck.length === 0) {
+        console.log('Invalid account type selected');
+        return { error: 'Selected account type is invalid or inactive.' };
+      }
+    }
+
+    if (branchType) {
+      const [branchCheck] = await pool.execute(
+        'SELECT id FROM generic_values WHERE g_id = 6 AND Name = ? AND orgid = ? AND isactive = 1',
+        [branchType, orgId]
+      );
+      if (branchCheck.length === 0) {
+        console.log('Invalid branch type selected');
+        return { error: 'Selected branch type is invalid or inactive.' };
+      }
+    }
+
+    if (businessCountryId) {
+      const [countryCheck] = await pool.execute(
+        'SELECT ID FROM C_COUNTRY WHERE ID = ? AND ACTIVE = 1',
+        [businessCountryId]
+      );
+      if (countryCheck.length === 0) {
+        console.log('Invalid business country selected');
+        return { error: 'Selected business country is invalid or inactive.' };
+      }
+    }
+
+    if (businessStateId) {
+      const [stateCheck] = await pool.execute(
+        'SELECT ID FROM C_STATE WHERE ID = ? AND ACTIVE = 1',
+        [businessStateId]
+      );
+      if (stateCheck.length === 0) {
+        console.log('Invalid business state selected');
+        return { error: 'Selected business state is invalid or inactive.' };
+      }
+    }
+
+    if (mailingCountryId) {
+      const [countryCheck] = await pool.execute(
+        'SELECT ID FROM C_COUNTRY WHERE ID = ? AND ACTIVE = 1',
+        [mailingCountryId]
+      );
+      if (countryCheck.length === 0) {
+        console.log('Invalid mailing country selected');
+        return { error: 'Selected mailing country is invalid or inactive.' };
+      }
+    }
+
+    if (mailingStateId) {
+      const [stateCheck] = await pool.execute(
+        'SELECT ID FROM C_STATE WHERE ID = ? AND ACTIVE = 1',
+        [mailingStateId]
+      );
+      if (stateCheck.length === 0) {
+        console.log('Invalid mailing state selected');
+        return { error: 'Selected mailing state is invalid or inactive.' };
+      }
+    }
+
+    const accntId = `ACC${Date.now()}${Math.floor(Math.random() * 1000)}`;
+    const createdBy = await getCurrentUserEmpIdName(pool, decoded.userId, orgId);
+
+    const [result] = await pool.query(
+      `INSERT INTO C_ACCOUNT (
+        ACCNT_ID, ORGID, ACTIVE_FLAG, ACCT_TYPE_CD, EMAIL, ALIAS_NAME, 
+        BUSINESS_ADDR_LINE1, BUSINESS_ADDR_LINE2, BUSINESS_ADDR_LINE3, BUSINESS_CITY, 
+        BUSINESS_STATE_ID, BUSINESS_COUNTRY_ID, BUSINESS_POSTAL_CODE,
+        MAILING_ADDR_LINE1, MAILING_ADDR_LINE2, MAILING_ADDR_LINE3, MAILING_CITY,
+        MAILING_STATE_ID, MAILING_COUNTRY_ID, MAILING_POSTAL_CODE,
+        CREATED_BY, LAST_UPDATED_BY, BRANCH_TYPE
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        accntId, orgId, 1, acctTypeCd, email, aliasName,
+        businessAddrLine1, businessAddrLine2, businessAddrLine3, businessCity,
+        businessStateId, businessCountryId, businessPostalCode,
+        mailingAddrLine1, mailingAddrLine2, mailingAddrLine3, mailingCity,
+        mailingStateId, mailingCountryId, mailingPostalCode,
+        createdBy, createdBy, branchType
+      ]
+    );
+
+    console.log(`Account created: ACCNT_ID ${accntId}, affectedRows: ${result.affectedRows}`);
+    return { success: true, accntId };
+  } catch (error) {
+    console.error('Error adding account:', error.message);
+    return { error: `Failed to add account: ${error.message}` };
+  }
+}
+
+export async function fetchUserPermissions() {
+  try {
+    const cookieStore = cookies();
+    const token = cookieStore.get('jwt_token')?.value;
+
+    if (!token) {
+      console.log('No token found');
+      throw new Error('No token found. Please log in.');
+    }
+
+    const decoded = decodeJwt(token);
+    if (!decoded || !decoded.orgid || !decoded.roleid) {
+      console.log('Invalid token or orgid/roleid not found');
+      throw new Error('Invalid token or orgid/roleid not found.');
+    }
+
+    const orgId = decoded.orgid;
+    const roleid = decoded.roleid;
+    if (!orgId || !roleid) {
+      console.log('orgId or roleid is undefined or invalid');
+      throw new Error('Organization ID or Role ID is missing or invalid.');
+    }
+
+    console.log(`Fetching permissions for roleid: ${roleid}, orgId: ${orgId}`);
+
+    const pool = await DBconnection();
+    console.log('MySQL connection pool acquired');
+
+    let isAdmin = false;
+    try {
+      const [adminRows] = await pool.query(
+        'SELECT isadmin FROM org_role_table WHERE roleid = ? AND orgid = ?',
+        [roleid, orgId]
+      );
+      if (adminRows.length > 0) {
+        isAdmin = adminRows[0].isadmin === 1;
+      }
+    } catch (error) {
+      console.error('Error fetching isadmin from org_role_table:', error.message);
+      isAdmin = false;
+    }
+
+    const [rows] = await pool.query(
+      `SELECT 
+        m.id AS menuid,
+        m.name AS menuname,
+        m.url AS menuhref,
+        m.hassubmenu,
+        sm.id AS submenuid,
+        sm.name AS submenuname,
+        sm.url AS submenuurl,
+        omp.priority
+      FROM org_menu_priority omp
+      JOIN menu m ON m.id = omp.menuid AND m.is_active = 1
+      LEFT JOIN submenu sm ON sm.id = omp.submenuid AND sm.is_active = 1
+      JOIN role_menu_permissions rmp 
+          ON rmp.menuid = omp.menuid 
+         AND (rmp.submenuid = omp.submenuid OR omp.submenuid IS NULL)
+      WHERE rmp.roleid = ? AND omp.orgid = ?
+      ORDER BY omp.priority`,
+      [roleid, orgId]
+    );
+
+    const accessibleItems = [];
+    const menuMap = new Map();
+    let hasAddAccounts = false;
+
+    for (const row of rows) {
+      const { menuid, menuname, menuhref, hassubmenu, submenuid, submenuname, submenuurl, priority } = row;
+      if (!menuMap.has(menuid)) {
+        menuMap.set(menuid, {
+          title: menuname,
+          href: menuhref || null,
+          submenu: [],
+          priority: priority || 0
+        });
+      }
+      const menu = menuMap.get(menuid);
+      if (hassubmenu === 'yes' && submenuid && submenuurl) {
+        menu.submenu.push({
+          title: submenuname,
+          href: submenuurl,
+          priority: priority || menu.submenu.length + 1
+        });
+        if (submenuurl === '/userscreens/account/addaccount') {
+          hasAddAccounts = true;
+        }
+      } else if (menuhref && !menu.href) {
+        menu.href = menuhref;
+      }
+    }
+
+    menuMap.forEach(menu => {
+      if (menu.href) {
+        accessibleItems.push({
+          href: menu.href,
+          isMenu: true,
+          priority: menu.priority
+        });
+      }
+      menu.submenu.forEach((sub) => {
+        accessibleItems.push({
+          href: sub.href,
+          isMenu: false,
+          priority: sub.priority
+        });
+      });
+    });
+
+    if (isAdmin) {
+      accessibleItems.push({
+        href: '/userscreens/prioritysetting',
+        isMenu: true,
+        priority: 1000
+      });
+    }
+
+    if (hasAddAccounts) {
+      accessibleItems.push({
+        href: '/userscreens/account/edit/:accntId',
+        isMenu: true,
+        priority: 1001
+      });
+    }
+
+    accessibleItems.sort((a, b) => a.priority - b.priority);
+    console.log('Fetched permissions:', accessibleItems);
+    return accessibleItems;
+  } catch (error) {
+    console.error('Error fetching permissions:', error.message);
+    throw new Error(`Failed to fetch permissions: ${error.message}`);
   }
 }
