@@ -1,4 +1,4 @@
-"use server";
+'use server';
 
 import DBconnection from "@/app/utils/config/db";
 import { cookies } from "next/headers";
@@ -16,19 +16,52 @@ const decodeJwt = (token) => {
   }
 };
 
+const getCurrentUserEmpIdName = async (pool, userId, orgId) => {
+  try {
+    const [userRows] = await pool.execute(
+      'SELECT empid FROM C_USER WHERE username = ? AND orgid = ?',
+      [userId, orgId]
+    );
+    if (userRows.length === 0) {
+      console.error('User not found in C_USER for username:', userId);
+      return 'system';
+    }
+    const empid = userRows[0].empid;
+
+    const [empRows] = await pool.execute(
+      'SELECT EMP_FST_NAME, EMP_LAST_NAME, roleid FROM C_EMP WHERE empid = ? AND orgid = ?',
+      [empid, orgId]
+    );
+    if (empRows.length === 0) {
+      console.error('Employee not found in C_EMP for empid:', empid);
+      return `${empid}-unknown`;
+    }
+    const { EMP_FST_NAME, EMP_LAST_NAME, roleid } = empRows[0];
+    const [roleRows] = await pool.execute(
+      'SELECT rolename FROM org_role_table WHERE roleid = ? AND orgid = ?',
+      [roleid, orgId]
+    );
+    const { rolename } = roleRows[0] || { rolename: 'Unknown' };
+    return `${empid}-${EMP_FST_NAME} ${EMP_LAST_NAME} (${rolename})`;
+  } catch (error) {
+    console.error('Error fetching empid-name:', error.message);
+    return 'system';
+  }
+};
+
 export async function addProjectAssignment(prevState, formData) {
   // Extract form data
-  const empId = formData.get('empId');
-  const prjId = formData.get('prjId');
-  const startDt = formData.get('startDt');
-  const endDt = formData.get('endDt') || null;
-  const billRate = formData.get('billRate') || null;
-  const billType = formData.get('billType');
-  const otBillRate = formData.get('otBillRate') || null;
-  const otBillType = formData.get('otBillType') || null;
-  const billableFlag = formData.get('billableFlag') === 'Yes' ? 1 : 0;
-  const otBillableFlag = formData.get('otBillableFlag') === 'Yes' ? 1 : 0;
-  const payTerm = formData.get('payTerm');
+  const empId = formData.get('empId')?.trim();
+  const prjId = formData.get('prjId')?.trim();
+  const startDt = formData.get('startDt')?.trim();
+  const endDt = formData.get('endDt')?.trim() || null;
+  const billRate = formData.get('billRate')?.trim() || null;
+  const billType = formData.get('billType')?.trim();
+  const otBillRate = formData.get('otBillRate')?.trim() || null;
+  const otBillType = formData.get('otBillType')?.trim() || null;
+  const billableFlag = formData.get('billableFlag')?.trim() === 'Yes' ? 1 : 0;
+  const otBillableFlag = formData.get('otBillableFlag')?.trim() === 'Yes' ? 1 : 0;
+  const payTerm = formData.get('payTerm')?.trim();
 
   // Log form data for debugging
   console.log("Form data received:", {
@@ -52,29 +85,41 @@ export async function addProjectAssignment(prevState, formData) {
 
   if (!token) {
     console.log('No token found');
-    return { error: 'No token found. Please log in.' };
+    return { error: 'No token found. Please log in.', success: false };
   }
 
   // Decode the token to get the orgid
   const decoded = decodeJwt(token);
-  if (!decoded || !decoded.orgid) {
-    console.log('Invalid token or orgid not found');
-    return { error: 'Invalid token or orgid not found.' };
+  if (!decoded || !decoded.orgid || !decoded.userId) {
+    console.log('Invalid token or orgid/userId not found');
+    return { error: 'Invalid token or orgid/userId not found.', success: false };
   }
 
   const orgId = decoded.orgid;
+  const userId = decoded.userId;
 
   // Validation for required fields
-  if (!empId) return { error: 'Employee is required.' };
-  if (!prjId) return { error: 'Project is required.' };
-  if (!startDt) return { error: 'Start date is required.' };
-  if (!billRate) return { error: 'Bill rate is required.' };
-  if (!billType) return { error: 'Bill type is required.' };
-  if (!payTerm) return { error: 'Payment term is required.' };
+  if (!empId) return { error: 'Employee is required.', success: false };
+  if (!prjId) return { error: 'Project is required.', success: false };
+  if (!startDt) return { error: 'Start date is required.', success: false };
+  if (!billRate) return { error: 'Bill rate is required.', success: false };
+  if (!billType) return { error: 'Bill type is required.', success: false };
+  if (!payTerm) return { error: 'Payment term is required.', success: false };
 
+  let pool;
   try {
-    const pool = await DBconnection();
+    pool = await DBconnection();
     console.log("MySQL connection pool acquired");
+
+    // Check if assignment already exists
+    const [existing] = await pool.execute(
+      'SELECT ROW_ID FROM C_PROJ_EMP WHERE PRJ_ID = ? AND EMP_ID = ?',
+      [prjId, empId]
+    );
+    if (existing.length > 0) {
+      console.log('Assignment already exists for PRJ_ID:', prjId, 'EMP_ID:', empId);
+      return { error: 'This employee is already assigned to the selected project.', success: false };
+    }
 
     // Validate start_dt and end_dt against C_PROJECT
     const [project] = await pool.query(
@@ -83,26 +128,63 @@ export async function addProjectAssignment(prevState, formData) {
     );
     if (project.length === 0) {
       console.log('Project not found');
-      return { error: 'Project not found.' };
+      return { error: 'Project not found.', success: false };
     }
     const projectStartDt = project[0].START_DT;
     const projectEndDt = project[0].END_DT;
     if (projectStartDt && new Date(startDt) < new Date(projectStartDt)) {
       console.log('Assignment start date must be on or after project start date');
-      return { error: `Assignment start date must be on or after project start date (${projectStartDt.toISOString().split('T')[0]}).` };
+      return { error: `Assignment start date must be on or after project start date (${projectStartDt.toISOString().split('T')[0]}).`, success: false };
     }
     if (endDt && projectEndDt && new Date(endDt) > new Date(projectEndDt)) {
       console.log('Assignment end date must be on or before project end date');
-      return { error: `Assignment end date must be on or before project end date (${projectEndDt.toISOString().split('T')[0]}).` };
+      return { error: `Assignment end date must be on or before project end date (${projectEndDt.toISOString().split('T')[0]}).`, success: false };
     }
 
+    // Validate billType, otBillType, and payTerm against generic_values
+    if (billType) {
+      const [billTypeCheck] = await pool.execute(
+        'SELECT id FROM generic_values WHERE g_id = 7 AND Name = ? AND orgid = ? AND isactive = 1',
+        [billType, orgId]
+      );
+      if (billTypeCheck.length === 0) {
+        console.log('Invalid bill type');
+        return { error: 'Invalid bill type.', success: false };
+      }
+    }
+
+    if (otBillType) {
+      const [otBillTypeCheck] = await pool.execute(
+        'SELECT id FROM generic_values WHERE g_id = 8 AND Name = ? AND orgid = ? AND isactive = 1',
+        [otBillType, orgId]
+      );
+      if (otBillTypeCheck.length === 0) {
+        console.log('Invalid OT bill type');
+        return { error: 'Invalid OT bill type.', success: false };
+      }
+    }
+
+    if (payTerm) {
+      const [payTermCheck] = await pool.execute(
+        'SELECT id FROM generic_values WHERE g_id = 9 AND Name = ? AND orgid = ? AND isactive = 1',
+        [payTerm, orgId]
+      );
+      if (payTermCheck.length === 0) {
+        console.log('Invalid pay term');
+        return { error: 'Invalid pay term.', success: false };
+      }
+    }
+
+    // Await the async function to get the created_by value
+    const created_by = await getCurrentUserEmpIdName(pool, userId, orgId);
+
     // Insert into C_PROJ_EMP table
-    await pool.query(
+    const [result] = await pool.query(
       `INSERT INTO C_PROJ_EMP (
         emp_id, prj_id, start_dt, end_dt, bill_rate, bill_type, ot_bill_rate,
         ot_bill_type, billable_flag, ot_billable_flag, pay_term, created_date,
-        last_updated_date, created_by, last_updated_by, modification_num
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?, ?, ?)`,
+        created_by, modification_num
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?)`,
       [
         empId,
         prjId,
@@ -115,28 +197,42 @@ export async function addProjectAssignment(prevState, formData) {
         billableFlag,
         otBillableFlag,
         payTerm,
-        'system',
-        'system',
+        created_by,
         0
       ]
     );
 
-    console.log(`Project assignment added for emp_id: ${empId}, prj_id: ${prjId}`);
+    console.log(`Project assignment added for emp_id: ${empId}, prj_id: ${prjId}, row_id: ${result.insertId}`);
     return { success: true };
   } catch (error) {
     console.error('Error adding project assignment:', error.message);
-    return { error: `Failed to add assignment: ${error.message}` };
+    return { error: `Failed to add assignment: ${error.message}`, success: false };
   }
 }
 
-export async function fetchEmployeesByOrgId(orgId) {
+export async function fetchEmployeesByOrgId(orgId, prjId = null) {
   try {
-    console.log(`Fetching employees for orgId: ${orgId}`);
+    console.log(`Fetching employees for orgId: ${orgId}, prjId: ${prjId || 'all'}`);
     const pool = await DBconnection();
-    const [rows] = await pool.execute(
-      'SELECT empid, emp_fst_name, emp_last_name FROM C_EMP WHERE orgid = ?',
-      [orgId]
-    );
+    let query = `
+      SELECT empid, emp_fst_name, emp_last_name 
+      FROM C_EMP 
+      WHERE orgid = ?
+    `;
+    const params = [orgId];
+
+    if (prjId) {
+      query += `
+        AND empid NOT IN (
+          SELECT EMP_ID 
+          FROM C_PROJ_EMP 
+          WHERE PRJ_ID = ?
+        )
+      `;
+      params.push(prjId);
+    }
+
+    const [rows] = await pool.execute(query, params);
     console.log('Fetched employees:', rows);
     return rows;
   } catch (error) {
@@ -149,9 +245,10 @@ export async function fetchProjectsByOrgId(orgId) {
   try {
     console.log(`Fetching projects for orgId: ${orgId}`);
     const pool = await DBconnection();
+    const today = new Date().toISOString().split('T')[0]; // Current date in YYYY-MM-DD
     const [rows] = await pool.execute(
-      'SELECT prj_id, prj_name, START_DT, END_DT FROM C_PROJECT WHERE org_id = ? AND (END_DT IS NULL OR END_DT >= ?)',
-      [orgId, '2025-06-25']
+      'SELECT prj_id, prj_name, START_DT, END_DT FROM C_PROJECT WHERE org_id = ? AND (END_DT IS NULL OR END_DT > ?)',
+      [orgId, today]
     );
     console.log('Fetched projects:', rows);
     return rows;

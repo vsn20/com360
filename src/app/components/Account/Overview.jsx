@@ -322,6 +322,9 @@ const Overview = ({
     const state = states.find(s => s.ID === stateId);
     return state ? state.VALUE : 'No State';
   };
+const getdisplayprojectid=(prjid)=>{
+  return prjid.split('-')[1]||prjid;
+ }
 
   return (
     <div className="employee-overview-container">
@@ -348,7 +351,7 @@ const Overview = ({
                     onClick={() => handleRowClick(account.ACCNT_ID)}
                     className={selectedAccntId === account.ACCNT_ID ? 'selected-row' : ''}
                   >
-                    <td>{account.ACCNT_ID}</td>
+                    <td>Account-{getdisplayprojectid(account.ACCNT_ID)}</td>
                     <td>{account.ALIAS_NAME || '-'}</td>
                     <td>{getAccountTypeName(account.ACCT_TYPE_CD)}</td>
                   </tr>
@@ -368,22 +371,21 @@ const Overview = ({
               {editingBasic && canEditAccounts ? (
                 <form onSubmit={(e) => { e.preventDefault(); handleSave('basic'); }}>
                   <div className="form-row">
-                    <div className="form-group">
+                    {/* <div className="form-group">
                       <label>Account ID</label>
                       <input type="text" name="accntId" value={formData.accntId} readOnly className="bg-gray-100" />
                     </div>
                     <div className="form-group">
                       <label>Organization ID</label>
                       <input type="number" name="orgid" value={formData.orgid} readOnly className="bg-gray-100" />
-                    </div>
+                    </div> */}
                   </div>
                   <div className="form-row">
                     <div className="form-group">
-                      <label>Active Flag</label>
-                      <select name="activeFlag" value={formData.activeFlag} onChange={handleFormChange}>
-                        <option value="1">Active</option>
-                        <option value="0">Inactive</option>
-                      </select>
+                      <div className="form-group">
+                      <label>Account Name</label>
+                      <input type="text" name="aliasName" value={formData.aliasName} onChange={handleFormChange} />
+                    </div>
                     </div>
                     <div className="form-group">
                       <label>Account Type*</label>
@@ -402,10 +404,12 @@ const Overview = ({
                       <label>Email*</label>
                       <input type="email" name="email" value={formData.email} onChange={handleFormChange} required />
                     </div>
-                    <div className="form-group">
-                      <label>Alias Name</label>
-                      <input type="text" name="aliasName" value={formData.aliasName} onChange={handleFormChange} />
-                    </div>
+                    <label>Active Flag</label>
+                      <select name="activeFlag" value={formData.activeFlag} onChange={handleFormChange}>
+                        <option value="1">Active</option>
+                        <option value="0">Inactive</option>
+                      </select>
+                    
                   </div>
                   <div className="form-row">
                     <div className="form-group">
@@ -419,26 +423,26 @@ const Overview = ({
                         ))}
                       </select>
                     </div>
-                    <div className="form-group">
+                    {/* <div className="form-group">
                       <label>Last Login Date</label>
                       <input type="text" name="lastLoginDate" value={formData.lastLoginDate || '-'} readOnly className="bg-gray-100" />
-                    </div>
+                    </div> */}
                   </div>
                   <div className="form-row">
-                    <div className="form-group">
+                    {/* <div className="form-group">
                       <label>Created By</label>
                       <input type="text" name="createdBy" value={formData.createdBy || '-'} readOnly className="bg-gray-100" />
                     </div>
                     <div className="form-group">
                       <label>Last Updated By</label>
                       <input type="text" name="lastUpdatedBy" value={formData.lastUpdatedBy || '-'} readOnly className="bg-gray-100" />
-                    </div>
+                    </div> */}
                   </div>
                   <div className="form-row">
-                    <div className="form-group">
+                    {/* <div className="form-group">
                       <label>Last Updated Date</label>
                       <input type="text" name="lastUpdatedDate" value={formData.lastUpdatedDate || '-'} readOnly className="bg-gray-100" />
-                    </div>
+                    </div> */}
                   </div>
                   <div className="form-buttons">
                     <button type="submit" className="save-button" disabled={isLoading}>
@@ -454,7 +458,7 @@ const Overview = ({
                   <div className="details-row">
                     <div className="details-group">
                       <label>Account ID</label>
-                      <p>{accountDetails.ACCNT_ID}</p>
+                      <p>Account-{getdisplayprojectid(accountDetails.ACCNT_ID)}</p>
                     </div>
                     <div className="details-group">
                       <label>Organization ID</label>
@@ -477,7 +481,7 @@ const Overview = ({
                       <p>{accountDetails.EMAIL || '-'}</p>
                     </div>
                     <div className="details-group">
-                      <label>Alias Name</label>
+                      <label>Account Name</label>
                       <p>{accountDetails.ALIAS_NAME || '-'}</p>
                     </div>
                   </div>

@@ -266,7 +266,7 @@ const Overview = () => {
               <tbody>
                 {roles.map((role) => (
                   <tr key={`${role.roleid}-${role.orgid}`} onClick={() => handleRoleClick(role)} style={{ cursor: 'pointer' }}>
-                    <td>{getDisplayRoleId(role.roleid)}</td>
+                    <td>Role-{getDisplayRoleId(role.roleid)}</td>
                     <td>{role.rolename}</td>
                     <td>{role.is_active ? 'Yes' : 'No'}</td>
                     <td>{new Date(role.CREATED_DATE).toLocaleDateString()}</td>
@@ -286,14 +286,14 @@ const Overview = () => {
             {editingDetails ? (
               <form onSubmit={(e) => { e.preventDefault(); handleDetailsSave(); }}>
                 <div className="form-row">
-                  <div className="form-group">
-                    <label>Role ID</label>
+                  {/* <div className="form-group">
+                    <label>Ro ID</label>
                     <input type="text" name="roleid" value={formData.roleid} readOnly className="bg-gray-100" />
-                  </div>
-                  <div className="form-group">
+                  </div> */}
+                  {/* <div className="form-group">
                     <label>Organization ID</label>
                     <input type="text" name="orgid" value={formData.orgid} readOnly className="bg-gray-100" />
-                  </div>
+                  </div> */}
                 </div>
                 <div className="form-row">
                   <div className="form-group">
@@ -318,7 +318,7 @@ const Overview = () => {
                 <div className="details-row">
                   <div className="details-group">
                     <label>Role ID</label>
-                    <p>{formData.roleid}</p>
+                    <p>Role-{getDisplayRoleId(formData.roleid)}</p>
                   </div>
                   <div className="details-group">
                     <label>Organization ID</label>
