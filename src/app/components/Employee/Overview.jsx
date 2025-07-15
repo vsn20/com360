@@ -497,6 +497,9 @@ const Overview = ({
 
   console.log('Rendering Overview component. selectedEmpId:', selectedEmpId, 'employeeDetails:', !!employeeDetails);
 
+ const getdisplayprojectid=(prjid)=>{
+  return prjid.split('_')[1]||prjid;
+ }
   return (
     <div className="employee-overview-container">
      
@@ -525,7 +528,8 @@ const Overview = ({
                     onClick={() => handleRowClick(employee.empid)}
                     className={selectedEmpId === employee.empid ? 'selected-row' : ''}
                   >
-                    <td>{employee.empid}</td>
+                   
+                    <td>Employee-{getdisplayprojectid(employee.empid)}</td>
                     <td>{employee.EMP_PREF_NAME || `${employee.EMP_FST_NAME} ${employee.EMP_MID_NAME || ''} ${employee.EMP_LAST_NAME}`.trim()}</td>
                     <td>{employee.email}</td>
                     <td>{employee.HIRE ? new Date(employee.HIRE).toLocaleDateString('en-US') : '-'}</td>
@@ -548,14 +552,14 @@ const Overview = ({
               {editingPersonal && canEditEmployees ? (
                 <form onSubmit={(e) => { e.preventDefault(); handleSave('personal'); }}>
                   <div className="form-row">
-                    <div className="form-group">
+                    {/* <div className="form-group">
                       <label>Employee ID</label>
                       <input type="text" name="empid" value={formData.empid} readOnly className="bg-gray-100" />
-                    </div>
-                    <div className="form-group">
+                    </div> */}
+                    {/* <div className="form-group">
                       <label>Organization ID</label>
                       <input type="number" name="orgid" value={formData.orgid} readOnly className="bg-gray-100" />
-                    </div>
+                    </div> */}
                   </div>
                   <div className="form-row">
                     <div className="form-group">
@@ -628,7 +632,7 @@ const Overview = ({
                   <div className="details-row">
                     <div className="details-group">
                       <label>Employee ID</label>
-                      <p>{employeeDetails.empid}</p>
+                      <p>Employee-{getdisplayprojectid(employeeDetails.empid)}</p>
                     </div>
                     <div className="details-group">
                       <label>Organization ID</label>

@@ -186,6 +186,9 @@ const Overview = ({ projects, billTypes, otBillTypes, payTerms, accounts }) => {
     const account = accounts.find(acc => acc.ACCNT_ID === accntId);
     return account ? account.ALIAS_NAME : accntId;
   };
+const getdisplayprojectid=(prjid)=>{
+  return prjid.split('-')[1]||prjid;
+ }
 
   return (
     <div className="project-overview-container">
@@ -208,7 +211,7 @@ const Overview = ({ projects, billTypes, otBillTypes, payTerms, accounts }) => {
             <tbody>
               {projects.map((project) => (
                 <tr key={project.PRJ_ID} onClick={() => handleRowClick(project)} className="clickable-row">
-                  <td>{project.PRJ_ID}</td>
+                  <td>Project-{getdisplayprojectid(project.PRJ_ID)}</td>
                   <td>{project.PRJ_NAME || '-'}</td>
                   <td>{project.PRS_DESC || '-'}</td>
                   <td>{getAccountName(project.ACCNT_ID)}</td>
@@ -227,7 +230,7 @@ const Overview = ({ projects, billTypes, otBillTypes, payTerms, accounts }) => {
             {editingBasic && canEditProjects ? (
               <form onSubmit={(e) => { e.preventDefault(); handleSave('basic'); }} className="project-form">
                 <div className="form-row">
-                  <div className="form-group">
+                  {/* <div className="form-group">
                     <label>Project ID:</label>
                     <input
                       type="text"
@@ -236,7 +239,7 @@ const Overview = ({ projects, billTypes, otBillTypes, payTerms, accounts }) => {
                       readOnly
                       className="bg-gray-100"
                     />
-                  </div>
+                  </div> */}
                   <div className="form-group">
                     <label>Project Name*:</label>
                     <input
@@ -289,7 +292,7 @@ const Overview = ({ projects, billTypes, otBillTypes, payTerms, accounts }) => {
                 <div className="details-row">
                   <div className="details-group">
                     <label>Project ID:</label>
-                    <p>{selectedProject.PRJ_ID}</p>
+                    <p>Project-{getdisplayprojectid(selectedProject.PRJ_ID)}</p>
                   </div>
                   <div className="details-group">
                     <label>Project Name:</label>
@@ -470,7 +473,7 @@ const Overview = ({ projects, billTypes, otBillTypes, payTerms, accounts }) => {
                   </div>
                 </div>
                 <div className="form-row">
-                  <div className="form-group">
+                  {/* <div className="form-group">
                     <label>Created By:</label>
                     <input
                       type="text"
@@ -479,8 +482,8 @@ const Overview = ({ projects, billTypes, otBillTypes, payTerms, accounts }) => {
                       readOnly
                       className="bg-gray-100"
                     />
-                  </div>
-                  <div className="form-group">
+                  </div> */}
+                  {/* <div className="form-group">
                     <label>Updated By:</label>
                     <input
                       type="text"
@@ -489,10 +492,10 @@ const Overview = ({ projects, billTypes, otBillTypes, payTerms, accounts }) => {
                       readOnly
                       className="bg-gray-100"
                     />
-                  </div>
+                  </div> */}
                 </div>
                 <div className="form-row">
-                  <div className="form-group">
+                  {/* <div className="form-group">
                     <label>Last Updated Date:</label>
                     <input
                       type="text"
@@ -501,7 +504,7 @@ const Overview = ({ projects, billTypes, otBillTypes, payTerms, accounts }) => {
                       readOnly
                       className="bg-gray-100"
                     />
-                  </div>
+                  </div> */}
                 </div>
                 <div className="form-buttons">
                   <button type="submit" className="submit-button" disabled={isLoading}>

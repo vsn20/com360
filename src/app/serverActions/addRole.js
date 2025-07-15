@@ -126,12 +126,7 @@ export async function addRole(formData) {
   } catch (error) {
     console.error('Error adding role or permissions:', error);
     return { error: `Failed to add role: ${error.message}` };
-  } finally {
-    if (connection) {
-      connection.release(); // Release the connection back to the pool
-    }
-    // Note: Do not call pool.end() here as it would close the pool, which should be managed globally
-  }
+  } 
 
   return redirect(`/userscreens/roles/addroles?success=Role%20added%20successfully`);
 }

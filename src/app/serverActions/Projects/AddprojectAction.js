@@ -187,7 +187,7 @@ export async function addProject(prevState, formData) {
       // Get the current number of records in C_PROJECT and add 1 for PRJ_ID
       const [countResult] = await pool.query('SELECT COUNT(*) AS count FROM C_PROJECT WHERE ORG_ID = ?', [orgId]);
       const prjCount = countResult[0].count;
-      const prjId = `PRJ_${orgId}_${prjCount + 1}`; // Generate PRJ_ID with orgId prefix
+      const prjId = `${orgId}-${prjCount + 1}`; // Generate PRJ_ID with orgId prefix
 
       // Define insert columns (all 18 columns from C_PROJECT schema)
       const insertColumns = [

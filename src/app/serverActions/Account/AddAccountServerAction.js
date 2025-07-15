@@ -182,7 +182,7 @@ export async function addAccount(formData) {
         [orgId]
       );
       const accCount = countResult[0].count;
-      const accntId = `${orgId}_${accCount + 1}`;
+      const accntId = `${orgId}-${accCount + 1}`;
       console.log("Generated ACCNT_ID:", accntId);
 
       // Get current user's empid-name
