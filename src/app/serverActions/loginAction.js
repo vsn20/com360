@@ -6,8 +6,8 @@ import { cookies } from "next/headers";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
-const generateToken = (userId, roleid, username, rolename, orgid, orgname) => {
-  return jwt.sign({ userId, roleid, username, rolename, orgid, orgname }, JWT_SECRET, { expiresIn: "24h" });
+const generateToken = (userId, empid, username, rolename, orgid, orgname) => {
+  return jwt.sign({ userId, empid, username, rolename, orgid, orgname }, JWT_SECRET, { expiresIn: "24h" });
 };
 
 export async function loginaction(logindetails) {
@@ -18,33 +18,36 @@ export async function loginaction(logindetails) {
     const pool = await DBconnection();
     console.log("MySQL connection established");
 
-    const [rows] = await pool.query(
+    // Fetch user data from C_USER
+    const [userRows] = await pool.query(
       `SELECT 
         u.username, u.empid, u.orgid, u.email, u.password, 
-        e.roleid, 
-        r.rolename,
         o.orgname
        FROM C_USER u 
-       JOIN C_EMP e ON u.empid = e.empid 
-       LEFT JOIN org_role_table r ON e.roleid = r.roleid 
        LEFT JOIN C_ORG o ON u.orgid = o.orgid
        WHERE u.username = ?`,
       [username]
     );
 
-    if (rows.length === 0) {
+    if (userRows.length === 0) {
       console.log("Login failed: User not found for username:", username);
       return { success: false, error: "Invalid username or password" };
     }
 
-    const user = rows[0];
+    const user = userRows[0];
     console.log("User data retrieved:", user);
+
+    if (!user.empid) {
+      console.log("Login failed: empid is missing or null for username:", username);
+      return { success: false, error: "Employee ID not found for this user" };
+    }
 
     if (!user.password) {
       console.log("Login failed: Password field is missing or empty for username:", username);
       return { success: false, error: "Invalid username or password" };
     }
 
+    // Validate password (assuming plain text for now; consider hashing in production)
     const isPasswordValid = password === user.password;
     console.log("Password comparison result:", isPasswordValid);
 
@@ -53,21 +56,32 @@ export async function loginaction(logindetails) {
       return { success: false, error: "Invalid username or password" };
     }
 
-    const effectiveRoleId = user.roleid;
-    const roleName = user.rolename || "default";
-    const orgName = user.orgname || "Unknown"; // Default to "Unknown" if orgname is null
+    // Fetch all roles for the employee from emp_role_assign
+    const [roleRows] = await pool.query(
+      `SELECT r.roleid, r.rolename
+       FROM emp_role_assign era
+       JOIN org_role_table r ON era.roleid = r.roleid AND era.orgid = r.orgid
+       WHERE era.empid = ? AND era.orgid = ?`,
+      [user.empid, user.orgid]
+    );
 
-    if (!roleName) {
-      console.log("Login failed: Role name not found for username:", username);
-      return { success: false, error: "User role not found" };
+    if (roleRows.length === 0) {
+      console.log("Login failed: No roles assigned for empid:", user.empid);
+      return { success: false, error: "No roles assigned to user" };
     }
 
-    console.log("User authenticated:", user.username, "Role:", roleName, "Org:", orgName);
+    // Combine role names into a comma-separated string
+    const rolename = roleRows.map(row => row.rolename).join(", ");
+    const orgName = user.orgname || "Unknown";
 
-    const token = generateToken(user.username, effectiveRoleId, username, roleName, user.orgid, orgName);
-    console.log("Generated JWT token payload:", JSON.stringify({ userId: user.username, roleid: effectiveRoleId, username, rolename: roleName, orgid: user.orgid, orgname: orgName }));
+    console.log("User authenticated:", user.username, "Roles:", rolename, "Org:", orgName);
+
+    // Generate JWT token with empid
+    const token = generateToken(user.username, user.empid, user.username, rolename, user.orgid, orgName);
+    console.log("Generated JWT token payload:", JSON.stringify({ userId: user.username, empid: user.empid, username, rolename, orgid: user.orgid, orgname: orgName }));
     console.log("Generated JWT token:", token);
 
+    // Set JWT token in cookies
     const cookieStore = cookies();
     await cookieStore.set("jwt_token", token, {
       httpOnly: true,
@@ -78,18 +92,18 @@ export async function loginaction(logindetails) {
     });
     console.log("Cookie set:", { name: "jwt_token", value: token });
 
+    // Fetch menu items from /api/menu
     const url = new URL('/api/menu', process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000');
-    url.searchParams.append('roleid', effectiveRoleId.toString());
-    url.searchParams.append('orgid', user.orgid.toString());
-
     const menuResponse = await fetch(url.toString(), {
       method: 'GET',
       headers: {
-        Cookie: `jwt_token=${token}`, // For server-side context
+        Cookie: `jwt_token=${token}`,
       },
     });
 
     if (!menuResponse.ok) {
+      const errorBody = await menuResponse.text();
+      console.error('Menu fetch failed:', { status: menuResponse.status, body: errorBody });
       throw new Error(`HTTP error! status: ${menuResponse.status}`);
     }
 
@@ -97,12 +111,13 @@ export async function loginaction(logindetails) {
     const features = menuData.map(item => item.href || item.submenu.map(sub => sub.href)).flat();
     console.log("Features fetched from /api/menu:", features);
 
+    // Update last login timestamp
     await pool.query(
       "UPDATE C_USER SET LAST_LOGIN_TIMESTAMP = CURRENT_TIMESTAMP WHERE username = ?",
       [username]
     );
 
-    return { success: true, roleid: effectiveRoleId, rolename: roleName, orgid: user.orgid, orgname: orgName, token };
+    return { success: true, empid: user.empid, rolename, orgid: user.orgid, orgname: orgName, token };
   } catch (error) {
     console.log("Login error:", error.message);
     return { success: false, error: "An error occurred during login" };

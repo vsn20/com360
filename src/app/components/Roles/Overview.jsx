@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { fetchRolesByOrgId, fetchRoleById, fetchMenusAndSubmenus, updateRole, fetchUserPermissions } from '@/app/serverActions/Roles/Overview';
+import { fetchRolesByOrgId, fetchRoleById, fetchMenusAndSubmenus, updateRole } from '@/app/serverActions/Roles/Overview';
 import './rolesoverview.css';
 
 const Overview = () => {
@@ -21,17 +21,12 @@ const Overview = () => {
   });
   const [detailsError, setDetailsError] = useState(null);
   const [featuresError, setFeaturesError] = useState(null);
-  const [accessibleItems, setAccessibleItems] = useState([]);
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [roleData, permissions] = await Promise.all([
-          fetchRolesByOrgId(),
-          fetchUserPermissions(),
-        ]);
+        const roleData = await fetchRolesByOrgId();
         setRoles(roleData);
-        setAccessibleItems(permissions);
         setDetailsError(null);
         setFeaturesError(null);
       } catch (err) {
@@ -50,7 +45,6 @@ const Overview = () => {
         try {
           const roleData = await fetchRoleById(selectedRole.roleid);
           setRoleDetails(roleData.role);
-          // Ensure unique permissions in state
           const uniquePermissions = Array.from(
             new Set(
               roleData.permissions.map(p => `${p.menuid}:${p.submenuid || 'null'}`)
@@ -91,6 +85,8 @@ const Overview = () => {
     setSelectedRole(role);
     setEditingDetails(false);
     setEditingFeatures(false);
+    setDetailsError(null);
+    setFeaturesError(null);
   };
 
   const handleBackClick = () => {
@@ -112,17 +108,19 @@ const Overview = () => {
       setDetailsError('Role name is required.');
       return;
     }
-    const formDataToSubmit = new FormData();
-    formDataToSubmit.append('roleid', formData.roleid);
-    formDataToSubmit.append('rolename', formData.rolename);
-    formDataToSubmit.append('is_active', formData.is_active);
-    console.log('Submitting form data:', Object.fromEntries(formDataToSubmit));
     try {
+      const formDataToSubmit = new FormData();
+      formDataToSubmit.append('roleid', formData.roleid);
+      formDataToSubmit.append('rolename', formData.rolename);
+      formDataToSubmit.append('is_active', formData.is_active);
+      console.log('Submitting form data:', Object.fromEntries(formDataToSubmit));
       const result = await updateRole({}, formDataToSubmit);
       if (result.success) {
         setEditingDetails(false);
         setRoleDetails({ ...roleDetails, rolename: formData.rolename, is_active: formData.is_active });
         setDetailsError(null);
+        const updatedRoles = await fetchRolesByOrgId();
+        setRoles(updatedRoles);
       } else {
         setDetailsError(result.error);
       }
@@ -141,24 +139,23 @@ const Overview = () => {
   };
 
   const handleFeatureSave = async () => {
-    const formDataToSubmit = new FormData();
-    formDataToSubmit.append('roleid', formData.roleid);
-    // Ensure unique permissions before sending
-    const uniquePermissions = Array.from(
-      new Set(
-        permissions.map(p => `${p.menuid}:${p.submenuid || 'null'}`)
-      ),
-      key => {
-        const [menuid, submenuid] = key.split(':');
-        return {
-          menuid: parseInt(menuid),
-          submenuid: submenuid === 'null' ? null : parseInt(submenuid),
-        };
-      }
-    );
-    formDataToSubmit.append('permissions', JSON.stringify(uniquePermissions));
-    console.log('Submitting permissions:', uniquePermissions);
     try {
+      const formDataToSubmit = new FormData();
+      formDataToSubmit.append('roleid', formData.roleid);
+      const uniquePermissions = Array.from(
+        new Set(
+          permissions.map(p => `${p.menuid}:${p.submenuid || 'null'}`)
+        ),
+        key => {
+          const [menuid, submenuid] = key.split(':');
+          return {
+            menuid: parseInt(menuid),
+            submenuid: submenuid === 'null' ? null : parseInt(submenuid),
+          };
+        }
+      );
+      formDataToSubmit.append('permissions', JSON.stringify(uniquePermissions));
+      console.log('Submitting permissions:', uniquePermissions);
       const result = await updateRole({}, formDataToSubmit);
       if (result.success) {
         setEditingFeatures(false);
@@ -181,7 +178,6 @@ const Overview = () => {
     if (!menu) return;
 
     setPermissions(prev => {
-      // Create a set of current permissions to check for duplicates
       const permissionSet = new Set(prev.map(p => `${p.menuid}:${p.submenuid || 'null'}`));
       let updatedPermissions = [...prev];
 
@@ -190,40 +186,33 @@ const Overview = () => {
 
       if (submenuid) {
         if (exists) {
-          // Remove submenu permission
           updatedPermissions = updatedPermissions.filter(
             p => !(p.menuid === menuid && p.submenuid === submenuid)
           );
         } else {
-          // Add submenu permission if not already present
           updatedPermissions.push({ menuid, submenuid });
         }
         if (menu.hassubmenu === 'yes') {
           const remainingSubmenus = updatedPermissions.filter(p => p.menuid === menuid && p.submenuid);
           if (remainingSubmenus.length === 0) {
-            // Remove menu permission if no submenus remain
             updatedPermissions = updatedPermissions.filter(p => p.menuid !== menuid);
           }
         }
       } else {
         if (exists) {
-          // Remove menu permission and all its submenus
           updatedPermissions = updatedPermissions.filter(p => p.menuid !== menuid);
         } else {
-          // Add menu permission
           updatedPermissions.push({ menuid, submenuid: null });
           if (menu.hassubmenu === 'yes') {
-            // Add all submenus if menu has submenus
             const submenus = availableSubmenus
               .filter(sm => sm.menuid === menuid)
               .map(sm => ({ menuid, submenuid: sm.submenuid }))
-              .filter(sm => !permissionSet.has(`${sm.menuid}:${sm.submenuid}`)); // Avoid duplicates
+              .filter(sm => !permissionSet.has(`${sm.menuid}:${sm.submenuid}`));
             updatedPermissions = [...updatedPermissions, ...submenus];
           }
         }
       }
 
-      // Ensure unique permissions
       const uniquePermissions = Array.from(
         new Set(updatedPermissions.map(p => `${p.menuid}:${p.submenuid || 'null'}`)),
         key => {
@@ -243,14 +232,13 @@ const Overview = () => {
     return roleid.split('-')[1] || roleid;
   };
 
-  const canEditRoles = accessibleItems.some(item => item.href === '/userscreens/roles/edit/:roleid');
+  const canEditRoles = true; // Grant access to everyone
 
   return (
     <div className="roles-overview-container">
       {detailsError && <div className="error-message">{detailsError}</div>}
       {!selectedRole && (
         <div className="roles-list">
-          
           {roles.length === 0 && !detailsError ? (
             <p>No active roles found.</p>
           ) : (
@@ -285,16 +273,6 @@ const Overview = () => {
             {detailsError && <div className="error-message">{detailsError}</div>}
             {editingDetails ? (
               <form onSubmit={(e) => { e.preventDefault(); handleDetailsSave(); }}>
-                <div className="form-row">
-                  {/* <div className="form-group">
-                    <label>Ro ID</label>
-                    <input type="text" name="roleid" value={formData.roleid} readOnly className="bg-gray-100" />
-                  </div> */}
-                  {/* <div className="form-group">
-                    <label>Organization ID</label>
-                    <input type="text" name="orgid" value={formData.orgid} readOnly className="bg-gray-100" />
-                  </div> */}
-                </div>
                 <div className="form-row">
                   <div className="form-group">
                     <label>Role Name</label>

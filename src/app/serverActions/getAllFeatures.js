@@ -27,9 +27,9 @@ export async function getAllFeatures() {
     }
 
     const decoded = decodeJwt(token);
-    if (!decoded || !decoded.orgid) {
-      console.log('Invalid token or orgid not found');
-      return { success: false, error: 'Invalid token or orgid not found.', features: [] };
+    if (!decoded || !decoded.orgid || !decoded.empid) {
+      console.log('Invalid token or orgid/empid not found');
+      return { success: false, error: 'Invalid token or organization/employee not found.', features: [] };
     }
 
     const orgId = decoded.orgid;

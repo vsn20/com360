@@ -37,23 +37,27 @@ export default async function AddEmployeePage({ searchParams }) {
     // Establish database connection
     const pool = await DBconnection();
 
-    // Get orgid and currentrole from token
+    // Get orgid and empid from token
     const cookieStore = cookies();
     const token = cookieStore.get('jwt_token')?.value;
 
     if (token) {
       const decoded = decodeJwt(token);
-      if (decoded && decoded.orgid) {
+      if (decoded && decoded.orgid && decoded.empid) {
         orgid = decoded.orgid;
 
-        // Fetch the current role based on orgid and roleid from the token
+        // Fetch user's roles from emp_role_assign
         const [roleRows] = await pool.query(
-          'SELECT roleid, rolename FROM org_role_table WHERE orgid = ? AND roleid = ? LIMIT 1',
-          [orgid, decoded.roleid]
+          'SELECT r.roleid, r.rolename, r.isadmin FROM emp_role_assign era ' +
+          'JOIN org_role_table r ON era.roleid = r.roleid AND era.orgid = r.orgid ' +
+          'WHERE era.empid = ? AND era.orgid = ? LIMIT 1',
+          [decoded.empid, orgid]
         );
 
         if (roleRows && roleRows.length > 0) {
           currentrole = roleRows[0].rolename || roleRows[0].roleid.toString();
+        } else {
+          console.warn('No roles found for empid:', decoded.empid);
         }
 
         // Fetch all employees for the given orgid
@@ -85,7 +89,11 @@ export default async function AddEmployeePage({ searchParams }) {
           'SELECT id, Name FROM generic_values WHERE g_id = 3 AND cutting = 1 AND orgid = ? AND isactive = 1',
           [orgid]
         );
+      } else {
+        console.error('Invalid token or missing empid/orgid');
       }
+    } else {
+      console.error('No JWT token found');
     }
 
     // Fetch active countries

@@ -26,7 +26,7 @@ const getCurrentUserEmpIdName = async (pool, userId, orgId) => {
     );
     if (userRows.length === 0) {
       console.error('User not found in C_USER for username:', userId);
-      return 'system';
+      return 'unknown';
     }
     const empid = userRows[0].empid;
 
@@ -39,13 +39,8 @@ const getCurrentUserEmpIdName = async (pool, userId, orgId) => {
       console.error('Employee not found in C_EMP for empid:', empid);
       return `${empid}-unknown`;
     }
-    const { EMP_FST_NAME, EMP_LAST_NAME,roleid } = empRows[0];
-     const [rolerows] = await pool.execute(
-      'SELECT rolename FROM org_role_table WHERE roleid= ? AND orgid = ?',
-      [roleid, orgId]
-    );
-    const{rolename}=rolerows[0];
-    return `${empid}-${EMP_FST_NAME} ${EMP_LAST_NAME} (${rolename})`;
+     const { EMP_FST_NAME, EMP_LAST_NAME } = empRows[0];
+    return `${empid}-${EMP_FST_NAME} ${EMP_LAST_NAME}`;
   } catch (error) {
     console.error('Error fetching empid-name:', error.message);
     return 'system';

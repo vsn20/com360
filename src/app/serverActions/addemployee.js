@@ -23,7 +23,7 @@ export async function addemployee(formData) {
   const empLastName = formData.get('empLastName') || '';
   const empPrefName = formData.get('empPrefName') || null;
   const email = formData.get('email') || '';
-  const roleid = formData.get('roleid') || null;
+  const roleids = [...new Set(formData.getAll('roleids'))]; // Deduplicate roleids
   const gender = formData.get('gender') || null;
   const mobileNumber = formData.get('mobileNumber') || null;
   const phoneNumber = formData.get('phoneNumber') || null;
@@ -80,7 +80,7 @@ export async function addemployee(formData) {
   if (!empFstName.trim()) return { error: 'First name is required.' };
   if (!empLastName.trim()) return { error: 'Last name is required.' };
   if (!email.trim()) return { error: 'Email is required.' };
-  if (!roleid) return { error: 'Role is required.' };
+  if (roleids.length === 0) return { error: 'At least one role is required.' };
   if (!hireDate) return { error: 'Hire date is required.' };
   if (!status) return { error: 'Status is required.' };
 
@@ -110,6 +110,17 @@ export async function addemployee(formData) {
       }
     }
 
+    // Validate roles
+    for (const roleid of roleids) {
+      const [existingRole] = await pool.query(
+        'SELECT roleid FROM org_role_table WHERE roleid = ? AND orgid = ?',
+        [roleid, orgid]
+      );
+      if (existingRole.length === 0) {
+        return { error: `Invalid role ID: ${roleid}` };
+      }
+    }
+
     // Get department name if department ID is provided
     let deptName = null;
     if (deptId) {
@@ -129,10 +140,10 @@ export async function addemployee(formData) {
     const empCount = countResult[0].count;
     empid = `${orgid}_${empCount + 1}`;
 
-    // Define insert columns and values
+    // Define insert columns and values for C_EMP
     const insertColumns = [
       'empid', 'orgid', 'EMP_FST_NAME', 'EMP_MID_NAME', 'EMP_LAST_NAME', 'EMP_PREF_NAME', 'email',
-      'roleid', 'GENDER', 'MOBILE_NUMBER', 'DOB', 'HIRE', 'LAST_WORK_DATE',
+      'GENDER', 'MOBILE_NUMBER', 'DOB', 'HIRE', 'LAST_WORK_DATE',
       'TERMINATED_DATE', 'REJOIN_DATE', 'CREATED_BY', 'LAST_UPDATED_BY', 'superior', 
       'SSN', 'STATUS', 'PHONE_NUMBER', 'LINKEDIN_URL', 'ADMIN_EMP_FLAG',
       'SUPER_USER_FLAG', 'JOB_TITLE', 'PAY_FREQUENCY', 'WORK_ADDR_LINE1', 'WORK_ADDR_LINE2',
@@ -148,7 +159,7 @@ export async function addemployee(formData) {
 
     const values = [
       empid, orgid, empFstName, empMidName, empLastName, empPrefName, email,
-      roleid, gender, mobileNumber, dob, hireDate, null, null, null, 
+      gender, mobileNumber, dob, hireDate, null, null, null, 
       'system', 'system', superior, ssn, status, phoneNumber, linkedinUrl, 
       adminEmpFlag, superUserFlag, jobTitle, payFrequency, workAddrLine1, 
       workAddrLine2, workAddrLine3, workCity, workStateId, workStateNameCustom, 
@@ -160,9 +171,6 @@ export async function addemployee(formData) {
       emergCnctPostalCode, 1
     ];
 
-    console.log("Inserting employee with", values.length, "values");
-    console.log("Column count:", insertColumns.length);
-
     if (values.length !== insertColumns.length) {
       console.error("Mismatch: values length =", values.length, "columns length =", insertColumns.length);
       return { error: 'Internal error: column count mismatch' };
@@ -170,7 +178,7 @@ export async function addemployee(formData) {
 
     const placeholders = values.map(() => '?').join(', ');
     
-    // Insert employee
+    // Insert employee into C_EMP
     await pool.query(
       `INSERT INTO C_EMP (${insertColumns.join(', ')}) VALUES (${placeholders})`,
       values
@@ -178,7 +186,18 @@ export async function addemployee(formData) {
 
     console.log(`Employee ${empid} inserted successfully`);
 
-    // Process leaves after successful employee insertion
+    // Insert roles into emp_role_assign with ON DUPLICATE KEY UPDATE
+    for (const roleid of roleids) {
+      await pool.query(
+        `INSERT INTO emp_role_assign (empid, orgid, roleid) 
+         VALUES (?, ?, ?) 
+         ON DUPLICATE KEY UPDATE roleid = roleid`,
+        [empid, orgid, roleid]
+      );
+      console.log(`Assigned role ${roleid} to employee ${empid}`);
+    }
+
+    // Process leaves
     const leaves = {};
     for (let [key, value] of formData.entries()) {
       if (key.startsWith('leaves[') && key.endsWith(']')) {
@@ -187,47 +206,32 @@ export async function addemployee(formData) {
       }
     }
 
-    console.log('Parsed leaves:', leaves);
-
-    // Get valid leave types
     const [validLeaveTypes] = await pool.execute(
       'SELECT id FROM generic_values WHERE g_id = ? AND orgid = ? AND isactive = 1',
       [1, orgid]
     );
     const validLeaveIds = validLeaveTypes.map(leave => leave.id.toString());
-    
-    console.log('Valid leave IDs:', validLeaveIds);
 
-    // Assign leaves with proper error handling
     const leaveAssignmentPromises = [];
     for (const [leaveid, noofleaves] of Object.entries(leaves)) {
       if (noofleaves >= 0 && validLeaveIds.includes(leaveid)) {
-        console.log(`Preparing to assign ${noofleaves} leaves of type ${leaveid} to employee ${empid}`);
         leaveAssignmentPromises.push(
           assignLeaves(empid, leaveid, noofleaves, orgid)
         );
-      } else {
-        console.log(`Skipping leave assignment: leaveid=${leaveid}, noofleaves=${noofleaves}, valid=${validLeaveIds.includes(leaveid)}`);
       }
     }
 
-    console.log('Leave assignment promises count:', leaveAssignmentPromises.length);
-
-    // Wait for all leave assignments to complete
     if (leaveAssignmentPromises.length > 0) {
       await Promise.all(leaveAssignmentPromises);
       console.log('All leave assignments completed successfully');
-    } else {
-      console.log('No leaves to assign');
     }
 
     // Success - redirect to employee list
     redirectPath = `/userscreens/employee/overview`;
     
   } catch (error) {
-    console.error('Error adding employee or assigning leaves:', error);
+    console.error('Error adding employee, roles, or assigning leaves:', error);
     
-    // If employee was inserted but leaves failed, we should still redirect with a warning
     if (empid) {
       try {
         const pool = await DBconnection();
@@ -237,18 +241,14 @@ export async function addemployee(formData) {
         );
         
         if (empExists.length > 0) {
-          // Employee was created but leaves failed
-          redirectPath = `/userscreens/employee?warning=Employee%20added%20but%20some%20leaves%20failed%20to%20assign:%20${encodeURIComponent(error.message)}`;
+          redirectPath = `/userscreens/employee?warning=Employee%20added%20but%20some%20roles%20or%20leaves%20failed%20to%20assign:%20${encodeURIComponent(error.message)}`;
         } else {
-          // Employee creation failed
           redirectPath = `/userscreens/employee/addemployee?error=Failed%20to%20add%20employee:%20${encodeURIComponent(error.message)}`;
         }
       } catch (checkError) {
-        // If we can't even check, assume employee creation failed
         redirectPath = `/userscreens/employee/addemployee?error=Failed%20to%20add%20employee:%20${encodeURIComponent(error.message)}`;
       }
     } else {
-      // Employee creation failed
       redirectPath = `/userscreens/employee/addemployee?error=Failed%20to%20add%20employee:%20${encodeURIComponent(error.message)}`;
     }
     

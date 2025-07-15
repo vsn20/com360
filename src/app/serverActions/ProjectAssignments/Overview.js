@@ -17,37 +17,33 @@ const decodeJwt = (token) => {
 
 const getCurrentUserEmpIdName = async (pool, userId, orgId) => {
   try {
+    // Fetch empid from C_USER using username (userId)
     const [userRows] = await pool.execute(
       'SELECT empid FROM C_USER WHERE username = ? AND orgid = ?',
       [userId, orgId]
     );
     if (userRows.length === 0) {
       console.error('User not found in C_USER for username:', userId);
-      return 'system';
+      return 'unknown';
     }
     const empid = userRows[0].empid;
 
+    // Fetch employee name from C_EMP
     const [empRows] = await pool.execute(
-      'SELECT EMP_FST_NAME, EMP_LAST_NAME, roleid FROM C_EMP WHERE empid = ? AND orgid = ?',
+      'SELECT EMP_FST_NAME, EMP_LAST_NAME,roleid FROM C_EMP WHERE empid = ? AND orgid = ?',
       [empid, orgId]
     );
     if (empRows.length === 0) {
       console.error('Employee not found in C_EMP for empid:', empid);
       return `${empid}-unknown`;
     }
-    const { EMP_FST_NAME, EMP_LAST_NAME, roleid } = empRows[0];
-    const [roleRows] = await pool.execute(
-      'SELECT rolename FROM org_role_table WHERE roleid = ? AND orgid = ?',
-      [roleid, orgId]
-    );
-    const { rolename } = roleRows[0] || { rolename: 'Unknown' };
-    return `${empid}-${EMP_FST_NAME} ${EMP_LAST_NAME} (${rolename})`;
+     const { EMP_FST_NAME, EMP_LAST_NAME } = empRows[0];
+    return `${empid}-${EMP_FST_NAME} ${EMP_LAST_NAME}`;
   } catch (error) {
     console.error('Error fetching empid-name:', error.message);
     return 'system';
   }
 };
-
 export async function fetchProjectsForAssignment() {
   let pool;
   try {

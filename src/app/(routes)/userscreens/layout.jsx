@@ -2,8 +2,8 @@ import Sidebar from '../../components/Sidebar';
 import Navbar from '../../components/screenbar';
 import SubmenuBar from '../../components/SubmenuBar';
 import { cookies } from 'next/headers';
-import DBconnection from '../../utils/config/db'; // Adjust path as needed
-import styles from './userscreens.module.css'; // Import CSS module
+import DBconnection from '../../utils/config/db';
+import styles from './userscreens.module.css';
 
 // Function to decode JWT (server-side)
 const decodeJwt = (token) => {
@@ -32,22 +32,28 @@ export default async function userscreenLayout({ children }) {
         rolename: decoded.rolename || decoded.role || 'Unknown',
         orgName: decoded.orgname || decoded.orgid || 'Unknown',
         logoLetter: (decoded.username || 'M')[0].toUpperCase(),
-        roleid: decoded.roleid, // Extract roleid
+        empid: decoded.empid,
       };
 
-      // Fetch isAdmin from database
+      // Fetch isAdmin from database based on employee's roles
       try {
         const pool = await DBconnection();
-        const [rows] = await pool.query(
-          'SELECT isadmin FROM org_role_table WHERE roleid = ?',
-          [decoded.roleid]
+        const [roleRows] = await pool.query(
+          'SELECT roleid FROM emp_role_assign WHERE empid = ? AND orgid = ?',
+          [decoded.empid, decoded.orgid]
         );
-        if (rows.length > 0) {
-          userData.isAdmin = rows[0].isadmin === 1;
+        const roleids = roleRows.map(row => row.roleid);
+
+        if (roleids.length > 0) {
+          const [adminRows] = await pool.query(
+            'SELECT isadmin FROM org_role_table WHERE roleid IN (?) AND orgid = ?',
+            [roleids, decoded.orgid]
+          );
+          userData.isAdmin = adminRows.some(row => row.isadmin === 1);
         }
       } catch (error) {
         console.error('Error fetching isadmin from database:', error.message);
-        userData.isAdmin = false; // Fallback to non-admin on error
+        userData.isAdmin = false;
       }
     }
   }
@@ -56,7 +62,7 @@ export default async function userscreenLayout({ children }) {
 
   return (
     <div>
-      <Sidebar isAdmin={userData.isAdmin} /> {/* Pass isAdmin as prop */}
+      <Sidebar isAdmin={userData.isAdmin} />
       <div className={styles.rightContent}>
         <Navbar
           orgName={userData.orgName}

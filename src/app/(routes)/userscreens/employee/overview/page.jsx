@@ -24,7 +24,7 @@ export default async function OverviewPage({ searchParams }) {
 
   // Initialize variables
   let orgid = null;
-  let currentrole = null;
+  let empid = null;
   let employees = [];
   let roles = [];
   let leaveTypes = [];
@@ -40,77 +40,101 @@ export default async function OverviewPage({ searchParams }) {
     // Establish database connection
     const pool = await DBconnection();
 
-    // Get orgid and currentrole from token
+    // Get orgid and empid from token
     const cookieStore = cookies();
     const token = cookieStore.get('jwt_token')?.value;
 
-    if (token) {
-      const decoded = decodeJwt(token);
-      if (decoded && decoded.orgid) {
-        orgid = decoded.orgid;
-
-        // Fetch the current role based on orgid and roleid from the token
-        const [roleRows] = await pool.query(
-          'SELECT roleid, rolename FROM org_role_table WHERE orgid = ? AND roleid = ? LIMIT 1',
-          [orgid, decoded.roleid]
-        );
-
-        if (roleRows && roleRows.length > 0) {
-          currentrole = roleRows[0].rolename || roleRows[0].roleid.toString();
-        }
-
-        // Fetch all employees for the given orgid
-        [employees] = await pool.query(
-          'SELECT empid, EMP_FST_NAME, EMP_LAST_NAME, roleid, email, HIRE, MOBILE_NUMBER, GENDER FROM C_EMP WHERE orgid = ?',
-          [orgid]
-        );
-
-        // Fetch active departments for the organization
-        [departments] = await pool.query(
-          'SELECT id, name FROM org_departments WHERE orgid = ? AND isactive = 1',
-          [orgid]
-        );
-
-        // Fetch active pay frequencies for the organization
-        [payFrequencies] = await pool.query(
-          'SELECT id, Name FROM generic_values WHERE g_id = 4 AND orgid = ? AND isactive = 1',
-          [orgid]
-        );
-
-        // Fetch active job titles for the organization
-        [jobTitles] = await pool.query(
-          'SELECT job_title, level FROM org_jobtitles WHERE orgid = ? AND is_active = 1',
-          [orgid]
-        );
-
-        // Fetch active statuses for the organization
-        [statuses] = await pool.query(
-          'SELECT id, Name FROM generic_values WHERE g_id = 3 AND cutting = 1 AND orgid = ? AND isactive = 1',
-          [orgid]
-        );
-
-        // Fetch active countries
-        [countries] = await pool.query(
-          'SELECT ID, VALUE FROM C_COUNTRY WHERE ACTIVE = 1'
-        );
-
-        // Fetch active states
-        [states] = await pool.query(
-          'SELECT ID, VALUE FROM C_STATE WHERE ACTIVE = 1'
-        );
-
-        // Fetch worker compensation classes
-        [workerCompClasses] = await pool.query(
-          'SELECT class_code, phraseology FROM worker_comp'
-        );
-      }
+    if (!token) {
+      console.error('No JWT token found in cookies');
+      return (
+        <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
+          <h1>Employee Overview</h1>
+          <p style={{ color: 'red' }}>Authentication token is missing. Please log in again.</p>
+        </div>
+      );
     }
+
+    const decoded = decodeJwt(token);
+    if (!decoded || !decoded.orgid || !decoded.empid) {
+      console.error('Invalid JWT token or missing orgid/empid:', decoded);
+      return (
+        <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
+          <h1>Employee Overview</h1>
+          <p style={{ color: 'red' }}>Invalid authentication token. Please log in again.</p>
+        </div>
+      );
+    }
+
+    orgid = decoded.orgid;
+    empid = decoded.empid;
+
+    // Fetch all employees for the given orgid with their roles from emp_role_assign
+    const [employeeRows] = await pool.query(
+      `SELECT 
+         e.empid, 
+         e.EMP_FST_NAME, 
+         e.EMP_LAST_NAME, 
+         e.email, 
+         e.HIRE, 
+         e.MOBILE_NUMBER, 
+         e.GENDER,
+         GROUP_CONCAT(era.roleid) AS roleids
+       FROM C_EMP e
+       LEFT JOIN emp_role_assign era ON e.empid = era.empid AND e.orgid = era.orgid
+       WHERE e.orgid = ?
+       GROUP BY e.empid`,
+      [orgid]
+    );
+
+    // Transform employee data to include roleids as an array
+    employees = employeeRows.map(emp => ({
+      ...emp,
+      roleids: emp.roleids ? emp.roleids.split(',').map(id => id.trim()) : []
+    }));
+
+    // Fetch active departments for the organization
+    [departments] = await pool.query(
+      'SELECT id, name FROM org_departments WHERE orgid = ? AND isactive = 1',
+      [orgid]
+    );
+
+    // Fetch active pay frequencies for the organization
+    [payFrequencies] = await pool.query(
+      'SELECT id, Name FROM generic_values WHERE g_id = 4 AND orgid = ? AND isactive = 1',
+      [orgid]
+    );
+
+    // Fetch active job titles for the organization
+    [jobTitles] = await pool.query(
+      'SELECT job_title, level, min_salary, max_salary FROM org_jobtitles WHERE orgid = ? AND is_active = 1',
+      [orgid]
+    );
+
+    // Fetch active statuses for the organization
+    [statuses] = await pool.query(
+      'SELECT id, Name FROM generic_values WHERE g_id = 3 AND cutting = 1 AND orgid = ? AND isactive = 1',
+      [orgid]
+    );
+
+    // Fetch active countries
+    [countries] = await pool.query(
+      'SELECT ID, VALUE FROM C_COUNTRY WHERE ACTIVE = 1'
+    );
+
+    // Fetch active states
+    [states] = await pool.query(
+      'SELECT ID, VALUE FROM C_STATE WHERE ACTIVE = 1'
+    );
+
+    // Fetch worker compensation classes
+    [workerCompClasses] = await pool.query(
+      'SELECT class_code, phraseology FROM worker_comp'
+    );
 
     // Fetch all roles for the role dropdown
     const { success, roles: fetchedRoles, error: fetchError } = await getAllroles();
-    if (success) {
-      roles = fetchedRoles;
-    } else {
+    if (!success) {
+      console.error('Failed to fetch roles:', fetchError);
       return (
         <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
           <h1>Employee Overview</h1>
@@ -118,19 +142,25 @@ export default async function OverviewPage({ searchParams }) {
         </div>
       );
     }
+    roles = fetchedRoles;
 
     // Fetch leave types
     leaveTypes = await fetchLeaveTypes();
 
   } catch (error) {
     console.error('Error fetching data:', error);
-    // Proceed with partial data
+    return (
+      <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
+        <h1>Employee Overview</h1>
+        <p style={{ color: 'red' }}>An error occurred while loading data: {error.message}</p>
+      </div>
+    );
   }
 
   return (
     <Overview
       roles={roles}
-      currentrole={currentrole}
+      empid={empid}
       orgid={orgid}
       error={error}
       employees={employees}

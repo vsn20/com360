@@ -7,7 +7,7 @@ import { addRole, fetchMenusAndSubmenus } from '@/app/serverActions/Roles/Overvi
 export default function AddRole({ currentRole, orgid, error }) {
   const router = useRouter();
   const [formError, setFormError] = useState(error || null);
-  const [permissions, setPermissions] = useState([]); // Track selected menus and submenus
+  const [permissions, setPermissions] = useState([]);
   const [availableMenus, setAvailableMenus] = useState([]);
   const [availableSubmenus, setAvailableSubmenus] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -31,11 +31,12 @@ export default function AddRole({ currentRole, orgid, error }) {
 
   const handleSubmit = async (formData) => {
     formData.append('currentRole', currentRole || '');
+    formData.append('orgid', orgid || '');
     formData.append('permissions', JSON.stringify(permissions));
 
     // Client-side validation: Ensure at least one submenu is selected for menus with hassubmenu='yes'
     const invalidSelections = permissions
-      .filter(p => !p.submenuid) // Filter menu-level permissions
+      .filter(p => !p.submenuid)
       .map(p => availableMenus.find(m => m.menuid === p.menuid))
       .filter(menu => menu && menu.hassubmenu === 'yes')
       .filter(menu => {
@@ -60,20 +61,20 @@ export default function AddRole({ currentRole, orgid, error }) {
     if (!menu) return;
 
     setPermissions(prev => {
-      const exists = prev.some(
-        (p) => p.menuid === menuid && p.submenuid === submenuid
-      );
-      let updatedPermissions;
+      const permissionSet = new Set(prev.map(p => `${p.menuid}:${p.submenuid || 'null'}`));
+      let updatedPermissions = [...prev];
+
+      const permissionKey = `${menuid}:${submenuid || 'null'}`;
+      const exists = permissionSet.has(permissionKey);
+
       if (submenuid) {
-        // Handle submenu toggle
         if (exists) {
-          updatedPermissions = prev.filter(
-            (p) => !(p.menuid === menuid && p.submenuid === submenuid)
+          updatedPermissions = updatedPermissions.filter(
+            p => !(p.menuid === menuid && p.submenuid === submenuid)
           );
         } else {
-          updatedPermissions = [...prev, { menuid, submenuid }];
+          updatedPermissions.push({ menuid, submenuid });
         }
-        // If no submenus are selected for this menu, remove the menu permission
         if (menu.hassubmenu === 'yes') {
           const remainingSubmenus = updatedPermissions.filter(p => p.menuid === menuid && p.submenuid);
           if (remainingSubmenus.length === 0) {
@@ -81,29 +82,24 @@ export default function AddRole({ currentRole, orgid, error }) {
           }
         }
       } else {
-        // Handle menu toggle
         if (exists) {
-          // Remove menu and all its submenus
-          updatedPermissions = prev.filter(p => p.menuid !== menuid);
+          updatedPermissions = updatedPermissions.filter(p => p.menuid !== menuid);
         } else {
-          // Add menu and all its submenus (if hassubmenu='yes')
-          updatedPermissions = [...prev, { menuid, submenuid: null }];
+          updatedPermissions.push({ menuid, submenuid: null });
           if (menu.hassubmenu === 'yes') {
             const submenus = availableSubmenus
               .filter(sm => sm.menuid === menuid)
-              .map(sm => ({ menuid, submenuid: sm.submenuid }));
+              .map(sm => ({ menuid, submenuid: sm.submenuid }))
+              .filter(sm => !permissionSet.has(`${sm.menuid}:${sm.submenuid}`));
             updatedPermissions = [...updatedPermissions, ...submenus];
           }
         }
       }
+
       console.log('Updated permissions:', updatedPermissions);
       return updatedPermissions;
     });
   };
-
-  console.log('Available Menus:', JSON.stringify(availableMenus, null, 2));
-  console.log('Available Submenus:', JSON.stringify(availableSubmenus, null, 2));
-  console.log('Permissions:', JSON.stringify(permissions, null, 2));
 
   if (loading) {
     return <div>Loading...</div>;
@@ -115,7 +111,6 @@ export default function AddRole({ currentRole, orgid, error }) {
       {error && <p style={{ color: "red" }}>{error}</p>}
       {formError && <p style={{ color: "red" }}>{formError}</p>}
       <form action={handleSubmit}>
-        {/* Organization ID (Non-editable) */}
         <div style={{ marginBottom: "20px" }}>
           <label htmlFor="orgid" style={{ display: "block", marginBottom: "5px" }}>
             Organization ID:
@@ -136,7 +131,6 @@ export default function AddRole({ currentRole, orgid, error }) {
           />
         </div>
 
-        {/* Required Fields */}
         <div style={{ marginBottom: "20px" }}>
           <label htmlFor="roleName" style={{ display: "block", marginBottom: "5px" }}>
             Role Name: *
@@ -156,7 +150,6 @@ export default function AddRole({ currentRole, orgid, error }) {
           />
         </div>
 
-        {/* Feature Checkboxes with Submenus */}
         <div style={{ marginBottom: "20px" }}>
           <h3>Select Features: *</h3>
           {availableMenus.length === 0 ? (
@@ -186,7 +179,7 @@ export default function AddRole({ currentRole, orgid, error }) {
                           onChange={() => handlePermissionToggle(menu.menuid, submenu.submenuid)}
                           style={{ marginRight: "10px" }}
                         />
-                        {submenu.submenuname} 
+                        {submenu.submenuname}
                       </label>
                     </div>
                   ))}
