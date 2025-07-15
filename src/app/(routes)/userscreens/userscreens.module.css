@@ -1,5 +1,6 @@
 /* Updated CSS for fixed navbar and submenu with proper z-index hierarchy */
 
+
 .navbar {
   font-size: 14px;
   display: flex;
@@ -73,11 +74,13 @@
   left: 0;
   width: 200px;
   height: 100vh;
-  background-color: black;
+  background-color: rgb(44, 47, 51);
   padding: 5px;
   box-sizing: border-box;
   z-index: 998; /* Lower than navbar and submenu but higher than content */
   font-size: 13px;
+  font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+
 }
 
 .rightContent {
@@ -102,7 +105,7 @@
   align-items: center;
   padding: 3px 12px;
   text-decoration: none;
-  color: white;
+  color: rgb(212, 215, 220);
   font-weight: 500;
   background-color: transparent;
   cursor: pointer;
@@ -118,7 +121,7 @@
   vertical-align: middle;
   border-top: 5px solid transparent;
   border-bottom: 5px solid transparent;
-  border-left: 5px solid #fff; /* Adjust color to match your design */
+  border-left: 5px solid rgb(212, 215, 220) ; /* Adjust color to match your design */
   transition: transform 0.3s ease;
 }
 
@@ -151,6 +154,10 @@
   background-color: #0FD46C;
 }
 
+.sidebarLink.active{
+  font-size: 14px;
+  color: white;
+}
 .sidebarArrow {
   margin-left: 8px;
   font-size: 12px;
@@ -162,7 +169,7 @@
   position: absolute;
   top: 0;
   left: 100%;
-  background-color: black;
+  background-color: rgb(44, 47, 51);
   padding: 8px 0;
   list-style: none;
   border: 1px solid #e5e7eb;
@@ -182,7 +189,7 @@
 
 .sidebarSubmenuLink {
   text-decoration: none;
-  color: white;
+  color: rgb(212, 215, 220);
   display: block;
   padding: 4px 8px;
   border-radius: 4px;
@@ -192,6 +199,7 @@
 
 .sidebarSubmenuLink:hover {
   background-color: #0FD46C;
+  color: white;
 }
 
 .com360_logo {
@@ -278,11 +286,14 @@
 }
 
 .submenuItem {
-  color: black;
-  text-decoration: none;
-  font-weight: bold;
-  padding: 4px 8px;
-  border-radius: 4px;
+    color: #393a3d;
+    font-size: 16px;
+    font-style: normal;
+    font-weight: 500;
+    line-height: 24px;
+    text-decoration: none;
+
+
 }
 
 .submenuItem:hover {
