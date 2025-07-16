@@ -7,10 +7,10 @@ import './addaccount.css';
 
 export default function Addaccount({ orgid, error, accountTypes, branchTypes, countries, states }) {
   const router = useRouter();
-  const [formError, setFormError] = useState(null);
-  const [formSuccess, setFormSuccess] = useState(null);
+  const [addFormError, addsetFormError] = useState(null);
+  const [addFormSuccess, addsetFormSuccess] = useState(null);
 
-  const [formData, setFormData] = useState({
+  const [addformData, setaddFormData] = useState({
     accountName: '',
     acctTypeCd: '',
     branchType: '',
@@ -32,46 +32,46 @@ export default function Addaccount({ orgid, error, accountTypes, branchTypes, co
     mailingPostalCode: '',
   });
 
-  const handleChange = (e) => {
+  const addhandleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
+    setaddFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
   };
 
-  const handleSubmit = async (e) => {
+  const addhandleSubmit = async (e) => {
     e.preventDefault();
-    setFormError(null);
-    setFormSuccess(null);
+    addsetFormError(null);
+    addsetFormSuccess(null);
 
-    if (!formData.accountName) {
-      setFormError('Account name is required.');
+    if (!addformData.accountName) {
+      addsetFormError('Account name is required.');
       return;
     }
-    if (!formData.acctTypeCd) {
-      setFormError('Please select an account type.');
+    if (!addformData.acctTypeCd) {
+      addsetFormError('Please select an account type.');
       return;
     }
-    if (!formData.branchType) {
-      setFormError('Please select a branch type.');
+    if (!addformData.branchType) {
+      addsetFormError('Please select a branch type.');
       return;
     }
-    if (!formData.email) {
-      setFormError('Email is required.');
+    if (!addformData.email) {
+      addsetFormError('Email is required.');
       return;
     }
 
-    const formDataToSend = new FormData();
-    Object.entries(formData).forEach(([key, value]) => {
-      formDataToSend.append(key, value);
+    const addformDataToSend = new FormData();
+    Object.entries(addformData).forEach(([key, value]) => {
+      addformDataToSend.append(key, value);
     });
 
-    const result = await addAccount(formDataToSend);
-    if (result?.error) {
-      setFormError(result.error);
-    } else if (result?.success) {
-      setFormData({
+    const addresult = await addAccount(addformDataToSend);
+    if (addresult?.error) {
+      addsetFormError(addresult.error);
+    } else if (addresult?.success) {
+      setaddFormData({
         accountName: '',
         acctTypeCd: '',
         branchType: '',
@@ -92,7 +92,7 @@ export default function Addaccount({ orgid, error, accountTypes, branchTypes, co
         mailingCountryId: '',
         mailingPostalCode: '',
       });
-      setFormSuccess('Account added successfully.');
+      addsetFormSuccess('Account added successfully.');
       setTimeout(() => router.push('/userscreens/account/overview'), 2000); // Redirect after success
     }
   };
@@ -101,9 +101,9 @@ export default function Addaccount({ orgid, error, accountTypes, branchTypes, co
     <div className="employee-overview-container">
       <h2>Add Account</h2>
       {error && <div className="error-message">{error}</div>}
-      {formError && <div className="error-message">{formError}</div>}
-      {formSuccess && <div className="success-message">{formSuccess}</div>}
-      <form onSubmit={handleSubmit} className="employee-details-container">
+      {addFormError && <div className="error-message">{addFormError}</div>}
+      {addFormSuccess && <div className="success-message">{addFormSuccess}</div>}
+      <form onSubmit={addhandleSubmit} className="employee-details-container">
         {/* Basic Details Block */}
         <div className="details-block">
           <h3>Basic Details</h3>
@@ -123,8 +123,8 @@ export default function Addaccount({ orgid, error, accountTypes, branchTypes, co
               <input
                 type="text"
                 name="accountName"
-                value={formData.accountName}
-                onChange={handleChange}
+                value={addformData.accountName}
+                onChange={addhandleChange}
                 placeholder="Enter Account Name"
                 required
               />
@@ -135,8 +135,8 @@ export default function Addaccount({ orgid, error, accountTypes, branchTypes, co
               <label>Account Type*</label>
               <select
                 name="acctTypeCd"
-                value={formData.acctTypeCd}
-                onChange={handleChange}
+                value={addformData.acctTypeCd}
+                onChange={addhandleChange}
                 required
               >
                 <option value="">Select Account Type</option>
@@ -151,8 +151,8 @@ export default function Addaccount({ orgid, error, accountTypes, branchTypes, co
               <label>Branch Type*</label>
               <select
                 name="branchType"
-                value={formData.branchType}
-                onChange={handleChange}
+                value={addformData.branchType}
+                onChange={addhandleChange}
                 required
               >
                 <option value="">Select Branch Type</option>
@@ -170,8 +170,8 @@ export default function Addaccount({ orgid, error, accountTypes, branchTypes, co
               <input
                 type="email"
                 name="email"
-                value={formData.email}
-                onChange={handleChange}
+                value={addformData.email}
+                onChange={addhandleChange}
                 placeholder="Enter Email"
                 required
               />
@@ -181,8 +181,8 @@ export default function Addaccount({ orgid, error, accountTypes, branchTypes, co
               <input
                 type="text"
                 name="aliasName"
-                value={formData.aliasName}
-                onChange={handleChange}
+                value={addformData.aliasName}
+                onChange={addhandleChange}
                 placeholder="Enter Alias Name"
               />
             </div>
@@ -198,8 +198,8 @@ export default function Addaccount({ orgid, error, accountTypes, branchTypes, co
               <input
                 type="text"
                 name="businessAddrLine1"
-                value={formData.businessAddrLine1}
-                onChange={handleChange}
+                value={addformData.businessAddrLine1}
+                onChange={addhandleChange}
                 placeholder="Enter Address Line 1"
               />
             </div>
@@ -208,8 +208,8 @@ export default function Addaccount({ orgid, error, accountTypes, branchTypes, co
               <input
                 type="text"
                 name="businessAddrLine2"
-                value={formData.businessAddrLine2}
-                onChange={handleChange}
+                value={addformData.businessAddrLine2}
+                onChange={addhandleChange}
                 placeholder="Enter Address Line 2"
               />
             </div>
@@ -220,8 +220,8 @@ export default function Addaccount({ orgid, error, accountTypes, branchTypes, co
               <input
                 type="text"
                 name="businessAddrLine3"
-                value={formData.businessAddrLine3}
-                onChange={handleChange}
+                value={addformData.businessAddrLine3}
+                onChange={addhandleChange}
                 placeholder="Enter Address Line 3"
               />
             </div>
@@ -230,8 +230,8 @@ export default function Addaccount({ orgid, error, accountTypes, branchTypes, co
               <input
                 type="text"
                 name="businessCity"
-                value={formData.businessCity}
-                onChange={handleChange}
+                value={addformData.businessCity}
+                onChange={addhandleChange}
                 placeholder="Enter City"
               />
             </div>
@@ -241,8 +241,8 @@ export default function Addaccount({ orgid, error, accountTypes, branchTypes, co
               <label>Country</label>
               <select
                 name="businessCountryId"
-                value={formData.businessCountryId}
-                onChange={handleChange}
+                value={addformData.businessCountryId}
+                onChange={addhandleChange}
               >
                 <option value="">Select Country</option>
                 {countries.map((country) => (
@@ -256,8 +256,8 @@ export default function Addaccount({ orgid, error, accountTypes, branchTypes, co
               <label>State</label>
               <select
                 name="businessStateId"
-                value={formData.businessStateId}
-                onChange={handleChange}
+                value={addformData.businessStateId}
+                onChange={addhandleChange}
               >
                 <option value="">Select State</option>
                 {states.map((state) => (
@@ -274,8 +274,8 @@ export default function Addaccount({ orgid, error, accountTypes, branchTypes, co
               <input
                 type="text"
                 name="businessPostalCode"
-                value={formData.businessPostalCode}
-                onChange={handleChange}
+                value={addformData.businessPostalCode}
+                onChange={addhandleChange}
                 placeholder="Enter Postal Code"
               />
             </div>
@@ -291,8 +291,8 @@ export default function Addaccount({ orgid, error, accountTypes, branchTypes, co
               <input
                 type="text"
                 name="mailingAddrLine1"
-                value={formData.mailingAddrLine1}
-                onChange={handleChange}
+                value={addformData.mailingAddrLine1}
+                onChange={addhandleChange}
                 placeholder="Enter Address Line 1"
               />
             </div>
@@ -301,8 +301,8 @@ export default function Addaccount({ orgid, error, accountTypes, branchTypes, co
               <input
                 type="text"
                 name="mailingAddrLine2"
-                value={formData.mailingAddrLine2}
-                onChange={handleChange}
+                value={addformData.mailingAddrLine2}
+                onChange={addhandleChange}
                 placeholder="Enter Address Line 2"
               />
             </div>
@@ -313,8 +313,8 @@ export default function Addaccount({ orgid, error, accountTypes, branchTypes, co
               <input
                 type="text"
                 name="mailingAddrLine3"
-                value={formData.mailingAddrLine3}
-                onChange={handleChange}
+                value={addformData.mailingAddrLine3}
+                onChange={addhandleChange}
                 placeholder="Enter Address Line 3"
               />
             </div>
@@ -323,8 +323,8 @@ export default function Addaccount({ orgid, error, accountTypes, branchTypes, co
               <input
                 type="text"
                 name="mailingCity"
-                value={formData.mailingCity}
-                onChange={handleChange}
+                value={addformData.mailingCity}
+                onChange={addhandleChange}
                 placeholder="Enter City"
               />
             </div>
@@ -334,8 +334,8 @@ export default function Addaccount({ orgid, error, accountTypes, branchTypes, co
               <label>Country</label>
               <select
                 name="mailingCountryId"
-                value={formData.mailingCountryId}
-                onChange={handleChange}
+                value={addformData.mailingCountryId}
+                onChange={addhandleChange}
               >
                 <option value="">Select Country</option>
                 {countries.map((country) => (
@@ -349,8 +349,8 @@ export default function Addaccount({ orgid, error, accountTypes, branchTypes, co
               <label>State</label>
               <select
                 name="mailingStateId"
-                value={formData.mailingStateId}
-                onChange={handleChange}
+                value={addformData.mailingStateId}
+                onChange={addhandleChange}
               >
                 <option value="">Select State</option>
                 {states.map((state) => (
@@ -367,8 +367,8 @@ export default function Addaccount({ orgid, error, accountTypes, branchTypes, co
               <input
                 type="text"
                 name="mailingPostalCode"
-                value={formData.mailingPostalCode}
-                onChange={handleChange}
+                value={addformData.mailingPostalCode}
+                onChange={addhandleChange}
                 placeholder="Enter Postal Code"
               />
             </div>

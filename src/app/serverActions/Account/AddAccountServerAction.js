@@ -53,7 +53,7 @@ export async function addAccount(formData) {
   const acctTypeCd = formData.get("acctTypeCd")?.trim();
   const branchType = formData.get("branchType")?.trim();
   const email = formData.get("email")?.trim();
-  const aliasName = formData.get("aliasName")?.trim() || null;
+  // const aliasName = formData.get("aliasName")?.trim() || null;
   const businessAddrLine1 = formData.get("businessAddrLine1")?.trim() || null;
   const businessAddrLine2 = formData.get("businessAddrLine2")?.trim() || null;
   const businessAddrLine3 = formData.get("businessAddrLine3")?.trim() || null;
@@ -75,7 +75,7 @@ export async function addAccount(formData) {
     acctTypeCd,
     branchType,
     email,
-    aliasName,
+    // aliasName,
     orgId: "from JWT",
     businessAddrLine1,
     businessAddrLine2,
@@ -201,7 +201,7 @@ export async function addAccount(formData) {
         acctTypeCd,
         branchType,
         email,
-        aliasName,
+        accountName,
         parseInt(orgId, 10),
         businessAddrLine1,
         businessAddrLine2,
