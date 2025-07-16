@@ -8,7 +8,7 @@ import styles from '../(routes)/userscreens/userscreens.module.css';
 function Sidebar({ isAdmin }) {
   const pathname = usePathname();
   const [menuItems, setMenuItems] = useState([]);
-  const [isFetched, setIsFetched] = useState(false); // Flag to prevent re-fetching
+  const [isFetched, setIsFetched] = useState(false);
 
   useEffect(() => {
     if (!isFetched) {
@@ -19,16 +19,16 @@ function Sidebar({ isAdmin }) {
           const data = await res.json();
           const safeData = Array.isArray(data) ? data : [];
           setMenuItems(safeData);
-          setIsFetched(true); // Mark as fetched after successful load
+          setIsFetched(true);
         } catch (error) {
           console.error('Error fetching menu items:', error.message);
           setMenuItems([]);
-          setIsFetched(true); // Still mark as fetched to avoid retries on error
+          setIsFetched(true);
         }
       }
       fetchData();
     }
-  }, [isFetched]); // Dependency on isFetched to run only once
+  }, [isFetched]);
 
   const finalMenuItems = [...menuItems];
 

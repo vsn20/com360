@@ -24,7 +24,7 @@ const getCurrentUserEmpIdName = async (pool, userId, orgId) => {
     );
     if (userRows.length === 0) {
       console.error('User not found in C_USER for username:', userId);
-      return 'system';
+      return 'unknown';
     }
     const empid = userRows[0].empid;
 
@@ -37,19 +37,13 @@ const getCurrentUserEmpIdName = async (pool, userId, orgId) => {
       console.error('Employee not found in C_EMP for empid:', empid);
       return `${empid}-unknown`;
     }
-    const { EMP_FST_NAME, EMP_LAST_NAME,roleid } = empRows[0];
-     const [rolerows] = await pool.execute(
-      'SELECT rolename FROM org_role_table WHERE roleid= ? AND orgid = ?',
-      [roleid, orgId]
-    );
-    const{rolename}=rolerows[0];
-    return `${empid}-${EMP_FST_NAME} ${EMP_LAST_NAME} (${rolename})`;
+     const { EMP_FST_NAME, EMP_LAST_NAME } = empRows[0];
+    return `${empid}-${EMP_FST_NAME} ${EMP_LAST_NAME}`;
   } catch (error) {
     console.error('Error fetching empid-name:', error.message);
     return 'system';
   }
 };
-
 export async function updateproject(formData) {
   const prjId = formData.get('PRJ_ID')?.trim();
   const section = formData.get('section')?.trim();
@@ -329,141 +323,6 @@ export async function fetchaccountsbyorgid() {
   } catch (error) {
     console.error('Error fetching account:', error.message);
     throw new Error(`Failed to fetch account: ${error.message}`);
-  } 
-}
-
-export async function fetchUserPermissions() {
-  let pool;
-  try {
-    const cookieStore = cookies();
-    const token = cookieStore.get('jwt_token')?.value;
-
-    if (!token) {
-      console.log('No token found');
-      throw new Error('No token found. Please log in.');
-    }
-
-    const decoded = decodeJwt(token);
-    if (!decoded || !decoded.orgid || !decoded.roleid) {
-      console.log('Invalid token or orgid/roleid not found');
-      throw new Error('Invalid token or orgid/roleid not found.');
-    }
-
-    const orgId = decoded.orgid;
-    const roleid = decoded.roleid;
-    if (!orgId || !roleid) {
-      console.log('orgId or roleid is undefined or invalid');
-      throw new Error('Organization ID or Role ID is missing or invalid.');
-    }
-
-    console.log(`Fetching permissions for roleid: ${roleid}, orgId: ${orgId}`);
-
-    pool = await DBconnection();
-    console.log('MySQL connection pool acquired');
-
-    let isAdmin = false;
-    try {
-      const [adminRows] = await pool.query(
-        'SELECT isadmin FROM org_role_table WHERE roleid = ? AND orgid = ?',
-        [roleid, orgId]
-      );
-      if (adminRows.length > 0) {
-        isAdmin = adminRows[0].isadmin === 1;
-      }
-    } catch (error) {
-      console.error('Error fetching isadmin from org_role_table:', error.message);
-      isAdmin = false;
-    }
-
-    const [rows] = await pool.query(
-      `SELECT 
-        m.id AS menuid,
-        m.name AS menuname,
-        m.url AS menuhref,
-        m.hassubmenu,
-        sm.id AS submenuid,
-        sm.name AS submenuname,
-        sm.url AS submenuurl,
-        omp.priority
-      FROM org_menu_priority omp
-      JOIN menu m ON m.id = omp.menuid AND m.is_active = 1
-      LEFT JOIN submenu sm ON sm.id = omp.submenuid AND sm.is_active = 1
-      JOIN role_menu_permissions rmp 
-          ON rmp.menuid = omp.menuid 
-         AND (rmp.submenuid = omp.submenuid OR omp.submenuid IS NULL)
-      WHERE rmp.roleid = ? AND omp.orgid = ?
-      ORDER BY omp.priority`,
-      [roleid, orgId]
-    );
-
-    const accessibleItems = [];
-    const menuMap = new Map();
-    let hasAddProjects = false;
-
-    for (const row of rows) {
-      const { menuid, menuname, menuhref, hassubmenu, submenuid, submenuname, submenuurl, priority } = row;
-      if (!menuMap.has(menuid)) {
-        menuMap.set(menuid, {
-          title: menuname,
-          href: menuhref || null,
-          submenu: [],
-          priority: priority || 0
-        });
-      }
-      const menu = menuMap.get(menuid);
-      if (hassubmenu === 'yes' && submenuid && submenuurl) {
-        menu.submenu.push({
-          title: submenuname,
-          href: submenuurl,
-          priority: priority || menu.submenu.length + 1
-        });
-        if (submenuurl === '/userscreens/project/addproject') {
-          hasAddProjects = true;
-        }
-      } else if (menuhref && !menu.href) {
-        menu.href = menuhref;
-      }
-    }
-
-    menuMap.forEach(menu => {
-      if (menu.href) {
-        accessibleItems.push({
-          href: menu.href,
-          isMenu: true,
-          priority: menu.priority
-        });
-      }
-      menu.submenu.forEach((sub) => {
-        accessibleItems.push({
-          href: sub.href,
-          isMenu: false,
-          priority: sub.priority
-        });
-      });
-    });
-
-    if (isAdmin) {
-      accessibleItems.push({
-        href: '/userscreens/prioritysetting',
-        isMenu: true,
-        priority: 1000
-      });
-    }
-
-    if (hasAddProjects) {
-      accessibleItems.push({
-        href: '/userscreens/project/edit/:prjId',
-        isMenu: true,
-        priority: 1001
-      });
-    }
-
-    accessibleItems.sort((a, b) => a.priority - b.priority);
-    console.log('Fetched permissions:', accessibleItems);
-    return accessibleItems;
-  } catch (error) {
-    console.error('Error fetching permissions:', error.message);
-    throw new Error(`Failed to fetch permissions: ${error.message}`);
   } 
 }
 

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { updateproject, fetchUserPermissions, fetchProjectById } from '@/app/serverActions/Projects/overview';
+import { updateproject, fetchProjectById } from '@/app/serverActions/Projects/overview';
 import './projectoverview.css';
 
 const Overview = ({ projects, billTypes, otBillTypes, payTerms, accounts }) => {
@@ -9,7 +9,7 @@ const Overview = ({ projects, billTypes, otBillTypes, payTerms, accounts }) => {
   const [formData, setFormData] = useState({});
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [canEditProjects, setCanEditProjects] = useState(false);
+  const [canEditProjects, setCanEditProjects] = useState(true); // Default to true for all authenticated users
   const [editingBasic, setEditingBasic] = useState(false);
   const [editingAdditional, setEditingAdditional] = useState(false);
 
@@ -24,19 +24,6 @@ const Overview = ({ projects, billTypes, otBillTypes, payTerms, accounts }) => {
     }
     return ''; // Fallback for invalid dates
   };
-
-  useEffect(() => {
-    const checkPermissions = async () => {
-      try {
-        const permissions = await fetchUserPermissions();
-        setCanEditProjects(permissions.some(item => item.href === '/userscreens/project/edit/:prjId'));
-      } catch (err) {
-        console.error('Error fetching permissions:', err);
-        setError(err.message);
-      }
-    };
-    checkPermissions();
-  }, []);
 
   const handleRowClick = (project) => {
     setSelectedProject(project);
@@ -186,9 +173,10 @@ const Overview = ({ projects, billTypes, otBillTypes, payTerms, accounts }) => {
     const account = accounts.find(acc => acc.ACCNT_ID === accntId);
     return account ? account.ALIAS_NAME : accntId;
   };
-const getdisplayprojectid=(prjid)=>{
-  return prjid.split('-')[1]||prjid;
- }
+
+  const getdisplayprojectid = (prjid) => {
+    return prjid.split('-')[1] || prjid;
+  };
 
   return (
     <div className="project-overview-container">
@@ -230,16 +218,6 @@ const getdisplayprojectid=(prjid)=>{
             {editingBasic && canEditProjects ? (
               <form onSubmit={(e) => { e.preventDefault(); handleSave('basic'); }} className="project-form">
                 <div className="form-row">
-                  {/* <div className="form-group">
-                    <label>Project ID:</label>
-                    <input
-                      type="text"
-                      name="prjId"
-                      value={formData.prjId}
-                      readOnly
-                      className="bg-gray-100"
-                    />
-                  </div> */}
                   <div className="form-group">
                     <label>Project Name*:</label>
                     <input
@@ -471,40 +449,6 @@ const getdisplayprojectid=(prjid)=>{
                       onChange={handleChange}
                     />
                   </div>
-                </div>
-                <div className="form-row">
-                  {/* <div className="form-group">
-                    <label>Created By:</label>
-                    <input
-                      type="text"
-                      name="createdBy"
-                      value={formData.createdBy || '-'}
-                      readOnly
-                      className="bg-gray-100"
-                    />
-                  </div> */}
-                  {/* <div className="form-group">
-                    <label>Updated By:</label>
-                    <input
-                      type="text"
-                      name="updatedBy"
-                      value={formData.updatedBy || '-'}
-                      readOnly
-                      className="bg-gray-100"
-                    />
-                  </div> */}
-                </div>
-                <div className="form-row">
-                  {/* <div className="form-group">
-                    <label>Last Updated Date:</label>
-                    <input
-                      type="text"
-                      name="lastUpdatedDate"
-                      value={formData.lastUpdatedDate || '-'}
-                      readOnly
-                      className="bg-gray-100"
-                    />
-                  </div> */}
                 </div>
                 <div className="form-buttons">
                   <button type="submit" className="submit-button" disabled={isLoading}>

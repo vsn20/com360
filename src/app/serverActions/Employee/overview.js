@@ -82,17 +82,17 @@ export async function updateEmployee(prevState, formData) {
     let affectedRows = 0;
 
     if (section === 'personal') {
-      const empFstName = formData.get('empFstName');
-      const empMidName = formData.get('empMidName') || null;
-      const empLastName = formData.get('empLastName');
-      const empPrefName = formData.get('empPrefName') || null;
-      const email = formData.get('email');
+      const empFstName = formData.get('empFstName')?.trim();
+      const empMidName = formData.get('empMidName')?.trim() || null;
+      const empLastName = formData.get('empLastName')?.trim();
+      const empPrefName = formData.get('empPrefName')?.trim() || null;
+      const email = formData.get('email')?.trim();
       const gender = formData.get('gender') || null;
-      const mobileNumber = formData.get('mobileNumber') || null;
-      const phoneNumber = formData.get('phoneNumber') || null;
+      const mobileNumber = formData.get('mobileNumber')?.trim() || null;
+      const phoneNumber = formData.get('phoneNumber')?.trim() || null;
       const dob = formData.get('dob') || null;
-      const ssn = formData.get('ssn') || null;
-      const linkedinUrl = formData.get('linkedinUrl') || null;
+      const ssn = formData.get('ssn')?.trim() || null;
+      const linkedinUrl = formData.get('linkedinUrl')?.trim() || null;
 
       console.log('Personal details:', {
         empFstName, empMidName, empLastName, empPrefName, email, gender,
@@ -149,7 +149,10 @@ export async function updateEmployee(prevState, formData) {
       affectedRows += result.affectedRows;
       console.log(`Personal details update result: ${result.affectedRows} rows affected for empid ${empid}`);
     } else if (section === 'employment') {
-      const roleid = formData.get('roleid') || null;
+      // Handle both single roleid and multiple roleids
+      const roleids = formData.getAll('roleids').length > 0 
+        ? [...new Set(formData.getAll('roleids'))] // Deduplicate if multiple
+        : [formData.get('roleid')].filter(Boolean); // Use single roleid if provided
       const hireDate = formData.get('hireDate') || null;
       const lastWorkDate = formData.get('lastWorkDate') || null;
       const terminatedDate = formData.get('terminatedDate') || null;
@@ -159,16 +162,17 @@ export async function updateEmployee(prevState, formData) {
       const jobTitle = formData.get('jobTitle') || null;
       const payFrequency = formData.get('payFrequency') || null;
       const deptId = formData.get('deptId') || null;
+      const deptName = formData.get('deptName')?.trim() || null;
       const workCompClass = formData.get('workCompClass') || null;
 
       console.log('Employment details:', {
-        roleid, hireDate, lastWorkDate, terminatedDate, rejoinDate, superior,
-        status, jobTitle, payFrequency, deptId, workCompClass,
+        roleids, hireDate, lastWorkDate, terminatedDate, rejoinDate, superior,
+        status, jobTitle, payFrequency, deptId, deptName, workCompClass,
       });
 
-      if (!roleid) {
-        console.log('Role is missing');
-        return { error: 'Role is required.' };
+      if (roleids.length === 0) {
+        console.log('No roles provided');
+        return { error: 'At least one role is required.' };
       }
       if (!hireDate) {
         console.log('Hire date is missing');
@@ -179,15 +183,15 @@ export async function updateEmployee(prevState, formData) {
         return { error: 'Status is required.' };
       }
 
-      // Validate role
-      if (roleid) {
+      // Validate roles
+      for (const roleid of roleids) {
         const [role] = await pool.execute(
           'SELECT roleid FROM org_role_table WHERE roleid = ? AND orgid = ? AND is_active = 1',
           [roleid, orgid]
         );
         if (role.length === 0) {
-          console.log('Invalid or inactive role selected');
-          return { error: 'Selected role is invalid or inactive.' };
+          console.log(`Invalid or inactive role selected: ${roleid}`);
+          return { error: `Selected role ID ${roleid} is invalid or inactive.` };
         }
       }
 
@@ -243,8 +247,8 @@ export async function updateEmployee(prevState, formData) {
         }
       }
 
-      // Validate department and set DEPT_NAME
-      let deptName = null;
+      // Validate department and fetch DEPT_NAME if deptId is provided
+      let finalDeptName = deptName;
       if (deptId) {
         const [deptCheck] = await pool.execute(
           'SELECT id, name FROM org_departments WHERE id = ? AND orgid = ? AND isactive = 1',
@@ -254,9 +258,13 @@ export async function updateEmployee(prevState, formData) {
           console.log('Invalid department selected:', deptId);
           return { error: 'Selected department is invalid or inactive.' };
         }
-        deptName = deptCheck[0].name; // Set DEPT_NAME from org_departments.name
+        finalDeptName = deptCheck[0].name; // Override with name from org_departments
+      } else {
+        finalDeptName = null; // Clear DEPT_NAME if deptId is not provided
       }
 
+      // Update C_EMP with the first roleid (for backward compatibility with existing schema)
+      const primaryRoleId = roleids[0] || null;
       const [result] = await pool.query(
         `UPDATE C_EMP 
          SET 
@@ -276,14 +284,34 @@ export async function updateEmployee(prevState, formData) {
            LAST_UPDATED_BY = ? 
          WHERE empid = ? AND orgid = ?`,
         [
-          roleid, hireDate, lastWorkDate, terminatedDate, rejoinDate, superior,
-          status, jobTitle, payFrequency, deptId, deptName, workCompClass,
+          primaryRoleId, hireDate, lastWorkDate, terminatedDate, rejoinDate, superior,
+          status, jobTitle, payFrequency, deptId, finalDeptName, workCompClass,
           'system', empid, orgid,
         ]
       );
 
       affectedRows += result.affectedRows;
-      console.log(`Employment details update result: ${result.affectedRows} rows affected for empid ${empid}, deptId: ${deptId}, deptName: ${deptName}`);
+      console.log(`Employment details update result: ${result.affectedRows} rows affected for empid ${empid}, deptId: ${deptId}, deptName: ${finalDeptName}`);
+
+      // Update role assignments in emp_role_assign
+      // First, remove existing role assignments
+      const [deleteResult] = await pool.query(
+        'DELETE FROM emp_role_assign WHERE empid = ? AND orgid = ?',
+        [empid, orgid]
+      );
+      console.log(`Removed ${deleteResult.affectedRows} existing role assignments for empid ${empid}`);
+
+      // Insert new role assignments
+      for (const roleid of roleids) {
+        const [roleAssignResult] = await pool.query(
+          `INSERT INTO emp_role_assign (empid, orgid, roleid) 
+           VALUES (?, ?, ?) 
+           ON DUPLICATE KEY UPDATE roleid = roleid`,
+          [empid, orgid, roleid]
+        );
+        affectedRows += roleAssignResult.affectedRows;
+        console.log(`Assigned role ${roleid} to employee ${empid}, affectedRows: ${roleAssignResult.affectedRows}`);
+      }
     } else if (section === 'leaves') {
       const leaves = {};
       for (let [key, value] of formData.entries()) {
@@ -323,14 +351,14 @@ export async function updateEmployee(prevState, formData) {
         affectedRows += result.affectedRows || 1;
       }
     } else if (section === 'workAddress') {
-      const workAddrLine1 = formData.get('workAddrLine1') || null;
-      const workAddrLine2 = formData.get('workAddrLine2') || null;
-      const workAddrLine3 = formData.get('workAddrLine3') || null;
-      const workCity = formData.get('workCity') || null;
+      const workAddrLine1 = formData.get('workAddrLine1')?.trim() || null;
+      const workAddrLine2 = formData.get('workAddrLine2')?.trim() || null;
+      const workAddrLine3 = formData.get('workAddrLine3')?.trim() || null;
+      const workCity = formData.get('workCity')?.trim() || null;
       const workStateId = formData.get('workStateId') || null;
-      const workStateNameCustom = formData.get('workStateNameCustom') || null;
+      const workStateNameCustom = formData.get('workStateNameCustom')?.trim() || null;
       const workCountryId = formData.get('workCountryId') || null;
-      const workPostalCode = formData.get('workPostalCode') || null;
+      const workPostalCode = formData.get('workPostalCode')?.trim() || null;
 
       console.log('Work address details:', {
         workAddrLine1, workAddrLine2, workAddrLine3, workCity,
@@ -385,14 +413,14 @@ export async function updateEmployee(prevState, formData) {
       affectedRows += result.affectedRows;
       console.log(`Work address update result: ${result.affectedRows} rows affected for empid ${empid}`);
     } else if (section === 'homeAddress') {
-      const homeAddrLine1 = formData.get('homeAddrLine1') || null;
-      const homeAddrLine2 = formData.get('homeAddrLine2') || null;
-      const homeAddrLine3 = formData.get('homeAddrLine3') || null;
-      const homeCity = formData.get('homeCity') || null;
+      const homeAddrLine1 = formData.get('homeAddrLine1')?.trim() || null;
+      const homeAddrLine2 = formData.get('homeAddrLine2')?.trim() || null;
+      const homeAddrLine3 = formData.get('homeAddrLine3')?.trim() || null;
+      const homeCity = formData.get('homeCity')?.trim() || null;
       const homeStateId = formData.get('homeStateId') || null;
-      const homeStateNameCustom = formData.get('homeStateNameCustom') || null;
+      const homeStateNameCustom = formData.get('homeStateNameCustom')?.trim() || null;
       const homeCountryId = formData.get('homeCountryId') || null;
-      const homePostalCode = formData.get('homePostalCode') || null;
+      const homePostalCode = formData.get('homePostalCode')?.trim() || null;
 
       console.log('Home address details:', {
         homeAddrLine1, homeAddrLine2, homeAddrLine3, homeCity,
@@ -447,17 +475,17 @@ export async function updateEmployee(prevState, formData) {
       affectedRows += result.affectedRows;
       console.log(`Home address update result: ${result.affectedRows} rows affected for empid ${empid}`);
     } else if (section === 'emergencyContact') {
-      const emergCnctName = formData.get('emergCnctName') || null;
-      const emergCnctPhoneNumber = formData.get('emergCnctPhoneNumber') || null;
-      const emergCnctEmail = formData.get('emergCnctEmail') || null;
-      const emergCnctAddrLine1 = formData.get('emergCnctAddrLine1') || null;
-      const emergCnctAddrLine2 = formData.get('emergCnctAddrLine2') || null;
-      const emergCnctAddrLine3 = formData.get('emergCnctAddrLine3') || null;
-      const emergCnctCity = formData.get('emergCnctCity') || null;
+      const emergCnctName = formData.get('emergCnctName')?.trim() || null;
+      const emergCnctPhoneNumber = formData.get('emergCnctPhoneNumber')?.trim() || null;
+      const emergCnctEmail = formData.get('emergCnctEmail')?.trim() || null;
+      const emergCnctAddrLine1 = formData.get('emergCnctAddrLine1')?.trim() || null;
+      const emergCnctAddrLine2 = formData.get('emergCnctAddrLine2')?.trim() || null;
+      const emergCnctAddrLine3 = formData.get('emergCnctAddrLine3')?.trim() || null;
+      const emergCnctCity = formData.get('emergCnctCity')?.trim() || null;
       const emergCnctStateId = formData.get('emergCnctStateId') || null;
-      const emergCnctStateNameCustom = formData.get('emergCnctStateNameCustom') || null;
+      const emergCnctStateNameCustom = formData.get('emergCnctStateNameCustom')?.trim() || null;
       const emergCnctCountryId = formData.get('emergCnctCountryId') || null;
-      const emergCnctPostalCode = formData.get('emergCnctPostalCode') || null;
+      const emergCnctPostalCode = formData.get('emergCnctPostalCode')?.trim() || null;
 
       console.log('Emergency contact details:', {
         emergCnctName, emergCnctPhoneNumber, emergCnctEmail, emergCnctAddrLine1,
@@ -534,7 +562,6 @@ export async function updateEmployee(prevState, formData) {
   }
 }
 
-// Other functions remain unchanged
 export async function assignLeaves(empid, leaveid, noofleaves, orgid) {
   try {
     const cookieStore = cookies();
@@ -638,8 +665,23 @@ export async function fetchEmployeesByOrgId() {
        WHERE orgid = ?`,
       [orgId]
     );
-    console.log('Fetched employees:', rows);
-    return rows;
+
+    // Fetch roleids for each employee from emp_role_assign
+    const employees = await Promise.all(
+      rows.map(async (employee) => {
+        const [roleRows] = await pool.execute(
+          'SELECT roleid FROM emp_role_assign WHERE empid = ? AND orgid = ?',
+          [employee.empid, orgId]
+        );
+        return {
+          ...employee,
+          roleids: roleRows.map(row => row.roleid),
+        };
+      })
+    );
+
+    console.log('Fetched employees with roleids:', employees);
+    return employees;
   } catch (error) {
     console.error('Error fetching employees:', error.message);
     throw new Error(`Failed to fetch employees: ${error.message}`);
@@ -698,8 +740,20 @@ export async function fetchEmployeeById(empid) {
       console.log('Employee not found');
       throw new Error('Employee not found.');
     }
-    console.log('Fetched employee:', rows[0]);
-    return rows[0];
+
+    // Fetch roleids from emp_role_assign
+    const [roleRows] = await pool.execute(
+      'SELECT roleid FROM emp_role_assign WHERE empid = ? AND orgid = ?',
+      [empid, orgId]
+    );
+
+    const employee = {
+      ...rows[0],
+      roleids: roleRows.map(row => row.roleid),
+    };
+
+    console.log('Fetched employee with roleids:', employee);
+    return employee;
   } catch (error) {
     console.error('Error fetching employee:', error.message);
     throw new Error(`Failed to fetch employee: ${error.message}`);
@@ -827,151 +881,5 @@ export async function fetchLeaveAssignments(empid) {
   } catch (error) {
     console.error('Error fetching leave assignments:', error.message);
     return {};
-  }
-}
-
-export async function fetchUserPermissions() {
-  try {
-    const cookieStore = cookies();
-    const token = cookieStore.get('jwt_token')?.value;
-
-    if (!token) {
-      console.log('No token found');
-      throw new Error('No token found. Please log in.');
-    }
-
-    const decoded = decodeJwt(token);
-    if (!decoded || !decoded.orgid || !decoded.roleid) {
-      console.log('Invalid token or orgid/roleid not found');
-      throw new Error('Invalid token or orgid/roleid not found.');
-    }
-
-    const orgId = decoded.orgid;
-    const roleid = decoded.roleid;
-    if (!orgId || !roleid) {
-      console.log('orgId or roleid is undefined or invalid');
-      throw new Error('Organization ID or Role ID is missing or invalid.');
-    }
-
-    console.log(`Fetching permissions for roleid: ${roleid}, orgId: ${orgId}`);
-
-    const pool = await DBconnection();
-    console.log('MySQL connection pool acquired');
-
-    let isAdmin = false;
-    try {
-      const [adminRows] = await pool.query(
-        'SELECT isadmin FROM org_role_table WHERE roleid = ? AND orgid = ?',
-        [roleid, orgId]
-      );
-      if (adminRows.length > 0) {
-        isAdmin = adminRows[0].isadmin === 1;
-      }
-    } catch (error) {
-      console.error('Error fetching isadmin from org_role_table:', error.message);
-      isAdmin = false;
-    }
-
-    const [rows] = await pool.query(
-      `SELECT 
-        m.id AS menuid,
-        m.name AS menuname,
-        m.url AS menuhref,
-        m.hassubmenu,
-        sm.id AS submenuid,
-        sm.name AS submenuname,
-        sm.url AS submenuurl,
-        omp.priority
-      FROM org_menu_priority omp
-      JOIN menu m ON m.id = omp.menuid AND m.is_active = 1
-      LEFT JOIN submenu sm ON sm.id = omp.submenuid AND sm.is_active = 1
-      JOIN role_menu_permissions rmp 
-          ON rmp.menuid = omp.menuid 
-         AND (rmp.submenuid = omp.submenuid OR omp.submenuid IS NULL)
-      WHERE rmp.roleid = ? AND omp.orgid = ?
-      ORDER BY omp.priority`,
-      [roleid, orgId]
-    );
-
-    const accessibleItems = [];
-    const menuMap = new Map();
-    let hasAddRoles = false;
-    let hasAddEmployee = false;
-
-    for (const row of rows) {
-      const { menuid, menuname, menuhref, hassubmenu, submenuid, submenuname, submenuurl, priority } = row;
-      if (!menuMap.has(menuid)) {
-        menuMap.set(menuid, {
-          title: menuname,
-          href: menuhref || null,
-          submenu: [],
-          priority: priority || 0,
-        });
-      }
-      const menu = menuMap.get(menuid);
-      if (hassubmenu === 'yes' && submenuid && submenuurl) {
-        menu.submenu.push({
-          title: submenuname,
-          href: submenuurl,
-          priority: priority || menu.submenu.length + 1,
-        });
-        if (submenuurl === '/userscreens/roles/addroles') {
-          hasAddRoles = true;
-        }
-        if (submenuurl === '/userscreens/employee/addemployee') {
-          hasAddEmployee = true;
-        }
-      } else if (menuhref && !menu.href) {
-        menu.href = menuhref;
-      }
-    }
-
-    menuMap.forEach(menu => {
-      if (menu.href) {
-        accessibleItems.push({
-          href: menu.href,
-          isMenu: true,
-          priority: menu.priority,
-        });
-      }
-      menu.submenu.forEach((sub) => {
-        accessibleItems.push({
-          href: sub.href,
-          isMenu: false,
-          priority: sub.priority,
-        });
-      });
-    });
-
-    if (isAdmin) {
-      accessibleItems.push({
-        href: '/userscreens/prioritysetting',
-        isMenu: true,
-        priority: 1000,
-      });
-    }
-
-    if (hasAddEmployee) {
-      accessibleItems.push({
-        href: '/userscreens/employee/edit/:empid',
-        isMenu: true,
-        priority: 1001,
-      });
-    }
-
-    if (hasAddRoles) {
-      accessibleItems.push({
-        href: '/userscreens/roles/edit/:roleid',
-        isMenu: true,
-        priority: 1002,
-      });
-    }
-
-    accessibleItems.sort((a, b) => a.priority - b.priority);
-    console.log('Fetched permissions:', accessibleItems);
-    return accessibleItems;
-  } catch (error) {
-    console.error('Error fetching permissions:', error.message);
-    throw new Error(`Failed to fetch permissions: ${error.message}`);
   }
 }

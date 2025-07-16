@@ -18,32 +18,41 @@ export async function GET(request) {
     const decoded = jwt.verify(token, JWT_SECRET);
     console.log("JWT token decoded:", decoded);
 
-    const { roleid, orgid } = decoded;
-    if (!roleid || !orgid) {
-      return NextResponse.json({ error: 'Missing roleid or orgid in token' }, { status: 400 });
+    const { empid, orgid } = decoded;
+    if (!empid || !orgid) {
+      return NextResponse.json({ error: 'Missing empid or orgid in token' }, { status: 400 });
     }
 
     // Connect to the database
     const pool = await DBconnection();
 
-    // Fetch isadmin from org_role_table
+    // Fetch all role IDs for the employee
+    const [roleRows] = await pool.query(
+      'SELECT roleid FROM emp_role_assign WHERE empid = ? AND orgid = ?',
+      [empid, orgid]
+    );
+    const roleids = roleRows.map(row => row.roleid);
+
+    if (roleids.length === 0) {
+      return NextResponse.json({ error: 'No roles assigned to employee' }, { status: 400 });
+    }
+
+    // Fetch isadmin for any of the roles
     let isAdmin = false;
     try {
       const [adminRows] = await pool.query(
-        'SELECT isadmin FROM org_role_table WHERE roleid = ?',
-        [roleid]
+        'SELECT isadmin FROM org_role_table WHERE roleid IN (?) AND orgid = ?',
+        [roleids, orgid]
       );
-      if (adminRows.length > 0) {
-        isAdmin = adminRows[0].isadmin === 1;
-      }
+      isAdmin = adminRows.some(row => row.isadmin === 1);
     } catch (error) {
       console.error('Error fetching isadmin from org_role_table:', error.message);
-      isAdmin = false; // Fallback to non-admin on error
+      isAdmin = false;
     }
 
-    // Fetch menu permissions for the role and organization
+    // Fetch menu permissions for all roles
     const [rows] = await pool.query(
-      `SELECT 
+      `SELECT DISTINCT
         m.id AS menuid,
         m.name AS menuname,
         m.url AS menuhref,
@@ -51,16 +60,17 @@ export async function GET(request) {
         sm.id AS submenuid,
         sm.name AS submenuname,
         sm.url AS submenuurl,
-        omp.priority
+        MIN(omp.priority) AS priority
       FROM org_menu_priority omp
       JOIN menu m ON m.id = omp.menuid AND m.is_active = 1
       LEFT JOIN submenu sm ON sm.id = omp.submenuid AND sm.is_active = 1
       JOIN role_menu_permissions rmp 
           ON rmp.menuid = omp.menuid 
          AND (rmp.submenuid = omp.submenuid OR omp.submenuid IS NULL)
-      WHERE rmp.roleid = ? AND omp.orgid = ?
-      ORDER BY omp.priority;`,
-      [roleid, orgid]
+      WHERE rmp.roleid IN (?) AND omp.orgid = ?
+      GROUP BY m.id, m.name, m.url, m.hassubmenu, sm.id, sm.name, sm.url
+      ORDER BY priority`,
+      [roleids, orgid]
     );
 
     // Build menu items
@@ -88,10 +98,12 @@ export async function GET(request) {
       const menu = menuMap.get(menuid);
 
       if (hassubmenu === 'yes' && submenuid && submenuurl) {
-        menu.submenu.push({
-          title: submenuname,
-          href: submenuurl,
-        });
+        if (!menu.submenu.some(sub => sub.href === submenuurl)) {
+          menu.submenu.push({
+            title: submenuname,
+            href: submenuurl,
+          });
+        }
         if (!menu.href) {
           menu.href = submenuurl;
         }

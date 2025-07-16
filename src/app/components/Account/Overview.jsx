@@ -4,8 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   fetchAccountByOrgId, 
   fetchAccountById, 
-  fetchUserPermissions, 
-  updateAccount 
+  updateAccount
 } from '@/app/serverActions/Account/Overview';
 import './overview.css';
 
@@ -48,7 +47,7 @@ const Overview = ({
     lastUpdatedDate: ''
   });
   const [error, setError] = useState(initialError);
-  const [canEditAccounts, setCanEditAccounts] = useState(false);
+  const [canEditAccounts, setCanEditAccounts] = useState(true); // Default to true for all authenticated users
   const [editingBasic, setEditingBasic] = useState(false);
   const [editingBusinessAddress, setEditingBusinessAddress] = useState(false);
   const [editingMailingAddress, setEditingMailingAddress] = useState(false);
@@ -69,19 +68,6 @@ const Overview = ({
   useEffect(() => {
     setError(initialError);
   }, [initialError]);
-
-  useEffect(() => {
-    const checkPermissions = async () => {
-      try {
-        const permissions = await fetchUserPermissions();
-        setCanEditAccounts(permissions.some(item => item.href === '/userscreens/account/edit/:accntId'));
-      } catch (err) {
-        console.error('Error fetching permissions:', err);
-        setError(err.message);
-      }
-    };
-    checkPermissions();
-  }, []);
 
   useEffect(() => {
     const loadAccountDetails = async () => {
@@ -322,9 +308,10 @@ const Overview = ({
     const state = states.find(s => s.ID === stateId);
     return state ? state.VALUE : 'No State';
   };
-const getdisplayprojectid=(prjid)=>{
-  return prjid.split('-')[1]||prjid;
- }
+
+  const getdisplayprojectid = (prjid) => {
+    return prjid.split('-')[1] || prjid;
+  };
 
   return (
     <div className="employee-overview-container">
@@ -371,21 +358,9 @@ const getdisplayprojectid=(prjid)=>{
               {editingBasic && canEditAccounts ? (
                 <form onSubmit={(e) => { e.preventDefault(); handleSave('basic'); }}>
                   <div className="form-row">
-                    {/* <div className="form-group">
-                      <label>Account ID</label>
-                      <input type="text" name="accntId" value={formData.accntId} readOnly className="bg-gray-100" />
-                    </div>
                     <div className="form-group">
-                      <label>Organization ID</label>
-                      <input type="number" name="orgid" value={formData.orgid} readOnly className="bg-gray-100" />
-                    </div> */}
-                  </div>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <div className="form-group">
                       <label>Account Name</label>
                       <input type="text" name="aliasName" value={formData.aliasName} onChange={handleFormChange} />
-                    </div>
                     </div>
                     <div className="form-group">
                       <label>Account Type*</label>
@@ -404,12 +379,13 @@ const getdisplayprojectid=(prjid)=>{
                       <label>Email*</label>
                       <input type="email" name="email" value={formData.email} onChange={handleFormChange} required />
                     </div>
-                    <label>Active Flag</label>
+                    <div className="form-group">
+                      <label>Active Flag</label>
                       <select name="activeFlag" value={formData.activeFlag} onChange={handleFormChange}>
                         <option value="1">Active</option>
                         <option value="0">Inactive</option>
                       </select>
-                    
+                    </div>
                   </div>
                   <div className="form-row">
                     <div className="form-group">
@@ -423,26 +399,6 @@ const getdisplayprojectid=(prjid)=>{
                         ))}
                       </select>
                     </div>
-                    {/* <div className="form-group">
-                      <label>Last Login Date</label>
-                      <input type="text" name="lastLoginDate" value={formData.lastLoginDate || '-'} readOnly className="bg-gray-100" />
-                    </div> */}
-                  </div>
-                  <div className="form-row">
-                    {/* <div className="form-group">
-                      <label>Created By</label>
-                      <input type="text" name="createdBy" value={formData.createdBy || '-'} readOnly className="bg-gray-100" />
-                    </div>
-                    <div className="form-group">
-                      <label>Last Updated By</label>
-                      <input type="text" name="lastUpdatedBy" value={formData.lastUpdatedBy || '-'} readOnly className="bg-gray-100" />
-                    </div> */}
-                  </div>
-                  <div className="form-row">
-                    {/* <div className="form-group">
-                      <label>Last Updated Date</label>
-                      <input type="text" name="lastUpdatedDate" value={formData.lastUpdatedDate || '-'} readOnly className="bg-gray-100" />
-                    </div> */}
                   </div>
                   <div className="form-buttons">
                     <button type="submit" className="save-button" disabled={isLoading}>

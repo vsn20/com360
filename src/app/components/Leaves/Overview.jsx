@@ -208,8 +208,8 @@ export default function Overview() {
                         {leave.status !== 'pending' && (
                           <td>
                             {leave.status === 'accepted'
-                              ? `Approved by ${leave.approved_by}(${leave.approved_role})`
-                              : `Rejected by ${leave.approved_by}(${leave.approved_role})`}
+                              ? `Approved by ${leave.approved_by}`
+                              : `Rejected by ${leave.approved_by}`}
                           </td>
                         )}
                         {leave.status === 'pending' && leave.empid === employees[0]?.empid && (

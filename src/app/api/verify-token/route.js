@@ -16,32 +16,41 @@ export async function POST(request) {
     const decoded = jwt.verify(token, JWT_SECRET);
     console.log("Token verified in API, decoded payload:", decoded);
 
-    const { roleid, orgid } = decoded;
-    if (!roleid || !orgid) {
-      return NextResponse.json({ error: 'Missing roleid or orgid in token' }, { status: 400 });
+    const { empid, orgid } = decoded;
+    if (!empid || !orgid) {
+      return NextResponse.json({ error: 'Missing empid or orgid in token' }, { status: 400 });
     }
 
     // Connect to the database
     const pool = await DBconnection();
 
-    // Fetch isadmin from org_role_table
+    // Fetch all role IDs for the employee
+    const [roleRows] = await pool.query(
+      'SELECT roleid FROM emp_role_assign WHERE empid = ? AND orgid = ?',
+      [empid, orgid]
+    );
+    const roleids = roleRows.map(row => row.roleid);
+
+    if (roleids.length === 0) {
+      return NextResponse.json({ error: 'No roles assigned to employee' }, { status: 400 });
+    }
+
+    // Fetch isadmin for any of the roles
     let isAdmin = false;
     try {
       const [adminRows] = await pool.query(
-        'SELECT isadmin FROM org_role_table WHERE roleid = ? AND orgid = ?',
-        [roleid, orgid]
+        'SELECT isadmin FROM org_role_table WHERE roleid IN (?) AND orgid = ?',
+        [roleids, orgid]
       );
-      if (adminRows.length > 0) {
-        isAdmin = adminRows[0].isadmin === 1;
-      }
+      isAdmin = adminRows.some(row => row.isadmin === 1);
     } catch (error) {
       console.error('Error fetching isadmin from org_role_table:', error.message);
       isAdmin = false;
     }
 
-    // Fetch menu permissions for the role and organization
+    // Fetch menu permissions for all roles
     const [rows] = await pool.query(
-      `SELECT 
+      `SELECT DISTINCT
         m.id AS menuid,
         m.name AS menuname,
         m.url AS menuhref,
@@ -49,16 +58,17 @@ export async function POST(request) {
         sm.id AS submenuid,
         sm.name AS submenuname,
         sm.url AS submenuurl,
-        omp.priority
+        MIN(omp.priority) AS priority
       FROM org_menu_priority omp
       JOIN menu m ON m.id = omp.menuid AND m.is_active = 1
       LEFT JOIN submenu sm ON sm.id = omp.submenuid AND sm.is_active = 1
       JOIN role_menu_permissions rmp 
           ON rmp.menuid = omp.menuid 
          AND (rmp.submenuid = omp.submenuid OR omp.submenuid IS NULL)
-      WHERE rmp.roleid = ? AND omp.orgid = ?
-      ORDER BY omp.priority`,
-      [roleid, orgid]
+      WHERE rmp.roleid IN (?) AND omp.orgid = ?
+      GROUP BY m.id, m.name, m.url, m.hassubmenu, sm.id, sm.name, sm.url
+      ORDER BY priority`,
+      [roleids, orgid]
     );
 
     // Build accessible items
@@ -101,11 +111,13 @@ export async function POST(request) {
         hasleaves = true;
       }
       if (hassubmenu === 'yes' && submenuid && submenuurl) {
-        menu.submenu.push({
-          title: submenuname,
-          href: submenuurl,
-          priority: priority || menu.submenu.length + 1,
-        });
+        if (!menu.submenu.some(sub => sub.href === submenuurl)) {
+          menu.submenu.push({
+            title: submenuname,
+            href: submenuurl,
+            priority: priority || menu.submenu.length + 1,
+          });
+        }
         if (submenuurl === '/userscreens/employee/addemployee') {
           hasAddEmployee = true;
         }
@@ -197,7 +209,6 @@ export async function POST(request) {
         isMenu: true,
         priority: 10000,
       });
-      // Add access to /uploads for users with timesheet permission
       accessibleItems.push({
         href: '/uploads/:employeeId/:date/:filename',
         isMenu: false,
@@ -234,51 +245,51 @@ export async function POST(request) {
     const ispendingapproval = pathname.match(/^\/userscreens\/timesheets\/pendingapproval$/);
     const isaddleave = pathname.match(/^\/userscreens\/leaves\/addleave$/);
     const ispendingleaves = pathname.match(/^\/userscreens\/leaves\/pending$/);
-    const isUploadPath = pathname.match(/^\/uploads\/[^/]+\/[^/]+\/[^/]+$/); // Match /uploads/employeeId/date/filename
+    const isUploadPath = pathname.match(/^\/uploads\/[^/]+\/[^/]+\/[^/]+$/);
 
     if (isEditEmployeePath && accessiblePaths.includes('/userscreens/employee/edit/:empid')) {
-      console.log(`Access granted to ${pathname} for roleid ${roleid} (dynamic employee edit route)`);
+      console.log(`Access granted to ${pathname} for empid ${empid} (dynamic employee edit route)`);
       return NextResponse.json({ success: true, accessibleItems });
     }
     if (isaddleave && accessiblePaths.includes('/userscreens/leaves/addleave')) {
-      console.log(`Access granted to ${pathname} for roleid ${roleid} (dynamic add leave route)`);
+      console.log(`Access granted to ${pathname} for empid ${empid} (dynamic add leave route)`);
       return NextResponse.json({ success: true, accessibleItems });
     }
     if (ispendingleaves && accessiblePaths.includes('/userscreens/leaves/pending')) {
-      console.log(`Access granted to ${pathname} for roleid ${roleid} (dynamic pending leaves route)`);
+      console.log(`Access granted to ${pathname} for empid ${empid} (dynamic pending leaves route)`);
       return NextResponse.json({ success: true, accessibleItems });
     }
     if (ispendingapproval && accessiblePaths.includes('/userscreens/timesheets/pendingapproval')) {
-      console.log(`Access granted to ${pathname} for roleid ${roleid} (dynamic pending approval route)`);
+      console.log(`Access granted to ${pathname} for empid ${empid} (dynamic pending approval route)`);
       return NextResponse.json({ success: true, accessibleItems });
     }
     if (isEditProjectPath && accessiblePaths.includes('/userscreens/project/edit/:PRJ_ID')) {
-      console.log(`Access granted to ${pathname} for roleid ${roleid} (dynamic project edit route)`);
+      console.log(`Access granted to ${pathname} for empid ${empid} (dynamic project edit route)`);
       return NextResponse.json({ success: true, accessibleItems });
     }
     if (isEditRolePath && accessiblePaths.includes('/userscreens/roles/edit/:roleid')) {
-      console.log(`Access granted to ${pathname} for roleid ${roleid} (dynamic role edit route)`);
+      console.log(`Access granted to ${pathname} for empid ${empid} (dynamic role edit route)`);
       return NextResponse.json({ success: true, accessibleItems });
     }
     if (isEditAccountPath && accessiblePaths.includes('/userscreens/account/edit/:accntId')) {
-      console.log(`Access granted to ${pathname} for roleid ${roleid} (dynamic account edit route)`);
+      console.log(`Access granted to ${pathname} for empid ${empid} (dynamic account edit route)`);
       return NextResponse.json({ success: true, accessibleItems });
     }
     if (isEditProjectAssignmentPath && accessiblePaths.includes('/userscreens/Project_Assign/edit/:PRJ_ID')) {
-      console.log(`Access granted to ${pathname} for roleid ${roleid} (dynamic project assignment edit route)`);
+      console.log(`Access granted to ${pathname} for empid ${empid} (dynamic project assignment edit route)`);
       return NextResponse.json({ success: true, accessibleItems });
     }
     if (isUploadPath && accessiblePaths.includes('/uploads/:employeeId/:date/:filename')) {
-      console.log(`Access granted to ${pathname} for roleid ${roleid} (upload path)`);
+      console.log(`Access granted to ${pathname} for empid ${empid} (upload path)`);
       return NextResponse.json({ success: true, accessibleItems });
     }
 
     if (!accessiblePaths.includes(pathname)) {
-      console.log(`Access denied to ${pathname} for roleid ${roleid}`);
+      console.log(`Access denied to ${pathname} for empid ${empid}`);
       return NextResponse.json({ error: 'Access denied', accessibleItems }, { status: 403 });
     }
 
-    console.log(`Access granted to ${pathname} for roleid ${roleid}`);
+    console.log(`Access granted to ${pathname} for empid ${empid}`);
     return NextResponse.json({ success: true, accessibleItems });
   } catch (error) {
     console.error("Verify token API error:", error.message);

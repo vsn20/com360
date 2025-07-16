@@ -17,31 +17,29 @@ const decodeJwt = (token) => {
 
 const getCurrentUserEmpIdName = async (pool, userId, orgId) => {
   try {
+    // Fetch empid from C_USER using username (userId)
     const [userRows] = await pool.execute(
       'SELECT empid FROM C_USER WHERE username = ? AND orgid = ?',
       [userId, orgId]
     );
     if (userRows.length === 0) {
       console.error('User not found in C_USER for username:', userId);
-      return 'system';
+      return 'unknown';
     }
     const empid = userRows[0].empid;
 
+    // Fetch employee name from C_EMP
     const [empRows] = await pool.execute(
-      'SELECT EMP_FST_NAME, EMP_LAST_NAME,roleid FROM C_EMP WHERE empid = ? AND orgid = ?',
+      'SELECT EMP_FST_NAME, EMP_LAST_NAME FROM C_EMP WHERE empid = ? AND orgid = ?',
       [empid, orgId]
     );
     if (empRows.length === 0) {
       console.error('Employee not found in C_EMP for empid:', empid);
       return `${empid}-unknown`;
     }
-     const { EMP_FST_NAME, EMP_LAST_NAME,roleid } = empRows[0];
-    const[rolerows]=await pool.execute(
-      'SELECT rolename from org_role_table where roleid=? AND orgid=?',
-      [roleid,orgId]
-    );
-   const {rolename}=rolerows[0];
-    return `${empid}-${EMP_FST_NAME} ${EMP_LAST_NAME}(${rolename})`;} catch (error) {
+    const { EMP_FST_NAME, EMP_LAST_NAME } = empRows[0];
+    return `${empid}-${EMP_FST_NAME} ${EMP_LAST_NAME}`;
+  } catch (error) {
     console.error('Error fetching empid-name:', error.message);
     return 'system';
   }
@@ -125,7 +123,7 @@ export async function fetchAccountById(accntId) {
               BUSINESS_STATE_ID, BUSINESS_COUNTRY_ID, BUSINESS_POSTAL_CODE,
               MAILING_ADDR_LINE1, MAILING_ADDR_LINE2, MAILING_ADDR_LINE3, MAILING_CITY,
               MAILING_STATE_ID, MAILING_COUNTRY_ID, MAILING_POSTAL_CODE,
-              LAST_LOGIN_DATE, CREATED_BY, LAST_UPDATED_BY, BRANCH_TYPE,LAST_UPDATED_DATE
+              LAST_LOGIN_DATE, CREATED_BY, LAST_UPDATED_BY, BRANCH_TYPE, LAST_UPDATED_DATE
        FROM C_ACCOUNT 
        WHERE ACCNT_ID = ? AND ORGID = ?`,
       [accntId, orgId]
@@ -556,139 +554,5 @@ export async function addAccount(formData) {
   } catch (error) {
     console.error('Error adding account:', error.message);
     return { error: `Failed to add account: ${error.message}` };
-  }
-}
-
-export async function fetchUserPermissions() {
-  try {
-    const cookieStore = cookies();
-    const token = cookieStore.get('jwt_token')?.value;
-
-    if (!token) {
-      console.log('No token found');
-      throw new Error('No token found. Please log in.');
-    }
-
-    const decoded = decodeJwt(token);
-    if (!decoded || !decoded.orgid || !decoded.roleid) {
-      console.log('Invalid token or orgid/roleid not found');
-      throw new Error('Invalid token or orgid/roleid not found.');
-    }
-
-    const orgId = decoded.orgid;
-    const roleid = decoded.roleid;
-    if (!orgId || !roleid) {
-      console.log('orgId or roleid is undefined or invalid');
-      throw new Error('Organization ID or Role ID is missing or invalid.');
-    }
-
-    console.log(`Fetching permissions for roleid: ${roleid}, orgId: ${orgId}`);
-
-    const pool = await DBconnection();
-    console.log('MySQL connection pool acquired');
-
-    let isAdmin = false;
-    try {
-      const [adminRows] = await pool.query(
-        'SELECT isadmin FROM org_role_table WHERE roleid = ? AND orgid = ?',
-        [roleid, orgId]
-      );
-      if (adminRows.length > 0) {
-        isAdmin = adminRows[0].isadmin === 1;
-      }
-    } catch (error) {
-      console.error('Error fetching isadmin from org_role_table:', error.message);
-      isAdmin = false;
-    }
-
-    const [rows] = await pool.query(
-      `SELECT 
-        m.id AS menuid,
-        m.name AS menuname,
-        m.url AS menuhref,
-        m.hassubmenu,
-        sm.id AS submenuid,
-        sm.name AS submenuname,
-        sm.url AS submenuurl,
-        omp.priority
-      FROM org_menu_priority omp
-      JOIN menu m ON m.id = omp.menuid AND m.is_active = 1
-      LEFT JOIN submenu sm ON sm.id = omp.submenuid AND sm.is_active = 1
-      JOIN role_menu_permissions rmp 
-          ON rmp.menuid = omp.menuid 
-         AND (rmp.submenuid = omp.submenuid OR omp.submenuid IS NULL)
-      WHERE rmp.roleid = ? AND omp.orgid = ?
-      ORDER BY omp.priority`,
-      [roleid, orgId]
-    );
-
-    const accessibleItems = [];
-    const menuMap = new Map();
-    let hasAddAccounts = false;
-
-    for (const row of rows) {
-      const { menuid, menuname, menuhref, hassubmenu, submenuid, submenuname, submenuurl, priority } = row;
-      if (!menuMap.has(menuid)) {
-        menuMap.set(menuid, {
-          title: menuname,
-          href: menuhref || null,
-          submenu: [],
-          priority: priority || 0
-        });
-      }
-      const menu = menuMap.get(menuid);
-      if (hassubmenu === 'yes' && submenuid && submenuurl) {
-        menu.submenu.push({
-          title: submenuname,
-          href: submenuurl,
-          priority: priority || menu.submenu.length + 1
-        });
-        if (submenuurl === '/userscreens/account/addaccount') {
-          hasAddAccounts = true;
-        }
-      } else if (menuhref && !menu.href) {
-        menu.href = menuhref;
-      }
-    }
-
-    menuMap.forEach(menu => {
-      if (menu.href) {
-        accessibleItems.push({
-          href: menu.href,
-          isMenu: true,
-          priority: menu.priority
-        });
-      }
-      menu.submenu.forEach((sub) => {
-        accessibleItems.push({
-          href: sub.href,
-          isMenu: false,
-          priority: sub.priority
-        });
-      });
-    });
-
-    if (isAdmin) {
-      accessibleItems.push({
-        href: '/userscreens/prioritysetting',
-        isMenu: true,
-        priority: 1000
-      });
-    }
-
-    if (hasAddAccounts) {
-      accessibleItems.push({
-        href: '/userscreens/account/edit/:accntId',
-        isMenu: true,
-        priority: 1001
-      });
-    }
-
-    accessibleItems.sort((a, b) => a.priority - b.priority);
-    console.log('Fetched permissions:', accessibleItems);
-    return accessibleItems;
-  } catch (error) {
-    console.error('Error fetching permissions:', error.message);
-    throw new Error(`Failed to fetch permissions: ${error.message}`);
   }
 }

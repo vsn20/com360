@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 
 const decodeJwt = (token) => {
   try {
-    const base64Url = token.split('.')[1]; // Get the payload part
+    const base64Url = token.split('.')[1];
     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
     const jsonPayload = Buffer.from(base64, 'base64').toString('utf8');
     return JSON.parse(jsonPayload);
@@ -15,45 +15,60 @@ const decodeJwt = (token) => {
   }
 };
 
-export async function getAllroles(){
-    try {
-        const cookieStore=cookies();
-        const token=cookieStore.get('jwt_token')?.value;
+export async function getAllroles() {
+  try {
+    const cookieStore = cookies();
+    const token = cookieStore.get('jwt_token')?.value;
 
-        if(!token){
-            return {success: false, error: 'No token found. Please log in.'}
-        }
-        const decoded=decodeJwt(token);
-         if (!decoded || !decoded.roleid) {
-         return { success: false, error: 'Invalid token or roleid not found.' };
-        }
-        const adminroleid=decoded.roleid;
-
-        const pool=await DBconnection();
-
-        const[roleRows]=await pool.query(
-            'select orgid from org_role_table where roleid=?' ,
-            [adminroleid]
-        );
-     if (!roleRows || roleRows.length === 0) {
-      return { success: false, error: 'Admin role not found or not an admin.' };
+    if (!token) {
+      return { success: false, error: 'No token found. Please log in.' };
     }
 
-    const orgid=roleRows[0].orgid;
+    const decoded = decodeJwt(token);
+    if (!decoded || !decoded.empid || !decoded.orgid) {
+      return { success: false, error: 'Invalid token or empid/orgid not found.' };
+    }
 
-    const [getroles]=await pool.query(
-        'select * from org_role_table where orgid=?',
-        [orgid]
+    const { empid, orgid } = decoded;
+
+    const pool = await DBconnection();
+
+    // Fetch user's roles from emp_role_assign
+    const [roleRows] = await pool.query(
+      'SELECT roleid FROM emp_role_assign WHERE empid = ? AND orgid = ?',
+      [empid, orgid]
     );
-   
-     if (!getroles || getroles.length === 0) {
-      return { success: true, roles: [] }; // No features accessible
-    }
-    return {success:true,roles:getroles}
 
-    } catch (error) {
-         console.error('Error fetching features:', error);
-    return { success: false, error: 'Failed to fetch features: ' + error.message };
+    if (!roleRows || roleRows.length === 0) {
+      return { success: false, error: 'No roles assigned to employee.' };
+    }
+
+    const roleids = roleRows.map(row => row.roleid);
+
+    // Check if user has an admin role
+    const [adminRows] = await pool.query(
+      'SELECT isadmin FROM org_role_table WHERE roleid IN (?) AND orgid = ?',
+      [roleids, orgid]
+    );
+
+    const isAdmin = adminRows.some(row => row.isadmin === 1);
+    // if (!isAdmin) {
+    //   return { success: false, error: 'User is not authorized to view roles.' };
+    // }
+
+    // Fetch all roles for the organization
+    const [allRoles] = await pool.query(
+      'SELECT roleid, rolename FROM org_role_table WHERE orgid = ?',
+      [orgid]
+    );
+
+    if (!allRoles || allRoles.length === 0) {
+      return { success: true, roles: [] };
+    }
+
+    return { success: true, roles: allRoles };
+  } catch (error) {
+    console.error('Error fetching roles:', error);
+    return { success: false, error: 'Failed to fetch roles: ' + error.message };
   }
-    
 }

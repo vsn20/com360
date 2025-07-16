@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { addemployee } from '@/app/serverActions/addemployee';
-import './addemployee.css'; // Import the new CSS file
+import './addemployee.css';
 
 export default function AddEmployee({ roles, currentrole, orgid, error, employees, leaveTypes, countries, states, departments, payFrequencies, jobTitles, statuses, workerCompClasses }) {
   const router = useRouter();
@@ -12,28 +12,60 @@ export default function AddEmployee({ roles, currentrole, orgid, error, employee
   const [workCountryId, setWorkCountryId] = useState('185');
   const [homeCountryId, setHomeCountryId] = useState('185');
   const [emergCnctCountryId, setEmergCnctCountryId] = useState('185');
+  const [selectedRoles, setSelectedRoles] = useState([]); // State for selected roles
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false); // State for dropdown visibility
+  const [isSubmitting, setIsSubmitting] = useState(false); // State to prevent multiple submissions
 
   const today = new Date().toISOString().split('T')[0];
 
+  const handleRoleToggle = (roleid) => {
+    setSelectedRoles((prev) => {
+      const newRoles = prev.includes(roleid)
+        ? prev.filter((id) => id !== roleid)
+        : [...prev, roleid];
+      // Ensure uniqueness using Set
+      return [...new Set(newRoles)];
+    });
+  };
+
+  const toggleDropdown = () => {
+    setIsDropdownOpen((prev) => !prev);
+  };
+
   const handleSubmit = async (formData) => {
+    if (isSubmitting) return; // Prevent multiple submissions
+    setIsSubmitting(true);
+
+    // Append currentRole and unique roleids
     formData.append('currentRole', currentrole || '');
+    const uniqueRoleIds = [...new Set(selectedRoles)]; // Ensure no duplicates
+    uniqueRoleIds.forEach((roleid) => {
+      formData.append('roleids', roleid); // Append each unique roleid
+    });
     Object.entries(leaves).forEach(([leaveid, noofleaves]) => {
       if (noofleaves !== '') formData.append(`leaves[${leaveid}]`, noofleaves || '0');
     });
-    const result = await addemployee(formData);
-    if (result?.error) {
-      setFormError(result.error);
-    } else {
-      router.push(`/userscreens/employee/overview`);
+
+    try {
+      const result = await addemployee(formData);
+      if (result?.error) {
+        setFormError(result.error);
+      } else {
+        router.push(`/userscreens/employee/overview`);
+      }
+    } catch (error) {
+      setFormError(`Submission failed: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleLeaveChange = (leaveid, value) => {
-    setLeaves(prev => ({ ...prev, [leaveid]: value }));
+    setLeaves((prev) => ({ ...prev, [leaveid]: value }));
   };
 
-  const employeesWithRoles = employees.map(employee => {
-    const role = roles.find(r => r.roleid === employee.roleid);
+  const employeesWithRoles = employees.map((employee) => {
+    const role = roles.find((r) => r.roleid === employee.roleid);
     const rolename = role ? role.rolename : 'Unknown Role';
     return { ...employee, rolename };
   });
@@ -174,15 +206,48 @@ export default function AddEmployee({ roles, currentrole, orgid, error, employee
             <h3>Employment Details</h3>
             <div className="form-row">
               <div className="form-group">
-                <label htmlFor="roleid">Role: *</label>
-                <select id="roleid" name="roleid" required>
-                  <option value="">Select a Role</option>
-                  {roles.map((role) => (
-                    <option key={role.roleid} value={role.roleid}>
-                      {role.rolename}
-                    </option>
+                <label htmlFor="roleids">Roles: * (Click to select/deselect)</label>
+                <div className="custom-select-container">
+                  <div
+                    className={`custom-select ${isDropdownOpen ? 'open' : ''}`}
+                    onClick={toggleDropdown}
+                  >
+                    <div className="selected-value">
+                      {selectedRoles.length > 0
+                        ? selectedRoles
+                            .map((id) => roles.find((r) => r.roleid === id)?.rolename)
+                            .join(', ')
+                        : 'Select Roles'}
+                    </div>
+                    {isDropdownOpen && (
+                      <div className="options-container">
+                        {roles.map((role) => (
+                          <div
+                            key={role.roleid}
+                            className={`option ${selectedRoles.includes(role.roleid) ? 'selected' : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation(); // Prevent closing dropdown
+                              handleRoleToggle(role.roleid);
+                            }}
+                          >
+                            {role.rolename}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {selectedRoles.length === 0 && (
+                    <input type="hidden" name="roleids" value="" disabled /> // Ensure form validation
+                  )}
+                  {selectedRoles.map((roleid) => (
+                    <input key={roleid} type="hidden" name="roleids" value={roleid} />
                   ))}
-                </select>
+                </div>
+                {selectedRoles.length > 0 && (
+                  <div className="selected-roles">
+                    <p>Selected Roles: {selectedRoles.map((id) => roles.find((r) => r.roleid === id)?.rolename).join(', ')}</p>
+                  </div>
+                )}
               </div>
               <div className="form-group">
                 <label htmlFor="superior">Superior:</label>
@@ -609,8 +674,8 @@ export default function AddEmployee({ roles, currentrole, orgid, error, employee
 
           {/* Submit Button */}
           <div className="form-buttons">
-            <button type="submit" className="submit-button">
-              Add Employee
+            <button type="submit" className="submit-button" disabled={isSubmitting}>
+              {isSubmitting ? 'Submitting...' : 'Add Employee'}
             </button>
           </div>
         </div>

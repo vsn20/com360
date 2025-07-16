@@ -1,14 +1,120 @@
-
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   fetchEmployeeById, 
   fetchLeaveAssignments, 
-  fetchUserPermissions, 
   updateEmployee 
 } from '@/app/serverActions/Employee/overview';
 import './overview.css';
+
+const CustomSelect = ({ name, value, onChange, options, placeholder, disabled }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  const handleSelect = (optionValue, optionLabel) => {
+    onChange({ target: { name, value: optionValue } });
+    setIsOpen(false);
+  };
+
+  const handleClickOutside = (event) => {
+    if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+      setIsOpen(false);
+    }
+  };
+
+  useEffect(() => {
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const selectedOption = options.find(opt => opt.value === value);
+
+  return (
+    <div className={`custom-select ${disabled ? 'disabled' : ''}`} ref={dropdownRef}>
+      <div className="select-selected" onClick={() => !disabled && setIsOpen(!isOpen)}>
+        {selectedOption ? selectedOption.label : placeholder}
+      </div>
+      {isOpen && (
+        <div className="select-items">
+          {options.map((option) => (
+            <div
+              key={option.value}
+              className={`select-option ${value === option.value ? 'selected' : ''}`}
+              onClick={() => handleSelect(option.value, option.label)}
+            >
+              {option.label}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const MultiSelectRoles = ({ selectedRoles, setSelectedRoles, roles, disabled }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  const handleRoleToggle = (roleid) => {
+    setSelectedRoles((prev) =>
+      prev.includes(roleid)
+        ? prev.filter((id) => id !== roleid)
+        : [...prev, roleid]
+    );
+  };
+
+  const toggleDropdown = () => {
+    setIsOpen((prev) => !prev);
+  };
+
+  const handleClickOutside = (event) => {
+    if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+      setIsOpen(false);
+    }
+  };
+
+  useEffect(() => {
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const getSelectedRoleNames = () => {
+    return selectedRoles
+      .map((roleid) => roles.find((r) => r.roleid === roleid)?.rolename || 'Unknown Role')
+      .join(', ') || 'Select Roles';
+  };
+
+  return (
+    <div className={`custom-select-container ${disabled ? 'disabled' : ''}`} ref={dropdownRef}>
+      <div className="select-selected" onClick={() => !disabled && toggleDropdown()}>
+        {getSelectedRoleNames()}
+      </div>
+      {isOpen && (
+        <div className="select-items">
+          {roles.map((role) => (
+            <div
+              key={role.roleid}
+              className={`select-option ${selectedRoles.includes(role.roleid) ? 'selected' : ''}`}
+              onClick={() => handleRoleToggle(role.roleid)}
+            >
+              <input
+                type="checkbox"
+                checked={selectedRoles.includes(role.roleid)}
+                readOnly
+              />
+              {role.rolename}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const Overview = ({
   roles,
@@ -29,6 +135,7 @@ const Overview = ({
   const [employeeDetails, setEmployeeDetails] = useState(null);
   const [leaveAssignments, setLeaveAssignments] = useState({});
   const [allEmployees, setAllEmployees] = useState(employees);
+  const [selectedRoles, setSelectedRoles] = useState([]);
   const [formData, setFormData] = useState({
     empid: '',
     orgid: orgid || '',
@@ -85,7 +192,7 @@ const Overview = ({
   });
   const [formLeaves, setFormLeaves] = useState({});
   const [error, setError] = useState(initialError);
-  const [canEditEmployees, setCanEditEmployees] = useState(false);
+  const [canEditEmployees, setCanEditEmployees] = useState(true);
   const [editingPersonal, setEditingPersonal] = useState(false);
   const [editingEmployment, setEditingEmployment] = useState(false);
   const [editingLeaves, setEditingLeaves] = useState(false);
@@ -101,25 +208,13 @@ const Overview = ({
     setError(initialError);
   }, [initialError]);
 
+ 
   useEffect(() => {
-    const checkPermissions = async () => {
-      try {
-        const permissions = await fetchUserPermissions();
-        setCanEditEmployees(permissions.some(item => item.href === '/userscreens/employee/edit/:empid'));
-      } catch (err) {
-        console.error('Error fetching permissions:', err);
-        setError(err.message);
-      }
-    };
-    checkPermissions();
-  }, []);
-
-  useEffect(() => {
-    console.log('Departments prop:', departments); // Debug departments prop
     const loadEmployeeDetails = async () => {
       if (!selectedEmpId) {
         setEmployeeDetails(null);
         setLeaveAssignments({});
+        setSelectedRoles([]);
         setFormData({
           empid: '',
           orgid: orgid || '',
@@ -191,6 +286,7 @@ const Overview = ({
         }
         setEmployeeDetails(employee);
         setLeaveAssignments(leaveData);
+        setSelectedRoles(employee.roleids || []); // Load multiple roles
         setFormData({
           empid: employee.empid || '',
           orgid: employee.orgid || orgid || '',
@@ -247,12 +343,13 @@ const Overview = ({
         });
         setFormLeaves(leaveData);
         setError(null);
-        console.log('Loaded employee details for empid:', selectedEmpId, 'deptId:', employee.DEPT_ID, 'deptName:', employee.DEPT_NAME);
+        console.log('Loaded employee details for empid:', selectedEmpId, 'deptId:', employee.DEPT_ID, 'deptName:', employee.DEPT_NAME, 'roleids:', employee.roleids);
       } catch (err) {
         console.error('Error loading employee details:', err);
         setError(err.message);
         setEmployeeDetails(null);
         setLeaveAssignments({});
+        setSelectedRoles([]);
         setFormLeaves({});
       }
     };
@@ -279,6 +376,7 @@ const Overview = ({
     setEditingWorkAddress(false);
     setEditingHomeAddress(false);
     setEditingEmergencyContact(false);
+    setSelectedRoles([]);
     setError(null);
     console.log('Back to employee list');
   };
@@ -343,8 +441,8 @@ const Overview = ({
       formDataToSubmit.append('ssn', formData.ssn || '');
       formDataToSubmit.append('linkedinUrl', formData.linkedinUrl || '');
     } else if (section === 'employment') {
-      if (!formData.roleid) {
-        setError('Role is required.');
+      if (selectedRoles.length === 0) {
+        setError('At least one role is required.');
         return;
       }
       if (!formData.hireDate) {
@@ -355,7 +453,7 @@ const Overview = ({
         setError('Status is required.');
         return;
       }
-      formDataToSubmit.append('roleid', formData.roleid || '');
+      selectedRoles.forEach((roleid) => formDataToSubmit.append('roleids', roleid));
       formDataToSubmit.append('hireDate', formData.hireDate || '');
       formDataToSubmit.append('lastWorkDate', formData.lastWorkDate || '');
       formDataToSubmit.append('terminatedDate', formData.terminatedDate || '');
@@ -365,7 +463,7 @@ const Overview = ({
       formDataToSubmit.append('jobTitle', formData.jobTitle || '');
       formDataToSubmit.append('payFrequency', formData.payFrequency || '');
       formDataToSubmit.append('deptId', formData.deptId || '');
-      formDataToSubmit.append('deptName', formData.deptName || ''); // Include deptName
+      formDataToSubmit.append('deptName', formData.deptName || '');
       formDataToSubmit.append('workCompClass', formData.workCompClass || '');
     } else if (section === 'leaves') {
       Object.entries(formLeaves).forEach(([leaveid, noofleaves]) => {
@@ -415,9 +513,10 @@ const Overview = ({
       console.log('updateEmployee response:', result);
       if (result && typeof result === 'object' && result.success) {
         const updatedEmployee = await fetchEmployeeById(formData.empid);
-        console.log('Updated employee data:', updatedEmployee); // Debug log for deptId
+        console.log('Updated employee data:', updatedEmployee);
         setEmployeeDetails(updatedEmployee);
         setLeaveAssignments(await fetchLeaveAssignments(formData.empid));
+        setSelectedRoles(updatedEmployee.roleids || []);
         if (section === 'personal') setEditingPersonal(false);
         if (section === 'employment') setEditingEmployment(false);
         if (section === 'leaves') setEditingLeaves(false);
@@ -449,9 +548,11 @@ const Overview = ({
     setFormLeaves(prev => ({ ...prev, [leaveid]: value }));
   };
 
-  const getRoleName = (roleid) => {
-    const role = roles.find(r => r.roleid === roleid);
-    return role ? role.rolename : 'No Role';
+  const getRoleNames = (roleids) => {
+    if (!roleids || roleids.length === 0) return 'No Roles';
+    return roleids
+      .map((roleid) => roles.find((r) => r.roleid === roleid)?.rolename || 'Unknown Role')
+      .join(', ');
   };
 
   const getSuperiorName = (superiorId) => {
@@ -495,14 +596,12 @@ const Overview = ({
     return state ? state.VALUE : 'No State';
   };
 
-  console.log('Rendering Overview component. selectedEmpId:', selectedEmpId, 'employeeDetails:', !!employeeDetails);
+  const getdisplayprojectid = (prjid) => {
+    return prjid.split('_')[1] || prjid;
+  };
 
- const getdisplayprojectid=(prjid)=>{
-  return prjid.split('_')[1]||prjid;
- }
   return (
     <div className="employee-overview-container">
-     
       {error && <div className="error-message">{error}</div>}
 
       {!selectedEmpId ? (
@@ -528,7 +627,6 @@ const Overview = ({
                     onClick={() => handleRowClick(employee.empid)}
                     className={selectedEmpId === employee.empid ? 'selected-row' : ''}
                   >
-                   
                     <td>Employee-{getdisplayprojectid(employee.empid)}</td>
                     <td>{employee.EMP_PREF_NAME || `${employee.EMP_FST_NAME} ${employee.EMP_MID_NAME || ''} ${employee.EMP_LAST_NAME}`.trim()}</td>
                     <td>{employee.email}</td>
@@ -551,16 +649,6 @@ const Overview = ({
               <h3>Personal Details</h3>
               {editingPersonal && canEditEmployees ? (
                 <form onSubmit={(e) => { e.preventDefault(); handleSave('personal'); }}>
-                  <div className="form-row">
-                    {/* <div className="form-group">
-                      <label>Employee ID</label>
-                      <input type="text" name="empid" value={formData.empid} readOnly className="bg-gray-100" />
-                    </div> */}
-                    {/* <div className="form-group">
-                      <label>Organization ID</label>
-                      <input type="number" name="orgid" value={formData.orgid} readOnly className="bg-gray-100" />
-                    </div> */}
-                  </div>
                   <div className="form-row">
                     <div className="form-group">
                       <label>First Name*</label>
@@ -711,15 +799,13 @@ const Overview = ({
                 <form onSubmit={(e) => { e.preventDefault(); handleSave('employment'); }}>
                   <div className="form-row">
                     <div className="form-group">
-                      <label>Role*</label>
-                      <select name="roleid" value={formData.roleid} onChange={handleFormChange} required>
-                        <option value="">Select Role</option>
-                        {roles.map((role) => (
-                          <option key={role.roleid} value={role.roleid}>
-                            {role.rolename}
-                          </option>
-                        ))}
-                      </select>
+                      <label>Roles*</label>
+                      <MultiSelectRoles
+                        selectedRoles={selectedRoles}
+                        setSelectedRoles={setSelectedRoles}
+                        roles={roles}
+                        disabled={false}
+                      />
                     </div>
                     <div className="form-group">
                       <label>Hire Date*</label>
@@ -794,7 +880,7 @@ const Overview = ({
                           .filter(emp => emp.empid !== formData.empid)
                           .map((employee) => (
                             <option key={employee.empid} value={employee.empid}>
-                              {`${employee.empid} - ${employee.EMP_FST_NAME} ${employee.EMP_LAST_NAME} (${getRoleName(employee.roleid)})`}
+                              {`${employee.empid} - ${employee.EMP_FST_NAME} ${employee.EMP_LAST_NAME} (${getRoleNames(employee.roleids || [employee.roleid])})`}
                             </option>
                           ))}
                       </select>
@@ -825,8 +911,8 @@ const Overview = ({
                 <div className="view-details">
                   <div className="details-row">
                     <div className="details-group">
-                      <label>Role</label>
-                      <p>{getRoleName(employeeDetails.roleid)}</p>
+                      <label>Roles</label>
+                      <p>{getRoleNames(employeeDetails.roleids)}</p>
                     </div>
                     <div className="details-group">
                       <label>Hire Date</label>
