@@ -164,12 +164,14 @@ const Overview = ({
   };
 
   const handleBackClick = () => {
+     router.refresh();
     setSelectedAccntId(null);
     setEditingBasic(false);
     setEditingBusinessAddress(false);
     setEditingMailingAddress(false);
     setError(null);
     setisadd(false);
+   
   };
   const handleaddaccount=()=>{
      setSelectedAccntId(null);
@@ -425,6 +427,8 @@ const Overview = ({
         mailingPostalCode: '',
       });
       addsetFormSuccess('Account added successfully.');
+      setTimeout(() => addsetFormSuccess(null), 3000);
+      setTimeout(() => router.refresh(), 4000);
       //setTimeout(() => router.push('/userscreens/account/overview'), 2000); // Redirect after success
     }
   };
@@ -726,7 +730,7 @@ const Overview = ({
       {!isadd&&!selectedAccntId ? (
         <div className="employee-list">
           <button onClick={()=>handleaddaccount()} className='save-button'>Add Account</button>
-          {accounts.length === 0 && !error ? (
+        {accounts.length === 0 && !error ? (
             <p>No active accounts found.</p>
           ) : (
             <table className="employee-table">

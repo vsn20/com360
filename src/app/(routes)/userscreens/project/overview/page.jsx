@@ -93,6 +93,7 @@ const page = async () => {
   return (
     <div>
       <Overview
+      orgId={orgId}
         projects={projects}
         billTypes={billTypes}
         otBillTypes={otBillTypes}

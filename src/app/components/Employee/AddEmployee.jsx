@@ -7,19 +7,19 @@ import './addemployee.css';
 
 export default function AddEmployee({ roles, currentrole, orgid, error, employees, leaveTypes, countries, states, departments, payFrequencies, jobTitles, statuses, workerCompClasses }) {
   const router = useRouter();
-  const [formError, setFormError] = useState(null);
-  const [leaves, setLeaves] = useState({});
-  const [workCountryId, setWorkCountryId] = useState('185');
-  const [homeCountryId, setHomeCountryId] = useState('185');
-  const [emergCnctCountryId, setEmergCnctCountryId] = useState('185');
-  const [selectedRoles, setSelectedRoles] = useState([]); // State for selected roles
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false); // State for dropdown visibility
-  const [isSubmitting, setIsSubmitting] = useState(false); // State to prevent multiple submissions
+  const [addform_formError, addform_setFormError] = useState(null);
+  const [addform_leaves, addform_setLeaves] = useState({});
+  const [addform_workCountryId, addform_setWorkCountryId] = useState('185');
+  const [addform_homeCountryId, addform_setHomeCountryId] = useState('185');
+  const [addform_emergCnctCountryId, addform_setEmergCnctCountryId] = useState('185');
+  const [addform_selectedRoles, addform_setSelectedRoles] = useState([]); // State for selected roles
+  const [addform_isDropdownOpen, addform_setIsDropdownOpen] = useState(false); // State for dropdown visibility
+  const [addform_isSubmitting, addform_setIsSubmitting] = useState(false); // State to prevent multiple submissions
+  const[addform_success,addform_setsuccess]=useState(null);
+  const addform_today = new Date().toISOString().split('T')[0];
 
-  const today = new Date().toISOString().split('T')[0];
-
-  const handleRoleToggle = (roleid) => {
-    setSelectedRoles((prev) => {
+  const addform_handleRoleToggle = (roleid) => {
+    addform_setSelectedRoles((prev) => {
       const newRoles = prev.includes(roleid)
         ? prev.filter((id) => id !== roleid)
         : [...prev, roleid];
@@ -28,43 +28,46 @@ export default function AddEmployee({ roles, currentrole, orgid, error, employee
     });
   };
 
-  const toggleDropdown = () => {
-    setIsDropdownOpen((prev) => !prev);
+  const addform_toggleDropdown = () => {
+    addform_setIsDropdownOpen((prev) => !prev);
   };
 
-  const handleSubmit = async (formData) => {
-    if (isSubmitting) return; // Prevent multiple submissions
-    setIsSubmitting(true);
+  const addform_handleSubmit = async (formData) => {
+    if (addform_isSubmitting) return; // Prevent multiple submissions
+    addform_setIsSubmitting(true);
 
     // Append currentRole and unique roleids
     formData.append('currentRole', currentrole || '');
-    const uniqueRoleIds = [...new Set(selectedRoles)]; // Ensure no duplicates
-    uniqueRoleIds.forEach((roleid) => {
+    const addform_uniqueRoleIds = [...new Set(addform_selectedRoles)]; // Ensure no duplicates
+    addform_uniqueRoleIds.forEach((roleid) => {
       formData.append('roleids', roleid); // Append each unique roleid
     });
-    Object.entries(leaves).forEach(([leaveid, noofleaves]) => {
+    Object.entries(addform_leaves).forEach(([leaveid, noofleaves]) => {
       if (noofleaves !== '') formData.append(`leaves[${leaveid}]`, noofleaves || '0');
     });
 
     try {
-      const result = await addemployee(formData);
-      if (result?.error) {
-        setFormError(result.error);
+      const addform_result = await addemployee(formData);
+      if (addform_result?.error) {
+        addform_setFormError(addform_result.error);
+        setTimeout(()=>addform_setFormError(null),4000)
       } else {
-        router.push(`/userscreens/employee/overview`);
+      addform_setsuccess("Employee added Successfully!");
+      setTimeout(()=>addform_setsuccess(null),4000);
       }
     } catch (error) {
-      setFormError(`Submission failed: ${error.message}`);
+      addform_setFormError(`Submission failed: ${error.message}`);
+      setTimeout(()=>addform_setsuccess(null),4000);
     } finally {
-      setIsSubmitting(false);
+      addform_setIsSubmitting(false);
     }
   };
 
-  const handleLeaveChange = (leaveid, value) => {
-    setLeaves((prev) => ({ ...prev, [leaveid]: value }));
+  const addform_handleLeaveChange = (leaveid, value) => {
+    addform_setLeaves((prev) => ({ ...prev, [leaveid]: value }));
   };
 
-  const employeesWithRoles = employees.map((employee) => {
+  const addform_employeesWithRoles = employees.map((employee) => {
     const role = roles.find((r) => r.roleid === employee.roleid);
     const rolename = role ? role.rolename : 'Unknown Role';
     return { ...employee, rolename };
@@ -74,8 +77,9 @@ export default function AddEmployee({ roles, currentrole, orgid, error, employee
     <div className="add-employee-container">
       <h1>Add Employee</h1>
       {error && <p className="error-message">{error}</p>}
-      {formError && <p className="error-message">{formError}</p>}
-      <form action={handleSubmit}>
+      {addform_formError && <p className="error-message">{addform_formError}</p>}
+      {addform_success && <p className="error-message">{addform_success}</p>}
+      <form action={addform_handleSubmit}>
         <div className="form-container">
           {/* Personal Details */}
           <div className="form-block">
@@ -209,25 +213,25 @@ export default function AddEmployee({ roles, currentrole, orgid, error, employee
                 <label htmlFor="roleids">Roles: * (Click to select/deselect)</label>
                 <div className="custom-select-container">
                   <div
-                    className={`custom-select ${isDropdownOpen ? 'open' : ''}`}
-                    onClick={toggleDropdown}
+                    className={`custom-select ${addform_isDropdownOpen ? 'open' : ''}`}
+                    onClick={addform_toggleDropdown}
                   >
                     <div className="selected-value">
-                      {selectedRoles.length > 0
-                        ? selectedRoles
+                      {addform_selectedRoles.length > 0
+                        ? addform_selectedRoles
                             .map((id) => roles.find((r) => r.roleid === id)?.rolename)
                             .join(', ')
                         : 'Select Roles'}
                     </div>
-                    {isDropdownOpen && (
+                    {addform_isDropdownOpen && (
                       <div className="options-container">
                         {roles.map((role) => (
                           <div
                             key={role.roleid}
-                            className={`option ${selectedRoles.includes(role.roleid) ? 'selected' : ''}`}
+                            className={`option ${addform_selectedRoles.includes(role.roleid) ? 'selected' : ''}`}
                             onClick={(e) => {
                               e.stopPropagation(); // Prevent closing dropdown
-                              handleRoleToggle(role.roleid);
+                              addform_handleRoleToggle(role.roleid);
                             }}
                           >
                             {role.rolename}
@@ -236,16 +240,16 @@ export default function AddEmployee({ roles, currentrole, orgid, error, employee
                       </div>
                     )}
                   </div>
-                  {selectedRoles.length === 0 && (
+                  {addform_selectedRoles.length === 0 && (
                     <input type="hidden" name="roleids" value="" disabled /> // Ensure form validation
                   )}
-                  {selectedRoles.map((roleid) => (
+                  {addform_selectedRoles.map((roleid) => (
                     <input key={roleid} type="hidden" name="roleids" value={roleid} />
                   ))}
                 </div>
-                {selectedRoles.length > 0 && (
+                {addform_selectedRoles.length > 0 && (
                   <div className="selected-roles">
-                    <p>Selected Roles: {selectedRoles.map((id) => roles.find((r) => r.roleid === id)?.rolename).join(', ')}</p>
+                    <p>Selected Roles: {addform_selectedRoles.map((id) => roles.find((r) => r.roleid === id)?.rolename).join(', ')}</p>
                   </div>
                 )}
               </div>
@@ -253,7 +257,7 @@ export default function AddEmployee({ roles, currentrole, orgid, error, employee
                 <label htmlFor="superior">Superior:</label>
                 <select id="superior" name="superior">
                   <option value="">Select a Superior (Optional)</option>
-                  {employeesWithRoles.map((employee) => (
+                  {addform_employeesWithRoles.map((employee) => (
                     <option key={employee.empid} value={employee.empid}>
                       {`${employee.empid} - ${employee.EMP_FST_NAME} ${employee.EMP_LAST_NAME} (${employee.rolename})`}
                     </option>
@@ -266,7 +270,7 @@ export default function AddEmployee({ roles, currentrole, orgid, error, employee
                   type="date"
                   id="hireDate"
                   name="hireDate"
-                  defaultValue={today}
+                  defaultValue={addform_today}
                   required
                 />
               </div>
@@ -378,7 +382,7 @@ export default function AddEmployee({ roles, currentrole, orgid, error, employee
                 <select
                   id="workStateId"
                   name="workStateId"
-                  disabled={workCountryId !== '185'}
+                  disabled={addform_workCountryId !== '185'}
                 >
                   <option value="">Select State</option>
                   {states.map((state) => (
@@ -395,7 +399,7 @@ export default function AddEmployee({ roles, currentrole, orgid, error, employee
                   id="workStateNameCustom"
                   name="workStateNameCustom"
                   placeholder="Enter Custom State Name"
-                  disabled={workCountryId === '185'}
+                  disabled={addform_workCountryId === '185'}
                 />
               </div>
             </div>
@@ -405,8 +409,8 @@ export default function AddEmployee({ roles, currentrole, orgid, error, employee
                 <select
                   id="workCountryId"
                   name="workCountryId"
-                  value={workCountryId}
-                  onChange={(e) => setWorkCountryId(e.target.value)}
+                  value={addform_workCountryId}
+                  onChange={(e) => addform_setWorkCountryId(e.target.value)}
                 >
                   <option value="">Select Country</option>
                   {countries.map((country) => (
@@ -475,7 +479,7 @@ export default function AddEmployee({ roles, currentrole, orgid, error, employee
                 <select
                   id="homeStateId"
                   name="homeStateId"
-                  disabled={homeCountryId !== '185'}
+                  disabled={addform_homeCountryId !== '185'}
                 >
                   <option value="">Select State</option>
                   {states.map((state) => (
@@ -492,7 +496,7 @@ export default function AddEmployee({ roles, currentrole, orgid, error, employee
                   id="homeStateNameCustom"
                   name="homeStateNameCustom"
                   placeholder="Enter Custom State Name"
-                  disabled={homeCountryId === '185'}
+                  disabled={addform_homeCountryId === '185'}
                 />
               </div>
             </div>
@@ -502,8 +506,8 @@ export default function AddEmployee({ roles, currentrole, orgid, error, employee
                 <select
                   id="homeCountryId"
                   name="homeCountryId"
-                  value={homeCountryId}
-                  onChange={(e) => setHomeCountryId(e.target.value)}
+                  value={addform_homeCountryId}
+                  onChange={(e) => addform_setHomeCountryId(e.target.value)}
                 >
                   <option value="">Select Country</option>
                   {countries.map((country) => (
@@ -601,7 +605,7 @@ export default function AddEmployee({ roles, currentrole, orgid, error, employee
                 <select
                   id="emergCnctStateId"
                   name="emergCnctStateId"
-                  disabled={emergCnctCountryId !== '185'}
+                  disabled={addform_emergCnctCountryId !== '185'}
                 >
                   <option value="">Select State</option>
                   {states.map((state) => (
@@ -618,7 +622,7 @@ export default function AddEmployee({ roles, currentrole, orgid, error, employee
                   id="emergCnctStateNameCustom"
                   name="emergCnctStateNameCustom"
                   placeholder="Enter Custom State Name"
-                  disabled={emergCnctCountryId === '185'}
+                  disabled={addform_emergCnctCountryId === '185'}
                 />
               </div>
             </div>
@@ -628,8 +632,8 @@ export default function AddEmployee({ roles, currentrole, orgid, error, employee
                 <select
                   id="emergCnctCountryId"
                   name="emergCnctCountryId"
-                  value={emergCnctCountryId}
-                  onChange={(e) => setEmergCnctCountryId(e.target.value)}
+                  value={addform_emergCnctCountryId}
+                  onChange={(e) => addform_setEmergCnctCountryId(e.target.value)}
                 >
                   <option value="">Select Country</option>
                   {countries.map((country) => (
@@ -662,8 +666,8 @@ export default function AddEmployee({ roles, currentrole, orgid, error, employee
                     type="number"
                     id={`noofleaves_${leave.id}`}
                     name={`noofleaves_${leave.id}`}
-                    value={leaves[leave.id] || ''}
-                    onChange={(e) => handleLeaveChange(leave.id, e.target.value)}
+                    value={addform_leaves[leave.id] || ''}
+                    onChange={(e) => addform_handleLeaveChange(leave.id, e.target.value)}
                     min="0"
                     step="any"
                   />
@@ -674,8 +678,8 @@ export default function AddEmployee({ roles, currentrole, orgid, error, employee
 
           {/* Submit Button */}
           <div className="form-buttons">
-            <button type="submit" className="submit-button" disabled={isSubmitting}>
-              {isSubmitting ? 'Submitting...' : 'Add Employee'}
+            <button type="submit" className="submit-button" disabled={addform_isSubmitting}>
+              {addform_isSubmitting ? 'Submitting...' : 'Add Employee'}
             </button>
           </div>
         </div>

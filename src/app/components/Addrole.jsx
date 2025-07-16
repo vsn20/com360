@@ -6,61 +6,66 @@ import { addRole, fetchMenusAndSubmenus } from '@/app/serverActions/Roles/Overvi
 
 export default function AddRole({ currentRole, orgid, error }) {
   const router = useRouter();
-  const [formError, setFormError] = useState(error || null);
-  const [permissions, setPermissions] = useState([]);
-  const [availableMenus, setAvailableMenus] = useState([]);
-  const [availableSubmenus, setAvailableSubmenus] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [addform_formerror, addform_setFormError] = useState(error || null);
+  const [addform_permissions, addform_setPermissions] = useState([]);
+  const [addform_availableMenus, addform_setAvailableMenus] = useState([]);
+  const [addform_availableSubmenus, addform_setAvailableSubmenus] = useState([]);
+  const [addform_loading, addform_setLoading] = useState(true);
+  const [addform_success,addform_setsuccess]=useState(true);
 
   useEffect(() => {
-    const loadData = async () => {
+    const addform_loadData = async () => {
       try {
-        const menuData = await fetchMenusAndSubmenus();
-        console.log('Fetched menus:', menuData.menus, 'Fetched submenus:', menuData.submenus);
-        setAvailableMenus(menuData.menus);
-        setAvailableSubmenus(menuData.submenus);
+        const addform_menuData = await fetchMenusAndSubmenus();
+        console.log('Fetched menus:', addform_menuData.menus, 'Fetched submenus:', addform_menuData.submenus);
+        addform_setAvailableMenus(addform_menuData.menus);
+        addform_setAvailableSubmenus(addform_menuData.submenus);
       } catch (err) {
         console.error('Error loading menus and submenus:', err);
-        setFormError(err.message || 'Failed to load features.');
+        addform_setFormError(err.message || 'Failed to load features.');
       } finally {
-        setLoading(false);
+        addform_setLoading(false);
       }
     };
-    loadData();
+    addform_loadData();
   }, []);
 
-  const handleSubmit = async (formData) => {
+  const addform_handleSubmit = async (formData) => {
     formData.append('currentRole', currentRole || '');
     formData.append('orgid', orgid || '');
-    formData.append('permissions', JSON.stringify(permissions));
+    formData.append('permissions', JSON.stringify(addform_permissions));
 
     // Client-side validation: Ensure at least one submenu is selected for menus with hassubmenu='yes'
-    const invalidSelections = permissions
+    const addform_invalidSelections = addform_permissions
       .filter(p => !p.submenuid)
-      .map(p => availableMenus.find(m => m.menuid === p.menuid))
+      .map(p => addform_availableMenus.find(m => m.menuid === p.menuid))
       .filter(menu => menu && menu.hassubmenu === 'yes')
       .filter(menu => {
-        const selectedSubmenus = permissions.filter(p => p.menuid === menu.menuid && p.submenuid);
+        const selectedSubmenus = addform_permissions.filter(p => p.menuid === menu.menuid && p.submenuid);
         return selectedSubmenus.length === 0;
       });
-    if (invalidSelections.length > 0) {
-      setFormError('Please select at least one submenu for each feature with submenus.');
+    if (addform_invalidSelections.length > 0) {
+      addform_setFormError('Please select at least one submenu for each feature with submenus.');
       return;
     }
 
     const result = await addRole(formData);
     if (result?.error) {
-      setFormError(result.error);
-    } else {
-      router.push(`/userscreens/roles/addroles?success=Role%20added%20successfully`);
+      addform_setFormError(result.error);
+
+      setTimeout(addform_setFormError(null),4000);
+    }else{
+      addform_setsuccess("Role added successfully");
+
+      setTimeout(addform_setsuccess(null),4000);
     }
   };
 
-  const handlePermissionToggle = (menuid, submenuid = null) => {
-    const menu = availableMenus.find(m => m.menuid === menuid);
+  const addform_handlePermissionToggle = (menuid, submenuid = null) => {
+    const menu = addform_availableMenus.find(m => m.menuid === menuid);
     if (!menu) return;
 
-    setPermissions(prev => {
+    addform_setPermissions(prev => {
       const permissionSet = new Set(prev.map(p => `${p.menuid}:${p.submenuid || 'null'}`));
       let updatedPermissions = [...prev];
 
@@ -87,7 +92,7 @@ export default function AddRole({ currentRole, orgid, error }) {
         } else {
           updatedPermissions.push({ menuid, submenuid: null });
           if (menu.hassubmenu === 'yes') {
-            const submenus = availableSubmenus
+            const submenus = addform_availableSubmenus
               .filter(sm => sm.menuid === menuid)
               .map(sm => ({ menuid, submenuid: sm.submenuid }))
               .filter(sm => !permissionSet.has(`${sm.menuid}:${sm.submenuid}`));
@@ -101,7 +106,7 @@ export default function AddRole({ currentRole, orgid, error }) {
     });
   };
 
-  if (loading) {
+  if (addform_loading) {
     return <div>Loading...</div>;
   }
 
@@ -109,8 +114,9 @@ export default function AddRole({ currentRole, orgid, error }) {
     <div style={{ padding: "20px", maxWidth: "600px", margin: "0 auto" }}>
       <h1>Add Role</h1>
       {error && <p style={{ color: "red" }}>{error}</p>}
-      {formError && <p style={{ color: "red" }}>{formError}</p>}
-      <form action={handleSubmit}>
+      {addform_formerror && <p style={{ color: "red" }}>{addform_formerror}</p>}
+      {addform_success && <p style={{ color: "green" }}>{addform_success}</p>}
+      <form action={addform_handleSubmit}>
         <div style={{ marginBottom: "20px" }}>
           <label htmlFor="orgid" style={{ display: "block", marginBottom: "5px" }}>
             Organization ID:
@@ -152,31 +158,31 @@ export default function AddRole({ currentRole, orgid, error }) {
 
         <div style={{ marginBottom: "20px" }}>
           <h3>Select Features: *</h3>
-          {availableMenus.length === 0 ? (
+          {addform_availableMenus.length === 0 ? (
             <p>No features available.</p>
           ) : (
-            availableMenus.map((menu) => (
+            addform_availableMenus.map((menu) => (
               <div key={`menu-${menu.menuid}`} style={{ margin: "10px 0" }}>
                 <label style={{ display: "flex", alignItems: "center" }}>
                   <input
                     type="checkbox"
-                    checked={permissions.some((p) => p.menuid === menu.menuid && !p.submenuid)}
-                    onChange={() => handlePermissionToggle(menu.menuid)}
+                    checked={addform_permissions.some((p) => p.menuid === menu.menuid && !p.submenuid)}
+                    onChange={() => addform_handlePermissionToggle(menu.menuid)}
                     style={{ marginRight: "10px" }}
                   />
                   {menu.menuname} ({menu.menuurl})
                 </label>
-                {menu.hassubmenu === 'yes' && availableSubmenus
+                {menu.hassubmenu === 'yes' && addform_availableSubmenus
                   .filter((sm) => sm.menuid === menu.menuid)
                   .map((submenu) => (
                     <div key={`submenu-${submenu.submenuid}`} style={{ margin: "5px 0", marginLeft: "20px" }}>
                       <label style={{ display: "flex", alignItems: "center" }}>
                         <input
                           type="checkbox"
-                          checked={permissions.some(
+                          checked={addform_permissions.some(
                             (p) => p.menuid === menu.menuid && p.submenuid === submenu.submenuid
                           )}
-                          onChange={() => handlePermissionToggle(menu.menuid, submenu.submenuid)}
+                          onChange={() => addform_handlePermissionToggle(menu.menuid, submenu.submenuid)}
                           style={{ marginRight: "10px" }}
                         />
                         {submenu.submenuname}

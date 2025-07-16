@@ -420,12 +420,5 @@ export async function addRole(formData) {
   } catch (error) {
     console.error('Error adding role or permissions:', error);
     return { error: `Failed to add role: ${error.message}` };
-  } finally {
-    if (connection) {
-      connection.release();
-      console.log('Connection released');
-    }
-  }
-
-  return redirect(`/userscreens/roles/addroles?success=Role%20added%20successfully`);
+  } 
 }

@@ -1,7 +1,6 @@
 "use server";
 
 import DBconnection from "../utils/config/db";
-import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { assignLeaves } from '@/app/serverActions/Employee/overview';
 
@@ -84,7 +83,6 @@ export async function addemployee(formData) {
   if (!hireDate) return { error: 'Hire date is required.' };
   if (!status) return { error: 'Status is required.' };
 
-  let redirectPath = `/userscreens/employee/addemployee`;
   let empid = null;
 
   try {
@@ -226,8 +224,8 @@ export async function addemployee(formData) {
       console.log('All leave assignments completed successfully');
     }
 
-    // Success - redirect to employee list
-    redirectPath = `/userscreens/employee/overview`;
+    // Success
+    return { success: true };
     
   } catch (error) {
     console.error('Error adding employee, roles, or assigning leaves:', error);
@@ -241,19 +239,15 @@ export async function addemployee(formData) {
         );
         
         if (empExists.length > 0) {
-          redirectPath = `/userscreens/employee?warning=Employee%20added%20but%20some%20roles%20or%20leaves%20failed%20to%20assign:%20${encodeURIComponent(error.message)}`;
+          return { error: `Employee added but some roles or leaves failed to assign: ${error.message}` };
         } else {
-          redirectPath = `/userscreens/employee/addemployee?error=Failed%20to%20add%20employee:%20${encodeURIComponent(error.message)}`;
+          return { error: `Failed to add employee: ${error.message}` };
         }
       } catch (checkError) {
-        redirectPath = `/userscreens/employee/addemployee?error=Failed%20to%20add%20employee:%20${encodeURIComponent(error.message)}`;
+        return { error: `Failed to add employee: ${error.message}` };
       }
     } else {
-      redirectPath = `/userscreens/employee/addemployee?error=Failed%20to%20add%20employee:%20${encodeURIComponent(error.message)}`;
+      return { error: `Failed to add employee: ${error.message}` };
     }
-    
-    return { error: `Failed to add employee: ${error.message}` };
   }
-
-  return redirect(redirectPath);
 }

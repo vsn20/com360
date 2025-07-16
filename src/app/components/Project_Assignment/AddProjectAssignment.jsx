@@ -4,11 +4,11 @@ import { addProjectAssignment, fetchEmployeesByOrgId, fetchProjectsByOrgId } fro
 import { useActionState } from 'react';
 import './projectassignment.css';
 
-const initialState = { error: null, success: false };
+const addform_initialState = { error: null, success: false };
 
 const AddProjectAssignment = ({ orgId, billTypes, otBillType, payTerms }) => {
   console.log("generic values", billTypes, otBillType, payTerms);
-  const [formData, setFormData] = useState({
+  const [addformData, setaddFormData] = useState({
     empId: '',
     prjId: '',
     startDt: '',
@@ -24,55 +24,55 @@ const AddProjectAssignment = ({ orgId, billTypes, otBillType, payTerms }) => {
     projectEndDt: '',
   });
 
-  const [employees, setEmployees] = useState([]);
-  const [projects, setProjects] = useState([]);
-  const [state, formAction] = useActionState(addProjectAssignment, initialState);
+  const [addform_employees, addform_setEmployees] = useState([]);
+  const [addform_projects, addform_setProjects] = useState([]);
+  const [addform_state, addform_formAction] = useActionState(addProjectAssignment, addform_initialState);
 
   useEffect(() => {
-    const loadProjects = async () => {
+    const addform_loadProjects = async () => {
       if (!orgId) {
         console.warn('No valid orgId provided, projects not fetched');
-        setProjects([]);
+        addform_setProjects([]);
         return;
       }
 
       try {
         console.log('Fetching projects for orgId:', orgId);
-        const projectsData = await fetchProjectsByOrgId(parseInt(orgId, 10));
-        console.log('Fetched projects:', projectsData);
-        setProjects(projectsData || []);
+        const addform_projectsData = await fetchProjectsByOrgId(parseInt(orgId, 10));
+        console.log('Fetched projects:', addform_projectsData);
+        addform_setProjects(addform_projectsData || []);
       } catch (error) {
         console.error('Error loading projects for orgId', orgId, ':', error);
-        setProjects([]);
+        addform_setProjects([]);
       }
     };
-    loadProjects();
+    addform_loadProjects();
   }, [orgId]);
 
   useEffect(() => {
-    const loadEmployees = async () => {
-      if (!orgId || !formData.prjId) {
+    const addform_loadEmployees = async () => {
+      if (!orgId || !addformData.prjId) {
         console.warn('No valid orgId or prjId provided, employees not fetched');
-        setEmployees([]);
+        addform_setEmployees([]);
         return;
       }
 
       try {
-        console.log('Fetching employees for orgId:', orgId, 'and prjId:', formData.prjId);
-        const employeesData = await fetchEmployeesByOrgId(parseInt(orgId, 10), formData.prjId);
-        console.log('Fetched employees:', employeesData);
-        setEmployees(employeesData || []);
+        console.log('Fetching employees for orgId:', orgId, 'and prjId:', addformData.prjId);
+        const addform_employeesData = await fetchEmployeesByOrgId(parseInt(orgId, 10), addformData.prjId);
+        console.log('Fetched employees:', addform_employeesData);
+        addform_setEmployees(addform_employeesData || []);
       } catch (error) {
-        console.error('Error loading employees for orgId', orgId, 'and prjId', formData.prjId, ':', error);
-        setEmployees([]);
+        console.error('Error loading employees for orgId', orgId, 'and prjId', addformData.prjId, ':', error);
+        addform_setEmployees([]);
       }
     };
-    loadEmployees();
-  }, [orgId, formData.prjId]);
+    addform_loadEmployees();
+  }, [orgId, addformData.prjId]);
 
   useEffect(() => {
-    if (state.success) {
-      setFormData({
+    if (addform_state.success) {
+      setaddFormData({
         empId: '',
         prjId: '',
         startDt: '',
@@ -88,17 +88,17 @@ const AddProjectAssignment = ({ orgId, billTypes, otBillType, payTerms }) => {
         projectEndDt: '',
       });
     }
-  }, [state.success]);
+  }, [addform_state.success]);
 
-  const handleChange = (e) => {
+  const handleform_handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
+    setaddFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
   };
 
-  const formatDate = (date) => {
+  const addform_formatDate = (date) => {
     if (!date) return '';
     if (date instanceof Date) {
       return date.toISOString().split('T')[0];
@@ -111,45 +111,45 @@ const AddProjectAssignment = ({ orgId, billTypes, otBillType, payTerms }) => {
 
   // Update project start/end dates when project is selected
   useEffect(() => {
-    if (formData.prjId) {
-      const selectedProject = projects.find((project) => project.prj_id === formData.prjId);
+    if (addformData.prjId) {
+      const selectedProject = addform_projects.find((project) => project.prj_id === addformData.prjId);
       if (selectedProject) {
-        setFormData((prev) => ({
+        setaddFormData((prev) => ({
           ...prev,
-          projectStartDt: formatDate(selectedProject.START_DT),
-          projectEndDt: formatDate(selectedProject.END_DT),
+          projectStartDt: addform_formatDate(selectedProject.START_DT),
+          projectEndDt: addform_formatDate(selectedProject.END_DT),
         }));
       } else {
-        setFormData((prev) => ({
+        setaddFormData((prev) => ({
           ...prev,
           projectStartDt: '',
           projectEndDt: '',
         }));
       }
     } else {
-      setFormData((prev) => ({
+      setaddFormData((prev) => ({
         ...prev,
         projectStartDt: '',
         projectEndDt: '',
         empId: '', // Reset employee selection when project is cleared
       }));
     }
-  }, [formData.prjId, projects]);
+  }, [addformData.prjId, addform_projects]);
 
   return (
     <div className="add-assignment-container">
       <h2>Add Project Assignment</h2>
-      {state.success && <div className="success-message">Assignment added successfully!</div>}
-      {state.error && <div className="error-message">{state.error}</div>}
-      <form action={formAction}>
+      {addform_state.success && <div className="success-message">Assignment added successfully!</div>}
+      {addform_state.error && <div className="error-message">{addform_state.error}</div>}
+      <form action={addform_formAction}>
         <div className="details-block">
           <h3>Selection Details</h3>
           <div className="form-row">
             <div className="form-group">
               <label>Project*:</label>
-              <select name="prjId" value={formData.prjId} onChange={handleChange} required disabled={!orgId}>
+              <select name="prjId" value={addformData.prjId} onChange={handleform_handleChange} required disabled={!orgId}>
                 <option value="">Select Project</option>
-                {projects.map((project) => (
+                {addform_projects.map((project) => (
                   <option key={project.prj_id} value={project.prj_id}>
                     {project.prj_name}
                   </option>
@@ -158,9 +158,9 @@ const AddProjectAssignment = ({ orgId, billTypes, otBillType, payTerms }) => {
             </div>
             <div className="form-group">
               <label>Employee*:</label>
-              <select name="empId" value={formData.empId} onChange={handleChange} required disabled={!orgId || !formData.prjId}>
+              <select name="empId" value={addformData.empId} onChange={handleform_handleChange} required disabled={!orgId || !addformData.prjId}>
                 <option value="">Select Employee</option>
-                {employees.map((employee) => (
+                {addform_employees.map((employee) => (
                   <option key={employee.empid} value={employee.empid}>
                     {employee.emp_fst_name} {employee.emp_last_name}
                   </option>
@@ -174,7 +174,7 @@ const AddProjectAssignment = ({ orgId, billTypes, otBillType, payTerms }) => {
               <input
                 type="date"
                 name="projectStartDt"
-                value={formData.projectStartDt}
+                value={addformData.projectStartDt}
                 readOnly
                 className="bg-gray-100"
               />
@@ -184,7 +184,7 @@ const AddProjectAssignment = ({ orgId, billTypes, otBillType, payTerms }) => {
               <input
                 type="date"
                 name="projectEndDt"
-                value={formData.projectEndDt}
+                value={addformData.projectEndDt}
                 readOnly
                 className="bg-gray-100"
               />
@@ -199,8 +199,8 @@ const AddProjectAssignment = ({ orgId, billTypes, otBillType, payTerms }) => {
               <input
                 type="date"
                 name="startDt"
-                value={formData.startDt}
-                onChange={handleChange}
+                value={addformData.startDt}
+                onChange={handleform_handleChange}
                 required
               />
             </div>
@@ -209,8 +209,8 @@ const AddProjectAssignment = ({ orgId, billTypes, otBillType, payTerms }) => {
               <input
                 type="date"
                 name="endDt"
-                value={formData.endDt}
-                onChange={handleChange}
+                value={addformData.endDt}
+                onChange={handleform_handleChange}
               />
             </div>
           </div>
@@ -224,14 +224,14 @@ const AddProjectAssignment = ({ orgId, billTypes, otBillType, payTerms }) => {
                 type="number"
                 step="0.01"
                 name="billRate"
-                value={formData.billRate}
-                onChange={handleChange}
+                value={addformData.billRate}
+                onChange={handleform_handleChange}
                 required
               />
             </div>
             <div className="form-group">
               <label>Bill Type*:</label>
-              <select name="billType" value={formData.billType} onChange={handleChange} required>
+              <select name="billType" value={addformData.billType} onChange={handleform_handleChange} required>
                 <option value="">Select Type</option>
                 {billTypes.map((type) => (
                   <option key={type.id} value={type.Name}>
@@ -248,13 +248,13 @@ const AddProjectAssignment = ({ orgId, billTypes, otBillType, payTerms }) => {
                 type="number"
                 step="0.01"
                 name="otBillRate"
-                value={formData.otBillRate}
-                onChange={handleChange}
+                value={addformData.otBillRate}
+                onChange={handleform_handleChange}
               />
             </div>
             <div className="form-group">
               <label>OT Bill Type:</label>
-              <select name="otBillType" value={formData.otBillType} onChange={handleChange}>
+              <select name="otBillType" value={addformData.otBillType} onChange={handleform_handleChange}>
                 <option value="">Select Type</option>
                 {otBillType.map((type) => (
                   <option key={type.id} value={type.Name}>
@@ -267,14 +267,14 @@ const AddProjectAssignment = ({ orgId, billTypes, otBillType, payTerms }) => {
           <div className="form-row">
             <div className="form-group">
               <label>Billable*:</label>
-              <select name="billableFlag" value={formData.billableFlag} onChange={handleChange} required>
+              <select name="billableFlag" value={addformData.billableFlag} onChange={handleform_handleChange} required>
                 <option value="No">No</option>
                 <option value="Yes">Yes</option>
               </select>
             </div>
             <div className="form-group">
               <label>OT Billable:</label>
-              <select name="otBillableFlag" value={formData.otBillableFlag} onChange={handleChange}>
+              <select name="otBillableFlag" value={addformData.otBillableFlag} onChange={handleform_handleChange}>
                 <option value="No">No</option>
                 <option value="Yes">Yes</option>
               </select>
@@ -283,7 +283,7 @@ const AddProjectAssignment = ({ orgId, billTypes, otBillType, payTerms }) => {
           <div className="form-row">
             <div className="form-group">
               <label>Payment Term*:</label>
-              <select name="payTerm" value={formData.payTerm} onChange={handleChange} required>
+              <select name="payTerm" value={addformData.payTerm} onChange={handleform_handleChange} required>
                 <option value="">Select Term</option>
                 {payTerms.map((term) => (
                   <option key={term.id} value={term.Name}>
@@ -295,7 +295,7 @@ const AddProjectAssignment = ({ orgId, billTypes, otBillType, payTerms }) => {
           </div>
         </div>
         <div className="form-buttons">
-          <button type="submit" disabled={!orgId || !formData.prjId || !formData.empId} className="submit-button">Add Assignment</button>
+          <button type="submit" disabled={!orgId || !addformData.prjId || !addformData.empId} className="submit-button">Add Assignment</button>
         </div>
       </form>
     </div>
