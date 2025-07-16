@@ -23,7 +23,16 @@ export default async function userscreenLayout({ children }) {
   const token = cookieStore.get('jwt_token')?.value;
   console.log('Server-side JWT token:', token);
 
-  let userData = { username: 'Unknown', rolename: 'Unknown', orgName: 'Unknown', logoLetter: 'M', isAdmin: false };
+  let userData = {
+    username: 'Unknown',
+    rolename: 'Unknown',
+    orgName: 'Unknown',
+    logoLetter: 'M',
+    orglogo_url: null,
+    is_logo_set: 0,
+    isAdmin: false,
+  };
+
   if (token) {
     const decoded = decodeJwt(token);
     if (decoded) {
@@ -33,11 +42,14 @@ export default async function userscreenLayout({ children }) {
         orgName: decoded.orgname || decoded.orgid || 'Unknown',
         logoLetter: (decoded.username || 'M')[0].toUpperCase(),
         empid: decoded.empid,
+        orgid: decoded.orgid,
       };
 
-      // Fetch isAdmin from database based on employee's roles
+      // Fetch isAdmin and org details from database
       try {
         const pool = await DBconnection();
+
+        // Fetch isAdmin from database based on employee's roles
         const [roleRows] = await pool.query(
           'SELECT roleid FROM emp_role_assign WHERE empid = ? AND orgid = ?',
           [decoded.empid, decoded.orgid]
@@ -51,9 +63,22 @@ export default async function userscreenLayout({ children }) {
           );
           userData.isAdmin = adminRows.some(row => row.isadmin === 1);
         }
+
+        // Fetch orglogo_url and is_logo_set from C_ORG table
+        const [orgRows] = await pool.query(
+          'SELECT orglogo_url, is_logo_set FROM C_ORG WHERE orgid = ?',
+          [decoded.orgid]
+        );
+
+        if (orgRows.length > 0) {
+          userData.orglogo_url = orgRows[0].orglogo_url || null;
+          userData.is_logo_set = orgRows[0].is_logo_set; // Keep as 1 or 0
+        }
       } catch (error) {
-        console.error('Error fetching isadmin from database:', error.message);
+        console.error('Error fetching data from database:', error.message);
         userData.isAdmin = false;
+        userData.orglogo_url = null;
+        userData.is_logo_set = 0;
       }
     }
   }
@@ -69,6 +94,8 @@ export default async function userscreenLayout({ children }) {
           logoLetter={userData.logoLetter}
           username={userData.username}
           rolename={userData.rolename}
+          orglogo_url={userData.orglogo_url}
+          is_logo_set={userData.is_logo_set}
         />
         <SubmenuBar />
         <main className={styles.main}>{children}</main>
