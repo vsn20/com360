@@ -37,7 +37,7 @@ function SubmenuBar() {
 
   return (
     <div className={styles.submenuBar}>
-      <div className={styles.activeMenuTitle}>{activeMenu.title.toUpperCase()}</div>
+      <div className={styles.activeMenuTitle}>{activeMenu.title}</div>
       {activeMenu.submenu && activeMenu.submenu.length > 0 && (
         <div className={styles.submenuContainer}>
           {activeMenu.submenu.map((sub) => (

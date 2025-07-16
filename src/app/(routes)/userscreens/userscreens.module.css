@@ -7,7 +7,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 12px 20px;
-  height: 30px;
+  height: 40px;
   
   /* Fixed positioning */
   position: fixed;
@@ -24,6 +24,17 @@
   gap: 12px;
   font-size: 10px;
 }
+
+
+/* Styling for the organization logo */
+.orgLogo {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  display: block; /* Make sure it's not display: none */
+}
+
+
 
 .logoContainer {
   position: relative;
@@ -206,7 +217,7 @@
   align-items: center;
   justify-content: center;
   text-decoration: none;
-  font-size: 1.2rem;
+  font-size: 1 rem;
   font-weight: bold;
   color: #51ec99;
   border-radius: 50%;
@@ -214,7 +225,8 @@
   height: 40px;
   transition: background-color 0.3s ease, transform 0.2s ease;
   margin-left: 35px;
-  margin-bottom: 45px;
+  margin-bottom: 28px;
+  margin-top: 28px;
 }
 
 .com360_logo:hover {
@@ -258,26 +270,30 @@
 /* Fixed submenu bar styling */
 .submenuBar {
   position: fixed;
-  top: 26px; /* Position right below navbar */
+  top: 32px; /* Position right below navbar */
   left: 200px; /* Account for sidebar width */
   right: 0;
   z-index: 999; /* Just below navbar dropdown */
   background-color: white; /* Solid white background */
   border-bottom: 1px solid #e5e7eb; /* Small border under submenu */
-  padding: 10px 20px;
+  padding: 20px 20px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  height: 65px; /* Fixed height for submenu */
+  height: 67px; /* Fixed height for submenu */
   box-shadow: 0 2px 4px rgba(169, 159, 159, 0.333); /* Added box shadow */
 }
 
 .activeMenuTitle {
-  font-size: 15px;
-  font-weight: bold;
-  color: #333;
+  color: #393a3d;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 21px;
+  text-decoration: none;
 }
+
 
 .submenuContainer {
   display: flex;
@@ -290,7 +306,7 @@
     font-size: 16px;
     font-style: normal;
     font-weight: 500;
-    line-height: 24px;
+    line-height: 13px;
     text-decoration: none;
 
 

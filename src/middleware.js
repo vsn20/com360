@@ -1,5 +1,18 @@
 import { NextResponse } from 'next/server';
 
+// Function to decode JWT (server-side, reused from your layout)
+const decodeJwt = (token) => {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = Buffer.from(base64, 'base64').toString('utf8');
+    return JSON.parse(jsonPayload);
+  } catch (error) {
+    console.error('Error decoding JWT:', error);
+    return null;
+  }
+};
+
 export async function middleware(request) {
   console.log("Middleware called for path:", request.nextUrl.pathname);
 
@@ -20,8 +33,44 @@ export async function middleware(request) {
 
   const { pathname } = request.nextUrl;
 
+  // Handle org logo paths (/uploads/orglogos/:orgid.jpg)
+  const isOrgLogoPath = pathname.match(/^\/uploads\/orglogos\/(\d+)\.jpg$/);
+  if (isOrgLogoPath) {
+    const requestedOrgId = isOrgLogoPath[1]; // Extract orgid from path
+    const token = request.cookies.get('jwt_token')?.value;
+
+    if (!token) {
+      console.log("No jwt_token found for org logo path, redirecting to login");
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+
+    try {
+      // Decode JWT to get user details
+      const decoded = decodeJwt(token);
+      if (!decoded || !decoded.orgid) {
+        console.log("Invalid or missing orgid in JWT for org logo path, redirecting to login");
+        return NextResponse.redirect(new URL('/login', request.url));
+      }
+
+      const userOrgId = decoded.orgid.toString();
+      if (userOrgId === requestedOrgId) {
+        console.log(`Access granted to org logo path ${pathname} for orgid ${userOrgId}`);
+        return NextResponse.next();
+      } else {
+        console.log(`Unauthorized: User orgid ${userOrgId} does not match requested orgid ${requestedOrgId}`);
+        return new Response(JSON.stringify({ error: 'Unauthorized: Cannot access another organization\'s logo' }), {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+    } catch (error) {
+      console.error('Error verifying JWT for org logo path:', error.message);
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+  }
+
   // Handle resume paths (/uploads/resumes/*)
-  const isResumePath = pathname.match(/^\/uploads\/resumes\/(.+)_(.+)_(.+\.pdf)$/);
+  const isResumePath = pathname.match(/^\/Uploads\/resumes\/(.+)_(.+)_(.+\.pdf)$/);
   if (isResumePath) {
     const jobToken = request.cookies.get('job_jwt_token')?.value;
     if (!jobToken) {
@@ -40,11 +89,11 @@ export async function middleware(request) {
       });
 
       const result = await verifyResponse.json();
-      console.log('Verify Token Response for resume path:', result); // Debug
+      console.log('Verify Token Response for resume path:', result);
 
       if (verifyResponse.ok && result.success) {
-        const candidate_id = result.user?.cid; // Extract cid from result.user
-        const resumeCandidateId = isResumePath[1]; // Extract candidate_id from filename
+        const candidate_id = result.user?.cid;
+        const resumeCandidateId = isResumePath[1];
 
         if (!candidate_id) {
           console.log('No candidate_id found in verify-token response');
@@ -122,8 +171,8 @@ export async function middleware(request) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // Check if the path matches /uploads/... (excluding /uploads/resumes/*)
-  const isUploadPath = pathname.match(/^\/Uploads\/(?!resumes\/).+/);
+  // Check if the path matches /uploads/... (excluding /uploads/resumes/* and /uploads/orglogos/*)
+  const isUploadPath = pathname.match(/^\/Uploads\/(?!resumes\/|orglogos\/).+/);
   if (isUploadPath) {
     console.log(`Authenticated user accessing upload path: ${pathname}`);
     try {
