@@ -8,28 +8,42 @@
   margin-bottom: 15px;
 }
 
+.header-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px; /* Equal gap between elements */
+  margin-bottom: 15px;
+  flex-wrap: wrap; /* Allow wrapping on smaller screens */
+}
+
 .date-navigation {
   display: flex;
   align-items: center;
-  margin-bottom: 15px;
+  gap: 20px; /* Equal gap between navigation elements */
 }
 
 .nav-button {
   padding: 5px 10px;
-  margin: 0 5px;
   border: none;
-  border-radius: 4px;
-  background-color: #007bff;
-  color: white;
+  border-radius: 5px;
+  background-color: #0FD46C;
+  color: black;
   cursor: pointer;
+  font-size: 14px;
+  font-family: Arial, sans-serif;
+  transition: background-color 0.3s ease, transform 0.1s ease, color 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  text-decoration: none;
 }
 
 .nav-button:hover {
-  background-color: #0056b3;
+  background-color: #0CB25A;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  color: white;
 }
 
 .date-label {
-  margin-right: 10px;
   font-weight: bold;
 }
 
@@ -37,6 +51,38 @@
   padding: 5px;
   border: 1px solid #ccc;
   border-radius: 4px;
+}
+
+.week-title {
+  color: #555;
+  margin: 0; /* Remove default margin to align with other elements */
+}
+
+.pending-approve-button {
+  padding: 5px 10px;
+  border: none;
+  border-radius: 5px;
+  background-color: #0FD46C;
+  color: black;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: Arial, sans-serif;
+  transition: background-color 0.3s ease, transform 0.1s ease, color 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  text-decoration: none;
+}
+
+.pending-approve-button:hover {
+  background-color: #0CB25A;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  color: white;
+}
+
+.pending-approve-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+  color: black;
+  box-shadow: none;
 }
 
 .employee-selection {
@@ -59,11 +105,6 @@
   border: 1px solid #ddd;
   padding: 10px;
   border-radius: 4px;
-}
-
-.week-title {
-  color: #555;
-  margin-bottom: 10px;
 }
 
 .project-table-container {
@@ -100,14 +141,21 @@
 .select-button {
   padding: 4px 8px;
   border: none;
-  border-radius: 4px;
-  background-color: #007bff;
-  color: white;
+  border-radius: 5px;
+  background-color: #0FD46C;
+  color: black;
   cursor: pointer;
+  font-size: 14px;
+  font-family: Arial, sans-serif;
+  transition: background-color 0.3s ease, transform 0.1s ease, color 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  text-decoration: none;
 }
 
 .select-button:hover {
-  background-color: #0056b3;
+  background-color: #0CB25A;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  color: white;
 }
 
 .project-header {
@@ -196,6 +244,7 @@
   padding: 5px;
   border: 1px solid #ccc;
   border-radius: 4px;
+  margin-right: 5px;
 }
 
 .attached-files {
@@ -233,53 +282,84 @@
   margin-left: 10px;
   padding: 2px 8px;
   border: none;
-  border-radius: 4px;
+  border-radius: 5px;
   background-color: #dc3545;
   color: white;
   cursor: pointer;
+  font-size: 14px;
+  font-family: Arial, sans-serif;
+  transition: background-color 0.3s ease, transform 0.1s ease, color 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .remove-button:hover {
   background-color: #c82333;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
-.approval-field {
-  margin: 10px 0;
+.approve-section {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* Small gap between Approve All and button group */
+  margin-top: 15px;
+  justify-content: flex-start; /* Align to the left */
 }
 
 .button-group {
-  margin-top: 15px;
+  display: flex;
+  gap: 10px; /* Small gap between Save and Submit buttons */
 }
 
 .save-button {
-  padding: 8px 15px;
+  padding: 5px 10px;
   border: none;
-  border-radius: 4px;
+  border-radius: 5px;
+  background-color: #0FD46C;
+  color: black;
   cursor: pointer;
   font-size: 14px;
-  background-color: #28a745;
+  font-family: Arial, sans-serif;
+  transition: background-color 0.3s ease, transform 0.1s ease, color 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.save-button:hover {
+  background-color: #0CB25A;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   color: white;
 }
 
 .save-button:disabled {
   background-color: #ccc;
   cursor: not-allowed;
+  color: black;
+  box-shadow: none;
 }
 
 .submit-button {
-  padding: 8px 15px;
+  padding: 5px 10px;
   border: none;
-  border-radius: 4px;
+  border-radius: 5px;
+  background-color: #0FD46C;
+  color: black;
   cursor: pointer;
   font-size: 14px;
-  background-color: #007bff;
+  font-family: Arial, sans-serif;
+  transition: background-color 0.3s ease, transform 0.1s ease, color 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.submit-button:hover {
+  background-color: #0CB25A;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   color: white;
-  margin-left: 10px;
 }
 
 .submit-button:disabled {
   background-color: #ccc;
   cursor: not-allowed;
+  color: black;
+  box-shadow: none;
 }
 
 .error-message {
@@ -299,6 +379,25 @@
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
+  .header-section {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .date-navigation {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .approve-section {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .button-group {
+    flex-direction: column;
+    gap: 10px;
+  }
   .timesheet-table {
     font-size: 12px;
   }
@@ -319,20 +418,4 @@
   .timesheet-comment-section {
     margin: 10px 0;
   }
-}
-.pending-approve-button {
-  background-color: rgb(108, 108, 218);
-  color: white;
-  padding: 8px 16px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  margin-left: 10px;
-}
-.pending-approve-button:hover {
-  background-color: #1e2c8d;
-}
-.pending-approve-button:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
 }
