@@ -478,7 +478,7 @@ const Overview = ({ currentRole, orgid, error }) => {
                         onChange={() => addform_handlePermissionToggle(menu.menuid)}
                         style={{ marginRight: "10px" }}
                       />
-                      {menu.menuname} ({menu.menuurl})
+                      {menu.menuname}
                     </label>
                     {menu.hassubmenu === 'yes' && addform_availableSubmenus
                       .filter((sm) => sm.menuid === menu.menuid)
@@ -664,12 +664,12 @@ const Overview = ({ currentRole, orgid, error }) => {
                     if (menuPerm || subPerms.length > 0) {
                       return (
                         <div key={`menu-${menu.menuid}`} className="permission-item">
-                          <p><strong>{menu.menuname} ({menu.menuurl})</strong></p>
+                          <p><strong>{menu.menuname}</strong></p>
                           {menu.hassubmenu === 'yes' && subPerms.map((perm) => {
                             const submenu = availableSubmenus.find(sm => sm.submenuid === perm.submenuid);
                             return submenu ? (
                               <p key={`submenu-${perm.submenuid}`} className="permission-subitem">
-                                - {submenu.submenuname} ({submenu.submenuurl})
+                                - {submenu.submenuname}
                               </p>
                             ) : null;
                           })}
