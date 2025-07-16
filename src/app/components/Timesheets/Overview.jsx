@@ -22,7 +22,7 @@ const Overview = () => {
   const [employeeProjects, setEmployeeProjects] = useState({});
   const [selectedEmployee, setSelectedEmployee] = useState("");
   const [attachments, setAttachments] = useState({});
-  const [noAttachmentFlag, setNoAttachmentFlag] = useState(true); // Default to true if no attachments
+  const [noAttachmentFlag, setNoAttachmentFlag] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
   const [selectedComment, setSelectedComment] = useState({ timesheetId: null, day: null });
@@ -48,7 +48,7 @@ const Overview = () => {
     const fetchData = async () => {
       setError(null);
       setSuccess(false);
-      setNoAttachmentFlag(true); // Reset to true if no attachments on load
+      setNoAttachmentFlag(true);
       setAttachments({});
       setSelectedComment({ timesheetId: null, day: null });
       setSuperiorName("");
@@ -111,7 +111,7 @@ const Overview = () => {
     setError(null);
     setSuccess(false);
     setAttachments({});
-    setNoAttachmentFlag(true); // Reset to true on date change
+    setNoAttachmentFlag(true);
     setSelectedComment({ timesheetId: null, day: null });
     setSuperiorName("");
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -124,7 +124,7 @@ const Overview = () => {
     setError(null);
     setSuccess(false);
     setAttachments({});
-    setNoAttachmentFlag(true); // Reset to true
+    setNoAttachmentFlag(true);
     setSelectedComment({ timesheetId: null, day: null });
     setSuperiorName("");
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -137,7 +137,7 @@ const Overview = () => {
     setError(null);
     setSuccess(false);
     setAttachments({});
-    setNoAttachmentFlag(true); // Reset to true
+    setNoAttachmentFlag(true);
     setSelectedComment({ timesheetId: null, day: null });
     setSuperiorName("");
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -150,7 +150,7 @@ const Overview = () => {
     const ts = targetTimesheets.find((t) => t.timesheet_id === timesheetId || t.temp_key === timesheetId);
     if (ts) {
       const isOwner = currentUserEmpId === ts.employee_id;
-      const canEdit = !isOwner || (!ts.is_submitted && !ts.is_approved); // Employee can edit only if not submitted/approved
+      const canEdit = !isOwner || (!ts.is_submitted && !ts.is_approved);
       if (canEdit) {
         const updateTimesheets = (prev) =>
           prev.map((t) => (t.timesheet_id === timesheetId || t.temp_key === timesheetId ? { ...t, [name]: value === "" ? null : value } : t));
@@ -335,25 +335,26 @@ const Overview = () => {
 
   return (
     <div className="timesheet-container">
-      <h2 className="timesheet-title">TimeSheets</h2>
-      <div className="date-navigation">
-        <button className="nav-button" onClick={handlePrevWeek}>
-          Prev
-        </button>
-        <label className="date-label">Select Date: </label>
-        <input type="date" value={selectedDate} onChange={handleDateChange} className="date-input" />
-        <button className="nav-button" onClick={handleNextWeek}>
-          Next
-        </button>
+      <div className="header-section">
+        <h3 className="week-title">Week Starting: {formatDate(getWeekStartDate(selectedDate))}</h3>
+        <div className="date-navigation">
+          <button className="nav-button" onClick={handlePrevWeek}>
+            Prev
+          </button>
+          <label className="date-label">Select Date: </label>
+          <input type="date" value={selectedDate} onChange={handleDateChange} className="date-input" />
+          <button className="nav-button" onClick={handleNextWeek}>
+            Next
+          </button>
+        </div>
+        {isSuperior && (
+          <button type="button" className="pending-approve-button" onClick={handlePendingApproveSheet}>
+            Pending Approve TimeSheet
+          </button>
+        )}
       </div>
-      {isSuperior && (
-        <button type="button" className="pending-approve-button" onClick={handlePendingApproveSheet}>
-          Pending Approve TimeSheet
-        </button>
-      )}
       {selectedDate && (
         <div className="timesheet-content">
-          <h3 className="week-title">Week Starting: {formatDate(getWeekStartDate(selectedDate))}</h3>
           <div className="employee-selection">
             <label>Select Employee: </label>
             <select
@@ -375,11 +376,15 @@ const Overview = () => {
               ))}
             </select>
           </div>
-          
-          {!selectedEmployee && !isSuperior && timesheets.some((ts) => ts.is_approved === 1) && superiorName && <p className="approval-message">Approved by {superiorName}</p>}
+          {!selectedEmployee && !isSuperior && timesheets.some((ts) => ts.is_approved === 1) && superiorName && (
+            <p className="approval-message">Approved by {superiorName}</p>
+          )}
           {((!selectedEmployee && timesheets.length > 0) || (selectedEmployee && employeeTimesheets.filter((t) => t.employee_id === selectedEmployee).length > 0)) && (
             <div>
-              <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                handleSave();
+              }}>
                 <table className="timesheet-table">
                   <thead>
                     <tr>
@@ -494,7 +499,7 @@ const Overview = () => {
                         ? "not-allowed"
                         : "pointer",
                     }}
-                    onChange={() => setNoAttachmentFlag(false)} // Untick noAttachmentFlag when files are selected
+                    onChange={() => setNoAttachmentFlag(false)}
                   />
                   <label className="no-attachment-label">
                     <input
@@ -590,21 +595,20 @@ const Overview = () => {
                   )}
                 </div>
               </form>
-              {selectedEmployee &&
-                employeeTimesheets.filter((t) => t.employee_id === selectedEmployee).length > 0 && (
-                  <div className="approve-section">
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={employeeTimesheets.filter((t) => t.employee_id === selectedEmployee).every((ts) => ts.is_approved)}
-                        onChange={(e) => handleApprovedChange(e, selectedEmployee)}
-                        disabled={isSaving}
-                        style={{ cursor: isSaving ? "not-allowed" : "pointer" }} // Enabled for superiors/delegates
-                      />
-                      Approve All
-                    </label>
-                  </div>
-                )}
+              {selectedEmployee && employeeTimesheets.filter((t) => t.employee_id === selectedEmployee).length > 0 && (
+                <div className="approve-section">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={employeeTimesheets.filter((t) => t.employee_id === selectedEmployee).every((ts) => ts.is_approved)}
+                      onChange={(e) => handleApprovedChange(e, selectedEmployee)}
+                      disabled={isSaving}
+                      style={{ cursor: isSaving ? "not-allowed" : "pointer" }}
+                    />
+                    Approve All
+                  </label>
+                </div>
+              )}
             </div>
           )}
         </div>
