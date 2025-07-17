@@ -3,14 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { 
   fetchAccountByOrgId, 
-  fetchAccountById, 
+  fetchAccountById,
   updateAccount
 } from '@/app/serverActions/Account/Overview';
-
 import { addAccount } from '@/app/serverActions/Account/AddAccountServerAction';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import './overview.css';
-
 
 const Overview = ({
   accountTypes,
@@ -19,9 +17,12 @@ const Overview = ({
   states,
   orgid,
   error: initialError,
-  accounts
-}) => 
-{
+  accounts,
+}) => {
+  const router = useRouter();
+  // Added to detect route changes
+  const pathname = usePathname(); // Fixed: usePathname instead of 'hello'
+  const searchparams = useSearchParams();
   const [selectedAccntId, setSelectedAccntId] = useState(null);
   const [accountDetails, setAccountDetails] = useState(null);
   const [formData, setFormData] = useState({
@@ -52,27 +53,68 @@ const Overview = ({
     lastUpdatedDate: ''
   });
   const [error, setError] = useState(initialError);
-  const [canEditAccounts, setCanEditAccounts] = useState(true); // Default to true for all authenticated users
+  const [canEditAccounts, setCanEditAccounts] = useState(true);
   const [editingBasic, setEditingBasic] = useState(false);
   const [editingBusinessAddress, setEditingBusinessAddress] = useState(false);
   const [editingMailingAddress, setEditingMailingAddress] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isadd,setisadd]=useState(false);
-  // Utility function to format dates for display
+  const [isadd, setisadd] = useState(false);
+  const [addFormError, addsetFormError] = useState(null);
+  const [addFormSuccess, addsetFormSuccess] = useState(null);
+  const [addformData, setaddFormData] = useState({
+    accountName: '',
+    acctTypeCd: '',
+    branchType: '',
+    email: '',
+    businessAddrLine1: '',
+    businessAddrLine2: '',
+    businessAddrLine3: '',
+    businessCity: '',
+    businessStateId: '',
+    businessCountryId: '',
+    businessPostalCode: '',
+    mailingAddrLine1: '',
+    mailingAddrLine2: '',
+    mailingAddrLine3: '',
+    mailingCity: '',
+    mailingStateId: '',
+    mailingCountryId: '',
+    mailingPostalCode: '',
+  });
+  // State for sorted accounts
+  const [allAccounts, setAllAccounts] = useState(accounts);
+  // State for sorting configuration
+  const [sortConfig, setSortConfig] = useState({ column: 'accntId', direction: 'asc' });
+
+  // Reset states on pathname change
+  useEffect(() => {
+    console.log("resetting");
+    handleBackClick();
+  }, [searchparams.get('refresh')]);
+
   const formatDate = (date) => {
     if (!date) return '';
     if (date instanceof Date) {
-      return date.toISOString().split('T')[0]; // Convert Date to YYYY-MM-DD
+      return date.toISOString().split('T')[0];
     }
     if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}(T.*)?$/)) {
-      return date.split('T')[0]; // Handle timestamp or date string
+      return date.split('T')[0];
     }
-    return ''; // Fallback for invalid dates
+    return '';
   };
 
   useEffect(() => {
     setError(initialError);
   }, [initialError]);
+
+  useEffect(() => {
+    setAllAccounts(accounts); // Initialize with accounts prop
+  }, [accounts]);
+
+  useEffect(() => {
+    const sortedAccounts = [...accounts].sort((a, b) => sortAccounts(a, b, sortConfig.column, sortConfig.direction));
+    setAllAccounts(sortedAccounts);
+  }, [sortConfig, accounts]);
 
   useEffect(() => {
     const loadAccountDetails = async () => {
@@ -164,23 +206,21 @@ const Overview = ({
   };
 
   const handleBackClick = () => {
-     router.refresh();
     setSelectedAccntId(null);
     setEditingBasic(false);
     setEditingBusinessAddress(false);
     setEditingMailingAddress(false);
     setError(null);
     setisadd(false);
-   
   };
-  const handleaddaccount=()=>{
-     setSelectedAccntId(null);
+  const handleaddaccount = () => {
+    setSelectedAccntId(null);
     setEditingBasic(false);
     setEditingBusinessAddress(false);
     setEditingMailingAddress(false);
     setError(null);
     setisadd(true);
-  }
+  };
 
   const handleEdit = (section) => {
     if (section === 'basic') setEditingBasic(true);
@@ -252,7 +292,6 @@ const Overview = ({
       if (result && result.success) {
         const updatedAccount = await fetchAccountById(formData.accntId);
         setAccountDetails(updatedAccount);
-        // Update accounts array to reflect changes in table
         accounts.forEach((account, index) => {
           if (account.ACCNT_ID === formData.accntId) {
             accounts[index] = {
@@ -330,42 +369,6 @@ const Overview = ({
     return prjid.split('-')[1] || prjid;
   };
 
-
-
-
-
-
-
-
-//add account
-
-
- const router = useRouter();
-  const [addFormError, addsetFormError] = useState(null);
-  const [addFormSuccess, addsetFormSuccess] = useState(null);
-
-  const [addformData, setaddFormData] = useState({
-    accountName: '',
-    acctTypeCd: '',
-    branchType: '',
-    email: '',
-    // aliasName: '',
-    businessAddrLine1: '',
-    businessAddrLine2: '',
-    businessAddrLine3: '',
-    businessCity: '',
-    businessStateId: '',
-    businessCountryId: '',
-    businessPostalCode: '',
-    mailingAddrLine1: '',
-    mailingAddrLine2: '',
-    mailingAddrLine3: '',
-    mailingCity: '',
-    mailingStateId: '',
-    mailingCountryId: '',
-    mailingPostalCode: '',
-  });
-
   const addhandleChange = (e) => {
     const { name, value } = e.target;
     setaddFormData((prev) => ({
@@ -410,7 +413,6 @@ const Overview = ({
         acctTypeCd: '',
         branchType: '',
         email: '',
-        // aliasName: '',
         businessAddrLine1: '',
         businessAddrLine2: '',
         businessAddrLine3: '',
@@ -429,320 +431,338 @@ const Overview = ({
       addsetFormSuccess('Account added successfully.');
       setTimeout(() => addsetFormSuccess(null), 3000);
       setTimeout(() => router.refresh(), 4000);
-      //setTimeout(() => router.push('/userscreens/account/overview'), 2000); // Redirect after success
     }
   };
 
+  // Sorting functions
+  const sortAccounts = (a, b, column, direction) => {
+    let aValue, bValue;
+    switch (column) {
+      case 'accntId':
+        aValue = parseInt(a.ACCNT_ID.split('-')[1] || a.ACCNT_ID);
+        bValue = parseInt(b.ACCNT_ID.split('-')[1] || b.ACCNT_ID);
+        return direction === 'asc' ? aValue - bValue : bValue - aValue;
+      case 'aliasName':
+        aValue = (a.ALIAS_NAME || '').toLowerCase();
+        bValue = (b.ALIAS_NAME || '').toLowerCase();
+        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      case 'acctTypeCd':
+        aValue = getAccountTypeName(a.ACCT_TYPE_CD).toLowerCase();
+        bValue = getAccountTypeName(b.ACCT_TYPE_CD).toLowerCase();
+        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      default:
+        return 0;
+    }
+  };
+
+  const requestSort = (column) => {
+    setSortConfig(prev => ({
+      column,
+      direction: prev.column === column && prev.direction === 'asc' ? 'desc' : 'asc',
+    }));
+  };
 
   return (
     <div className="employee-overview-container">
       {error && <div className="error-message">{error}</div>}
       {isLoading && <div className="loading-message">Saving...</div>}
     
-      {isadd&&(
-       
+      {isadd && (
         <div className="employee-overview-container">
-           <button className="back-button" onClick={handleBackClick}>x</button>
-      <h2>Add Account</h2>
-      {error && <div className="error-message">{error}</div>}
-      {addFormError && <div className="error-message">{addFormError}</div>}
-      {addFormSuccess && <div className="success-message">{addFormSuccess}</div>}
-      <form onSubmit={addhandleSubmit} className="employee-details-container">
-        {/* Basic Details Block */}
-        <div className="details-block">
-          <h3>Basic Details</h3>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Organization ID</label>
-              <input
-                type="text"
-                name="orgid"
-                value={orgid || ''}
-                readOnly
-                className="bg-gray-100"
-              />
+          <button className="back-button" onClick={handleBackClick}>x</button>
+          <h2>Add Account</h2>
+          {error && <div className="error-message">{error}</div>}
+          {addFormError && <div className="error-message">{addFormError}</div>}
+          {addFormSuccess && <div className="success-message">{addFormSuccess}</div>}
+          <form onSubmit={addhandleSubmit} className="employee-details-container">
+            <div className="details-block">
+              <h3>Basic Details</h3>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Organization ID</label>
+                  <input
+                    type="text"
+                    name="orgid"
+                    value={orgid || ''}
+                    readOnly
+                    className="bg-gray-100"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Account Name*</label>
+                  <input
+                    type="text"
+                    name="accountName"
+                    value={addformData.accountName}
+                    onChange={addhandleChange}
+                    placeholder="Enter Account Name"
+                    required
+                  />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Account Type*</label>
+                  <select
+                    name="acctTypeCd"
+                    value={addformData.acctTypeCd}
+                    onChange={addhandleChange}
+                    required
+                  >
+                    <option value="">Select Account Type</option>
+                    {accountTypes.map((type) => (
+                      <option key={type.id} value={type.Name}>
+                        {type.Name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Branch Type*</label>
+                  <select
+                    name="branchType"
+                    value={addformData.branchType}
+                    onChange={addhandleChange}
+                    required
+                  >
+                    <option value="">Select Branch Type</option>
+                    {branchTypes.map((type) => (
+                      <option key={type.id} value={type.Name}>
+                        {type.Name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Email*</label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={addformData.email}
+                    onChange={addhandleChange}
+                    placeholder="Enter Email"
+                    required
+                  />
+                </div>
+              </div>
             </div>
-            <div className="form-group">
-              <label>Account Name*</label>
-              <input
-                type="text"
-                name="accountName"
-                value={addformData.accountName}
-                onChange={addhandleChange}
-                placeholder="Enter Account Name"
-                required
-              />
-            </div>
-          </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Account Type*</label>
-              <select
-                name="acctTypeCd"
-                value={addformData.acctTypeCd}
-                onChange={addhandleChange}
-                required
-              >
-                <option value="">Select Account Type</option>
-                {accountTypes.map((type) => (
-                  <option key={type.id} value={type.Name}>
-                    {type.Name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Branch Type*</label>
-              <select
-                name="branchType"
-                value={addformData.branchType}
-                onChange={addhandleChange}
-                required
-              >
-                <option value="">Select Branch Type</option>
-                {branchTypes.map((type) => (
-                  <option key={type.id} value={type.Name}>
-                    {type.Name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Email*</label>
-              <input
-                type="email"
-                name="email"
-                value={addformData.email}
-                onChange={addhandleChange}
-                placeholder="Enter Email"
-                required
-              />
-            </div>
-            {/* <div className="form-group">
-              <label>Alias Name</label>
-              <input
-                type="text"
-                name="aliasName"
-                value={addformData.aliasName}
-                onChange={addhandleChange}
-                placeholder="Enter Alias Name"
-              />
-            </div> */}
-          </div>
-        </div>
 
-        {/* Business Address Block */}
-        <div className="details-block">
-          <h3>Business Address</h3>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Address Line 1</label>
-              <input
-                type="text"
-                name="businessAddrLine1"
-                value={addformData.businessAddrLine1}
-                onChange={addhandleChange}
-                placeholder="Enter Address Line 1"
-              />
+            <div className="details-block">
+              <h3>Business Address</h3>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Address Line 1</label>
+                  <input
+                    type="text"
+                    name="businessAddrLine1"
+                    value={addformData.businessAddrLine1}
+                    onChange={addhandleChange}
+                    placeholder="Enter Address Line 1"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Address Line 2</label>
+                  <input
+                    type="text"
+                    name="businessAddrLine2"
+                    value={addformData.businessAddrLine2}
+                    onChange={addhandleChange}
+                    placeholder="Enter Address Line 2"
+                  />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Address Line 3</label>
+                  <input
+                    type="text"
+                    name="businessAddrLine3"
+                    value={addformData.businessAddrLine3}
+                    onChange={addhandleChange}
+                    placeholder="Enter Address Line 3"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>City</label>
+                  <input
+                    type="text"
+                    name="businessCity"
+                    value={addformData.businessCity}
+                    onChange={addhandleChange}
+                    placeholder="Enter City"
+                  />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Country</label>
+                  <select
+                    name="businessCountryId"
+                    value={addformData.businessCountryId}
+                    onChange={addhandleChange}
+                  >
+                    <option value="">Select Country</option>
+                    {countries.map((country) => (
+                      <option key={country.ID} value={country.ID}>
+                        {country.VALUE}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>State</label>
+                  <select
+                    name="businessStateId"
+                    value={addformData.businessStateId}
+                    onChange={addhandleChange}
+                  >
+                    <option value="">Select State</option>
+                    {states.map((state) => (
+                      <option key={state.ID} value={state.ID}>
+                        {state.VALUE}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Postal Code</label>
+                  <input
+                    type="text"
+                    name="businessPostalCode"
+                    value={addformData.businessPostalCode}
+                    onChange={addhandleChange}
+                    placeholder="Enter Postal Code"
+                  />
+                </div>
+              </div>
             </div>
-            <div className="form-group">
-              <label>Address Line 2</label>
-              <input
-                type="text"
-                name="businessAddrLine2"
-                value={addformData.businessAddrLine2}
-                onChange={addhandleChange}
-                placeholder="Enter Address Line 2"
-              />
-            </div>
-          </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Address Line 3</label>
-              <input
-                type="text"
-                name="businessAddrLine3"
-                value={addformData.businessAddrLine3}
-                onChange={addhandleChange}
-                placeholder="Enter Address Line 3"
-              />
-            </div>
-            <div className="form-group">
-              <label>City</label>
-              <input
-                type="text"
-                name="businessCity"
-                value={addformData.businessCity}
-                onChange={addhandleChange}
-                placeholder="Enter City"
-              />
-            </div>
-          </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Country</label>
-              <select
-                name="businessCountryId"
-                value={addformData.businessCountryId}
-                onChange={addhandleChange}
-              >
-                <option value="">Select Country</option>
-                {countries.map((country) => (
-                  <option key={country.ID} value={country.ID}>
-                    {country.VALUE}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label>State</label>
-              <select
-                name="businessStateId"
-                value={addformData.businessStateId}
-                onChange={addhandleChange}
-              >
-                <option value="">Select State</option>
-                {states.map((state) => (
-                  <option key={state.ID} value={state.ID}>
-                    {state.VALUE}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Postal Code</label>
-              <input
-                type="text"
-                name="businessPostalCode"
-                value={addformData.businessPostalCode}
-                onChange={addhandleChange}
-                placeholder="Enter Postal Code"
-              />
-            </div>
-          </div>
-        </div>
 
-        {/* Mailing Address Block */}
-        <div className="details-block">
-          <h3>Mailing Address</h3>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Address Line 1</label>
-              <input
-                type="text"
-                name="mailingAddrLine1"
-                value={addformData.mailingAddrLine1}
-                onChange={addhandleChange}
-                placeholder="Enter Address Line 1"
-              />
+            <div className="details-block">
+              <h3>Mailing Address</h3>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Address Line 1</label>
+                  <input
+                    type="text"
+                    name="mailingAddrLine1"
+                    value={addformData.mailingAddrLine1}
+                    onChange={addhandleChange}
+                    placeholder="Enter Address Line 1"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Address Line 2</label>
+                  <input
+                    type="text"
+                    name="mailingAddrLine2"
+                    value={addformData.mailingAddrLine2}
+                    onChange={addhandleChange}
+                    placeholder="Enter Address Line 2"
+                  />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Address Line 3</label>
+                  <input
+                    type="text"
+                    name="mailingAddrLine3"
+                    value={addformData.mailingAddrLine3}
+                    onChange={addhandleChange}
+                    placeholder="Enter Address Line 3"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>City</label>
+                  <input
+                    type="text"
+                    name="mailingCity"
+                    value={addformData.mailingCity}
+                    onChange={addhandleChange}
+                    placeholder="Enter City"
+                  />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Country</label>
+                  <select
+                    name="mailingCountryId"
+                    value={addformData.mailingCountryId}
+                    onChange={addhandleChange}
+                  >
+                    <option value="">Select Country</option>
+                    {countries.map((country) => (
+                      <option key={country.ID} value={country.ID}>
+                        {country.VALUE}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>State</label>
+                  <select
+                    name="mailingStateId"
+                    value={addformData.mailingStateId}
+                    onChange={addhandleChange}
+                  >
+                    <option value="">Select State</option>
+                    {states.map((state) => (
+                      <option key={state.ID} value={state.ID}>
+                        {state.VALUE}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Postal Code</label>
+                  <input
+                    type="text"
+                    name="mailingPostalCode"
+                    value={addformData.mailingPostalCode}
+                    onChange={addhandleChange}
+                    placeholder="Enter Postal Code"
+                  />
+                </div>
+              </div>
             </div>
-            <div className="form-group">
-              <label>Address Line 2</label>
-              <input
-                type="text"
-                name="mailingAddrLine2"
-                value={addformData.mailingAddrLine2}
-                onChange={addhandleChange}
-                placeholder="Enter Address Line 2"
-              />
-            </div>
-          </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Address Line 3</label>
-              <input
-                type="text"
-                name="mailingAddrLine3"
-                value={addformData.mailingAddrLine3}
-                onChange={addhandleChange}
-                placeholder="Enter Address Line 3"
-              />
-            </div>
-            <div className="form-group">
-              <label>City</label>
-              <input
-                type="text"
-                name="mailingCity"
-                value={addformData.mailingCity}
-                onChange={addhandleChange}
-                placeholder="Enter City"
-              />
-            </div>
-          </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Country</label>
-              <select
-                name="mailingCountryId"
-                value={addformData.mailingCountryId}
-                onChange={addhandleChange}
-              >
-                <option value="">Select Country</option>
-                {countries.map((country) => (
-                  <option key={country.ID} value={country.ID}>
-                    {country.VALUE}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label>State</label>
-              <select
-                name="mailingStateId"
-                value={addformData.mailingStateId}
-                onChange={addhandleChange}
-              >
-                <option value="">Select State</option>
-                {states.map((state) => (
-                  <option key={state.ID} value={state.ID}>
-                    {state.VALUE}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Postal Code</label>
-              <input
-                type="text"
-                name="mailingPostalCode"
-                value={addformData.mailingPostalCode}
-                onChange={addhandleChange}
-                placeholder="Enter Postal Code"
-              />
-            </div>
-          </div>
-        </div>
 
-        <div className="form-buttons">
-          <button type="submit" className="save-button">
-            Add Account
-          </button>
+            <div className="form-buttons">
+              <button type="submit" className="save-button">
+                Add Account
+              </button>
+            </div>
+          </form>
         </div>
-      </form>
-    </div>
       )}
-      {!isadd&&!selectedAccntId ? (
+      {!isadd && !selectedAccntId ? (
         <div className="employee-list">
-          <button onClick={()=>handleaddaccount()} className='save-button'>Add Account</button>
-        {accounts.length === 0 && !error ? (
+          <button onClick={() => handleaddaccount()} className='save-button'>Add Account</button>
+          {accounts.length === 0 && !error ? (
             <p>No active accounts found.</p>
           ) : (
             <table className="employee-table">
               <thead>
                 <tr>
-                  <th>Account ID</th>
-                  <th>Account Name</th>
-                  <th>Account Type</th>
+                  <th onClick={() => requestSort('accntId')}>
+                    Account ID 
+                  </th>
+                  <th onClick={() => requestSort('aliasName')}>
+                    Account Name 
+                  </th>
+                  <th>
+                    Account Type 
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {accounts.map((account) => (
+                {allAccounts.map((account) => (
                   <tr
                     key={account.ACCNT_ID}
                     onClick={() => handleRowClick(account.ACCNT_ID)}
@@ -757,12 +777,11 @@ const Overview = ({
             </table>
           )}
         </div>
-      ) : !isadd&&(
+      ) : !isadd && (
         accountDetails && (
           <div className="employee-details-container">
             <button className="back-button" onClick={handleBackClick}>x</button>
 
-            {/* Basic Details Section */}
             <div className="details-block">
               <h3>Basic Details</h3>
               {editingBasic && canEditAccounts ? (
@@ -819,7 +838,7 @@ const Overview = ({
                     </button>
                   </div>
                 </form>
-              ) :(
+              ) : (
                 <div className="view-details">
                   <div className="details-row">
                     <div className="details-group">
@@ -886,7 +905,6 @@ const Overview = ({
               )}
             </div>
 
-            {/* Business Address Section */}
             <div className="details-block">
               <h3>Business Address</h3>
               {editingBusinessAddress && canEditAccounts ? (
@@ -997,7 +1015,6 @@ const Overview = ({
               )}
             </div>
 
-            {/* Mailing Address Section */}
             <div className="details-block">
               <h3>Mailing Address</h3>
               {editingMailingAddress && canEditAccounts ? (

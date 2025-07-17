@@ -3,9 +3,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { fetchRolesByOrgId, fetchRoleById, fetchMenusAndSubmenus, updateRole, addRole } from '@/app/serverActions/Roles/Overview';
 import './rolesoverview.css';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 const Overview = ({ currentRole, orgid, error }) => {
+  const searchparams = useSearchParams();
   const router = useRouter();
   const formRef = useRef(null);
   const [roles, setRoles] = useState([]);
@@ -31,12 +32,13 @@ const Overview = ({ currentRole, orgid, error }) => {
   const [addform_availableSubmenus, addform_setAvailableSubmenus] = useState([]);
   const [addform_loading, addform_setLoading] = useState(true);
   const [addform_success, addform_setsuccess] = useState(null);
+  const [sortConfig, setSortConfig] = useState({ column: 'roleid', direction: 'asc' }); // Default sort
 
   useEffect(() => {
     const loadData = async () => {
       try {
         const roleData = await fetchRolesByOrgId(parseInt(orgid, 10));
-        setRoles([...roleData]);
+        setRoles([...roleData].sort((a, b) => sortRoles(a, b, 'roleid', 'asc'))); // Initial sort by roleid asc
         setDetailsError(null);
         setFeaturesError(null);
       } catch (err) {
@@ -124,6 +126,19 @@ const Overview = ({ currentRole, orgid, error }) => {
     addform_loadData();
   }, []);
 
+  useEffect(() => {
+    // Sort roles when sortConfig changes
+    if (roles.length > 0) {
+      setRoles([...roles].sort((a, b) => sortRoles(a, b, sortConfig.column, sortConfig.direction)));
+    }
+  }, [sortConfig]);
+
+  useEffect(() => {
+    // Handle refresh from search params
+    console.log("through handle back");
+    handleBackClick();
+  }, [searchparams.get('refresh')]);
+
   const handleRoleClick = (role) => {
     setSelectedRole(role);
     setEditingDetails(false);
@@ -134,7 +149,7 @@ const Overview = ({ currentRole, orgid, error }) => {
   };
 
   const handleBackClick = () => {
-     router.refresh();
+    router.refresh();
     setSelectedRole(null);
     setRoleDetails(null);
     setPermissions([]);
@@ -143,7 +158,7 @@ const Overview = ({ currentRole, orgid, error }) => {
     setDetailsError(null);
     setFeaturesError(null);
     setisadd(false);
-   
+    router.refresh();
   };
 
   const handleaddrole = () => {
@@ -184,7 +199,7 @@ const Overview = ({ currentRole, orgid, error }) => {
         setEditingDetails(false);
         setRoleDetails({ ...roleDetails, rolename: formData.rolename, is_active: formData.is_active });
         const updatedRoles = await fetchRolesByOrgId(parseInt(orgid, 10));
-        setRoles([...updatedRoles]);
+        setRoles([...updatedRoles].sort((a, b) => sortRoles(a, b, sortConfig.column, sortConfig.direction)));
         setDetailsError(null);
       } else {
         setDetailsError(result.error);
@@ -346,7 +361,7 @@ const Overview = ({ currentRole, orgid, error }) => {
         setTimeout(() => {
           addform_setsuccess(null);
           setisadd(true);
-           addform_setPermissions([]);
+          addform_setPermissions([]);
           if (formRef.current) formRef.current.reset();
           router.refresh();
         }, 2000);
@@ -411,6 +426,41 @@ const Overview = ({ currentRole, orgid, error }) => {
   };
 
   const canEditRoles = true;
+
+  const sortRoles = (a, b, column, direction) => {
+    let aValue, bValue;
+    switch (column) {
+      case 'roleid':
+        aValue = parseInt(a.roleid.split('-')[1] || a.roleid);
+        bValue = parseInt(b.roleid.split('-')[1] || b.roleid);
+        return direction === 'asc' ? aValue - bValue : bValue - aValue;
+      case 'rolename':
+        aValue = a.rolename || '';
+        bValue = b.rolename || '';
+        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      case 'is_active':
+        aValue = a.is_active ? 'Yes' : 'No';
+        bValue = b.is_active ? 'Yes' : 'No';
+        if (direction === 'asc') {
+          return aValue === 'Yes' ? -1 : bValue === 'Yes' ? 1 : aValue.localeCompare(bValue);
+        } else {
+          return aValue === 'No' ? -1 : bValue === 'No' ? 1 : bValue.localeCompare(aValue);
+        }
+      case 'created_date':
+        aValue = new Date(a.CREATED_DATE).getTime();
+        bValue = new Date(b.CREATED_DATE).getTime();
+        return direction === 'asc' ? aValue - bValue : bValue - aValue;
+      default:
+        return 0;
+    }
+  };
+
+  const requestSort = (column) => {
+    setSortConfig(prev => ({
+      column,
+      direction: prev.column === column && prev.direction === 'asc' ? 'desc' : 'asc',
+    }));
+  };
 
   if (addform_loading) {
     return <div>Loading...</div>;
@@ -539,10 +589,18 @@ const Overview = ({ currentRole, orgid, error }) => {
             <table className="roles-table">
               <thead>
                 <tr>
-                  <th>Role ID</th>
-                  <th>Role Name</th>
-                  <th>Is Active</th>
-                  <th>Created Date</th>
+                  <th onClick={() => requestSort('roleid')}>
+                    Role ID {/*{sortConfig.column === 'roleid' && (sortConfig.direction === 'asc' ? '↑' : '↓')} */}
+                  </th>
+                  <th onClick={() => requestSort('rolename')}>
+                    Role Name {/* {sortConfig.column === 'rolename' && (sortConfig.direction === 'asc' ? '↑' : '↓')} */}
+                  </th>
+                  <th onClick={() => requestSort('is_active')}>
+                    Is Active {/* {sortConfig.column === 'is_active' && (sortConfig.direction === 'asc' ? '↑' : '↓')}*/}
+                  </th>
+                  <th onClick={() => requestSort('created_date')}>
+                    Created Date {/*{sortConfig.column === 'created_date' && (sortConfig.direction === 'asc' ? '↑' : '↓')}*/}
+                  </th>
                 </tr>
               </thead>
               <tbody>

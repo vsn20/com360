@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   fetchTimesheetAndProjects,
   fetchTimesheetsForSuperior,
@@ -13,6 +13,7 @@ import {
 import "./Overview.css";
 
 const Overview = () => {
+  const searchParams = useSearchParams(); // Corrected variable name
   const router = useRouter();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
   const [timesheets, setTimesheets] = useState([]);
@@ -43,6 +44,63 @@ const Overview = () => {
     d.setDate(d.getDate() - day);
     return d.toISOString().split("T")[0];
   };
+
+  // Reset to initial state when refresh parameter changes
+  useEffect(() => {
+    const resetToInitialState = async () => {
+      console.log("Refresh detected, resetting to initial state. Refresh:", searchParams.get('refresh'));
+      setSelectedDate(new Date().toISOString().split("T")[0]); // Reset to today
+      setTimesheets([]);
+      setProjects([]);
+      setEmployees([]);
+      setEmployeeTimesheets([]);
+      setEmployeeProjects({});
+      setSelectedEmployee("");
+      setAttachments({});
+      setNoAttachmentFlag(true);
+      setError(null);
+      setSuccess(false);
+      setSelectedComment({ timesheetId: null, day: null });
+      setSuperiorName("");
+      setIsSuperior(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+
+      // Re-fetch data with the default date
+      const weekStart = getWeekStartDate(new Date().toISOString().split("T")[0]);
+      const individualResult = await fetchTimesheetAndProjects(weekStart);
+      if (individualResult.error) {
+        setError(individualResult.error);
+      } else {
+        setTimesheets(individualResult.timesheets || []);
+        setProjects(individualResult.projects || []);
+        setAttachments(individualResult.attachments || {});
+        setNoAttachmentFlag(Object.values(individualResult.attachments || {}).every((atts) => !atts.length));
+        setCurrentUserEmpId(individualResult.currentUserEmpId || "");
+      }
+
+      const superiorResult = await fetchTimesheetsForSuperior(weekStart);
+      if (superiorResult.error) {
+        setEmployees([]);
+        setEmployeeTimesheets([]);
+        setEmployeeProjects({});
+      } else {
+        setEmployees(superiorResult.employees || []);
+        setEmployeeTimesheets(superiorResult.timesheets || []);
+        setEmployeeProjects(superiorResult.projects || {});
+        setAttachments((prev) => {
+          const newAttachments = { ...prev, ...superiorResult.attachments };
+          setNoAttachmentFlag(Object.values(newAttachments).every((atts) => !atts.length));
+          return newAttachments;
+        });
+        setIsSuperior(superiorResult.employees.length > 0);
+        setCurrentUserEmpId(superiorResult.currentUserEmpId || "");
+      }
+    };
+
+    if (searchParams.get('refresh')) {
+      resetToInitialState();
+    }
+  }, [searchParams.get('refresh')]);
 
   useEffect(() => {
     const fetchData = async () => {

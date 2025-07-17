@@ -352,3 +352,148 @@
     transform: translateX(0);
   }
 }
+
+.sidebarContainer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 200px;
+  height: 100vh;
+  background-color: rgb(44, 47, 51);
+  padding: 5px;
+  box-sizing: border-box;
+  z-index: 998; /* Below navbar and submenu */
+  font-size: 13px;
+  font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+}
+
+.sidebarMenu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebarMenuItem {
+  position: relative;
+  margin-bottom: 10px;
+}
+
+.sidebarLink {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 12px;
+  text-decoration: none;
+  color: rgb(212, 215, 220);
+  font-weight: 500;
+  background-color: transparent;
+  cursor: pointer;
+  position: relative;
+  transition: background-color 0.3s;
+}
+
+.sidebarArrow {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  margin-left: 8px;
+  vertical-align: middle;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 5px solid rgb(212, 215, 220);
+  transition: transform 0.3s ease;
+}
+
+.sidebarMenuItem:hover .sidebarArrow {
+  transform: rotate(90deg); /* Rotates to down arrow on hover */
+}
+
+.sidebarLink::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 4px;
+  height: 100%;
+  background-color: transparent;
+  transition: background-color 0.3s;
+}
+
+.sidebarLink:hover::before {
+  background-color: #0FD46C;
+}
+
+.sidebarLink:hover {
+  background-color: #1f2937;
+}
+
+.sidebarLink.active::before {
+  background-color: #0FD46C;
+}
+
+.sidebarLink.active {
+  font-size: 14px;
+  color: white;
+}
+
+.sidebarSubmenu {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 100%;
+  background-color: rgb(44, 47, 51);
+  padding: 8px 0;
+  list-style: none;
+  border: 1px solid #e5e7eb;
+  min-width: 160px;
+  z-index: 1100; /* Highest z-index to appear above navbar and submenu */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.sidebarMenuItem:hover .sidebarSubmenu,
+.sidebarSubmenu.visible {
+  display: block;
+}
+
+.sidebarSubmenuItem {
+  padding: 6px 16px;
+}
+
+.sidebarSubmenuLink {
+  text-decoration: none;
+  color: rgb(212, 215, 220);
+  display: block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.3s;
+}
+
+.sidebarSubmenuLink:hover {
+  background-color: #0FD46C;
+  color: white;
+}
+
+.sidebarSubmenuLink.active {
+  background-color: #0FD46C;
+  color: white;
+}
+
+.com360_logo {
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  font-size: 1rem;
+  font-weight: bold;
+  color: #51ec99;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  margin-left: 35px;
+  margin-bottom: 28px;
+  margin-top: 28px;
+}
+
+.com360_logo:hover {
+  transform: scale(1.1);
+}

@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { fetchEmployeeLeaves, fetchEmployeesUnderSuperior, fetchLeaveAssignments } from '@/app/serverActions/Leaves/Overview';
 import { approveEmployeeLeave } from '@/app/serverActions/Leaves/Addleave';
 import './overview.css';
@@ -15,6 +15,7 @@ export default function Overview() {
   const [success, setSuccess] = useState(false);
   const [isSuperior, setIsSuperior] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -61,6 +62,58 @@ export default function Overview() {
     };
     fetchData();
   }, []);
+
+  // Reset to initial state when refresh parameter changes
+  useEffect(() => {
+    const resetToInitialState = async () => {
+      console.log('Refresh detected, resetting to initial state. Refresh:', searchParams.get('refresh'));
+      setLeaves([]);
+      setEmployees([]);
+      setSelectedEmployee('');
+      setAvailableLeaves({});
+      setError(null);
+      setLoading(true);
+      setSuccess(false);
+      setIsSuperior(false);
+
+      const employeesResult = await fetchEmployeesUnderSuperior();
+      if (employeesResult.error) {
+        setError(employeesResult.error);
+      } else {
+        const currentEmpId = employeesResult.employees[0]?.empid; // Logged-in employee
+        setSelectedEmployee(currentEmpId || '');
+        const sortedEmployees = [
+          ...employeesResult.employees.filter(emp => emp.empid === currentEmpId),
+          ...employeesResult.employees.filter(emp => emp.empid !== currentEmpId).sort((a, b) =>
+            `${a.EMP_FST_NAME} ${a.EMP_LAST_NAME || ''}`.localeCompare(`${b.EMP_FST_NAME} ${b.EMP_LAST_NAME || ''}`)
+          ),
+        ];
+        setEmployees(sortedEmployees);
+        setIsSuperior(sortedEmployees.length > 1 || sortedEmployees.some(emp => emp.empid !== currentEmpId));
+        if (currentEmpId) {
+          const [leavesResult, availableLeavesResult] = await Promise.all([
+            fetchEmployeeLeaves(currentEmpId),
+            fetchLeaveAssignments(currentEmpId),
+          ]);
+          if (leavesResult.error) {
+            setError(leavesResult.error);
+          } else {
+            setLeaves(leavesResult);
+          }
+          if (availableLeavesResult.error) {
+            setError(availableLeavesResult.error);
+          } else {
+            setAvailableLeaves(availableLeavesResult);
+          }
+        }
+      }
+      setLoading(false);
+    };
+
+    if (searchParams.get('refresh')) {
+      resetToInitialState();
+    }
+  }, [searchParams.get('refresh')]);
 
   const handleEmployeeChange = async (e) => {
     const empId = e.target.value;

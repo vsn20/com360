@@ -3,6 +3,7 @@ import Overview from '@/app/components/Account/Overview';
 import { cookies } from 'next/headers';
 import DBconnection from '@/app/utils/config/db';
 
+
 // Simple function to decode JWT without verification
 const decodeJwt = (token) => {
   try {
@@ -26,10 +27,9 @@ export default async function OverviewPage({ searchParams }) {
   let branchTypes = [];
   let countries = [];
   let states = [];
-
   try {
     const pool = await DBconnection();
-
+    console.log("1234")
     const cookieStore = cookies();
     const token = cookieStore.get('jwt_token')?.value;
 

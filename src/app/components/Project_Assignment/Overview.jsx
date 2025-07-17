@@ -3,17 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import { fetchProjectsForAssignment, fetchProjectAssignmentDetails, updateProjectAssignment } from '@/app/serverActions/ProjectAssignments/Overview';
 import './overview.css';
-
-
 import { addProjectAssignment, fetchEmployeesByOrgId, fetchProjectsByOrgId } from '@/app/serverActions/ProjectAssignments/AddProjectAssignments';
 import { useActionState } from 'react';
-
-import { useRouter } from 'next/navigation';
-
+import { useRouter, useSearchParams } from 'next/navigation';
 
 const addform_initialState = { error: null, success: false };
 
 const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
+  const searchparams = useSearchParams();
   const [projects, setProjects] = useState([]);
   const [selectedProject, setSelectedProject] = useState(null);
   const [assignmentData, setAssignmentData] = useState([]);
@@ -24,10 +21,15 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [editingBasic, setEditingBasic] = useState(false);
   const [editingAdditional, setEditingAdditional] = useState(false);
-  const [isadd,setisadd]=useState(false);
-  const router=useRouter();
-  const [addform_success,setaddfrom_success]=useState(null);
-  const [addform_error,setaddform_error]=useState(null);
+  const [isadd, setisadd] = useState(false);
+  const router = useRouter();
+  const [addform_success, setaddfrom_success] = useState(null);
+  const [addform_error, setaddform_error] = useState(null);
+  // State for sorted projects
+  const [allProjects, setAllProjects] = useState([]);
+  // State for sorting configuration
+  const [sortConfig, setSortConfig] = useState({ column: 'prjId', direction: 'asc' });
+
   // Utility function to format dates for display and form input
   const formatDate = (date) => {
     if (!date) return '';
@@ -39,6 +41,10 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
     }
     return '';
   };
+
+  useEffect(() => {
+    handleBack();
+  }, [searchparams.get('refresh')]);
 
   useEffect(() => {
     const loadProjects = async () => {
@@ -53,6 +59,15 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
     };
     loadProjects();
   }, []);
+
+  useEffect(() => {
+    setAllProjects(projects); // Initialize with projects state
+  }, [projects]);
+
+  useEffect(() => {
+    const sortedProjects = [...projects].sort((a, b) => sortProjects(a, b, sortConfig.column, sortConfig.direction));
+    setAllProjects(sortedProjects);
+  }, [sortConfig, projects]);
 
   useEffect(() => {
     const loadAssignmentData = async () => {
@@ -153,7 +168,7 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
   };
 
   const handleBack = () => {
-     router.refresh();
+    router.refresh();
     setSelectedProject(null);
     setSelectedEmployeeId('');
     setEmployeeDetails(null);
@@ -164,7 +179,7 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
     setisadd(false);
   };
 
-  const handleaddprojectassignment=()=>{
+  const handleaddprojectassignment = () => {
     setSelectedProject(null);
     setSelectedEmployeeId('');
     setEmployeeDetails(null);
@@ -173,14 +188,14 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
     setEditingAdditional(false);
     setError(null);
     setisadd(true);
-  }
+  };
 
   const handleEmployeeSelect = (empId) => {
     setSelectedEmployeeId(empId);
     setEditingBasic(false);
     setEditingAdditional(false);
   };
-   
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -294,23 +309,16 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
     const option = options.find(opt => opt.Name === value);
     return option ? option.Name : value;
   };
- const getdisplayprojectid=(prjid)=>{
-  return prjid.split('-')[1]||prjid;
- }
- const getdisplayemployeeid=(prjid)=>{
-  return prjid.split('_')[1]||prjid;
- }
 
+  const getdisplayprojectid = (prjid) => {
+    return prjid.split('-')[1] || prjid;
+  };
 
+  const getdisplayemployeeid = (prjid) => {
+    return prjid.split('_')[1] || prjid;
+  };
 
-
-
-
-
-
-//addprojectassign
-
-  console.log("generic values", billTypes, otBillType, payTerms);
+  // Add Project Assignment Logic
   const [addformData, setaddFormData] = useState({
     empId: '',
     prjId: '',
@@ -391,7 +399,7 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
         projectEndDt: '',
       });
       setaddfrom_success('Project Assigned successfully!');
-      setTimeout(()=>setaddfrom_success(null),4000);
+      setTimeout(() => setaddfrom_success(null), 4000);
     }
   }, [addform_state.success]);
 
@@ -414,7 +422,6 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
     return '';
   };
 
-  // Update project start/end dates when project is selected
   useEffect(() => {
     if (addformData.prjId) {
       const selectedProject = addform_projects.find((project) => project.prj_id === addformData.prjId);
@@ -441,225 +448,265 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
     }
   }, [addformData.prjId, addform_projects]);
 
+  // Sorting functions
+  const sortProjects = (a, b, column, direction) => {
+    let aValue, bValue;
+    switch (column) {
+      case 'prjId':
+        aValue = parseInt(a.PRJ_ID.split('-')[1] || a.PRJ_ID);
+        bValue = parseInt(b.PRJ_ID.split('-')[1] || b.PRJ_ID);
+        return direction === 'asc' ? aValue - bValue : bValue - aValue;
+      case 'prjName':
+        aValue = (a.PRJ_NAME || '').toLowerCase();
+        bValue = (b.PRJ_NAME || '').toLowerCase();
+        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      case 'prsDesc':
+        aValue = (a.PRS_DESC || '').toLowerCase();
+        bValue = (b.PRS_DESC || '').toLowerCase();
+        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      case 'accntId':
+        aValue = (a.ACCNT_ID || '').toLowerCase();
+        bValue = (b.ACCNT_ID || '').toLowerCase();
+        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      case 'startDt':
+        aValue = new Date(a.START_DT || '1970-01-01');
+        bValue = new Date(b.START_DT || '1970-01-01');
+        return direction === 'asc' ? aValue - bValue : bValue - aValue;
+      case 'endDt':
+        aValue = new Date(a.END_DT || '1970-01-01');
+        bValue = new Date(b.END_DT || '1970-01-01');
+        return direction === 'asc' ? aValue - bValue : bValue - aValue;
+      default:
+        return 0;
+    }
+  };
 
-
-
-
-
-
-
-
+  const requestSort = (column) => {
+    setSortConfig(prev => ({
+      column,
+      direction: prev.column === column && prev.direction === 'asc' ? 'desc' : 'asc',
+    }));
+  };
 
   return (
     <div className="overview-container">
-      {/* <h2>Project Assignments Overview</h2> */}
       {error && <div className="error-message">{error}</div>}
       {isLoading && <div className="loading-message">Saving...</div>}
-      {isadd&&(
-       
-       <div className="add-assignment-container">
-      <h2>Add Project Assignment</h2>
-      <button className="back-button" onClick={handleBack}>x</button>
-      {addform_success && <div className="success-message">{addform_success}</div>}
-      {addform_state.error && <div className="error-message">{addform_state.error}</div>}
-      <form action={addform_formAction}>
-        <div className="details-block">
-          <h3>Selection Details</h3>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Project*:</label>
-              <select name="prjId" value={addformData.prjId} onChange={handleform_handleChange} required disabled={!orgId}>
-                <option value="">Select Project</option>
-                {addform_projects.map((project) => (
-                  <option key={project.prj_id} value={project.prj_id}>
-                    {project.prj_name}
-                  </option>
-                ))}
-              </select>
+      {isadd && (
+        <div className="add-assignment-container">
+          <h2>Add Project Assignment</h2>
+          <button className="back-button" onClick={handleBack}>x</button>
+          {addform_success && <div className="success-message">{addform_success}</div>}
+          {addform_state.error && <div className="error-message">{addform_state.error}</div>}
+          <form action={addform_formAction}>
+            <div className="details-block">
+              <h3>Selection Details</h3>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Project*:</label>
+                  <select name="prjId" value={addformData.prjId} onChange={handleform_handleChange} required disabled={!orgId}>
+                    <option value="">Select Project</option>
+                    {addform_projects.map((project) => (
+                      <option key={project.prj_id} value={project.prj_id}>
+                        {project.prj_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Employee*:</label>
+                  <select name="empId" value={addformData.empId} onChange={handleform_handleChange} required disabled={!orgId || !addformData.prjId}>
+                    <option value="">Select Employee</option>
+                    {addform_employees.map((employee) => (
+                      <option key={employee.empid} value={employee.empid}>
+                        {employee.emp_fst_name} {employee.emp_last_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Project Start Date:</label>
+                  <input
+                    type="date"
+                    name="projectStartDt"
+                    value={addformData.projectStartDt}
+                    readOnly
+                    className="bg-gray-100"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Project End Date:</label>
+                  <input
+                    type="date"
+                    name="projectEndDt"
+                    value={addformData.projectEndDt}
+                    readOnly
+                    className="bg-gray-100"
+                  />
+                </div>
+              </div>
             </div>
-            <div className="form-group">
-              <label>Employee*:</label>
-              <select name="empId" value={addformData.empId} onChange={handleform_handleChange} required disabled={!orgId || !addformData.prjId}>
-                <option value="">Select Employee</option>
-                {addform_employees.map((employee) => (
-                  <option key={employee.empid} value={employee.empid}>
-                    {employee.emp_fst_name} {employee.emp_last_name}
-                  </option>
-                ))}
-              </select>
+            <div className="details-block">
+              <h3>Date Details</h3>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Assignment Start Date*:</label>
+                  <input
+                    type="date"
+                    name="startDt"
+                    value={addformData.startDt}
+                    onChange={handleform_handleChange}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Assignment End Date:</label>
+                  <input
+                    type="date"
+                    name="endDt"
+                    value={addformData.endDt}
+                    onChange={handleform_handleChange}
+                  />
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Project Start Date:</label>
-              <input
-                type="date"
-                name="projectStartDt"
-                value={addformData.projectStartDt}
-                readOnly
-                className="bg-gray-100"
-              />
+            <div className="details-block">
+              <h3>Billing Details</h3>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Bill Rate*:</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    name="billRate"
+                    value={addformData.billRate}
+                    onChange={handleform_handleChange}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Bill Type*:</label>
+                  <select name="billType" value={addformData.billType} onChange={handleform_handleChange} required>
+                    <option value="">Select Type</option>
+                    {billTypes.map((type) => (
+                      <option key={type.id} value={type.Name}>
+                        {type.Name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>OT Bill Rate:</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    name="otBillRate"
+                    value={addformData.otBillRate}
+                    onChange={handleform_handleChange}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>OT Bill Type:</label>
+                  <select name="otBillType" value={addformData.otBillType} onChange={handleform_handleChange}>
+                    <option value="">Select Type</option>
+                    {otBillType.map((type) => (
+                      <option key={type.id} value={type.Name}>
+                        {type.Name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Billable*:</label>
+                  <select name="billableFlag" value={addformData.billableFlag} onChange={handleform_handleChange} required>
+                    <option value="No">No</option>
+                    <option value="Yes">Yes</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>OT Billable:</label>
+                  <select name="otBillableFlag" value={addformData.otBillableFlag} onChange={handleform_handleChange}>
+                    <option value="No">No</option>
+                    <option value="Yes">Yes</option>
+                  </select>
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Payment Term*:</label>
+                  <select name="payTerm" value={addformData.payTerm} onChange={handleform_handleChange} required>
+                    <option value="">Select Term</option>
+                    {payTerms.map((term) => (
+                      <option key={term.id} value={term.Name}>
+                        {term.Name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
-            <div className="form-group">
-              <label>Project End Date:</label>
-              <input
-                type="date"
-                name="projectEndDt"
-                value={addformData.projectEndDt}
-                readOnly
-                className="bg-gray-100"
-              />
+            <div className="form-buttons">
+              <button type="submit" disabled={!orgId || !addformData.prjId || !addformData.empId} className="submit-button">Add Assignment</button>
             </div>
-          </div>
+          </form>
         </div>
-        <div className="details-block">
-          <h3>Date Details</h3>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Assignment Start Date*:</label>
-              <input
-                type="date"
-                name="startDt"
-                value={addformData.startDt}
-                onChange={handleform_handleChange}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label>Assignment End Date:</label>
-              <input
-                type="date"
-                name="endDt"
-                value={addformData.endDt}
-                onChange={handleform_handleChange}
-              />
-            </div>
-          </div>
-        </div>
-        <div className="details-block">
-          <h3>Billing Details</h3>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Bill Rate*:</label>
-              <input
-                type="number"
-                step="0.01"
-                name="billRate"
-                value={addformData.billRate}
-                onChange={handleform_handleChange}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label>Bill Type*:</label>
-              <select name="billType" value={addformData.billType} onChange={handleform_handleChange} required>
-                <option value="">Select Type</option>
-                {billTypes.map((type) => (
-                  <option key={type.id} value={type.Name}>
-                    {type.Name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label>OT Bill Rate:</label>
-              <input
-                type="number"
-                step="0.01"
-                name="otBillRate"
-                value={addformData.otBillRate}
-                onChange={handleform_handleChange}
-              />
-            </div>
-            <div className="form-group">
-              <label>OT Bill Type:</label>
-              <select name="otBillType" value={addformData.otBillType} onChange={handleform_handleChange}>
-                <option value="">Select Type</option>
-                {otBillType.map((type) => (
-                  <option key={type.id} value={type.Name}>
-                    {type.Name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Billable*:</label>
-              <select name="billableFlag" value={addformData.billableFlag} onChange={handleform_handleChange} required>
-                <option value="No">No</option>
-                <option value="Yes">Yes</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label>OT Billable:</label>
-              <select name="otBillableFlag" value={addformData.otBillableFlag} onChange={handleform_handleChange}>
-                <option value="No">No</option>
-                <option value="Yes">Yes</option>
-              </select>
-            </div>
-          </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Payment Term*:</label>
-              <select name="payTerm" value={addformData.payTerm} onChange={handleform_handleChange} required>
-                <option value="">Select Term</option>
-                {payTerms.map((term) => (
-                  <option key={term.id} value={term.Name}>
-                    {term.Name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-        <div className="form-buttons">
-          <button type="submit" disabled={!orgId || !addformData.prjId || !addformData.empId} className="submit-button">Add Assignment</button>
-        </div>
-      </form>
-    </div>      
-        )}
-      {!isadd&&!selectedProject ? (
+      )}
+      {!isadd && !selectedProject ? (
         <div>
-       <button onClick={()=>handleaddprojectassignment()} className="submit-button">Assign Project</button>
-        {projects.length === 0 ? (
-          <p>No Projects found.</p>
-        ) : (
-          <table className="project-table">
-            <thead>
-              <tr>
-                <th>Project ID</th>
-                <th>Project Name</th>
-                <th>Description</th>
-                <th>Account</th>
-                <th>Start Date</th>
-                <th>End Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {projects.map((project) => (
-                <tr
-                  key={project.PRJ_ID}
-                  onClick={() => handleRowClick(project)}
-                  className="clickable-row"
-                >
-                  <td>Project-{getdisplayprojectid(project.PRJ_ID)}</td>
-                  <td>{project.PRJ_NAME || '-'}</td>
-                  <td>{project.PRS_DESC || '-'}</td>
-                  <td>Account-{getdisplayprojectid(project.ACCNT_ID)}</td>
-                  <td>{formatDate(project.START_DT) || '-'}</td>
-                  <td>{formatDate(project.END_DT) || '-'}</td>
+          <button onClick={() => handleaddprojectassignment()} className="submit-button">Assign Project</button>
+          {projects.length === 0 ? (
+            <p>No Projects found.</p>
+          ) : (
+            <table className="project-table">
+              <thead>
+                <tr>
+                  <th onClick={() => requestSort('prjId')}>
+                    Project ID 
+                  </th>
+                  <th onClick={() => requestSort('prjName')}>
+                    Project Name 
+                  </th>
+                  <th >
+                    Description 
+                  </th>
+                  <th onClick={() => requestSort('accntId')}>
+                    Account 
+                  </th>
+                  <th onClick={() => requestSort('startDt')}>
+                    Start Date 
+                  </th>
+                  <th onClick={() => requestSort('endDt')}>
+                    End Date 
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+              </thead>
+              <tbody>
+                {allProjects.map((project) => (
+                  <tr
+                    key={project.PRJ_ID}
+                    onClick={() => handleRowClick(project)}
+                    className="clickable-row"
+                  >
+                    <td>Project-{getdisplayprojectid(project.PRJ_ID)}</td>
+                    <td>{project.PRJ_NAME || '-'}</td>
+                    <td>{project.PRS_DESC || '-'}</td>
+                    <td>Account-{getdisplayprojectid(project.ACCNT_ID)}</td>
+                    <td>{formatDate(project.START_DT) || '-'}</td>
+                    <td>{formatDate(project.END_DT) || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
-      ) : !isadd&&(
+      ) : !isadd && (
         <div className="employee-details-container">
-        
           <button className="back-button" onClick={handleBack}>x</button>
           <div className="details-block">
             <h3>Select Employee*</h3>
@@ -688,28 +735,6 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
                 <h3>Basic Details</h3>
                 {editingBasic ? (
                   <form onSubmit={(e) => { e.preventDefault(); handleSave('basic'); }} className="assignment-form">
-                    {/* <div className="form-row">
-                      <div className="form-group">
-                        <label>Employee ID:</label>
-                        <input
-                          type="text"
-                          name="empId"
-                          value={formData.empId}
-                          readOnly
-                          className="bg-gray-100"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Project ID:</label>
-                        <input
-                          type="text"
-                          name="prjId"
-                          value={formData.prjId}
-                          readOnly
-                          className="bg-gray-100"
-                        />
-                      </div>
-                    </div> */}
                     <div className="form-row">
                       <div className="form-group">
                         <label>Project Start Date:</label>
@@ -776,7 +801,7 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
                       </div>
                       <div className="details-group">
                         <label>Project ID:</label>
-                        <p>Project-{getdisplayprojectid(employeeDetails.PRJ_ID )|| '-'}</p>
+                        <p>Project-{getdisplayprojectid(employeeDetails.PRJ_ID) || '-'}</p>
                       </div>
                     </div>
                     <div className="details-row">
@@ -887,40 +912,6 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
                         </select>
                       </div>
                     </div>
-                    {/* <div className="form-row">
-                      <div className="form-group">
-                        <label>Created By:</label>
-                        <input
-                          type="text"
-                          name="createdBy"
-                          value={formData.createdBy || '-'}
-                          readOnly
-                          className="bg-gray-100"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Updated By:</label>
-                        <input
-                          type="text"
-                          name="updatedBy"
-                          value={formData.updatedBy || '-'}
-                          readOnly
-                          className="bg-gray-100"
-                        />
-                      </div>
-                    </div>
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label>Last Updated Date:</label>
-                        <input
-                          type="text"
-                          name="lastUpdatedDate"
-                          value={formData.lastUpdatedDate || '-'}
-                          readOnly
-                          className="bg-gray-100"
-                        />
-                      </div>
-                    </div> */}
                     <div className="form-buttons">
                       <button type="submit" className="submit-button" disabled={isLoading}>
                         {isLoading ? 'Saving...' : 'Save'}

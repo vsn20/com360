@@ -35,7 +35,7 @@ export default async function OverviewPage({ searchParams }) {
   let jobTitles = [];
   let statuses = [];
   let workerCompClasses = [];
-
+  let timestamp = new Date().getTime();
   try {
     // Establish database connection
     const pool = await DBconnection();
@@ -172,6 +172,7 @@ export default async function OverviewPage({ searchParams }) {
       jobTitles={jobTitles}
       statuses={statuses}
       workerCompClasses={workerCompClasses}
+      timestamp={timestamp}
     />
   );
 }

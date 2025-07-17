@@ -3,14 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import { updateproject, fetchProjectById } from '@/app/serverActions/Projects/overview';
 import { useActionState } from 'react';
-import { addProject,fetchAccountsByOrgId } from '@/app/serverActions/Projects/AddprojectAction';
+import { addProject, fetchAccountsByOrgId } from '@/app/serverActions/Projects/AddprojectAction';
 import './projectoverview.css';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 const addform_intialstate = { error: null, success: false };
 
-
-const Overview = ({orgId, projects, billTypes, otBillTypes, payTerms, accounts }) => {
+const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts }) => {
+  const searchparams = useSearchParams();
   const [selectedProject, setSelectedProject] = useState(null);
   const [formData, setFormData] = useState({});
   const [error, setError] = useState(null);
@@ -18,9 +18,14 @@ const Overview = ({orgId, projects, billTypes, otBillTypes, payTerms, accounts }
   const [canEditProjects, setCanEditProjects] = useState(true); // Default to true for all authenticated users
   const [editingBasic, setEditingBasic] = useState(false);
   const [editingAdditional, setEditingAdditional] = useState(false);
-  const [isadd,setisadd]=useState(false);
-  const [addformsuccess,setaddformsuccess]=useState(null);
-  const router=useRouter();
+  const [isadd, setisadd] = useState(false);
+  const [addformsuccess, setaddformsuccess] = useState(null);
+  const router = useRouter();
+  // State for sorted projects
+  const [allProjects, setAllProjects] = useState(projects);
+  // State for sorting configuration
+  const [sortConfig, setSortConfig] = useState({ column: 'prjId', direction: 'asc' });
+
   // Utility function to format dates for display and form input
   const formatDate = (date) => {
     if (!date) return '';
@@ -32,6 +37,19 @@ const Overview = ({orgId, projects, billTypes, otBillTypes, payTerms, accounts }
     }
     return ''; // Fallback for invalid dates
   };
+
+  useEffect(() => {
+    handleBack();
+  }, [searchparams.get('refresh')]);
+
+  useEffect(() => {
+    setAllProjects(projects); // Initialize with projects prop
+  }, [projects]);
+
+  useEffect(() => {
+    const sortedProjects = [...projects].sort((a, b) => sortProjects(a, b, sortConfig.column, sortConfig.direction));
+    setAllProjects(sortedProjects);
+  }, [sortConfig, projects]);
 
   const handleRowClick = (project) => {
     setSelectedProject(project);
@@ -60,7 +78,7 @@ const Overview = ({orgId, projects, billTypes, otBillTypes, payTerms, accounts }
     setEditingAdditional(false);
     setError(null);
     setIsLoading(false);
-    setisadd(false)
+    setisadd(false);
   };
 
   const handleBack = () => {
@@ -71,17 +89,16 @@ const Overview = ({orgId, projects, billTypes, otBillTypes, payTerms, accounts }
     setError(null);
     setIsLoading(false);
     setisadd(false);
-    
   };
 
-  const handleaddproject=()=>{
-     setSelectedProject(null);
+  const handleaddproject = () => {
+    setSelectedProject(null);
     setEditingBasic(false);
     setEditingAdditional(false);
     setError(null);
     setIsLoading(false);
     setisadd(true);
-  }
+  };
 
   const handleEdit = (section) => {
     if (section === 'basic') setEditingBasic(true);
@@ -199,16 +216,40 @@ const Overview = ({orgId, projects, billTypes, otBillTypes, payTerms, accounts }
     return prjid.split('-')[1] || prjid;
   };
 
+  // Sorting functions
+  const sortProjects = (a, b, column, direction) => {
+    let aValue, bValue;
+    switch (column) {
+      case 'prjId':
+        aValue = parseInt(a.PRJ_ID.split('-')[1] || a.PRJ_ID);
+        bValue = parseInt(b.PRJ_ID.split('-')[1] || b.PRJ_ID);
+        return direction === 'asc' ? aValue - bValue : bValue - aValue;
+      case 'prjName':
+        aValue = (a.PRJ_NAME || '').toLowerCase();
+        bValue = (b.PRJ_NAME || '').toLowerCase();
+        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      case 'prsDesc':
+        aValue = (a.PRS_DESC || '').toLowerCase();
+        bValue = (b.PRS_DESC || '').toLowerCase();
+        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      case 'accntId':
+        aValue = getAccountName(a.ACCNT_ID).toLowerCase();
+        bValue = getAccountName(b.ACCNT_ID).toLowerCase();
+        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      default:
+        return 0;
+    }
+  };
 
+  const requestSort = (column) => {
+    setSortConfig(prev => ({
+      column,
+      direction: prev.column === column && prev.direction === 'asc' ? 'desc' : 'asc',
+    }));
+  };
 
-
-
-
-
-//add project
-
-
-const [addformData, setaddFormData] = useState({
+  // Add Project Logic
+  const [addformData, setaddFormData] = useState({
     prjName: '',
     prsDesc: '',
     accntId: '',
@@ -255,7 +296,6 @@ const [addformData, setaddFormData] = useState({
     }));
   };
 
-  // Custom form action to include generic values in FormData
   const addform_enhancedFormAction = async (formData) => {
     formData.append('billTypes', JSON.stringify(billTypes));
     formData.append('otBillTypes', JSON.stringify(otBillTypes));
@@ -263,7 +303,6 @@ const [addformData, setaddFormData] = useState({
     return formAction(formData);
   };
 
-  // Reset form and show success message on successful submission
   useEffect(() => {
     if (state.success) {
       setaddFormData({
@@ -285,276 +324,280 @@ const [addformData, setaddFormData] = useState({
         invoicePhone: '',
       });
       setaddformsuccess('Project added successfully!');
-    setTimeout(() => setaddformsuccess(null), 4000); // Clear success message after 2 seconds
+      setTimeout(() => setaddformsuccess(null), 4000); // Clear success message after 2 seconds
     }
   }, [state.success, orgId]);
 
-
-
   return (
     <div className="project-overview-container">
-      
       {error && <div className="error-message">{error}</div>}
       {isLoading && <div className="loading-message">Saving...</div>}
     
-    {isadd&&(
-     <div className="project-overview-container">
-      <h2>Add Project</h2>
-      <button className="back-button" onClick={handleBack}>x</button>
-      {addformsuccess && <div className="success-message">{addformsuccess}</div>}
-      {state.error && <div className="error-message">{state.error}</div>}
-      <form action={addform_enhancedFormAction} className="project-details-container">
-        {/* Basic Details Block */}
-        <div className="details-block">
-          <h3>Basic Details</h3>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Project Name*:</label>
-              <input
-                type="text"
-                name="prjName"
-                value={addformData.prjName}
-                onChange={addform_handleChange}
-                required
-              />
+      {isadd && (
+        <div className="project-overview-container">
+          <h2>Add Project</h2>
+          <button className="back-button" onClick={handleBack}>x</button>
+          {addformsuccess && <div className="success-message">{addformsuccess}</div>}
+          {state.error && <div className="error-message">{state.error}</div>}
+          <form action={addform_enhancedFormAction} className="project-details-container">
+            {/* Basic Details Block */}
+            <div className="details-block">
+              <h3>Basic Details</h3>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Project Name*:</label>
+                  <input
+                    type="text"
+                    name="prjName"
+                    value={addformData.prjName}
+                    onChange={addform_handleChange}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Description:</label>
+                  <input
+                    type="text"
+                    name="prsDesc"
+                    value={addformData.prsDesc}
+                    onChange={addform_handleChange}
+                  />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Account*:</label>
+                  <select
+                    name="accntId"
+                    value={addformData.accntId}
+                    onChange={addform_handleChange}
+                    required
+                    disabled={!orgId}
+                  >
+                    <option value="">Select Account</option>
+                    {addform_accounts.map((account) => (
+                      <option key={account.ACCNT_ID} value={account.ACCNT_ID}>
+                        {account.ALIAS_NAME}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Organization*:</label>
+                  <input
+                    type="number"
+                    name="orgId"
+                    value={orgId || ''}
+                    readOnly
+                    className="bg-gray-100"
+                  />
+                </div>
+              </div>
             </div>
-            <div className="form-group">
-              <label>Description:</label>
-              <input
-                type="text"
-                name="prsDesc"
-                value={addformData.prsDesc}
-                onChange={addform_handleChange}
-              />
-            </div>
-          </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Account*:</label>
-              <select
-                name="accntId"
-                value={addformData.accntId}
-                onChange={addform_handleChange}
-                required
-                disabled={!orgId}
-              >
-                <option value="">Select Account</option>
-                {addform_accounts.map((account) => (
-                  <option key={account.ACCNT_ID} value={account.ACCNT_ID}>
-                    {account.ALIAS_NAME}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Organization*:</label>
-              <input
-                type="number"
-                name="orgId"
-                value={orgId || ''}
-                readOnly
-                className="bg-gray-100"
-              />
-            </div>
-          </div>
-        </div>
 
-        {/* Additional Details Block */}
-        <div className="details-block">
-          <h3>Additional Details</h3>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Bill Rate:</label>
-              <input
-                type="number"
-                step="0.01"
-                name="billRate"
-                value={addformData.billRate}
-                onChange={addform_handleChange}
-              />
+            {/* Additional Details Block */}
+            <div className="details-block">
+              <h3>Additional Details</h3>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Bill Rate:</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    name="billRate"
+                    value={addformData.billRate}
+                    onChange={addform_handleChange}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Bill Type:</label>
+                  <select
+                    name="billType"
+                    value={addformData.billType}
+                    onChange={addform_handleChange}
+                  >
+                    <option value="">Select Type</option>
+                    {billTypes.map((type) => (
+                      <option key={type.id} value={type.Name}>
+                        {type.Name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>OT Bill Rate:</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    name="otBillRate"
+                    value={addformData.otBillRate}
+                    onChange={addform_handleChange}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>OT Bill Type:</label>
+                  <select
+                    name="otBillType"
+                    value={addformData.otBillType}
+                    onChange={addform_handleChange}
+                  >
+                    <option value="">Select Type</option>
+                    {otBillTypes.map((type) => (
+                      <option key={type.id} value={type.Name}>
+                        {type.Name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Billable:</label>
+                  <select
+                    name="billableFlag"
+                    value={addformData.billableFlag}
+                    onChange={addform_handleChange}
+                  >
+                    <option value="No">No</option>
+                    <option value="Yes">Yes</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Start Date:</label>
+                  <input
+                    type="date"
+                    name="startDt"
+                    value={addformData.startDt}
+                    onChange={addform_handleChange}
+                    placeholder="mm/dd/yyyy"
+                  />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>End Date:</label>
+                  <input
+                    type="date"
+                    name="endDt"
+                    value={addformData.endDt}
+                    onChange={addform_handleChange}
+                    placeholder="mm/dd/yyyy"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Client*:</label>
+                  <select
+                    name="clientId"
+                    value={addformData.clientId}
+                    onChange={addform_handleChange}
+                    required
+                    disabled={!orgId}
+                  >
+                    <option value="">Select Client</option>
+                    {addform_accounts.map((account) => (
+                      <option key={account.ACCNT_ID} value={account.ACCNT_ID}>
+                        {account.ALIAS_NAME}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Payment Term:</label>
+                  <select
+                    name="payTerm"
+                    value={addformData.payTerm}
+                    onChange={addform_handleChange}
+                  >
+                    <option value="">Select Term</option>
+                    {payTerms.map((term) => (
+                      <option key={term.id} value={term.Name}>
+                        {term.Name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Invoice Email:</label>
+                  <input
+                    type="email"
+                    name="invoiceEmail"
+                    value={addformData.invoiceEmail}
+                    onChange={addform_handleChange}
+                  />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Invoice Fax:</label>
+                  <input
+                    type="text"
+                    name="invoiceFax"
+                    value={addformData.invoiceFax}
+                    onChange={addform_handleChange}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Invoice Phone:</label>
+                  <input
+                    type="text"
+                    name="invoicePhone"
+                    value={addformData.invoicePhone}
+                    onChange={addform_handleChange}
+                  />
+                </div>
+              </div>
             </div>
-            <div className="form-group">
-              <label>Bill Type:</label>
-              <select
-                name="billType"
-                value={addformData.billType}
-                onChange={addform_handleChange}
-              >
-                <option value="">Select Type</option>
-                {billTypes.map((type) => (
-                  <option key={type.id} value={type.Name}>
-                    {type.Name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label>OT Bill Rate:</label>
-              <input
-                type="number"
-                step="0.01"
-                name="otBillRate"
-                value={addformData.otBillRate}
-                onChange={addform_handleChange}
-              />
-            </div>
-            <div className="form-group">
-              <label>OT Bill Type:</label>
-              <select
-                name="otBillType"
-                value={addformData.otBillType}
-                onChange={addform_handleChange}
-              >
-                <option value="">Select Type</option>
-                {otBillTypes.map((type) => (
-                  <option key={type.id} value={type.Name}>
-                    {type.Name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Billable:</label>
-              <select
-                name="billableFlag"
-                value={addformData.billableFlag}
-                onChange={addform_handleChange}
-              >
-                <option value="No">No</option>
-                <option value="Yes">Yes</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Start Date:</label>
-              <input
-                type="date"
-                name="startDt"
-                value={addformData.startDt}
-                onChange={addform_handleChange}
-                placeholder="mm/dd/yyyy"
-              />
-            </div>
-          </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label>End Date:</label>
-              <input
-                type="date"
-                name="endDt"
-                value={addformData.endDt}
-                onChange={addform_handleChange}
-                placeholder="mm/dd/yyyy"
-              />
-            </div>
-            <div className="form-group">
-              <label>Client*:</label>
-              <select
-                name="clientId"
-                value={addformData.clientId}
-                onChange={addform_handleChange}
-                required
-                disabled={!orgId}
-              >
-                <option value="">Select Client</option>
-                {addform_accounts.map((account) => (
-                  <option key={account.ACCNT_ID} value={account.ACCNT_ID}>
-                    {account.ALIAS_NAME}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Payment Term:</label>
-              <select
-                name="payTerm"
-                value={addformData.payTerm}
-                onChange={addform_handleChange}
-              >
-                <option value="">Select Term</option>
-                {payTerms.map((term) => (
-                  <option key={term.id} value={term.Name}>
-                    {term.Name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Invoice Email:</label>
-              <input
-                type="email"
-                name="invoiceEmail"
-                value={addformData.invoiceEmail}
-                onChange={addform_handleChange}
-              />
-            </div>
-          </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Invoice Fax:</label>
-              <input
-                type="text"
-                name="invoiceFax"
-                value={addformData.invoiceFax}
-                onChange={addform_handleChange}
-              />
-            </div>
-            <div className="form-group">
-              <label>Invoice Phone:</label>
-              <input
-                type="text"
-                name="invoicePhone"
-                value={addformData.invoicePhone}
-                onChange={addform_handleChange}
-              />
-            </div>
-          </div>
-        </div>
 
-        <div className="form-buttons">
-          <button type="submit" className="submit-button" disabled={!orgId}>
-            Add Project
-          </button>
+            <div className="form-buttons">
+              <button type="submit" className="submit-button" disabled={!orgId}>
+                Add Project
+              </button>
+            </div>
+          </form>
         </div>
-      </form>
-    </div>
-  )}
+      )}
 
-      {!isadd&&!selectedProject ? (
+      {!isadd && !selectedProject ? (
         <div>
-         <button onClick={()=>handleaddproject()} className='submit-button'>Add Project</button>
-       {projects.length === 0 ? (
-          
-          <p>No Projects found.</p>
-        ) : (
-          <table className="project-table">
-            <thead>
-              <tr>
-                <th>Project ID</th>
-                <th>Project Name</th>
-                <th>Description</th>
-                <th>Account</th>
-              </tr>
-            </thead>
-            <tbody>
-              {projects.map((project) => (
-                <tr key={project.PRJ_ID} onClick={() => handleRowClick(project)} className="clickable-row">
-                  <td>Project-{getdisplayprojectid(project.PRJ_ID)}</td>
-                  <td>{project.PRJ_NAME || '-'}</td>
-                  <td>{project.PRS_DESC || '-'}</td>
-                  <td>{getAccountName(project.ACCNT_ID)}</td>
+          <button onClick={() => handleaddproject()} className='submit-button'>Add Project</button>
+          {projects.length === 0 ? (
+            <p>No Projects found.</p>
+          ) : (
+            <table className="project-table">
+              <thead>
+                <tr>
+                  <th onClick={() => requestSort('prjId')}>
+                    Project ID 
+                  </th>
+                  <th onClick={() => requestSort('prjName')}>
+                    Project Name
+                  </th>
+                  <th>
+                    Description 
+                  </th>
+                  <th onClick={() => requestSort('accntId')}>
+                    Account 
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+              </thead>
+              <tbody>
+                {allProjects.map((project) => (
+                  <tr key={project.PRJ_ID} onClick={() => handleRowClick(project)} className="clickable-row">
+                    <td>Project-{getdisplayprojectid(project.PRJ_ID)}</td>
+                    <td>{project.PRJ_NAME || '-'}</td>
+                    <td>{project.PRS_DESC || '-'}</td>
+                    <td>{getAccountName(project.ACCNT_ID)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
-      ) : !isadd&&(
+      ) : !isadd && (
         <div className="project-details-container">
           <button className="back-button" onClick={handleBack}>x</button>
 

@@ -7,7 +7,7 @@ import {
   updateEmployee 
 } from '@/app/serverActions/Employee/overview';
 import './overview.css';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { addemployee } from '@/app/serverActions/addemployee';
 
 
@@ -132,7 +132,8 @@ const Overview = ({
   payFrequencies,
   jobTitles,
   statuses,
-  workerCompClasses
+  workerCompClasses,
+  timestamp
 }) => {
   const [selectedEmpId, setSelectedEmpId] = useState(null);
   const [employeeDetails, setEmployeeDetails] = useState(null);
@@ -140,6 +141,8 @@ const Overview = ({
   const [allEmployees, setAllEmployees] = useState(employees);
   const [selectedRoles, setSelectedRoles] = useState([]);
   const router=useRouter();
+  const searchparams=useSearchParams();
+  let ts=timestamp;
   const [formData, setFormData] = useState({
     empid: '',
     orgid: orgid || '',
@@ -204,15 +207,23 @@ const Overview = ({
   const [editingHomeAddress, setEditingHomeAddress] = useState(false);
   const [editingEmergencyContact, setEditingEmergencyContact] = useState(false);
   const[issadd,setisadd]=useState(false);
-  useEffect(() => {
-    setAllEmployees(employees);
-  }, [employees]);
+ // Add state for sorting configuration
+const [sortConfig, setSortConfig] = useState({ column: 'empid', direction: 'asc' });
 
+// Update useEffect for sorting
+useEffect(() => {
+  const sortedEmployees = [...employees].sort((a, b) => sortEmployees(a, b, sortConfig.column, sortConfig.direction));
+  setAllEmployees(sortedEmployees);
+}, [sortConfig, employees]);
   useEffect(() => {
     setError(initialError);
   }, [initialError]);
-
  
+  useEffect(()=>{
+   handleBackClick();
+  },[searchparams.get('refresh')]);
+  
+
   useEffect(() => {
     const loadEmployeeDetails = async () => {
       if (!selectedEmpId) {
@@ -713,6 +724,53 @@ const Overview = ({
 
 
 
+
+
+
+  //sorting
+
+
+
+  // Add state for sorting configuration
+
+// Update useEffect for sorting
+useEffect(() => {
+  const sortedEmployees = [...employees].sort((a, b) => sortEmployees(a, b, sortConfig.column, sortConfig.direction));
+  setAllEmployees(sortedEmployees);
+}, [sortConfig, employees]);
+
+// Add sortEmployees function
+const sortEmployees = (a, b, column, direction) => {
+  let aValue, bValue;
+  switch (column) {
+    case 'empid':
+      aValue = parseInt(a.empid.split('_')[1] || a.empid);
+      bValue = parseInt(b.empid.split('_')[1] || b.empid);
+      return direction === 'asc' ? aValue - bValue : bValue - aValue;
+    case 'name':
+      aValue = (a.EMP_PREF_NAME || `${a.EMP_FST_NAME} ${a.EMP_MID_NAME || ''} ${a.EMP_LAST_NAME}`.trim()).toLowerCase();
+      bValue = (b.EMP_PREF_NAME || `${b.EMP_FST_NAME} ${b.EMP_MID_NAME || ''} ${b.EMP_LAST_NAME}`.trim()).toLowerCase();
+      return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+    case 'hireDate':
+      aValue = a.HIRE ? new Date(a.HIRE).getTime() : 0;
+      bValue = b.HIRE ? new Date(b.HIRE).getTime() : 0;
+      return direction === 'asc' ? aValue - bValue : bValue - aValue;
+    case 'gender':
+      aValue = a.GENDER || '';
+      bValue = b.GENDER || '';
+      return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+    default:
+      return 0;
+  }
+};
+
+// Add requestSort function
+const requestSort = (column) => {
+  setSortConfig(prev => ({
+    column,
+    direction: prev.column === column && prev.direction === 'asc' ? 'desc' : 'asc',
+  }));
+};
 
 
 
@@ -1343,16 +1401,28 @@ const Overview = ({
             <table className="employee-table">
               <thead>
                 <tr>
-                  <th>Employee ID</th>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Hire Date</th>
-                  <th>Mobile</th>
-                  <th>Gender</th>
-                </tr>
+    <th onClick={() => requestSort('empid')}>
+      Employee ID 
+    </th>
+    <th onClick={() => requestSort('name')}>
+      Name
+    </th>
+    <th onClick={() => requestSort('email')}>
+      Email
+    </th>
+    <th onClick={() => requestSort('hireDate')}>
+      Hire Date 
+    </th>
+    <th >
+      Mobile
+    </th>
+    <th>
+      Gender 
+    </th>
+  </tr>
               </thead>
               <tbody>
-                {employees.map((employee) => (
+                {allEmployees.map((employee) => (
                   <tr
                     key={employee.empid}
                     onClick={() => handleRowClick(employee.empid)}
