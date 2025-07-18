@@ -44,6 +44,7 @@ const getCurrentUserEmpIdName = async (pool, userId, orgId) => {
     return 'system';
   }
 };
+
 export async function updateproject(formData) {
   const prjId = formData.get('PRJ_ID')?.trim();
   const section = formData.get('section')?.trim();

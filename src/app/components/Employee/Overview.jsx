@@ -784,7 +784,7 @@ const requestSort = (column) => {
       <button className="back-button" onClick={handleBackClick}>x</button>
       {error && <p className="error-message">{error}</p>}
       {addform_formError && <p className="error-message">{addform_formError}</p>}
-      {addform_success && <p className="error-message">{addform_success}</p>}
+      {addform_success && <p className="success-message">{addform_success}</p>}
       <form action={addform_handleSubmit}>
         <div className="form-container">
           {/* Personal Details */}

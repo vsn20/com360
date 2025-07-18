@@ -30,10 +30,15 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
   const formatDate = (date) => {
     if (!date) return '';
     if (date instanceof Date) {
-      return date.toISOString().split('T')[0]; // Convert Date to YYYY-MM-DD
+      // Use local date components to preserve YYYY-MM-DD
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
     }
     if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}(T.*)?$/)) {
-      return date.split('T')[0]; // Handle timestamp or date string
+      // If it's already a date string (YYYY-MM-DD), return it as is
+      return date.split('T')[0];
     }
     return ''; // Fallback for invalid dates
   };
@@ -232,7 +237,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
         aValue = (a.PRS_DESC || '').toLowerCase();
         bValue = (b.PRS_DESC || '').toLowerCase();
         return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
-      case 'accntId':
+      case ' acclId':
         aValue = getAccountName(a.ACCNT_ID).toLowerCase();
         bValue = getAccountName(b.ACCNT_ID).toLowerCase();
         return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);

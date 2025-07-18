@@ -30,20 +30,21 @@ const getCurrentUserEmpIdName = async (pool, userId, orgId) => {
 
     // Fetch employee name from C_EMP
     const [empRows] = await pool.execute(
-      'SELECT EMP_FST_NAME, EMP_LAST_NAME,roleid FROM C_EMP WHERE empid = ? AND orgid = ?',
+      'SELECT EMP_FST_NAME, EMP_LAST_NAME, roleid FROM C_EMP WHERE empid = ? AND orgid = ?',
       [empid, orgId]
     );
     if (empRows.length === 0) {
       console.error('Employee not found in C_EMP for empid:', empid);
       return `${empid}-unknown`;
     }
-     const { EMP_FST_NAME, EMP_LAST_NAME } = empRows[0];
+    const { EMP_FST_NAME, EMP_LAST_NAME } = empRows[0];
     return `${empid}-${EMP_FST_NAME} ${EMP_LAST_NAME}`;
   } catch (error) {
     console.error('Error fetching empid-name:', error.message);
     return 'system';
   }
 };
+
 export async function fetchProjectsForAssignment() {
   let pool;
   try {
@@ -70,7 +71,9 @@ export async function fetchProjectsForAssignment() {
     console.log(`Fetching projects for orgId: ${orgId}`);
     pool = await DBconnection();
     const [rows] = await pool.execute(
-      `SELECT PRJ_ID, PRJ_NAME, PRS_DESC, ACCNT_ID, START_DT, END_DT 
+      `SELECT PRJ_ID, PRJ_NAME, PRS_DESC, ACCNT_ID, 
+              DATE_FORMAT(START_DT, '%Y-%m-%d') AS START_DT, 
+              DATE_FORMAT(END_DT, '%Y-%m-%d') AS END_DT 
        FROM C_PROJECT 
        WHERE ORG_ID = ?`,
       [orgId]
@@ -192,7 +195,7 @@ export async function updateProjectAssignment(formData) {
       }
 
       const [project] = await pool.execute(
-        'SELECT START_DT, END_DT FROM C_PROJECT WHERE PRJ_ID = ? AND ORG_ID = ?',
+        'SELECT DATE_FORMAT(START_DT, "%Y-%m-%d") AS START_DT, DATE_FORMAT(END_DT, "%Y-%m-%d") AS END_DT FROM C_PROJECT WHERE PRJ_ID = ? AND ORG_ID = ?',
         [PRJ_ID, orgId]
       );
       if (project.length === 0) {
@@ -215,13 +218,26 @@ export async function updateProjectAssignment(formData) {
           console.log('Start Date is required');
           return { error: 'Start Date is required.', success: false };
         }
-        if (startDt && projectStartDt && new Date(startDt) < new Date(projectStartDt)) {
+
+        // Normalize dates to YYYY-MM-DD for comparison
+        const normalizeDate = (dateStr) => {
+          if (!dateStr) return null;
+          const date = new Date(dateStr);
+          return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        };
+
+        const normalizedStartDt = normalizeDate(startDt);
+        const normalizedEndDt = endDt ? normalizeDate(endDt) : null;
+        const normalizedProjectStartDt = normalizeDate(projectStartDt);
+        const normalizedProjectEndDt = projectEndDt ? normalizeDate(projectEndDt) : null;
+
+        if (normalizedStartDt && normalizedProjectStartDt && normalizedStartDt < normalizedProjectStartDt) {
           console.log('Assignment start date must be on or after project start date');
-          return { error: `Assignment start date must be on or after project start date (${projectStartDt.toISOString().split('T')[0]}).`, success: false };
+          return { error: `Assignment start date must be on or after project start date (${normalizedProjectStartDt}).`, success: false };
         }
-        if (endDt && projectEndDt && new Date(endDt) > new Date(projectEndDt)) {
+        if (normalizedEndDt && normalizedProjectEndDt && normalizedEndDt > normalizedProjectEndDt) {
           console.log('Assignment end date must be on or before project end date');
-          return { error: `Assignment end date must be on or before project end date (${projectEndDt.toISOString().split('T')[0]}).`, success: false };
+          return { error: `Assignment end date must be on or before project end date (${normalizedProjectEndDt}).`, success: false };
         }
 
         const [result] = await pool.query(

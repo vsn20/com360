@@ -11,6 +11,7 @@ function Sidebar({ isAdmin }) {
   const [menuItems, setMenuItems] = useState([]);
   const [isFetched, setIsFetched] = useState(false);
   const [openSubmenuIndex, setOpenSubmenuIndex] = useState(null); // Track open submenu
+  const [isSubmenuLocked, setIsSubmenuLocked] = useState(false); // Lock submenu after click
 
   useEffect(() => {
     if (!isFetched) {
@@ -34,27 +35,29 @@ function Sidebar({ isAdmin }) {
 
   const finalMenuItems = [...menuItems];
 
-  // Handle hover to open submenu
+  // Handle hover to open submenu, but only if not locked
   const handleMouseEnter = (index) => {
-    setOpenSubmenuIndex(index);
+    if (!isSubmenuLocked) {
+      setOpenSubmenuIndex(index);
+    }
   };
 
-  // Handle mouse leave to close submenu
+  // Handle mouse leave to close submenu and unlock
   const handleMouseLeave = () => {
     setOpenSubmenuIndex(null);
+    setIsSubmenuLocked(false); // Unlock to allow hover again
   };
 
-  // Handle menu/submenu click to close submenu and navigate with refresh
+  // Handle menu/submenu click to close submenu after 2 seconds, lock it, and navigate
   const handleMenuClick = (e, href, index) => {
     e.preventDefault(); // Prevent default Link navigation
-    console.log('Menu click triggered for:', href, 'Index:', index, 'Current openSubmenuIndex:', openSubmenuIndex);
-    setOpenSubmenuIndex(null); // Close submenu immediately
-    console.log('Setting openSubmenuIndex to null, new state:', openSubmenuIndex); // Debug state before update
     const timestamp = new Date().getTime();
+    router.push(`${href}?refresh=${timestamp}`); // Navigate immediately
+    // Delay hiding submenu and locking for 2 seconds
     setTimeout(() => {
-      console.log('Navigating to:', `${href}?refresh=${timestamp}`, 'After state update, openSubmenuIndex:', openSubmenuIndex);
-      router.push(`${href}?refresh=${timestamp}`); // Navigate with refresh param
-    }, 0); // Slight delay to ensure state update is processed
+      setOpenSubmenuIndex(null); // Close submenu after 2 seconds
+      setIsSubmenuLocked(true); // Lock submenu to prevent hover
+    }, 3500);
   };
 
   return (
@@ -82,7 +85,7 @@ function Sidebar({ isAdmin }) {
               {safeSubmenu.length > 0 && (
                 <ul
                   className={`${styles.sidebarSubmenu} ${
-                    openSubmenuIndex === index ? styles.visible : ''
+                    openSubmenuIndex === index && !isSubmenuLocked ? styles.visible : ''
                   }`}
                 >
                   {safeSubmenu.map((sub) => (

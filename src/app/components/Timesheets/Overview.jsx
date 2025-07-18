@@ -11,9 +11,10 @@ import {
   approveTimesheet,
 } from "@/app/serverActions/Timesheets/Overview";
 import "./Overview.css";
+import ApprovalPending from "./ApprovalPending";
 
 const Overview = () => {
-  const searchParams = useSearchParams(); // Corrected variable name
+  const searchParams = useSearchParams();
   const router = useRouter();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
   const [timesheets, setTimesheets] = useState([]);
@@ -33,6 +34,7 @@ const Overview = () => {
   const fileInputRef = useRef(null);
   const [isClient, setIsClient] = useState(false);
   const [currentUserEmpId, setCurrentUserEmpId] = useState("");
+  const [ispending, setispending] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
@@ -45,58 +47,57 @@ const Overview = () => {
     return d.toISOString().split("T")[0];
   };
 
-  // Reset to initial state when refresh parameter changes
-  useEffect(() => {
-    const resetToInitialState = async () => {
-      console.log("Refresh detected, resetting to initial state. Refresh:", searchParams.get('refresh'));
-      setSelectedDate(new Date().toISOString().split("T")[0]); // Reset to today
-      setTimesheets([]);
-      setProjects([]);
+  const resetToInitialState = async () => {
+    console.log("Resetting to initial state");
+    setSelectedDate(new Date().toISOString().split("T")[0]);
+    setTimesheets([]);
+    setProjects([]);
+    setEmployees([]);
+    setEmployeeTimesheets([]);
+    setEmployeeProjects({});
+    setSelectedEmployee("");
+    setAttachments({});
+    setNoAttachmentFlag(true);
+    setError(null);
+    setSuccess(false);
+    setSelectedComment({ timesheetId: null, day: null });
+    setSuperiorName("");
+    setIsSuperior(false);
+    setispending(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+
+    const weekStart = getWeekStartDate(new Date().toISOString().split("T")[0]);
+    const individualResult = await fetchTimesheetAndProjects(weekStart);
+    if (individualResult.error) {
+      setError(individualResult.error);
+    } else {
+      setTimesheets(individualResult.timesheets || []);
+      setProjects(individualResult.projects || []);
+      setAttachments(individualResult.attachments || {});
+      setNoAttachmentFlag(Object.values(individualResult.attachments || {}).every((atts) => !atts.length));
+      setCurrentUserEmpId(individualResult.currentUserEmpId || "");
+    }
+
+    const superiorResult = await fetchTimesheetsForSuperior(weekStart);
+    if (superiorResult.error) {
       setEmployees([]);
       setEmployeeTimesheets([]);
       setEmployeeProjects({});
-      setSelectedEmployee("");
-      setAttachments({});
-      setNoAttachmentFlag(true);
-      setError(null);
-      setSuccess(false);
-      setSelectedComment({ timesheetId: null, day: null });
-      setSuperiorName("");
-      setIsSuperior(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+    } else {
+      setEmployees(superiorResult.employees || []);
+      setEmployeeTimesheets(superiorResult.timesheets || []);
+      setEmployeeProjects(superiorResult.projects || {});
+      setAttachments((prev) => {
+        const newAttachments = { ...prev, ...superiorResult.attachments };
+        setNoAttachmentFlag(Object.values(newAttachments).every((atts) => !atts.length));
+        return newAttachments;
+      });
+      setIsSuperior(superiorResult.employees.length > 0);
+      setCurrentUserEmpId(superiorResult.currentUserEmpId || "");
+    }
+  };
 
-      // Re-fetch data with the default date
-      const weekStart = getWeekStartDate(new Date().toISOString().split("T")[0]);
-      const individualResult = await fetchTimesheetAndProjects(weekStart);
-      if (individualResult.error) {
-        setError(individualResult.error);
-      } else {
-        setTimesheets(individualResult.timesheets || []);
-        setProjects(individualResult.projects || []);
-        setAttachments(individualResult.attachments || {});
-        setNoAttachmentFlag(Object.values(individualResult.attachments || {}).every((atts) => !atts.length));
-        setCurrentUserEmpId(individualResult.currentUserEmpId || "");
-      }
-
-      const superiorResult = await fetchTimesheetsForSuperior(weekStart);
-      if (superiorResult.error) {
-        setEmployees([]);
-        setEmployeeTimesheets([]);
-        setEmployeeProjects({});
-      } else {
-        setEmployees(superiorResult.employees || []);
-        setEmployeeTimesheets(superiorResult.timesheets || []);
-        setEmployeeProjects(superiorResult.projects || {});
-        setAttachments((prev) => {
-          const newAttachments = { ...prev, ...superiorResult.attachments };
-          setNoAttachmentFlag(Object.values(newAttachments).every((atts) => !atts.length));
-          return newAttachments;
-        });
-        setIsSuperior(superiorResult.employees.length > 0);
-        setCurrentUserEmpId(superiorResult.currentUserEmpId || "");
-      }
-    };
-
+  useEffect(() => {
     if (searchParams.get('refresh')) {
       resetToInitialState();
     }
@@ -172,6 +173,7 @@ const Overview = () => {
     setNoAttachmentFlag(true);
     setSelectedComment({ timesheetId: null, day: null });
     setSuperiorName("");
+    setispending(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -185,6 +187,7 @@ const Overview = () => {
     setNoAttachmentFlag(true);
     setSelectedComment({ timesheetId: null, day: null });
     setSuperiorName("");
+    setispending(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -198,6 +201,7 @@ const Overview = () => {
     setNoAttachmentFlag(true);
     setSelectedComment({ timesheetId: null, day: null });
     setSuperiorName("");
+    setispending(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -382,7 +386,23 @@ const Overview = () => {
     } else setError(result.error || "Failed to remove attachment.");
   };
 
-  const handlePendingApproveSheet = () => router.push("/userscreens/timesheets/pendingapproval");
+  const handlePendingApproveSheet = () => {
+    setSelectedDate(new Date().toISOString().split("T")[0]);
+    setTimesheets([]);
+    setProjects([]);
+    setEmployees([]);
+    setEmployeeTimesheets([]);
+    setEmployeeProjects({});
+    setSelectedEmployee("");
+    setAttachments({});
+    setNoAttachmentFlag(true);
+    setError(null);
+    setSuccess(false);
+    setSelectedComment({ timesheetId: null, day: null });
+    setSuperiorName("");
+    setIsSuperior(false);
+    setispending(true);
+  };
 
   const isAnySubmittedOrApproved = (targetTimesheets) => targetTimesheets.some((ts) => ts.is_submitted === 1 || ts.is_approved === 1);
 
@@ -393,283 +413,292 @@ const Overview = () => {
 
   return (
     <div className="timesheet-container">
-      <div className="header-section">
-        <h3 className="week-title">Week Starting: {formatDate(getWeekStartDate(selectedDate))}</h3>
-        <div className="date-navigation">
-          <button className="nav-button" onClick={handlePrevWeek}>
-            Prev
-          </button>
-          <label className="date-label">Select Date: </label>
-          <input type="date" value={selectedDate} onChange={handleDateChange} className="date-input" />
-          <button className="nav-button" onClick={handleNextWeek}>
-            Next
-          </button>
+      {ispending ? (
+        <div>
+          <button onClick={resetToInitialState} className="back-button">Back</button>
+          <ApprovalPending />
         </div>
-        {isSuperior && (
-          <button type="button" className="pending-approve-button" onClick={handlePendingApproveSheet}>
-            Pending Approve TimeSheet
-          </button>
-        )}
-      </div>
-      {selectedDate && (
-        <div className="timesheet-content">
-          <div className="employee-selection">
-            <label>Select Employee: </label>
-            <select
-              value={selectedEmployee}
-              onChange={(e) => {
-                setSelectedEmployee(e.target.value);
-                setError(null);
-                setSuccess(false);
-                setSelectedComment({ timesheetId: null, day: null });
-                setNoAttachmentFlag(Object.values(attachments).every((atts) => !atts.length));
-              }}
-              className="employee-dropdown"
-            >
-              <option value="">Your TimeSheets</option>
-              {employees.map((emp) => (
-                <option key={emp.empid} value={emp.empid}>
-                  {`${emp.EMP_FST_NAME} ${emp.EMP_LAST_NAME || ""}`}
-                </option>
-              ))}
-            </select>
+      ) : (
+        <>
+          <div className="header-section">
+            <h3 className="week-title">Week Starting: {formatDate(getWeekStartDate(selectedDate))}</h3>
+            <div className="date-navigation">
+              <button className="nav-button" onClick={handlePrevWeek}>
+                Prev
+              </button>
+              <label className="date-label">Select Date: </label>
+              <input type="date" value={selectedDate} onChange={handleDateChange} className="date-input" />
+              <button className="nav-button" onClick={handleNextWeek}>
+                Next
+              </button>
+            </div>
+            {isSuperior && (
+              <button type="button" className="pending-approve-button" onClick={handlePendingApproveSheet}>
+                Pending Approve TimeSheet
+              </button>
+            )}
           </div>
-          {!selectedEmployee && !isSuperior && timesheets.some((ts) => ts.is_approved === 1) && superiorName && (
-            <p className="approval-message">Approved by {superiorName}</p>
-          )}
-          {((!selectedEmployee && timesheets.length > 0) || (selectedEmployee && employeeTimesheets.filter((t) => t.employee_id === selectedEmployee).length > 0)) && (
-            <div>
-              <form onSubmit={(e) => {
-                e.preventDefault();
-                handleSave();
-              }}>
-                <table className="timesheet-table">
-                  <thead>
-                    <tr>
-                      <th>Project Name</th>
-                      {["sun", "mon", "tue", "wed", "thu", "fri", "sat"].map((day, index) => (
-                        <th key={day}>{getDateForDay(getWeekStartDate(selectedDate), index)}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(selectedEmployee ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee) : timesheets).map((ts) => {
-                      const project = selectedEmployee
-                        ? (employeeProjects[selectedEmployee] || []).find((p) => p.PRJ_ID === ts.project_id)
-                        : projects.find((p) => p.PRJ_ID === ts.project_id);
-                      const isOwner = currentUserEmpId === ts.employee_id;
-                      const isLocked = isOwner && (ts.is_submitted === 1 || ts.is_approved === 1);
-                      return (
-                        <tr key={ts.timesheet_id || ts.temp_key}>
-                          <td>{project?.PRJ_NAME || "Unnamed Project"}</td>
-                          {["sun", "mon", "tue", "wed", "thu", "fri", "sat"].map((day) => (
-                            <td key={`${ts.timesheet_id || ts.temp_key}_${day}`}>
-                              <input
-                                type="number"
-                                name={`${day}_hours`}
-                                value={ts[`${day}_hours`] ?? ""}
-                                onChange={(e) => handleInputChange(e, ts.timesheet_id || ts.temp_key, selectedEmployee ? ts.employee_id : null)}
-                                step="0.25"
-                                min="0"
-                                max="24"
-                                className="hours-input"
-                                disabled={isLocked}
-                                style={{ cursor: isLocked ? "not-allowed" : "text" }}
-                              />
-                              <textarea
-                                name={`${day}_comment`}
-                                value={ts[`${day}_comment`] ?? ""}
-                                onChange={(e) => handleInputChange(e, ts.timesheet_id || ts.temp_key, selectedEmployee ? ts.employee_id : null, day)}
-                                onFocus={() => handleCommentFocus(ts.timesheet_id || ts.temp_key, day)}
-                                className="comment-textarea"
-                                disabled={isLocked}
-                                style={{ cursor: isLocked ? "not-allowed" : "text" }}
-                              />
-                            </td>
+          {selectedDate && (
+            <div className="timesheet-content">
+              <div className="employee-selection">
+                <label>Select Employee: </label>
+                <select
+                  value={selectedEmployee}
+                  onChange={(e) => {
+                    setSelectedEmployee(e.target.value);
+                    setError(null);
+                    setSuccess(false);
+                    setSelectedComment({ timesheetId: null, day: null });
+                    setNoAttachmentFlag(Object.values(attachments).every((atts) => !atts.length));
+                  }}
+                  className="employee-dropdown"
+                >
+                  <option value="">Your TimeSheets</option>
+                  {employees.map((emp) => (
+                    <option key={emp.empid} value={emp.empid}>
+                      {`${emp.EMP_FST_NAME} ${emp.EMP_LAST_NAME || ""}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {!selectedEmployee && !isSuperior && timesheets.some((ts) => ts.is_approved === 1) && superiorName && (
+                <p className="approval-message">Approved by {superiorName}</p>
+              )}
+              {((!selectedEmployee && timesheets.length > 0) || (selectedEmployee && employeeTimesheets.filter((t) => t.employee_id === selectedEmployee).length > 0)) && (
+                <div>
+                  <form onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSave();
+                  }}>
+                    <table className="timesheet-table">
+                      <thead>
+                        <tr>
+                          <th>Project Name</th>
+                          {["sun", "mon", "tue", "wed", "thu", "fri", "sat"].map((day, index) => (
+                            <th key={day}>{getDateForDay(getWeekStartDate(selectedDate), index)}</th>
                           ))}
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-                <div className="selected-comment-section">
-                  <label>Selected Comment:</label>
-                  <textarea
-                    value={
-                      selectedComment.timesheetId && selectedComment.day
-                        ? (selectedEmployee
-                            ? employeeTimesheets.find((t) => t.timesheet_id === selectedComment.timesheetId || t.temp_key === selectedComment.timesheetId)
-                            : timesheets.find((t) => t.timesheet_id === selectedComment.timesheetId || t.temp_key === selectedComment.timesheetId))?.[
-                            `${selectedComment.day}_comment`
-                          ] ?? ""
-                        : ""
-                    }
-                    onChange={(e) => {
-                      const newValue = e.target.value;
-                      const targetTimesheets = selectedEmployee ? employeeTimesheets : timesheets;
-                      const ts = targetTimesheets.find((t) => t.timesheet_id === selectedComment.timesheetId || t.temp_key === selectedComment.timesheetId);
-                      if (ts) {
-                        const isOwner = currentUserEmpId === ts.employee_id;
-                        const isLocked = isOwner && (ts.is_submitted === 1 || ts.is_approved === 1);
-                        if (!isLocked) {
-                          const updateTimesheets = (prev) =>
-                            prev.map((t) =>
-                              t.timesheet_id === selectedComment.timesheetId || t.temp_key === selectedComment.timesheetId
-                                ? { ...t, [`${selectedComment.day}_comment`]: newValue === "" ? null : newValue }
-                                : t
-                            );
-                          selectedEmployee ? setEmployeeTimesheets(updateTimesheets) : setTimesheets(updateTimesheets);
-                        }
-                      }
-                    }}
-                    onFocus={() => selectedComment.timesheetId && selectedComment.day && handleCommentFocus(selectedComment.timesheetId, selectedComment.day)}
-                    className="comment-display-textarea"
-                    placeholder="Select a comment in the table to edit it here..."
-                    disabled={
-                      !selectedComment.timesheetId ||
-                      !selectedComment.day ||
-                      (getTimesheetById(selectedComment.timesheetId)?.is_submitted === 1 &&
-                        getTimesheetById(selectedComment.timesheetId)?.is_approved === 1 &&
-                        currentUserEmpId === getTimesheetById(selectedComment.timesheetId)?.employee_id)
-                    }
-                    style={{
-                      cursor:
-                        !selectedComment.timesheetId ||
-                        !selectedComment.day ||
-                        (getTimesheetById(selectedComment.timesheetId)?.is_submitted === 1 &&
-                          getTimesheetById(selectedComment.timesheetId)?.is_approved === 1 &&
-                          currentUserEmpId === getTimesheetById(selectedComment.timesheetId)?.employee_id)
-                          ? "not-allowed"
-                          : "text",
-                    }}
-                  />
-                </div>
-                <div className="attachment-field">
-                  <label>Attachments for the Week:</label>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    className="file-input"
-                    multiple
-                    disabled={isAnySubmittedOrApproved(selectedEmployee ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee) : timesheets)}
-                    style={{
-                      cursor: isAnySubmittedOrApproved(selectedEmployee ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee) : timesheets)
-                        ? "not-allowed"
-                        : "pointer",
-                    }}
-                    onChange={() => setNoAttachmentFlag(false)}
-                  />
-                  <label className="no-attachment-label">
-                    <input
-                      type="checkbox"
-                      checked={noAttachmentFlag}
-                      onChange={(e) => handleNoAttachmentChange(e.target.checked)}
-                      disabled={isAnySubmittedOrApproved(selectedEmployee ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee) : timesheets)}
-                      style={{
-                        cursor: isAnySubmittedOrApproved(selectedEmployee ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee) : timesheets)
-                          ? "not-allowed"
-                          : "pointer",
-                      }}
-                    />
-                    No Attachment
-                  </label>
-                  {Object.values(attachments).some((atts) => atts.length > 0) && (
-                    <div className="attached-files">
-                      <h5>Attached Files:</h5>
-                      <ul>
-                        {[...new Set(Object.values(attachments).flat().map((a) => a.attachment_id))].map((attachmentId) => {
-                          const attachment = Object.values(attachments)
-                            .flat()
-                            .find((a) => a.attachment_id === attachmentId);
-                          const ts = getTimesheetById(attachment.timesheet_id);
+                      </thead>
+                      <tbody>
+                        {(selectedEmployee ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee) : timesheets).map((ts) => {
+                          const project = selectedEmployee
+                            ? (employeeProjects[selectedEmployee] || []).find((p) => p.PRJ_ID === ts.project_id)
+                            : projects.find((p) => p.PRJ_ID === ts.project_id);
+                          const isOwner = currentUserEmpId === ts.employee_id;
+                          const isLocked = isOwner && (ts.is_submitted === 1 || ts.is_approved === 1);
                           return (
-                            <li key={attachment.attachment_id}>
-                              <a
-                                href={attachment.file_path}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="attachment-link"
-                                style={{ cursor: ts?.is_submitted === 1 || ts?.is_approved === 1 ? "not-allowed" : "pointer" }}
-                              >
-                                {attachment.file_name}
-                              </a>
-                              <button
-                                type="button"
-                                className="remove-button"
-                                onClick={() => handleRemoveAttachment(attachment.attachment_id, attachment.timesheet_id)}
-                                disabled={isAnySubmittedOrApproved(selectedEmployee ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee) : timesheets)}
-                                style={{
-                                  cursor: isAnySubmittedOrApproved(selectedEmployee ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee) : timesheets)
-                                    ? "not-allowed"
-                                    : "pointer",
-                                }}
-                              >
-                                Remove
-                              </button>
-                            </li>
+                            <tr key={ts.timesheet_id || ts.temp_key}>
+                              <td>{project?.PRJ_NAME || "Unnamed Project"}</td>
+                              {["sun", "mon", "tue", "wed", "thu", "fri", "sat"].map((day) => (
+                                <td key={`${ts.timesheet_id || ts.temp_key}_${day}`}>
+                                  <input
+                                    type="number"
+                                    name={`${day}_hours`}
+                                    value={ts[`${day}_hours`] ?? ""}
+                                    onChange={(e) => handleInputChange(e, ts.timesheet_id || ts.temp_key, selectedEmployee ? ts.employee_id : null)}
+                                    step="0.25"
+                                    min="0"
+                                    max="24"
+                                    className="hours-input"
+                                    disabled={isLocked}
+                                    style={{ cursor: isLocked ? "not-allowed" : "text" }}
+                                  />
+                                  <textarea
+                                    name={`${day}_comment`}
+                                    value={ts[`${day}_comment`] ?? ""}
+                                    onChange={(e) => handleInputChange(e, ts.timesheet_id || ts.temp_key, selectedEmployee ? ts.employee_id : null, day)}
+                                    onFocus={() => handleCommentFocus(ts.timesheet_id || ts.temp_key, day)}
+                                    className="comment-textarea"
+                                    disabled={isLocked}
+                                    style={{ cursor: isLocked ? "not-allowed" : "text" }}
+                                  />
+                                </td>
+                              ))}
+                            </tr>
                           );
                         })}
-                      </ul>
+                      </tbody>
+                    </table>
+                    <div className="selected-comment-section">
+                      <label>Selected Comment:</label>
+                      <textarea
+                        value={
+                          selectedComment.timesheetId && selectedComment.day
+                            ? (selectedEmployee
+                                ? employeeTimesheets.find((t) => t.timesheet_id === selectedComment.timesheetId || t.temp_key === selectedComment.timesheetId)
+                                : timesheets.find((t) => t.timesheet_id === selectedComment.timesheetId || t.temp_key === selectedComment.timesheetId))?.[
+                                `${selectedComment.day}_comment`
+                              ] ?? ""
+                            : ""
+                        }
+                        onChange={(e) => {
+                          const newValue = e.target.value;
+                          const targetTimesheets = selectedEmployee ? employeeTimesheets : timesheets;
+                          const ts = targetTimesheets.find((t) => t.timesheet_id === selectedComment.timesheetId || t.temp_key === selectedComment.timesheetId);
+                          if (ts) {
+                            const isOwner = currentUserEmpId === ts.employee_id;
+                            const isLocked = isOwner && (ts.is_submitted === 1 || ts.is_approved === 1);
+                            if (!isLocked) {
+                              const updateTimesheets = (prev) =>
+                                prev.map((t) =>
+                                  t.timesheet_id === selectedComment.timesheetId || t.temp_key === selectedComment.timesheetId
+                                    ? { ...t, [`${selectedComment.day}_comment`]: newValue === "" ? null : newValue }
+                                    : t
+                                );
+                              selectedEmployee ? setEmployeeTimesheets(updateTimesheets) : setTimesheets(updateTimesheets);
+                            }
+                          }
+                        }}
+                        onFocus={() => selectedComment.timesheetId && selectedComment.day && handleCommentFocus(selectedComment.timesheetId, selectedComment.day)}
+                        className="comment-display-textarea"
+                        placeholder="Select a comment in the table to edit it here..."
+                        disabled={
+                          !selectedComment.timesheetId ||
+                          !selectedComment.day ||
+                          (getTimesheetById(selectedComment.timesheetId)?.is_submitted === 1 &&
+                            getTimesheetById(selectedComment.timesheetId)?.is_approved === 1 &&
+                            currentUserEmpId === getTimesheetById(selectedComment.timesheetId)?.employee_id)
+                        }
+                        style={{
+                          cursor:
+                            !selectedComment.timesheetId ||
+                            !selectedComment.day ||
+                            (getTimesheetById(selectedComment.timesheetId)?.is_submitted === 1 &&
+                              getTimesheetById(selectedComment.timesheetId)?.is_approved === 1 &&
+                              currentUserEmpId === getTimesheetById(selectedComment.timesheetId)?.employee_id)
+                              ? "not-allowed"
+                              : "text",
+                        }}
+                      />
                     </div>
-                  )}
-                </div>
-                {error && <p className="error-message">{error}</p>}
-                {success && <p className="success-message">Action successful!</p>}
-                <div className="button-group">
-                  <button
-                    type="submit"
-                    className="save-button"
-                    disabled={isSaving || (selectedEmployee ? employeeTimesheets.some((t) => t.employee_id === selectedEmployee && (t.is_submitted === 1 || t.is_approved === 1)) : timesheets.some((ts) => ts.is_submitted === 1 || ts.is_approved === 1))}
-                    style={{
-                      cursor:
-                        isSaving ||
-                        (selectedEmployee
-                          ? employeeTimesheets.some((t) => t.employee_id === selectedEmployee && (t.is_submitted === 1 || t.is_approved === 1))
-                          : timesheets.some((ts) => ts.is_submitted === 1 || ts.is_approved === 1))
-                          ? "not-allowed"
-                          : "pointer",
-                    }}
-                  >
-                    Save
-                  </button>
-                  {!selectedEmployee && (
-                    <button
-                      type="button"
-                      className="submit-button"
-                      onClick={() => handleSave(true)}
-                      disabled={isSaving || (selectedEmployee ? employeeTimesheets.some((t) => t.employee_id === selectedEmployee && (t.is_submitted === 1 || t.is_approved === 1)) : timesheets.some((ts) => ts.is_submitted === 1 || ts.is_approved === 1))}
-                      style={{
-                        cursor:
-                          isSaving ||
-                          (selectedEmployee
-                            ? employeeTimesheets.some((t) => t.employee_id === selectedEmployee && (t.is_submitted === 1 || t.is_approved === 1))
-                            : timesheets.some((ts) => ts.is_submitted === 1 || ts.is_approved === 1))
+                    <div className="attachment-field">
+                      <label>Attachments for the Week:</label>
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        className="file-input"
+                        multiple
+                        disabled={isAnySubmittedOrApproved(selectedEmployee ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee) : timesheets)}
+                        style={{
+                          cursor: isAnySubmittedOrApproved(selectedEmployee ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee) : timesheets)
                             ? "not-allowed"
                             : "pointer",
-                      }}
-                    >
-                      Submit
-                    </button>
+                        }}
+                        onChange={() => setNoAttachmentFlag(false)}
+                      />
+                      <label className="no-attachment-label">
+                        <input
+                          type="checkbox"
+                          checked={noAttachmentFlag}
+                          onChange={(e) => handleNoAttachmentChange(e.target.checked)}
+                          disabled={isAnySubmittedOrApproved(selectedEmployee ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee) : timesheets)}
+                          style={{
+                            cursor: isAnySubmittedOrApproved(selectedEmployee ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee) : timesheets)
+                              ? "not-allowed"
+                              : "pointer",
+                          }}
+                        />
+                        No Attachment
+                      </label>
+                      {Object.values(attachments).some((atts) => atts.length > 0) && (
+                        <div className="attached-files">
+                          <h5>Attached Files:</h5>
+                          <ul>
+                            {[...new Set(Object.values(attachments).flat().map((a) => a.attachment_id))].map((attachmentId) => {
+                              const attachment = Object.values(attachments)
+                                .flat()
+                                .find((a) => a.attachment_id === attachmentId);
+                              const ts = getTimesheetById(attachment.timesheet_id);
+                              return (
+                                <li key={attachment.attachment_id}>
+                                  <a
+                                    href={attachment.file_path}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="attachment-link"
+                                    style={{ cursor: ts?.is_submitted === 1 || ts?.is_approved === 1 ? "not-allowed" : "pointer" }}
+                                  >
+                                    {attachment.file_name}
+                                  </a>
+                                  <button
+                                    type="button"
+                                    className="remove-button"
+                                    onClick={() => handleRemoveAttachment(attachment.attachment_id, attachment.timesheet_id)}
+                                    disabled={isAnySubmittedOrApproved(selectedEmployee ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee) : timesheets)}
+                                    style={{
+                                      cursor: isAnySubmittedOrApproved(selectedEmployee ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee) : timesheets)
+                                        ? "not-allowed"
+                                        : "pointer",
+                                    }}
+                                  >
+                                    Remove
+                                  </button>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                    {error && <p className="error-message">{error}</p>}
+                    {success && <p className="success-message">Action successful!</p>}
+                    <div className="button-group">
+                      <button
+                        type="submit"
+                        className="save-button"
+                        disabled={isSaving || (selectedEmployee ? employeeTimesheets.some((t) => t.employee_id === selectedEmployee && (t.is_submitted === 1 || t.is_approved === 1)) : timesheets.some((ts) => ts.is_submitted === 1 || ts.is_approved === 1))}
+                        style={{
+                          cursor:
+                            isSaving ||
+                            (selectedEmployee
+                              ? employeeTimesheets.some((t) => t.employee_id === selectedEmployee && (t.is_submitted === 1 || t.is_approved === 1))
+                              : timesheets.some((ts) => ts.is_submitted === 1 || ts.is_approved === 1))
+                              ? "not-allowed"
+                              : "pointer",
+                        }}
+                      >
+                        Save
+                      </button>
+                      {!selectedEmployee && (
+                        <button
+                          type="button"
+                          className="submit-button"
+                          onClick={() => handleSave(true)}
+                          disabled={isSaving || (selectedEmployee ? employeeTimesheets.some((t) => t.employee_id === selectedEmployee && (t.is_submitted === 1 || t.is_approved === 1)) : timesheets.some((ts) => ts.is_submitted === 1 || ts.is_approved === 1))}
+                          style={{
+                            cursor:
+                              isSaving ||
+                              (selectedEmployee
+                                ? employeeTimesheets.some((t) => t.employee_id === selectedEmployee && (t.is_submitted === 1 || t.is_approved === 1))
+                                : timesheets.some((ts) => ts.is_submitted === 1 || ts.is_approved === 1))
+                                ? "not-allowed"
+                                : "pointer",
+                          }}
+                        >
+                          Submit
+                        </button>
+                      )}
+                    </div>
+                  </form>
+                  {selectedEmployee && employeeTimesheets.filter((t) => t.employee_id === selectedEmployee).length > 0 && (
+                    <div className="approve-section">
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={employeeTimesheets.filter((t) => t.employee_id === selectedEmployee).every((ts) => ts.is_approved)}
+                          onChange={(e) => handleApprovedChange(e, selectedEmployee)}
+                          disabled={isSaving}
+                          style={{ cursor: isSaving ? "not-allowed" : "pointer" }}
+                        />
+                        Approve All
+                      </label>
+                    </div>
                   )}
-                </div>
-              </form>
-              {selectedEmployee && employeeTimesheets.filter((t) => t.employee_id === selectedEmployee).length > 0 && (
-                <div className="approve-section">
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={employeeTimesheets.filter((t) => t.employee_id === selectedEmployee).every((ts) => ts.is_approved)}
-                      onChange={(e) => handleApprovedChange(e, selectedEmployee)}
-                      disabled={isSaving}
-                      style={{ cursor: isSaving ? "not-allowed" : "pointer" }}
-                    />
-                    Approve All
-                  </label>
                 </div>
               )}
             </div>
           )}
-        </div>
+        </>
       )}
     </div>
   );

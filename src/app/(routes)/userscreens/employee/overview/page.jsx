@@ -112,7 +112,7 @@ export default async function OverviewPage({ searchParams }) {
 
     // Fetch active statuses for the organization
     [statuses] = await pool.query(
-      'SELECT id, Name FROM generic_values WHERE g_id = 3 AND cutting = 1 AND orgid = ? AND isactive = 1',
+      'SELECT id, Name FROM generic_values WHERE g_id = 3  AND orgid = ? AND isactive = 1',
       [orgid]
     );
 

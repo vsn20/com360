@@ -30,6 +30,12 @@ const getWeekStartDate = (date) => {
   }
 };
 
+const getWeekEndDate = (weekStart) => {
+  const d = new Date(weekStart);
+  d.setDate(d.getDate() + 6);
+  return d.toISOString().split("T")[0];
+};
+
 const getAllSubordinates = async (pool, superiorEmpId, visited = new Set()) => {
   if (visited.has(superiorEmpId)) return [];
   visited.add(superiorEmpId);
@@ -41,7 +47,7 @@ const getAllSubordinates = async (pool, superiorEmpId, visited = new Set()) => {
     );
     console.log("Direct subordinates for:", superiorEmpId, directSubordinates);
 
-    let allSubordinates = [...directSubordinates];
+    let allSubordinates = directSubordinates.map(sub => ({ ...sub, isDelegated: false }));
     for (const subordinate of directSubordinates) {
       const nestedSubordinates = await getAllSubordinates(pool, subordinate.empid, visited);
       allSubordinates = allSubordinates.concat(nestedSubordinates);
@@ -64,19 +70,19 @@ const getDelegatedSubordinates = async (pool, userEmpId) => {
   let allSubordinates = [];
   for (const superiorId of delegatedSuperiors) {
     const subordinates = await getAllSubordinates(pool, superiorId, new Set());
-    allSubordinates = allSubordinates.concat(subordinates);
+    allSubordinates = allSubordinates.concat(subordinates.map(sub => ({ ...sub, isDelegated: true })));
   }
 
   if (delegatedSuperiors.length > 0) {
     const placeholders = delegatedSuperiors.map(() => "?").join(",");
     const [hierarchyRows] = await pool.execute(
-      `SELECT empid, superior FROM C_EMP WHERE superior IN (${placeholders})`,
+      `SELECT empid, superior, EMP_FST_NAME, EMP_LAST_NAME FROM C_EMP WHERE superior IN (${placeholders})`,
       [...delegatedSuperiors]
     );
     const subordinateIds = hierarchyRows.map((row) => row.empid);
     for (const subId of subordinateIds) {
       const nestedSubordinates = await getAllSubordinates(pool, subId, new Set());
-      allSubordinates = allSubordinates.concat(nestedSubordinates);
+      allSubordinates = allSubordinates.concat(nestedSubordinates.map(sub => ({ ...sub, isDelegated: true })));
     }
   }
 
@@ -130,14 +136,17 @@ export async function fetchTimesheetAndProjects(selectedDate) {
 
   const employeeId = userRows[0].empid;
   const weekStart = getWeekStartDate(selectedDate);
+  const weekEnd = getWeekEndDate(weekStart);
   const year = new Date(weekStart).getFullYear();
 
   const [projRows] = await pool.execute(
     `SELECT pe.PRJ_ID, COALESCE(p.PRJ_NAME, 'Unnamed Project') AS PRJ_NAME, pe.BILL_RATE, pe.BILL_TYPE 
      FROM C_PROJ_EMP pe 
      LEFT JOIN C_PROJECT p ON pe.PRJ_ID = p.PRJ_ID 
-     WHERE pe.EMP_ID = ? AND ? BETWEEN pe.START_DT AND COALESCE(pe.END_DT, '9999-12-31')`,
-    [employeeId, weekStart]
+     WHERE pe.EMP_ID = ? 
+     AND pe.START_DT <= ? 
+     AND COALESCE(pe.END_DT, '9999-12-31') >= ?`,
+    [employeeId, weekEnd, weekStart]
   );
 
   const timesheets = [];
@@ -197,6 +206,7 @@ export async function fetchTimesheetsForSuperior(selectedDate) {
 
   const superiorEmpId = userRows[0].empid;
   const weekStart = getWeekStartDate(selectedDate);
+  const weekEnd = getWeekEndDate(weekStart);
   const year = new Date(weekStart).getFullYear();
 
   const directSubordinates = await getAllSubordinates(pool, superiorEmpId);
@@ -213,8 +223,10 @@ export async function fetchTimesheetsForSuperior(selectedDate) {
       `SELECT pe.PRJ_ID, COALESCE(p.PRJ_NAME, 'Unnamed Project') AS PRJ_NAME, pe.BILL_RATE, pe.BILL_TYPE 
        FROM C_PROJ_EMP pe 
        LEFT JOIN C_PROJECT p ON pe.PRJ_ID = p.PRJ_ID 
-       WHERE pe.EMP_ID = ? AND ? BETWEEN pe.START_DT AND COALESCE(pe.END_DT, '9999-12-31')`,
-      [employee.empid, weekStart]
+       WHERE pe.EMP_ID = ? 
+       AND pe.START_DT <= ? 
+       AND COALESCE(pe.END_DT, '9999-12-31') >= ?`,
+      [employee.empid, weekEnd, weekStart]
     );
     projects[employee.empid] = projRows;
 
@@ -247,7 +259,7 @@ export async function fetchTimesheetsForSuperior(selectedDate) {
         invoice_path: null,
         invoice_generated_at: null,
         temp_key: `temp-${Date.now()}-${project.PRJ_ID}`,
-        employeeName: `${employee.EMP_FST_NAME} ${employee.EMP_LAST_NAME || ""}`,
+        employeeName: `${employee.EMP_FST_NAME} ${employee.EMP_LAST_NAME || ""}${employee.isDelegated ? " [del]" : ""}`.trim(),
       };
       timesheets.push(ts);
 
@@ -514,14 +526,17 @@ export async function fetchPendingTimesheets() {
     employeeIds
   );
 
-  const timesheets = timesheetRows.map((ts) => ({
-    ...ts,
-    employee_name: `${ts.EMP_FST_NAME} ${ts.EMP_LAST_NAME || ""}`.trim(),
-    total_hours: ["sun_hours", "mon_hours", "tue_hours", "wed_hours", "thu_hours", "fri_hours", "sat_hours"].reduce(
-      (sum, day) => sum + (parseFloat(ts[day]) || 0),
-      0
-    ),
-  }));
+  const timesheets = timesheetRows.map((ts) => {
+    const employee = allSubordinates.find((emp) => emp.empid === ts.employee_id);
+    return {
+      ...ts,
+      employee_name: `${ts.EMP_FST_NAME} ${ts.EMP_LAST_NAME || ""}${employee?.isDelegated ? " [del]" : ""}`.trim(),
+      total_hours: ["sun_hours", "mon_hours", "tue_hours", "wed_hours", "thu_hours", "fri_hours", "sat_hours"].reduce(
+        (sum, day) => sum + (parseFloat(ts[day]) || 0),
+        0
+      ),
+    };
+  });
 
   return { timesheets, employees: allSubordinates };
 }
