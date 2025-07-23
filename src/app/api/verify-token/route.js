@@ -21,6 +21,14 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Missing empid or orgid in token' }, { status: 400 });
     }
 
+    // Grant access to upload paths for everyone
+    let isUploadPath = pathname && pathname.match(/^\/Uploads\/[^/]+\/[^/]+\/[^/]+$/);
+    const isNewUploadPath = pathname && pathname.match(/^\/Uploads\/UPLOAD\/[^/]+\/[^/]+\/[^/]+$/);
+    if (isUploadPath || isNewUploadPath) {
+      console.log(`Universal access granted to ${pathname} for empid ${empid} (upload path)`);
+      return NextResponse.json({ success: true, accessibleItems: [] });
+    }
+
     // Connect to the database
     const pool = await DBconnection();
 
@@ -210,7 +218,7 @@ export async function POST(request) {
         priority: 10000,
       });
       accessibleItems.push({
-        href: '/uploads/:employeeId/:date/:filename',
+        href: '/Uploads/:employeeId/:date/:filename',
         isMenu: false,
         priority: 10001,
       });
@@ -245,7 +253,7 @@ export async function POST(request) {
     const ispendingapproval = pathname.match(/^\/userscreens\/timesheets\/pendingapproval$/);
     const isaddleave = pathname.match(/^\/userscreens\/leaves\/addleave$/);
     const ispendingleaves = pathname.match(/^\/userscreens\/leaves\/pending$/);
-    const isUploadPath = pathname.match(/^\/uploads\/[^/]+\/[^/]+\/[^/]+$/);
+     isUploadPath = pathname.match(/^\/Uploads\/[^/]+\/[^/]+\/[^/]+$/);
 
     if (isEditEmployeePath && accessiblePaths.includes('/userscreens/employee/edit/:empid')) {
       console.log(`Access granted to ${pathname} for empid ${empid} (dynamic employee edit route)`);
@@ -279,7 +287,7 @@ export async function POST(request) {
       console.log(`Access granted to ${pathname} for empid ${empid} (dynamic project assignment edit route)`);
       return NextResponse.json({ success: true, accessibleItems });
     }
-    if (isUploadPath && accessiblePaths.includes('/uploads/:employeeId/:date/:filename')) {
+    if (isUploadPath && accessiblePaths.includes('/Uploads/:employeeId/:date/:filename')) {
       console.log(`Access granted to ${pathname} for empid ${empid} (upload path)`);
       return NextResponse.json({ success: true, accessibleItems });
     }

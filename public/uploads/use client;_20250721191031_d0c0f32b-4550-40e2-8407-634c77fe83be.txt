@@ -1,0 +1,4050 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import AddServiceReq from "./AddServiceReq";
+import { fetchServiceRequestById, updateServiceRequest } from "@/app/serverActions/ServiceRequests/Overview";
+import "./overview.css";
+
+const Overview = ({
+  orgid,
+  empid,
+  employees,
+  type,
+  subtype,
+  priority,
+  serviceRequests,
+  previousServiceRequests,
+}) => {
+  const [selectedSrNum, setSelectedSrNum] = useState(null);
+  const [serviceRequestDetails, setServiceRequestDetails] = useState(null);
+  const [isAdd, setIsAdd] = useState(false);
+  const [isEditingBasic, setIsEditingBasic] = useState(false);
+  const [isEditingAdditional, setIsEditingAdditional] = useState(false);
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [isEditingAttachments, setIsEditingAttachments] = useState(false);
+  const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [allServiceRequests, setAllServiceRequests] = useState(serviceRequests || []);
+  const [formData, setFormData] = useState({
+    serviceName: "",
+    statusCd: "Open",
+    priorityCd: "",
+    typeCd: "",
+    subTypeCd: "",
+    assignedTo: "",
+    dueDate: "",
+    escalatedFlag: false,
+    escalatedTo: "",
+    escalatedDate: "",
+    description: "",
+    comments: "",
+    contactId: "",
+    accountId: "",
+    assetId: "",
+    parRowId: "",
+  });
+  const [existingFiles, setExistingFiles] = useState([]);
+  const [newFiles, setNewFiles] = useState([]);
+
+  useEffect(() => {
+    const loadServiceRequestDetails = async () => {
+      if (!selectedSrNum) {
+        console.log("No selectedSrNum, resetting details");
+        setServiceRequestDetails(null);
+        setFormData({
+          serviceName: "",
+          statusCd: "Open",
+          priorityCd: "",
+          typeCd: "",
+          subTypeCd: "",
+          assignedTo: "",
+          dueDate: "",
+          escalatedFlag: false,
+          escalatedTo: "",
+          escalatedDate: "",
+          description: "",
+          comments: "",
+          contactId: "",
+          accountId: "",
+          assetId: "",
+          parRowId: "",
+        });
+        setExistingFiles([]);
+        setNewFiles([]);
+        return;
+      }
+      try {
+        setIsLoading(true);
+        const serviceRequest = await fetchServiceRequestById(selectedSrNum, orgid, empid);
+        setServiceRequestDetails(serviceRequest);
+        setFormData({
+          serviceName: serviceRequest.SERVICE_NAME || "",
+          statusCd: serviceRequest.STATUS_CD || "Open",
+          priorityCd: serviceRequest.PRIORITY_CD || "",
+          typeCd: serviceRequest.TYPE_CD || "",
+          subTypeCd: serviceRequest.SUB_TYPE_CD || "",
+          assignedTo: serviceRequest.ASSIGNED_TO || "",
+          dueDate: serviceRequest.DUE_DATE
+            ? new Date(serviceRequest.DUE_DATE).toISOString().split("T")[0]
+            : "",
+          escalatedFlag: !!serviceRequest.ESCALATED_FLAG,
+          escalatedTo: serviceRequest.ESCALATED_TO || "",
+          escalatedDate: serviceRequest.ESCALATED_DATE
+            ? new Date(serviceRequest.ESCALATED_DATE).toISOString().split("T")[0]
+            : "",
+          description: serviceRequest.DESCRIPTION || "",
+          comments: serviceRequest.COMMENTS || "",
+          contactId: serviceRequest.CONTACT_ID || "",
+          accountId: serviceRequest.ACCOUNT_ID || "",
+          assetId: serviceRequest.ASSET_ID || "",
+          parRowId: serviceRequest.PAR_ROW_ID || "",
+        });
+        setExistingFiles(
+          serviceRequest.attachments.map((att) => ({
+            sr_att_id: att.SR_ATT_ID,
+            name: att.FILE_NAME,
+            file_path: att.FILE_PATH,
+            type: att.TYPE_CD || "",
+            comments: att.COMMENTS || "",
+            attachmentStatus: att.ATTACHMENT_STATUS || "",
+          })) || []
+        );
+        setNewFiles([]);
+        setError(null);
+      } catch (err) {
+        console.error("Error loading service request details:", err);
+        setError(err.message || "Failed to load service request details");
+        setServiceRequestDetails(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadServiceRequestDetails();
+  }, [selectedSrNum, orgid, empid]);
+
+  const handleRowClick = (srNum) => {
+    setSelectedSrNum(srNum);
+    setIsEditingBasic(false);
+    setIsEditingAdditional(false);
+    setIsEditingDescription(false);
+    setIsEditingAttachments(false);
+    setError(null);
+    setIsAdd(false);
+  };
+
+  const handleBackClick = () => {
+    setSelectedSrNum(null);
+    setIsEditingBasic(false);
+    setIsEditingAdditional(false);
+    setIsEditingDescription(false);
+    setIsEditingAttachments(false);
+    setError(null);
+    setIsAdd(false);
+  };
+
+  const handleAddServiceRequest = () => {
+    setSelectedSrNum(null);
+    setIsEditingBasic(false);
+    setIsEditingAdditional(false);
+    setIsEditingDescription(false);
+    setIsEditingAttachments(false);
+    setError(null);
+    setIsAdd(true);
+  };
+
+  const handleEdit = (section) => {
+    if (section === "basic") setIsEditingBasic(true);
+    if (section === "additional") setIsEditingAdditional(true);
+    if (section === "description") setIsEditingDescription(true);
+    if (section === "attachments") setIsEditingAttachments(true);
+  };
+
+  const handleFormChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
+
+  const handleFileChange = (e) => {
+    const newFiles = Array.from(e.target.files || []).map((file) => ({
+      file,
+      name: file.name,
+      type: file.type || "application/octet-stream",
+      comments: "",
+      attachmentStatus: "",
+    }));
+    console.log("New files selected:", newFiles);
+    setNewFiles((prev) => [...prev, ...newFiles]);
+  };
+
+  const handleFileCommentChange = (index, value, isExisting = false) => {
+    if (isExisting) {
+      setExistingFiles((prev) =>
+        prev.map((file, i) => (i === index ? { ...file, comments: value } : file))
+      );
+    } else {
+      setNewFiles((prev) =>
+        prev.map((file, i) => (i === index ? { ...file, comments: value } : file))
+      );
+    }
+  };
+
+  const handleFileStatusChange = (index, value, isExisting = false) => {
+    if (isExisting) {
+      setExistingFiles((prev) =>
+        prev.map((file, i) => (i === index ? { ...file, attachmentStatus: value } : file))
+      );
+    } else {
+      setNewFiles((prev) =>
+        prev.map((file, i) => (i === index ? { ...file, attachmentStatus: value } : file))
+      );
+    }
+  };
+
+  const handleRemoveFile = (index, isExisting = false) => {
+    if (isExisting) {
+      setExistingFiles((prev) => prev.filter((_, i) => i !== index));
+    } else {
+      setNewFiles((prev) => prev.filter((_, i) => i !== index));
+    }
+  };
+
+  const handleSave = async (section) => {
+    setError(null);
+    setIsLoading(true);
+
+    if (section === "basic") {
+      if (!formData.serviceName) {
+        setError("Service Name is required.");
+        setIsLoading(false);
+        return;
+      }
+      if (!formData.priorityCd) {
+        setError("Priority is required.");
+        setIsLoading(false);
+        return;
+      }
+      if (!formData.typeCd) {
+        setError("Type is required.");
+        setIsLoading(false);
+        return;
+      }
+    }
+
+    const formDataToSend = new FormData();
+    formDataToSend.append("SR_NUM", selectedSrNum || "");
+    formDataToSend.append("orgid", orgid || "");
+    formDataToSend.append("empid", empid || "");
+    formDataToSend.append("section", section);
+
+    if (section === "basic") {
+      formDataToSend.append("serviceName", formData.serviceName);
+      formDataToSend.append("statusCd", formData.statusCd);
+      formDataToSend.append("priorityCd", formData.priorityCd);
+      formDataToSend.append("typeCd", formData.typeCd);
+      formDataToSend.append("subTypeCd", formData.subTypeCd);
+      formDataToSend.append("assignedTo", formData.assignedTo);
+      formDataToSend.append("dueDate", formData.dueDate);
+    } else if (section === "additional") {
+      formDataToSend.append("escalatedFlag", formData.escalatedFlag.toString());
+      formDataToSend.append("escalatedTo", formData.escalatedTo);
+      formDataToSend.append("escalatedDate", formData.escalatedDate);
+      formDataToSend.append("contactId", formData.contactId);
+      formDataToSend.append("accountId", formData.accountId);
+      formDataToSend.append("assetId", formData.assetId);
+      formDataToSend.append("parRowId", formData.parRowId);
+    } else if (section === "description") {
+      formDataToSend.append("description", formData.description);
+      formDataToSend.append("comments", formData.comments);
+    } else if (section === "attachments") {
+      newFiles.forEach((fileObj, index) => {
+        formDataToSend.append(`attachment[${index}]`, fileObj.file);
+        formDataToSend.append(`fileComments[${index}]`, fileObj.comments);
+        formDataToSend.append(`fileStatuses[${index}]`, fileObj.attachmentStatus);
+        formDataToSend.append(`fileTypes[${index}]`, fileObj.type);
+      });
+      existingFiles.forEach((fileObj, index) => {
+        formDataToSend.append(`existingFiles[${index}]`, JSON.stringify(fileObj));
+      });
+    }
+
+    try {
+      const result = await updateServiceRequest(formDataToSend);
+      if (result && result.success) {
+        const updatedRequest = await fetchServiceRequestById(selectedSrNum, orgid, empid);
+        setServiceRequestDetails(updatedRequest);
+        setFormData({
+          serviceName: updatedRequest.SERVICE_NAME || "",
+          statusCd: updatedRequest.STATUS_CD || "Open",
+          priorityCd: updatedRequest.PRIORITY_CD || "",
+          typeCd: updatedRequest.TYPE_CD || "",
+          subTypeCd: updatedRequest.SUB_TYPE_CD || "",
+          assignedTo: updatedRequest.ASSIGNED_TO || "",
+          dueDate: updatedRequest.DUE_DATE
+            ? new Date(updatedRequest.DUE_DATE).toISOString().split("T")[0]
+            : "",
+          escalatedFlag: !!updatedRequest.ESCALATED_FLAG,
+          escalatedTo: updatedRequest.ESCALATED_TO || "",
+          escalatedDate: updatedRequest.ESCALATED_DATE
+            ? new Date(updatedRequest.ESCALATED_DATE).toISOString().split("T")[0]
+            : "",
+          description: updatedRequest.DESCRIPTION || "",
+          comments: updatedRequest.COMMENTS || "",
+          contactId: updatedRequest.CONTACT_ID || "",
+          accountId: updatedRequest.ACCOUNT_ID || "",
+          assetId: updatedRequest.ASSET_ID || "",
+          parRowId: updatedRequest.PAR_ROW_ID || "",
+        });
+        setExistingFiles(
+          updatedRequest.attachments.map((att) => ({
+            sr_att_id: att.SR_ATT_ID,
+            name: att.FILE_NAME,
+            file_path: att.FILE_PATH,
+            type: att.TYPE_CD || "",
+            comments: att.COMMENTS || "",
+            attachmentStatus: att.ATTACHMENT_STATUS || "",
+          })) || []
+        );
+        setNewFiles([]);
+        setAllServiceRequests((prev) =>
+          prev.map((req) =>
+            req.SR_NUM === selectedSrNum ? { ...req, ...updatedRequest } : req
+          )
+        );
+        if (section === "basic") setIsEditingBasic(false);
+        if (section === "additional") setIsEditingAdditional(false);
+        if (section === "description") setIsEditingDescription(false);
+        if (section === "attachments") setIsEditingAttachments(false);
+        setError(null);
+      } else {
+        setError(result.error || "Failed to save: Invalid response from server");
+      }
+    } catch (err) {
+      console.error("Error saving service request:", err);
+      setError(err.message || "An unexpected error occurred while saving.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const formatDate = (date) => {
+    if (!date) return "-";
+    if (date instanceof Date) {
+      return date.toISOString().split("T")[0];
+    }
+    if (typeof date === "string" && date.match(/^\d{4}-\d{2}-\d{2}(T.*)?$/)) {
+      return date.split("T")[0];
+    }
+    return "-";
+  };
+
+  return (
+    <div className="employee-overview-container">
+      {error && <div className="error-message">{error}</div>}
+      {isLoading && <div className="loading-message">Loading...</div>}
+
+      {isAdd ? (
+        <AddServiceReq
+          orgid={orgid}
+          empid={empid}
+          employees={employees}
+          type={type}
+          subtype={subtype}
+          priority={priority}
+          previousServiceRequests={previousServiceRequests}
+          onBack={handleBackClick}
+        />
+      ) : !selectedSrNum ? (
+        <div className="employee-list">
+          <button onClick={handleAddServiceRequest} className="save-button">
+            Add Service Request
+          </button>
+          {allServiceRequests.length === 0 && !error ? (
+            <p>No service requests found.</p>
+          ) : (
+            <table className="employee-table">
+              <thead>
+                <tr>
+                  <th>Service Request ID</th>
+                  <th>Service Name</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {allServiceRequests.map((request) => (
+                  <tr
+                    key={request.SR_NUM}
+                    onClick={() => handleRowClick(request.SR_NUM)}
+                    className={selectedSrNum === request.SR_NUM ? "selected-row" : ""}
+                  >
+                    <td>SR-{request.SR_NUM}</td>
+                    <td>{request.SERVICE_NAME || "-"}</td>
+                    <td>{request.STATUS_CD || "-"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ) : (
+        serviceRequestDetails && (
+          <div className="employee-details-container">
+            <button className="back-button" onClick={handleBackClick}>
+              Back
+            </button>
+
+            <div className="details-block">
+              <h3>Basic Details</h3>
+              {isEditingBasic ? (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSave("basic");
+                  }}
+                >
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Service Request ID</label>
+                      <input
+                        type="text"
+                        value={`SR-${selectedSrNum}`}
+                        readOnly
+                        className="bg-gray-100"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Organization ID</label>
+                      <input
+                        type="text"
+                        value={orgid || ""}
+                        readOnly
+                        className="bg-gray-100"
+                      />
+                    </div>
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Service Name*</label>
+                      <input
+                        type="text"
+                        name="serviceName"
+                        value={formData.serviceName}
+                        onChange={handleFormChange}
+                        placeholder="Enter Service Name"
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Status*</label>
+                      <input
+                        type="text"
+                        name="statusCd"
+                        value={formData.statusCd}
+                        readOnly
+                        className="bg-gray-100"
+                      />
+                    </div>
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Priority*</label>
+                      <select
+                        name="priorityCd"
+                        value={formData.priorityCd}
+                        onChange={handleFormChange}
+                        required
+                      >
+                        <option value="">Select Priority</option>
+                        {priority.map((p) => (
+                          <option key={p.id} value={p.Name}>
+                            {p.Name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>Type*</label>
+                      <select
+                        name="typeCd"
+                        value={formData.typeCd}
+                        onChange={handleFormChange}
+                        required
+                      >
+                        <option value="">Select Type</option>
+                        {type.map((t) => (
+                          <option key={t.id} value={t.Name}>
+                            {t.Name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Sub-Type</label>
+                      <select
+                        name="subTypeCd"
+                        value={formData.subTypeCd}
+                        onChange={handleFormChange}
+                      >
+                        <option value="">Select Sub-Type</option>
+                        {subtype.map((s) => (
+                          <option key={s.id} value={s.Name}>
+                            {s.Name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>Assigned To</label>
+                      <input
+                        type="text"
+                        name="assignedTo"
+                        value={formData.assignedTo}
+                        readOnly
+                        className="bg-gray-100"
+                      />
+                    </div>
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Due Date</label>
+                      <input
+                        type="date"
+                        name="dueDate"
+                        value={formData.dueDate}
+                        onChange={handleFormChange}
+                      />
+                    </div>
+                  </div>
+                  <div className="form-buttons">
+                    <button
+                      type="submit"
+                      className="save-button"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? "Saving..." : "Save"}
+                    </button>
+                    <button
+                      type="button"
+                      className="cancel-button"
+                      onClick={() => setIsEditingBasic(false)}
+                      disabled={isLoading}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div>
+                  <div className="details-row">
+                    <div className="details-group">
+                      <label>Service Request ID</label>
+                      <p>SR-{serviceRequestDetails.SR_NUM}</p>
+                    </div>
+                    <div className="details-group">
+                      <label>Organization ID</label>
+                      <p>{serviceRequestDetails.ORG_ID || "-"}</p>
+                    </div>
+                  </div>
+                  <div className="details-row">
+                    <div className="details-group">
+                      <label>Service Name</label>
+                      <p>{serviceRequestDetails.SERVICE_NAME || "-"}</p>
+                    </div>
+                    <div className="details-group">
+                      <label>Status</label>
+                      <p>{serviceRequestDetails.STATUS_CD || "-"}</p>
+                    </div>
+                  </div>
+                  <div className="details-row">
+                    <div className="details-group">
+                      <label>Priority</label>
+                      <p>{serviceRequestDetails.PRIORITY_CD || "-"}</p>
+                    </div>
+                    <div className="details-group">
+                      <label>Type</label>
+                      <p>{serviceRequestDetails.TYPE_CD || "-"}</p>
+                    </div>
+                  </div>
+                  <div className="details-row">
+                    <div className="details-group">
+                      <label>Sub-Type</label>
+                      <p>{serviceRequestDetails.SUB_TYPE_CD || "-"}</p>
+                    </div>
+                    <div className="details-group">
+                      <label>Assigned To</label>
+                      <p>{serviceRequestDetails.ASSIGNED_TO || "-"}</p>
+                    </div>
+                  </div>
+                  <div className="details-row">
+                    <div className="details-group">
+                      <label>Due Date</label>
+                      <p>{formatDate(serviceRequestDetails.DUE_DATE)}</p>
+                    </div>
+                  </div>
+                  <div className="details-buttons">
+                    <button
+                      className="edit-button"
+                      onClick={() => handleEdit("basic")}
+                    >
+                      Edit
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="details-block">
+              <h3>Additional Details</h3>
+              {isEditingAdditional ? (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSave("additional");
+                  }}
+                >
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Escalated</label>
+                      <input
+                        type="checkbox"
+                        name="escalatedFlag"
+                        checked={formData.escalatedFlag}
+                        onChange={handleFormChange}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Escalated To</label>
+                      <input
+                        type="text"
+                        name="escalatedTo"
+                        value={formData.escalatedTo}
+                        onChange={handleFormChange}
+                        placeholder="Enter Escalated To"
+                      />
+                    </div>
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Escalated Date</label>
+                      <input
+                        type="date"
+                        name="escalatedDate"
+                        value={formData.escalatedDate}
+                        onChange={handleFormChange}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Parent SR ID</label>
+                      <select
+                        name="parRowId"
+                        value={formData.parRowId}
+                        onChange={handleFormChange}
+                      >
+                        <option value="">Select Parent Service Request</option>
+                        {allServiceRequests
+                          .filter(
+                            (req) =>
+                              req.SR_NUM < selectedSrNum && req.CREATED_BY === empid
+                          )
+                          .map((req) => (
+                            <option key={req.SR_NUM} value={req.SR_NUM}>
+                              SR-{req.SR_NUM}: {req.SERVICE_NAME}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Contact ID</label>
+                      <input
+                        type="text"
+                        name="contactId"
+                        value={formData.contactId}
+                        onChange={handleFormChange}
+                        placeholder="Enter Contact ID"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Account ID</label>
+                      <input
+                        type="text"
+                        name="accountId"
+                        value={formData.accountId}
+                        onChange={handleFormChange}
+                        placeholder="Enter Account ID"
+                      />
+                    </div>
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Asset ID</label>
+                      <input
+                        type="text"
+                        name="assetId"
+                        value={formData.assetId}
+                        onChange={handleFormChange}
+                        placeholder="Enter Asset ID"
+                      />
+                    </div>
+                  </div>
+                  <div className="form-buttons">
+                    <button
+                      type="submit"
+                      className="save-button"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? "Saving..." : "Save"}
+                    </button>
+                    <button
+                      type="button"
+                      className="cancel-button"
+                      onClick={() => setIsEditingAdditional(false)}
+                      disabled={isLoading}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div>
+                  <div className="details-row">
+                    <div className="details-group">
+                      <label>Escalated</label>
+                      <p>{serviceRequestDetails.ESCALATED_FLAG ? "Yes" : "No"}</p>
+                    </div>
+                    <div className="details-group">
+                      <label>Escalated To</label>
+                      <p>{serviceRequestDetails.ESCALATED_TO || "-"}</p>
+                    </div>
+                  </div>
+                  <div className="details-row">
+                    <div className="details-group">
+                      <label>Escalated Date</label>
+                      <p>{formatDate(serviceRequestDetails.ESCALATED_DATE)}</p>
+                    </div>
+                    <div className="details-group">
+                      <label>Parent SR ID</label>
+                      <p>
+                        {serviceRequestDetails.PAR_ROW_ID
+                          ? `SR-${serviceRequestDetails.PAR_ROW_ID}`
+                          : "-"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="details-row">
+                    <div className="details-group">
+                      <label>Contact ID</label>
+                      <p>{serviceRequestDetails.CONTACT_ID || "-"}</p>
+                    </div>
+                    <div className="details-group">
+                      <label>Account ID</label>
+                      <p>{serviceRequestDetails.ACCOUNT_ID || "-"}</p>
+                    </div>
+                  </div>
+                  <div className="details-row">
+                    <div className="details-group">
+                      <label>Asset ID</label>
+                      <p>{serviceRequestDetails.ASSET_ID || "-"}</p>
+                    </div>
+                  </div>
+                  <div className="details-buttons">
+                    <button
+                      className="edit-button"
+                      onClick={() => handleEdit("additional")}
+                    >
+                      Edit
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="details-block">
+              <h3>Description and Comments</h3>
+              {isEditingDescription ? (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSave("description");
+                  }}
+                >
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Description</label>
+                      <textarea
+                        name="description"
+                        value={formData.description}
+                        onChange={handleFormChange}
+                        placeholder="Enter Description"
+                        rows={4}
+                      />
+                    </div>
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Comments</label>
+                      <textarea
+                        name="comments"
+                        value={formData.comments}
+                        onChange={handleFormChange}
+                        placeholder="Enter Comments"
+                        rows={4}
+                      />
+                    </div>
+                  </div>
+                  <div className="form-buttons">
+                    <button
+                      type="submit"
+                      className="save-button"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? "Saving..." : "Save"}
+                    </button>
+                    <button
+                      type="button"
+                      className="cancel-button"
+                      onClick={() => setIsEditingDescription(false)}
+                      disabled={isLoading}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div>
+                  <div className="details-row">
+                    <div className="details-group">
+                      <label>Description</label>
+                      <p>{serviceRequestDetails.DESCRIPTION || "-"}</p>
+                    </div>
+                  </div>
+                  <div className="details-row">
+                    <div className="details-group">
+                      <label>Comments</label>
+                      <p>{serviceRequestDetails.COMMENTS || "-"}</p>
+                    </div>
+                  </div>
+                  <div className="details-buttons">
+                    <button
+                      className="edit-button"
+                      onClick={() => handleEdit("description")}
+                    >
+                      Edit
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="details-block">
+              <h3>Attachments</h3>
+              {isEditingAttachments ? (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSave("attachments");
+                  }}
+                >
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Upload New Files</label>
+                      <input
+                        type="file"
+                        multiple
+                        onChange={handleFileChange}
+                        accept="*/*"
+                      />
+                    </div>
+                  </div>
+                  {(existingFiles.length > 0 || newFiles.length > 0) && (
+                    <div className="form-row">
+                      <div className="form-group">
+                        <h4>Attached Files</h4>
+                        <table className="attachment-table">
+                          <thead>
+                            <tr>
+                              <th>File Name</th>
+                              <th>Type</th>
+                              <th>Comments</th>
+                              <th>Status</th>
+                              <th>Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {existingFiles.map((fileObj, index) => (
+                              <tr key={`existing-${index}`}>
+                                <td>
+                                  <a
+                                    href={`/uploads/${fileObj.file_path}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    {fileObj.name}
+                                  </a>
+                                </td>
+                                <td>
+                                  <input
+                                    type="text"
+                                    value={fileObj.type}
+                                    onChange={(e) =>
+                                      handleFileCommentChange(
+                                        index,
+                                        e.target.value,
+                                        true
+                                      )
+                                    }
+                                    placeholder="Enter file type"
+                                  />
+                                </td>
+                                <td>
+                                  <input
+                                    type="text"
+                                    value={fileObj.comments}
+                                    onChange={(e) =>
+                                      handleFileCommentChange(
+                                        index,
+                                        e.target.value,
+                                        true
+                                      )
+                                    }
+                                    placeholder="Add comments"
+                                  />
+                                </td>
+                                <td>
+                                  <input
+                                    type="text"
+                                    value={fileObj.attachmentStatus}
+                                    onChange={(e) =>
+                                      handleFileStatusChange(
+                                        index,
+                                        e.target.value,
+                                        true
+                                      )
+                                    }
+                                    placeholder="Enter status"
+                                  />
+                                </td>
+                                <td>
+                                  <button
+                                    type="button"
+                                    className="cancel-button"
+                                    onClick={() => handleRemoveFile(index, true)}
+                                  >
+                                    Remove
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                            {newFiles.map((fileObj, index) => (
+                              <tr key={`new-${index}`}>
+                                <td>{fileObj.name}</td>
+                                <td>
+                                  <input
+                                    type="text"
+                                    value={fileObj.type}
+                                    onChange={(e) =>
+                                      handleFileCommentChange(
+                                        index,
+                                        e.target.value
+                                      )
+                                    }
+                                    placeholder="Enter file type"
+                                  />
+                                </td>
+                                <td>
+                                  <input
+                                    type="text"
+                                    value={fileObj.comments}
+                                    onChange={(e) =>
+                                      handleFileCommentChange(
+                                        index,
+                                        e.target.value
+                                      )
+                                    }
+                                    placeholder="Add comments"
+                                  />
+                                </td>
+                                <td>
+                                  <input
+                                    type="text"
+                                    value={fileObj.attachmentStatus}
+                                    onChange={(e) =>
+                                      handleFileStatusChange(
+                                        index,
+                                        e.target.value
+                                      )
+                                    }
+                                    placeholder="Enter status"
+                                  />
+                                </td>
+                                <td>
+                                  <button
+                                    type="button"
+                                    className="cancel-button"
+                                    onClick={() => handleRemoveFile(index)}
+                                  >
+                                    Remove
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                  <div className="form-buttons">
+                    <button
+                      type="submit"
+                      className="save-button"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? "Saving..." : "Save"}
+                    </button>
+                    <button
+                      type="button"
+                      className="cancel-button"
+                      onClick={() => setIsEditingAttachments(false)}
+                      disabled={isLoading}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div>
+                  <div className="details-row">
+                    {existingFiles.length > 0 && (
+                      <div className="details-group">
+                        <h4>Attached Files</h4>
+                        <table className="attachment-table">
+                          <thead>
+                            <tr>
+                              <th>File Name</th>
+                              <th>Comments</th>
+                              <th>Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {existingFiles.map((fileObj, index) => (
+                              <tr key={index}>
+                                <td>
+                                  <a
+                                    href={`/uploads/${fileObj.file_path}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    {fileObj.name}
+                                  </a>
+                                </td>
+                                <td>{fileObj.comments || "-"}</td>
+                                <td>{fileObj.attachmentStatus || "-"}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                  <div className="details-buttons">
+                    <button
+                      className="edit-button"
+                      onClick={() => handleEdit("attachments")}
+                    >
+                      Edit
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      )}
+    </div>
+  );
+};
+
+export default Overview;
+
+'use client';
+import React, { useState } from 'react';
+import { addServiceRequest } from '@/app/serverActions/ServiceRequests/AddServicereq';
+import './overview.css';
+
+const AddServiceReq = ({ orgid, empid, employees, type, subtype, priority, previousServiceRequests, onBack }) => {
+  const [formData, setFormData] = useState({
+    serviceName: '',
+    statusCd: 'Open',
+    priorityCd: '',
+    typeCd: '',
+    subTypeCd: '',
+    assignedTo: '',
+    dueDate: '',
+    escalatedFlag: false,
+    escalatedTo: '',
+    escalatedDate: '',
+    description: '',
+    comments: '',
+    contactId: '',
+    accountId: '',
+    assetId: '',
+    parRowId: '',
+  });
+  const [files, setFiles] = useState([]);
+  const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleFormChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const handleFileChange = (e) => {
+    const newFiles = Array.from(e.target.files || []).map((file) => ({
+      file,
+      name: file.name,
+      type: file.type,
+      comments: '',
+      attachmentStatus: ''
+    }));
+    console.log('Files selected:', newFiles);
+    setFiles((prev) => [...prev, ...newFiles]);
+  };
+
+  const handleFileCommentChange = (index, value) => {
+    setFiles((prev) => {
+      const updatedFiles = [...prev];
+      updatedFiles[index].comments = value;
+      return updatedFiles;
+    });
+  };
+
+  const handleFileStatusChange = (index, value) => {
+    setFiles((prev) => {
+      const updatedFiles = [...prev];
+      updatedFiles[index].attachmentStatus = value;
+      return updatedFiles;
+    });
+  };
+
+  const handleRemoveFile = (index) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(null);
+    setIsLoading(true);
+
+    if (!formData.serviceName) {
+      setError('Service Name is required.');
+      setIsLoading(false);
+      return;
+    }
+    if (!formData.priorityCd) {
+      setError('Priority is required.');
+      setIsLoading(false);
+      return;
+    }
+    if (!formData.typeCd) {
+      setError('Type is required.');
+      setIsLoading(false);
+      return;
+    }
+
+    const formDataToSend = new FormData();
+    formDataToSend.append('orgid', orgid || '');
+    formDataToSend.append('empid', empid || '');
+    formDataToSend.append('serviceName', formData.serviceName);
+    formDataToSend.append('statusCd', formData.statusCd);
+    formDataToSend.append('priorityCd', formData.priorityCd);
+    formDataToSend.append('typeCd', formData.typeCd);
+    formDataToSend.append('subTypeCd', formData.subTypeCd);
+    formDataToSend.append('assignedTo', formData.assignedTo);
+    formDataToSend.append('dueDate', formData.dueDate);
+    formDataToSend.append('escalatedFlag', formData.escalatedFlag.toString());
+    formDataToSend.append('escalatedTo', formData.escalatedTo);
+    formDataToSend.append('escalatedDate', formData.escalatedDate);
+    formDataToSend.append('description', formData.description);
+    formDataToSend.append('comments', formData.comments);
+    formDataToSend.append('contactId', formData.contactId);
+    formDataToSend.append('accountId', formData.accountId);
+    formDataToSend.append('assetId', formData.assetId);
+    formDataToSend.append('parRowId', formData.parRowId);
+
+    files.forEach((fileObj, index) => {
+      formDataToSend.append(`attachment[${index}]`, fileObj.file);
+      formDataToSend.append(`fileComments[${index}]`, fileObj.comments);
+      formDataToSend.append(`fileStatuses[${index}]`, fileObj.attachmentStatus);
+    });
+
+    try {
+      const result = await addServiceRequest(formDataToSend);
+      if (result && result.success) {
+        setError(null);
+        onBack(); // Navigate back to the list
+      } else {
+        setError(result.error || 'Failed to create service request');
+      }
+    } catch (err) {
+      console.error('Error creating service request:', err);
+      setError(err.message || 'An unexpected error occurred');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="employee-overview-container">
+      {error && <div className="error-message">{error}</div>}
+      {isLoading && <div className="loading-message">Creating...</div>}
+      <h2>Create New Service Request</h2>
+      <button className="back-button" onClick={onBack} disabled={isLoading}>
+        Back
+      </button>
+      <form onSubmit={handleSubmit}>
+        <div className="details-block">
+          <h3>Basic Details</h3>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Organization ID</label>
+              <input type="text" value={orgid || ''} readOnly className="bg-gray-100" />
+            </div>
+            <div className="form-group">
+              <label>Created By</label>
+              <input type="text" value={empid || ''} readOnly className="bg-gray-100" />
+            </div>
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Service Name*</label>
+              <input
+                type="text"
+                name="serviceName"
+                value={formData.serviceName}
+                onChange={handleFormChange}
+                placeholder="Enter Service Name"
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label>Status*</label>
+              <input
+                type="text"
+                name="statusCd"
+                value={formData.statusCd}
+                readOnly
+                className="bg-gray-100"
+              />
+            </div>
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Priority*</label>
+              <select name="priorityCd" value={formData.priorityCd} onChange={handleFormChange} required>
+                <option value="">Select Priority</option>
+                {priority.map((p) => (
+                  <option key={p.id} value={p.Name}>{p.Name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Type*</label>
+              <select name="typeCd" value={formData.typeCd} onChange={handleFormChange} required>
+                <option value="">Select Type</option>
+                {type.map((t) => (
+                  <option key={t.id} value={t.Name}>{t.Name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Sub-Type</label>
+              <select name="subTypeCd" value={formData.subTypeCd} onChange={handleFormChange}>
+                <option value="">Select Sub-Type</option>
+                {subtype.map((s) => (
+                  <option key={s.id} value={s.Name}>{s.Name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Assigned To</label>
+              <select name="assignedTo" value={formData.assignedTo} onChange={handleFormChange}>
+                <option value="">Select Employee</option>
+                {employees.map((emp) => (
+                  <option key={emp.empid} value={emp.empid}>
+                    {emp.EMP_FST_NAME} {emp.EMP_LAST_NAME}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Due Date</label>
+              <input type="date" name="dueDate" value={formData.dueDate} onChange={handleFormChange} />
+            </div>
+          </div>
+        </div>
+
+        <div className="details-block">
+          <h3>Additional Details</h3>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Escalated</label>
+              <input
+                type="checkbox"
+                name="escalatedFlag"
+                checked={formData.escalatedFlag}
+                onChange={handleFormChange}
+              />
+            </div>
+            <div className="form-group">
+              <label>Escalated To</label>
+              <input
+                type="text"
+                name="escalatedTo"
+                value={formData.escalatedTo}
+                onChange={handleFormChange}
+                placeholder="Enter Escalated To"
+              />
+            </div>
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Escalated Date</label>
+              <input
+                type="date"
+                name="escalatedDate"
+                value={formData.escalatedDate}
+                onChange={handleFormChange}
+              />
+            </div>
+            <div className="form-group">
+              <label>Parent SR ID</label>
+              <select name="parRowId" value={formData.parRowId} onChange={handleFormChange}>
+                <option value="">Select Parent Service Request</option>
+                {previousServiceRequests.map((sr) => (
+                  <option key={sr.SR_NUM} value={sr.SR_NUM}>
+                    SR-{sr.SR_NUM}: {sr.SERVICE_NAME}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Contact ID</label>
+              <input
+                type="text"
+                name="contactId"
+                value={formData.contactId}
+                onChange={handleFormChange}
+                placeholder="Enter Contact ID"
+              />
+            </div>
+            <div className="form-group">
+              <label>Account ID</label>
+              <input
+                type="text"
+                name="accountId"
+                value={formData.accountId}
+                onChange={handleFormChange}
+                placeholder="Enter Account ID"
+              />
+            </div>
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Asset ID</label>
+              <input
+                type="text"
+                name="assetId"
+                value={formData.assetId}
+                onChange={handleFormChange}
+                placeholder="Enter Asset ID"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="details-block">
+          <h3>Description and Comments</h3>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Description</label>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleFormChange}
+                placeholder="Enter Description"
+                rows={4}
+              />
+            </div>
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Comments</label>
+              <textarea
+                name="comments"
+                value={formData.comments}
+                onChange={handleFormChange}
+                placeholder="Enter Comments"
+                rows={4}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="details-block">
+          <h3>Attachments</h3>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Upload Files</label>
+              <input type="file" multiple onChange={handleFileChange} accept="*/*" />
+            </div>
+          </div>
+          {files.length > 0 && (
+            <div className="form-row">
+              <div className="form-group">
+                <h4>Attached Files</h4>
+                <table className="attachment-table">
+                  <thead>
+                    <tr>
+                      <th>File Name</th>
+                      <th>Comments</th>
+                      <th>Status</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {files.map((fileObj, index) => (
+                      <tr key={index}>
+                        <td>{fileObj.name}</td>
+                        <td>
+                          <input
+                            type="text"
+                            value={fileObj.comments}
+                            onChange={(e) => handleFileCommentChange(index, e.target.value)}
+                            placeholder="Add comments"
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={fileObj.attachmentStatus}
+                            onChange={(e) => handleFileStatusChange(index, e.target.value)}
+                            placeholder="Enter status"
+                          />
+                        </td>
+                        <td>
+                          <button type="button" className="cancel-button" onClick={() => handleRemoveFile(index)}>
+                            Remove
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="form-buttons">
+          <button type="submit" className="save-button" disabled={isLoading}>
+            {isLoading ? 'Creating...' : 'Create'}
+          </button>
+          <button type="button" className="cancel-button" onClick={onBack} disabled={isLoading}>
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+};
+
+export default AddServiceReq;
+
+
+'use server';
+import { cookies } from 'next/headers';
+import DBconnection from '@/app/utils/config/db';
+import { writeFile, mkdir } from 'fs/promises';
+import path from 'path';
+import { v4 as uuidv4 } from 'uuid';
+
+const decodeJwt = (token) => {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = Buffer.from(base64, 'base64').toString('utf8');
+    return JSON.parse(jsonPayload);
+  } catch (error) {
+    console.error('Error decoding JWT:', error);
+    return null;
+  }
+};
+
+export async function addServiceRequest(formData) {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('jwt_token')?.value;
+  const decoded = token ? decodeJwt(token) : null;
+
+  if (!decoded || !decoded.orgid || !decoded.empid) {
+    console.error('Invalid token: Decoded token is null or missing orgid/empid', { decoded, token });
+    return { success: false, error: 'Invalid or missing authentication token' };
+  }
+
+  const orgid = formData.get('orgid');
+  const empid = formData.get('empid');
+
+  console.log('Token validation:', {
+    decodedOrgid: decoded.orgid,
+    decodedEmpid: decoded.empid,
+    formOrgid: orgid,
+    formEmpid: empid
+  });
+
+  if (decoded.orgid != orgid || decoded.empid != empid) {
+    console.error('Token mismatch error:', {
+      decodedOrgid: decoded.orgid,
+      decodedEmpid: decoded.empid,
+      formOrgid: orgid,
+      formEmpid: empid
+    });
+    return { success: false, error: 'Unauthorized: Token does not match provided orgid or empid' };
+  }
+
+  try {
+    const pool = await DBconnection();
+    const [countRows] = await pool.query(
+      'SELECT COUNT(*) as count FROM C_SRV_REQ WHERE ORG_ID = ?',
+      [orgid]
+    );
+    const requestCount = countRows[0].count + 1;
+    const srNum = `${orgid}-${requestCount}`;
+
+    const insertQuery = `
+      INSERT INTO C_SRV_REQ (
+        SR_NUM, ORG_ID, SERVICE_NAME, STATUS_CD, PRIORITY_CD, TYPE_CD, SUB_TYPE_CD,
+        ASSIGNED_TO, DUE_DATE, ESCALATED_FLAG, ESCALATED_TO, ESCALATED_DATE,
+        DESCRIPTION, COMMENTS, CONTACT_ID, ACCOUNT_ID, ASSET_ID, PAR_ROW_ID,
+        CREATED_BY, CREATED, LAST_UPD_BY, LAST_UPD
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, NOW())
+    `;
+    const insertValues = [
+      srNum,
+      orgid,
+      formData.get('serviceName') || null,
+      formData.get('statusCd') || 'Open',
+      formData.get('priorityCd') || null,
+      formData.get('typeCd') || null,
+      formData.get('subTypeCd') || null,
+      formData.get('assignedTo') || null,
+      formData.get('dueDate') || null,
+      formData.get('escalatedFlag') === 'true' ? 1 : 0,
+      formData.get('escalatedTo') || null,
+      formData.get('escalatedDate') || null,
+      formData.get('description') || null,
+      formData.get('comments') || null,
+      formData.get('contactId') || null,
+      formData.get('accountId') || null,
+      formData.get('assetId') || null,
+      formData.get('parRowId') || null,
+      empid,
+      empid
+    ];
+
+    const [result] = await pool.query(insertQuery, insertValues);
+    if (result.affectedRows === 0) {
+      return { success: false, error: 'Failed to create service request' };
+    }
+
+    const attachments = [];
+    const fileComments = [];
+    const fileStatuses = [];
+
+    for (const [key, value] of formData.entries()) {
+      if (key.startsWith('attachment[')) {
+        attachments.push(value);
+      } else if (key.startsWith('fileComments[')) {
+        fileComments.push(value);
+      } else if (key.startsWith('fileStatuses[')) {
+        fileStatuses.push(value);
+      }
+    }
+
+    if (attachments.length > 0) {
+      const currentDate = new Date().toISOString().split('T')[0].replace(/-/g, '');
+      const uploadDir = path.join(process.cwd(), 'public', 'uploads', empid, currentDate);
+      await mkdir(uploadDir, { recursive: true });
+
+      for (let i = 0; i < attachments.length; i++) {
+        const file = attachments[i];
+        const fileExtension = path.extname(file.name) || '.bin';
+        const uniqueFileName = `${uuidv4()}${fileExtension}`;
+        const filePath = path.join('uploads', empid, currentDate, uniqueFileName);
+        const fullPath = path.join(uploadDir, uniqueFileName);
+        const arrayBuffer = await file.arrayBuffer();
+        await writeFile(fullPath, Buffer.from(arrayBuffer));
+
+        await pool.query(
+          'INSERT INTO C_SRV_REQ_ATT (SR_ID, TYPE_CD, FILE_NAME, FILE_PATH, COMMENTS, ATTACHMENT_STATUS, CREATED_BY, CREATED, LAST_UPD_BY, LAST_UPD) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?, NOW())',
+          [
+            srNum,
+            file.type || 'application/octet-stream',
+            file.name,
+            filePath,
+            fileComments[i] || null,
+            fileStatuses[i] || null,
+            empid,
+            empid
+          ]
+        );
+      }
+    }
+
+    return { success: true, srNum };
+  } catch (error) {
+    console.error('Error creating service request:', error);
+    return { success: false, error: error.message || 'Failed to create service request' };
+  }
+}
+
+
+'use server';
+import { cookies } from 'next/headers';
+import DBconnection from '@/app/utils/config/db';
+import { writeFile, mkdir } from 'fs/promises';
+import path from 'path';
+import { v4 as uuidv4 } from 'uuid';
+
+const decodeJwt = (token) => {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = Buffer.from(base64, 'base64').toString('utf8');
+    return JSON.parse(jsonPayload);
+  } catch (error) {
+    console.error('Error decoding JWT:', error);
+    return null;
+  }
+};
+
+export async function fetchServiceRequestById(srNum, orgid, empid) {
+  try {
+    const pool = await DBconnection();
+    const [rows] = await pool.query(
+      'SELECT SR_NUM, ORG_ID, SERVICE_NAME, STATUS_CD, PRIORITY_CD, TYPE_CD, SUB_TYPE_CD, ASSIGNED_TO, DUE_DATE, ESCALATED_FLAG, ESCALATED_TO, ESCALATED_DATE, DESCRIPTION, COMMENTS, CONTACT_ID, ACCOUNT_ID, ASSET_ID, PAR_ROW_ID, CATEGORY_CD, CREATED, CREATED_BY, LAST_UPD, LAST_UPD_BY FROM C_SRV_REQ WHERE SR_NUM = ? AND ORG_ID = ? AND CREATED_BY = ?',
+      [srNum, orgid, empid]
+    );
+
+    if (rows.length === 0) {
+      throw new Error('Service request not found or you do not have access');
+    }
+
+    const [attachments] = await pool.query(
+      'SELECT SR_ATT_ID, SR_ID, TYPE_CD, FILE_NAME, FILE_PATH, COMMENTS, ATTACHMENT_STATUS, CREATED, CREATED_BY, LAST_UPD, LAST_UPD_BY FROM C_SRV_REQ_ATT WHERE SR_ID = ?',
+      [srNum]
+    );
+    console.log(`Fetched attachments for SR_ID=${srNum} at ${new Date().toISOString()}:`, attachments);
+
+    return { ...rows[0], attachments };
+  } catch (error) {
+    console.error('Error fetching service request:', error);
+    throw new Error(error.message || 'Failed to fetch service request');
+  }
+}
+
+export async function updateServiceRequest(formData) {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('jwt_token')?.value;
+  const decoded = token ? decodeJwt(token) : null;
+
+  if (!decoded || !decoded.orgid || !decoded.empid) {
+    console.error('Invalid token: Decoded token is null or missing orgid/empid', { decoded, token });
+    return { success: false, error: 'Invalid or missing authentication token' };
+  }
+
+  const orgid = formData.get('orgid');
+  const empid = formData.get('empid');
+  const srNum = formData.get('SR_NUM');
+  const section = formData.get('section');
+
+  console.log('Token validation:', {
+    decodedOrgid: decoded.orgid,
+    decodedEmpid: decoded.empid,
+    formOrgid: orgid,
+    formEmpid: empid,
+    srNum,
+    section
+  });
+
+  if (decoded.orgid != orgid || decoded.empid != empid) {
+    console.error('Token mismatch error:', {
+      decodedOrgid: decoded.orgid,
+      decodedEmpid: decoded.empid,
+      formOrgid: orgid,
+      formEmpid: empid
+    });
+    return { success: false, error: 'Unauthorized: Token does not match provided orgid or empid' };
+  }
+
+  try {
+    const pool = await DBconnection();
+    let updateQuery = '';
+    const updateValues = [];
+
+    if (section === 'basic') {
+      updateQuery = `
+        UPDATE C_SRV_REQ SET
+          SERVICE_NAME = ?,
+          STATUS_CD = ?,
+          PRIORITY_CD = ?,
+          TYPE_CD = ?,
+          SUB_TYPE_CD = ?,
+          ASSIGNED_TO = ?,
+          DUE_DATE = ?,
+          CATEGORY_CD = ?,
+          LAST_UPD_BY = ?,
+          LAST_UPD = NOW()
+        WHERE SR_NUM = ? AND ORG_ID = ? AND CREATED_BY = ?
+      `;
+      updateValues.push(
+        formData.get('serviceName') || null,
+        formData.get('statusCd') || null,
+        formData.get('priorityCd') || null,
+        formData.get('typeCd') || null,
+        formData.get('subTypeCd') || null,
+        formData.get('assignedTo') || null,
+        formData.get('dueDate') || null,
+        formData.get('categoryCd') || null,
+        empid,
+        srNum,
+        orgid,
+        empid
+      );
+    } else if (section === 'additional') {
+      updateQuery = `
+        UPDATE C_SRV_REQ SET
+          ESCALATED_FLAG = ?,
+          ESCALATED_TO = ?,
+          ESCALATED_DATE = ?,
+          CONTACT_ID = ?,
+          ACCOUNT_ID = ?,
+          ASSET_ID = ?,
+          PAR_ROW_ID = ?,
+          LAST_UPD_BY = ?,
+          LAST_UPD = NOW()
+        WHERE SR_NUM = ? AND ORG_ID = ? AND CREATED_BY = ?
+      `;
+      updateValues.push(
+        formData.get('escalatedFlag') === 'true' ? 1 : 0,
+        formData.get('escalatedTo') || null,
+        formData.get('escalatedDate') || null,
+        formData.get('contactId') || null,
+        formData.get('accountId') || null,
+        formData.get('assetId') || null,
+        formData.get('parRowId') || null,
+        empid,
+        srNum,
+        orgid,
+        empid
+      );
+    } else if (section === 'description') {
+      updateQuery = `
+        UPDATE C_SRV_REQ SET
+          DESCRIPTION = ?,
+          COMMENTS = ?,
+          LAST_UPD_BY = ?,
+          LAST_UPD = NOW()
+        WHERE SR_NUM = ? AND ORG_ID = ? AND CREATED_BY = ?
+      `;
+      updateValues.push(
+        formData.get('description') || null,
+        formData.get('comments') || null,
+        empid,
+        srNum,
+        orgid,
+        empid
+      );
+    } else if (section === 'attachments') {
+      const attachments = [];
+      const fileComments = [];
+      const fileStatuses = [];
+      const fileTypes = [];
+      const existingFiles = [];
+
+      for (const [key, value] of formData.entries()) {
+        if (key.startsWith('attachment[')) {
+          attachments.push(value);
+        } else if (key.startsWith('fileComments[')) {
+          fileComments.push(value);
+        } else if (key.startsWith('fileStatuses[')) {
+          fileStatuses.push(value);
+        } else if (key.startsWith('fileTypes[')) {
+          fileTypes.push(value);
+        } else if (key.startsWith('existingFiles[')) {
+          existingFiles.push(JSON.parse(value));
+        }
+      }
+
+      // Update existing attachments
+      for (const fileObj of existingFiles) {
+        await pool.query(
+          'UPDATE C_SRV_REQ_ATT SET COMMENTS = ?, ATTACHMENT_STATUS = ?, TYPE_CD = ?, LAST_UPD_BY = ?, LAST_UPD = NOW() WHERE SR_ATT_ID = ? AND SR_ID = ?',
+          [fileObj.comments || null, fileObj.attachmentStatus || null, fileObj.typeCd || null, empid, fileObj.sr_att_id, srNum]
+        );
+      }
+
+      // Add new attachments
+      if (attachments.length > 0) {
+        const currentDate = new Date().toISOString().split('T')[0].replace(/-/g, '');
+        const uploadDir = path.join(process.cwd(), 'public', 'uploads', empid, currentDate);
+        await mkdir(uploadDir, { recursive: true });
+
+        for (let i = 0; i < attachments.length; i++) {
+          const file = attachments[i];
+          const fileExtension = path.extname(file.name) || '.bin';
+          const uniqueFileName = `${uuidv4()}${fileExtension}`;
+          const filePath = path.join('uploads', empid, currentDate, uniqueFileName);
+          const fullPath = path.join(uploadDir, uniqueFileName);
+          const arrayBuffer = await file.arrayBuffer();
+          await writeFile(fullPath, Buffer.from(arrayBuffer));
+
+          await pool.query(
+            'INSERT INTO C_SRV_REQ_ATT (SR_ID, TYPE_CD, FILE_NAME, FILE_PATH, COMMENTS, ATTACHMENT_STATUS, CREATED_BY, CREATED, LAST_UPD_BY, LAST_UPD) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?, NOW())',
+            [
+              srNum,
+              fileTypes[i] || file.type || 'application/octet-stream',
+              file.name,
+              filePath,
+              fileComments[i] || null,
+              fileStatuses[i] || null,
+              empid,
+              empid
+            ]
+          );
+          console.log(`Attachment inserted: SR_ID=${srNum}, FILE_PATH=${filePath}`);
+        }
+      }
+
+      return { success: true };
+    }
+
+    if (updateQuery) {
+      const [result] = await pool.query(updateQuery, updateValues);
+      if (result.affectedRows === 0) {
+        return { success: false, error: 'Service request not found or you do not have access' };
+      }
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating service request:', error);
+    return { success: false, error: error.message || 'Failed to update service request' };
+  }
+}
+
+
+in this when the request is added it should be in that page only with message req added successfully and make sire date insert correctly and make sure when attachemnets are inserted they should insert in public/uploads
+take below code as refernce on how it is displaying date and how it is inserting date and how it is refreshing 
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { updateproject, fetchProjectById } from '@/app/serverActions/Projects/overview';
+import { useActionState } from 'react';
+import { addProject, fetchAccountsByOrgId } from '@/app/serverActions/Projects/AddprojectAction';
+import './projectoverview.css';
+import { useRouter, useSearchParams } from 'next/navigation';
+
+const addform_intialstate = { error: null, success: false };
+
+const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts }) => {
+  const searchparams = useSearchParams();
+  const [selectedProject, setSelectedProject] = useState(null);
+  const [formData, setFormData] = useState({});
+  const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [canEditProjects, setCanEditProjects] = useState(true); // Default to true for all authenticated users
+  const [editingBasic, setEditingBasic] = useState(false);
+  const [editingAdditional, setEditingAdditional] = useState(false);
+  const [isadd, setisadd] = useState(false);
+  const [addformsuccess, setaddformsuccess] = useState(null);
+  const router = useRouter();
+  // State for sorted projects
+  const [allProjects, setAllProjects] = useState(projects);
+  // State for sorting configuration
+  const [sortConfig, setSortConfig] = useState({ column: 'prjId', direction: 'asc' });
+
+  // Utility function to format dates for display and form input
+  const formatDate = (date) => {
+    if (!date) return '';
+    if (date instanceof Date) {
+      // Use local date components to preserve YYYY-MM-DD
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+    if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}(T.*)?$/)) {
+      // If it's already a date string (YYYY-MM-DD), return it as is
+      return date.split('T')[0];
+    }
+    return ''; // Fallback for invalid dates
+  };
+
+  useEffect(() => {
+    handleBack();
+  }, [searchparams.get('refresh')]);
+
+  useEffect(() => {
+    setAllProjects(projects); // Initialize with projects prop
+  }, [projects]);
+
+  useEffect(() => {
+    const sortedProjects = [...projects].sort((a, b) => sortProjects(a, b, sortConfig.column, sortConfig.direction));
+    setAllProjects(sortedProjects);
+  }, [sortConfig, projects]);
+
+  const handleRowClick = (project) => {
+    setSelectedProject(project);
+    setFormData({
+      prjId: project.PRJ_ID,
+      prjName: project.PRJ_NAME || '',
+      prsDesc: project.PRS_DESC || '',
+      accntId: project.ACCNT_ID || '',
+      billRate: project.BILL_RATE || '',
+      billType: project.BILL_TYPE || '',
+      otBillRate: project.OT_BILL_RATE || '',
+      otBillType: project.OT_BILL_TYPE || '',
+      billableFlag: project.BILLABLE_FLAG ? 'Yes' : 'No',
+      startDt: formatDate(project.START_DT),
+      endDt: formatDate(project.END_DT),
+      clientId: project.CLIENT_ID || '',
+      payTerm: project.PAY_TERM || '',
+      invoiceEmail: project.INVOICE_EMAIL || '',
+      invoiceFax: project.INVOICE_FAX || '',
+      invoicePhone: project.INVOICE_PHONE || '',
+      createdBy: project.Createdby || '',
+      updatedBy: project.Updatedby || '',
+      lastUpdatedDate: formatDate(project.last_updated_date) || '',
+    });
+    setEditingBasic(false);
+    setEditingAdditional(false);
+    setError(null);
+    setIsLoading(false);
+    setisadd(false);
+  };
+
+  const handleBack = () => {
+    router.refresh();
+    setSelectedProject(null);
+    setEditingBasic(false);
+    setEditingAdditional(false);
+    setError(null);
+    setIsLoading(false);
+    setisadd(false);
+  };
+
+  const handleaddproject = () => {
+    setSelectedProject(null);
+    setEditingBasic(false);
+    setEditingAdditional(false);
+    setError(null);
+    setIsLoading(false);
+    setisadd(true);
+  };
+
+  const handleEdit = (section) => {
+    if (section === 'basic') setEditingBasic(true);
+    if (section === 'additional') setEditingAdditional(true);
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSave = async (section) => {
+    if (section === 'basic') {
+      if (!formData.prjName) {
+        setError('Project Name is required.');
+        return;
+      }
+      if (!formData.accntId) {
+        setError('Account is required.');
+        return;
+      }
+    } else if (section === 'additional') {
+      if (!formData.clientId) {
+        setError('Client is required.');
+        return;
+      }
+    }
+
+    setIsLoading(true);
+    const formDataToSubmit = new FormData();
+    formDataToSubmit.append('PRJ_ID', formData.prjId);
+    formDataToSubmit.append('section', section);
+
+    if (section === 'basic') {
+      formDataToSubmit.append('PRJ_NAME', formData.prjName || '');
+      formDataToSubmit.append('PRS_DESC', formData.prsDesc || '');
+      formDataToSubmit.append('ACCNT_ID', formData.accntId || '');
+    } else if (section === 'additional') {
+      formDataToSubmit.append('BILL_RATE', formData.billRate || '');
+      formDataToSubmit.append('BILL_TYPE', formData.billType || '');
+      formDataToSubmit.append('OT_BILL_RATE', formData.otBillRate || '');
+      formDataToSubmit.append('OT_BILL_TYPE', formData.otBillType || '');
+      formDataToSubmit.append('BILLABLE_FLAG', formData.billableFlag === 'Yes' ? '1' : '0');
+      formDataToSubmit.append('START_DT', formData.startDt || '');
+      formDataToSubmit.append('END_DT', formData.endDt || '');
+      formDataToSubmit.append('CLIENT_ID', formData.clientId || '');
+      formDataToSubmit.append('PAY_TERM', formData.payTerm || '');
+      formDataToSubmit.append('INVOICE_EMAIL', formData.invoiceEmail || '');
+      formDataToSubmit.append('INVOICE_FAX', formData.invoiceFax || '');
+      formDataToSubmit.append('INVOICE_PHONE', formData.invoicePhone || '');
+    }
+
+    try {
+      console.log('FormData to submit:', Object.fromEntries(formDataToSubmit));
+      const result = await updateproject(formDataToSubmit);
+      if (result && result.success) {
+        const updatedProject = await fetchProjectById(formData.prjId);
+        setSelectedProject(updatedProject);
+        // Update projects array to reflect changes in table
+        projects.forEach((project, index) => {
+          if (project.PRJ_ID === formData.prjId) {
+            projects[index] = {
+              ...project,
+              PRJ_NAME: updatedProject.PRJ_NAME || project.PRJ_NAME,
+              PRS_DESC: updatedProject.PRS_DESC || project.PRS_DESC,
+              ACCNT_ID: updatedProject.ACCNT_ID || project.ACCNT_ID,
+              BILL_RATE: updatedProject.BILL_RATE || project.BILL_RATE,
+              BILL_TYPE: updatedProject.BILL_TYPE || project.BILL_TYPE,
+              OT_BILL_RATE: updatedProject.OT_BILL_RATE || project.OT_BILL_RATE,
+              OT_BILL_TYPE: updatedProject.OT_BILL_TYPE || project.OT_BILL_TYPE,
+              BILLABLE_FLAG: updatedProject.BILLABLE_FLAG || project.BILLABLE_FLAG,
+              START_DT: updatedProject.START_DT || project.START_DT,
+              END_DT: updatedProject.END_DT || project.END_DT,
+              CLIENT_ID: updatedProject.CLIENT_ID || project.CLIENT_ID,
+              PAY_TERM: updatedProject.PAY_TERM || project.PAY_TERM,
+              INVOICE_EMAIL: updatedProject.INVOICE_EMAIL || project.INVOICE_EMAIL,
+              INVOICE_FAX: updatedProject.INVOICE_FAX || project.INVOICE_FAX,
+              INVOICE_PHONE: updatedProject.INVOICE_PHONE || project.INVOICE_PHONE,
+              Createdby: updatedProject.Createdby || project.Createdby,
+              Updatedby: updatedProject.Updatedby || project.Updatedby,
+              last_updated_date: updatedProject.last_updated_date || project.last_updated_date,
+            };
+          }
+        });
+        if (section === 'basic') setEditingBasic(false);
+        if (section === 'additional') setEditingAdditional(false);
+        setError(null);
+      } else {
+        setError(result.error || 'Failed to save: Invalid response from server');
+      }
+    } catch (err) {
+      console.error('Error saving project:', err);
+      setError(err.message || 'An unexpected error occurred while saving.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getDisplayValue = (value, options) => {
+    if (!value || !options) return '-';
+    const option = options.find(opt => opt.Name === value);
+    return option ? option.Name : value;
+  };
+
+  const getAccountName = (accntId) => {
+    if (!accntId || !accounts) return '-';
+    const account = accounts.find(acc => acc.ACCNT_ID === accntId);
+    return account ? account.ALIAS_NAME : accntId;
+  };
+
+  const getdisplayprojectid = (prjid) => {
+    return prjid.split('-')[1] || prjid;
+  };
+
+  // Sorting functions
+  const sortProjects = (a, b, column, direction) => {
+    let aValue, bValue;
+    switch (column) {
+      case 'prjId':
+        aValue = parseInt(a.PRJ_ID.split('-')[1] || a.PRJ_ID);
+        bValue = parseInt(b.PRJ_ID.split('-')[1] || b.PRJ_ID);
+        return direction === 'asc' ? aValue - bValue : bValue - aValue;
+      case 'prjName':
+        aValue = (a.PRJ_NAME || '').toLowerCase();
+        bValue = (b.PRJ_NAME || '').toLowerCase();
+        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      case 'prsDesc':
+        aValue = (a.PRS_DESC || '').toLowerCase();
+        bValue = (b.PRS_DESC || '').toLowerCase();
+        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      case ' acclId':
+        aValue = getAccountName(a.ACCNT_ID).toLowerCase();
+        bValue = getAccountName(b.ACCNT_ID).toLowerCase();
+        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      default:
+        return 0;
+    }
+  };
+
+  const requestSort = (column) => {
+    setSortConfig(prev => ({
+      column,
+      direction: prev.column === column && prev.direction === 'asc' ? 'desc' : 'asc',
+    }));
+  };
+
+  // Add Project Logic
+  const [addformData, setaddFormData] = useState({
+    prjName: '',
+    prsDesc: '',
+    accntId: '',
+    orgId: orgId || '',
+    billRate: '',
+    billType: '',
+    otBillRate: '',
+    otBillType: '',
+    billableFlag: 'No',
+    startDt: '',
+    endDt: '',
+    clientId: '',
+    payTerm: '',
+    invoiceEmail: '',
+    invoiceFax: '',
+    invoicePhone: '',
+  });
+
+  const [addform_accounts, addform_setAccounts] = useState([]);
+  const [state, formAction] = useActionState(addProject, addform_intialstate);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        if (orgId) {
+          const accountsData = await fetchAccountsByOrgId(parseInt(orgId, 10));
+          addform_setAccounts(accountsData);
+        } else {
+          addform_setAccounts([]);
+          console.warn('No valid orgId provided, accounts not fetched');
+        }
+      } catch (error) {
+        console.error('Error loading accounts:', error);
+      }
+    };
+    loadData();
+  }, [orgId]);
+
+  const addform_handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setaddFormData((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
+  };
+
+  const addform_enhancedFormAction = async (formData) => {
+    formData.append('billTypes', JSON.stringify(billTypes));
+    formData.append('otBillTypes', JSON.stringify(otBillTypes));
+    formData.append('payTerms', JSON.stringify(payTerms));
+    return formAction(formData);
+  };
+
+  useEffect(() => {
+    if (state.success) {
+      setaddFormData({
+        prjName: '',
+        prsDesc: '',
+        accntId: '',
+        orgId: orgId || '',
+        billRate: '',
+        billType: '',
+        otBillRate: '',
+        otBillType: '',
+        billableFlag: 'No',
+        startDt: '',
+        endDt: '',
+        clientId: '',
+        payTerm: '',
+        invoiceEmail: '',
+        invoiceFax: '',
+        invoicePhone: '',
+      });
+      setaddformsuccess('Project added successfully!');
+      setTimeout(() => setaddformsuccess(null), 4000); // Clear success message after 2 seconds
+    }
+  }, [state.success, orgId]);
+
+  return (
+    <div className="project-overview-container">
+      {error && <div className="error-message">{error}</div>}
+      {isLoading && <div className="loading-message">Saving...</div>}
+    
+      {isadd && (
+        <div className="project-overview-container">
+          <h2>Add Project</h2>
+          <button className="back-button" onClick={handleBack}>x</button>
+          {addformsuccess && <div className="success-message">{addformsuccess}</div>}
+          {state.error && <div className="error-message">{state.error}</div>}
+          <form action={addform_enhancedFormAction} className="project-details-container">
+            {/* Basic Details Block */}
+            <div className="details-block">
+              <h3>Basic Details</h3>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Project Name*:</label>
+                  <input
+                    type="text"
+                    name="prjName"
+                    value={addformData.prjName}
+                    onChange={addform_handleChange}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Description:</label>
+                  <input
+                    type="text"
+                    name="prsDesc"
+                    value={addformData.prsDesc}
+                    onChange={addform_handleChange}
+                  />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Account*:</label>
+                  <select
+                    name="accntId"
+                    value={addformData.accntId}
+                    onChange={addform_handleChange}
+                    required
+                    disabled={!orgId}
+                  >
+                    <option value="">Select Account</option>
+                    {addform_accounts.map((account) => (
+                      <option key={account.ACCNT_ID} value={account.ACCNT_ID}>
+                        {account.ALIAS_NAME}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Organization*:</label>
+                  <input
+                    type="number"
+                    name="orgId"
+                    value={orgId || ''}
+                    readOnly
+                    className="bg-gray-100"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Additional Details Block */}
+            <div className="details-block">
+              <h3>Additional Details</h3>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Bill Rate:</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    name="billRate"
+                    value={addformData.billRate}
+                    onChange={addform_handleChange}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Bill Type:</label>
+                  <select
+                    name="billType"
+                    value={addformData.billType}
+                    onChange={addform_handleChange}
+                  >
+                    <option value="">Select Type</option>
+                    {billTypes.map((type) => (
+                      <option key={type.id} value={type.Name}>
+                        {type.Name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>OT Bill Rate:</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    name="otBillRate"
+                    value={addformData.otBillRate}
+                    onChange={addform_handleChange}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>OT Bill Type:</label>
+                  <select
+                    name="otBillType"
+                    value={addformData.otBillType}
+                    onChange={addform_handleChange}
+                  >
+                    <option value="">Select Type</option>
+                    {otBillTypes.map((type) => (
+                      <option key={type.id} value={type.Name}>
+                        {type.Name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Billable:</label>
+                  <select
+                    name="billableFlag"
+                    value={addformData.billableFlag}
+                    onChange={addform_handleChange}
+                  >
+                    <option value="No">No</option>
+                    <option value="Yes">Yes</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Start Date:</label>
+                  <input
+                    type="date"
+                    name="startDt"
+                    value={addformData.startDt}
+                    onChange={addform_handleChange}
+                    placeholder="mm/dd/yyyy"
+                  />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>End Date:</label>
+                  <input
+                    type="date"
+                    name="endDt"
+                    value={addformData.endDt}
+                    onChange={addform_handleChange}
+                    placeholder="mm/dd/yyyy"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Client*:</label>
+                  <select
+                    name="clientId"
+                    value={addformData.clientId}
+                    onChange={addform_handleChange}
+                    required
+                    disabled={!orgId}
+                  >
+                    <option value="">Select Client</option>
+                    {addform_accounts.map((account) => (
+                      <option key={account.ACCNT_ID} value={account.ACCNT_ID}>
+                        {account.ALIAS_NAME}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Payment Term:</label>
+                  <select
+                    name="payTerm"
+                    value={addformData.payTerm}
+                    onChange={addform_handleChange}
+                  >
+                    <option value="">Select Term</option>
+                    {payTerms.map((term) => (
+                      <option key={term.id} value={term.Name}>
+                        {term.Name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Invoice Email:</label>
+                  <input
+                    type="email"
+                    name="invoiceEmail"
+                    value={addformData.invoiceEmail}
+                    onChange={addform_handleChange}
+                  />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Invoice Fax:</label>
+                  <input
+                    type="text"
+                    name="invoiceFax"
+                    value={addformData.invoiceFax}
+                    onChange={addform_handleChange}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Invoice Phone:</label>
+                  <input
+                    type="text"
+                    name="invoicePhone"
+                    value={addformData.invoicePhone}
+                    onChange={addform_handleChange}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="form-buttons">
+              <button type="submit" className="submit-button" disabled={!orgId}>
+                Add Project
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {!isadd && !selectedProject ? (
+        <div>
+          <button onClick={() => handleaddproject()} className='submit-button'>Add Project</button>
+          {projects.length === 0 ? (
+            <p>No Projects found.</p>
+          ) : (
+            <table className="project-table">
+              <thead>
+                <tr>
+                  <th onClick={() => requestSort('prjId')}>
+                    Project ID 
+                  </th>
+                  <th onClick={() => requestSort('prjName')}>
+                    Project Name
+                  </th>
+                  <th>
+                    Description 
+                  </th>
+                  <th onClick={() => requestSort('accntId')}>
+                    Account 
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {allProjects.map((project) => (
+                  <tr key={project.PRJ_ID} onClick={() => handleRowClick(project)} className="clickable-row">
+                    <td>Project-{getdisplayprojectid(project.PRJ_ID)}</td>
+                    <td>{project.PRJ_NAME || '-'}</td>
+                    <td>{project.PRS_DESC || '-'}</td>
+                    <td>{getAccountName(project.ACCNT_ID)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ) : !isadd && (
+        <div className="project-details-container">
+          <button className="back-button" onClick={handleBack}>x</button>
+
+          {/* Basic Details Block */}
+          <div className="details-block">
+            <h3>Basic Details</h3>
+            {editingBasic && canEditProjects ? (
+              <form onSubmit={(e) => { e.preventDefault(); handleSave('basic'); }} className="project-form">
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Project Name*:</label>
+                    <input
+                      type="text"
+                      name="prjName"
+                      value={formData.prjName}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Description:</label>
+                    <input
+                      type="text"
+                      name="prsDesc"
+                      value={formData.prsDesc}
+                      onChange={handleChange}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Account*:</label>
+                    <select
+                      name="accntId"
+                      value={formData.accntId}
+                      onChange={handleChange}
+                      required
+                    >
+                      <option value="">Select Account</option>
+                      {accounts.map((account) => (
+                        <option key={account.ACCNT_ID} value={account.ACCNT_ID}>
+                          {account.ALIAS_NAME}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="form-buttons">
+                  <button type="submit" className="submit-button" disabled={isLoading}>
+                    {isLoading ? 'Saving...' : 'Save'}
+                  </button>
+                  <button type="button" className="cancel-button" onClick={() => setEditingBasic(false)} disabled={isLoading}>
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="view-details">
+                <div className="details-row">
+                  <div className="details-group">
+                    <label>Project ID:</label>
+                    <p>Project-{getdisplayprojectid(selectedProject.PRJ_ID)}</p>
+                  </div>
+                  <div className="details-group">
+                    <label>Project Name:</label>
+                    <p>{selectedProject.PRJ_NAME || '-'}</p>
+                  </div>
+                </div>
+                <div className="details-row">
+                  <div className="details-group">
+                    <label>Description:</label>
+                    <p>{selectedProject.PRS_DESC || '-'}</p>
+                  </div>
+                  <div className="details-group">
+                    <label>Account:</label>
+                    <p>{getAccountName(selectedProject.ACCNT_ID)}</p>
+                  </div>
+                </div>
+                {canEditProjects && (
+                  <div className="details-buttons">
+                    <button className="edit-button" onClick={() => handleEdit('basic')}>Edit</button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Additional Details Block */}
+          <div className="details-block">
+            <h3>Additional Details</h3>
+            {editingAdditional && canEditProjects ? (
+              <form onSubmit={(e) => { e.preventDefault(); handleSave('additional'); }} className="project-form">
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Bill Rate:</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      name="billRate"
+                      value={formData.billRate}
+                      onChange={handleChange}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Bill Type:</label>
+                    <select
+                      name="billType"
+                      value={formData.billType}
+                      onChange={handleChange}
+                    >
+                      <option value="">Select Type</option>
+                      {billTypes.map((type) => (
+                        <option key={type.id} value={type.Name}>
+                          {type.Name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>OT Bill Rate:</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      name="otBillRate"
+                      value={formData.otBillRate}
+                      onChange={handleChange}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>OT Bill Type:</label>
+                    <select
+                      name="otBillType"
+                      value={formData.otBillType}
+                      onChange={handleChange}
+                    >
+                      <option value="">Select Type</option>
+                      {otBillTypes.map((type) => (
+                        <option key={type.id} value={type.Name}>
+                          {type.Name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Billable:</label>
+                    <select
+                      name="billableFlag"
+                      value={formData.billableFlag}
+                      onChange={handleChange}
+                    >
+                      <option value="No">No</option>
+                      <option value="Yes">Yes</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Start Date:</label>
+                    <input
+                      type="date"
+                      name="startDt"
+                      value={formData.startDt}
+                      onChange={handleChange}
+                    />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>End Date:</label>
+                    <input
+                      type="date"
+                      name="endDt"
+                      value={formData.endDt}
+                      onChange={handleChange}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Client*:</label>
+                    <select
+                      name="clientId"
+                      value={formData.clientId}
+                      onChange={handleChange}
+                      required
+                    >
+                      <option value="">Select Client</option>
+                      {accounts.map((account) => (
+                        <option key={account.ACCNT_ID} value={account.ACCNT_ID}>
+                          {account.ALIAS_NAME}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Payment Term:</label>
+                    <select
+                      name="payTerm"
+                      value={formData.payTerm}
+                      onChange={handleChange}
+                    >
+                      <option value="">Select Term</option>
+                      {payTerms.map((term) => (
+                        <option key={term.id} value={term.Name}>
+                          {term.Name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Invoice Email:</label>
+                    <input
+                      type="email"
+                      name="invoiceEmail"
+                      value={formData.invoiceEmail}
+                      onChange={handleChange}
+                    />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Invoice Fax:</label>
+                    <input
+                      type="text"
+                      name="invoiceFax"
+                      value={formData.invoiceFax}
+                      onChange={handleChange}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Invoice Phone:</label>
+                    <input
+                      type="text"
+                      name="invoicePhone"
+                      value={formData.invoicePhone}
+                      onChange={handleChange}
+                    />
+                  </div>
+                </div>
+                <div className="form-buttons">
+                  <button type="submit" className="submit-button" disabled={isLoading}>
+                    {isLoading ? 'Saving...' : 'Save'}
+                  </button>
+                  <button type="button" className="cancel-button" onClick={() => setEditingAdditional(false)} disabled={isLoading}>
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="view-details">
+                <div className="details-row">
+                  <div className="details-group">
+                    <label>Bill Rate:</label>
+                    <p>{selectedProject.BILL_RATE || '-'}</p>
+                  </div>
+                  <div className="details-group">
+                    <label>Bill Type:</label>
+                    <p>{getDisplayValue(selectedProject.BILL_TYPE, billTypes)}</p>
+                  </div>
+                </div>
+                <div className="details-row">
+                  <div className="details-group">
+                    <label>OT Bill Rate:</label>
+                    <p>{selectedProject.OT_BILL_RATE || '-'}</p>
+                  </div>
+                  <div className="details-group">
+                    <label>OT Bill Type:</label>
+                    <p>{getDisplayValue(selectedProject.OT_BILL_TYPE, otBillTypes)}</p>
+                  </div>
+                </div>
+                <div className="details-row">
+                  <div className="details-group">
+                    <label>Billable:</label>
+                    <p>{selectedProject.BILLABLE_FLAG ? 'Yes' : 'No'}</p>
+                  </div>
+                  <div className="details-group">
+                    <label>Start Date:</label>
+                    <p>{formatDate(selectedProject.START_DT) || '-'}</p>
+                  </div>
+                </div>
+                <div className="details-row">
+                  <div className="details-group">
+                    <label>End Date:</label>
+                    <p>{formatDate(selectedProject.END_DT) || '-'}</p>
+                  </div>
+                  <div className="details-group">
+                    <label>Client:</label>
+                    <p>{getAccountName(selectedProject.CLIENT_ID)}</p>
+                  </div>
+                </div>
+                <div className="details-row">
+                  <div className="details-group">
+                    <label>Payment Term:</label>
+                    <p>{getDisplayValue(selectedProject.PAY_TERM, payTerms)}</p>
+                  </div>
+                  <div className="details-group">
+                    <label>Invoice Email:</label>
+                    <p>{selectedProject.INVOICE_EMAIL || '-'}</p>
+                  </div>
+                </div>
+                <div className="details-row">
+                  <div className="details-group">
+                    <label>Invoice Fax:</label>
+                    <p>{selectedProject.INVOICE_FAX || '-'}</p>
+                  </div>
+                  <div className="details-group">
+                    <label>Invoice Phone:</label>
+                    <p>{selectedProject.INVOICE_PHONE || '-'}</p>
+                  </div>
+                </div>
+                <div className="details-row">
+                  <div className="details-group">
+                    <label>Created By:</label>
+                    <p>{selectedProject.Createdby || '-'}</p>
+                  </div>
+                  <div className="details-group">
+                    <label>Updated By:</label>
+                    <p>{selectedProject.Updatedby || '-'}</p>
+                  </div>
+                </div>
+                <div className="details-row">
+                  <div className="details-group">
+                    <label>Last Updated Date:</label>
+                    <p>{formatDate(selectedProject.last_updated_date) || '-'}</p>
+                  </div>
+                </div>
+                {canEditProjects && (
+                  <div className="details-buttons">
+                    <button className="edit-button" onClick={() => handleEdit('additional')}>Edit</button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default Overview;
+
+'use server';
+
+import DBconnection from '@/app/utils/config/db';
+import { cookies } from 'next/headers';
+
+const decodeJwt = (token) => {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = Buffer.from(base64, 'base64').toString('utf8');
+    return JSON.parse(jsonPayload);
+  } catch (error) {
+    console.error('Error decoding JWT:', error);
+    return null;
+  }
+};
+
+const getCurrentUserEmpIdName = async (pool, userId, orgId) => {
+  try {
+    // Fetch empid from C_USER using username (userId)
+    const [userRows] = await pool.execute(
+      'SELECT empid FROM C_USER WHERE username = ? AND orgid = ?',
+      [userId, orgId]
+    );
+    if (userRows.length === 0) {
+      console.error('User not found in C_USER for username:', userId);
+      return 'unknown';
+    }
+    const empid = userRows[0].empid;
+
+    // Fetch employee name from C_EMP
+    const [empRows] = await pool.execute(
+      'SELECT EMP_FST_NAME, EMP_LAST_NAME,roleid FROM C_EMP WHERE empid = ? AND orgid = ?',
+      [empid, orgId]
+    );
+    if (empRows.length === 0) {
+      console.error('Employee not found in C_EMP for empid:', empid);
+      return `${empid}-unknown`;
+    }
+     const { EMP_FST_NAME, EMP_LAST_NAME } = empRows[0];
+    return `${empid}-${EMP_FST_NAME} ${EMP_LAST_NAME}`;
+  } catch (error) {
+    console.error('Error fetching empid-name:', error.message);
+    return 'system';
+  }
+};
+
+export async function updateproject(formData) {
+  const prjId = formData.get('PRJ_ID')?.trim();
+  const section = formData.get('section')?.trim();
+
+  console.log('updateproject FormData:', {
+    prjId,
+    section,
+    formData: Object.fromEntries(formData)
+  });
+
+  const cookieStore = cookies();
+  const token = cookieStore.get('jwt_token')?.value;
+
+  if (!token) {
+    console.log('No token found');
+    return { error: 'No token found. Please log in.' };
+  }
+
+  const decoded = decodeJwt(token);
+  if (!decoded || !decoded.orgid || !decoded.userId) {
+    console.log('Invalid token or orgid/userId not found');
+    return { error: 'Invalid token or orgid/userId not found.' };
+  }
+
+  const orgId = decoded.orgid;
+  const userId = decoded.userId;
+
+  if (!prjId) {
+    console.log('Project ID is required');
+    return { error: 'Project ID is required.' };
+  }
+
+  let pool;
+  let retryCount = 0;
+  const maxRetries = 2;
+
+  while (retryCount <= maxRetries) {
+    try {
+      console.log(`Attempting to connect to MySQL (attempt ${retryCount + 1})...`);
+      pool = await DBconnection();
+      console.log('MySQL connection pool acquired');
+
+      const [existing] = await pool.execute(
+        'SELECT PRJ_ID FROM C_PROJECT WHERE PRJ_ID = ? AND ORG_ID = ?',
+        [prjId, orgId]
+      );
+      if (existing.length === 0) {
+        console.log('Project not found');
+        return { error: 'Project not found.' };
+      }
+
+      const updatedBy = await getCurrentUserEmpIdName(pool, userId, orgId);
+      let affectedRows = 0;
+
+      if (section === 'basic') {
+        const prjName = formData.get('PRJ_NAME')?.trim();
+        const prsDesc = formData.get('PRS_DESC')?.trim() || null;
+        const accntId = formData.get('ACCNT_ID')?.trim();
+
+        console.log('Basic details:', { prjName, prsDesc, accntId, updatedBy });
+
+        if (!prjName) {
+          console.log('Project name is required');
+          return { error: 'Project name is required.' };
+        }
+        if (!accntId) {
+          console.log('Account is required');
+          return { error: 'Account is required.' };
+        }
+
+        const [accountCheck] = await pool.execute(
+          'SELECT ACCNT_ID FROM C_ACCOUNT WHERE ACCNT_ID = ? AND ORGID = ? AND ACTIVE_FLAG = 1',
+          [accntId, orgId]
+        );
+        if (accountCheck.length === 0) {
+          console.log('Invalid or inactive account');
+          return { error: 'Invalid or inactive account.' };
+        }
+
+        const [result] = await pool.query(
+          `UPDATE C_PROJECT 
+           SET PRJ_NAME = ?, PRS_DESC = ?, ACCNT_ID = ?, 
+               Updatedby = ?, last_updated_date = ?
+           WHERE PRJ_ID = ? AND ORG_ID = ?`,
+          [prjName, prsDesc, accntId, updatedBy, new Date(), prjId, orgId]
+        );
+
+        affectedRows += result.affectedRows;
+        console.log(`Basic details update result: ${result.affectedRows} rows affected for PRJ_ID ${prjId}`);
+      } else if (section === 'additional') {
+        const billRate = formData.get('BILL_RATE') ? parseFloat(formData.get('BILL_RATE')) : null;
+        const billType = formData.get('BILL_TYPE')?.trim() || null;
+        const otBillRate = formData.get('OT_BILL_RATE') ? parseFloat(formData.get('OT_BILL_RATE')) : null;
+        const otBillType = formData.get('OT_BILL_TYPE')?.trim() || null;
+        const billableFlag = formData.get('BILLABLE_FLAG')?.trim() === '1' ? 1 : 0;
+        const startDt = formData.get('START_DT') || null;
+        const endDt = formData.get('END_DT') || null;
+        const clientId = formData.get('CLIENT_ID')?.trim() || null;
+        const payTerm = formData.get('PAY_TERM')?.trim() || null;
+        const invoiceEmail = formData.get('INVOICE_EMAIL')?.trim() || null;
+        const invoiceFax = formData.get('INVOICE_FAX')?.trim() || null;
+        const invoicePhone = formData.get('INVOICE_PHONE')?.trim() || null;
+
+        console.log('Additional details:', {
+          billRate, billType, otBillRate, otBillType, billableFlag, startDt, endDt,
+          clientId, payTerm, invoiceEmail, invoiceFax, invoicePhone, updatedBy
+        });
+
+        if (!clientId) {
+          console.log('Client is required');
+          return { error: 'Client is required.' };
+        }
+
+        const [clientCheck] = await pool.execute(
+          'SELECT ACCNT_ID FROM C_ACCOUNT WHERE ACCNT_ID = ? AND ORGID = ? AND ACTIVE_FLAG = 1',
+          [clientId, orgId]
+        );
+        if (clientCheck.length === 0) {
+          console.log('Invalid or inactive client');
+          return { error: 'Invalid or inactive client.' };
+        }
+
+        if (billType) {
+          const [billTypeCheck] = await pool.execute(
+            'SELECT id FROM generic_values WHERE g_id = 7 AND Name = ? AND orgid = ? AND isactive = 1',
+            [billType, orgId]
+          );
+          if (billTypeCheck.length === 0) {
+            console.log('Invalid bill type');
+            return { error: 'Invalid bill type.' };
+          }
+        }
+
+        if (otBillType) {
+          const [otBillTypeCheck] = await pool.execute(
+            'SELECT id FROM generic_values WHERE g_id = 8 AND Name = ? AND orgid = ? AND isactive = 1',
+            [otBillType, orgId]
+          );
+          if (otBillTypeCheck.length === 0) {
+            console.log('Invalid OT bill type');
+            return { error: 'Invalid OT bill type.' };
+          }
+        }
+
+        if (payTerm) {
+          const [payTermCheck] = await pool.execute(
+            'SELECT id FROM generic_values WHERE g_id = 9 AND Name = ? AND orgid = ? AND isactive = 1',
+            [payTerm, orgId]
+          );
+          if (payTermCheck.length === 0) {
+            console.log('Invalid pay term');
+            return { error: 'Invalid pay term.' };
+          }
+        }
+
+        const [result] = await pool.query(
+          `UPDATE C_PROJECT 
+           SET BILL_RATE = ?, BILL_TYPE = ?, OT_BILL_RATE = ?, OT_BILL_TYPE = ?, 
+               BILLABLE_FLAG = ?, START_DT = ?, END_DT = ?, CLIENT_ID = ?, 
+               PAY_TERM = ?, INVOICE_EMAIL = ?, INVOICE_FAX = ?, INVOICE_PHONE = ?, 
+               Updatedby = ?, last_updated_date = ?
+           WHERE PRJ_ID = ? AND ORG_ID = ?`,
+          [
+            billRate, billType, otBillRate, otBillType, billableFlag, startDt, endDt,
+            clientId, payTerm, invoiceEmail, invoiceFax, invoicePhone, updatedBy,
+            new Date(), prjId, orgId
+          ]
+        );
+
+        affectedRows += result.affectedRows;
+        console.log(`Additional details update result: ${result.affectedRows} rows affected for PRJ_ID ${prjId}`);
+      } else {
+        console.log('Invalid section:', section);
+        return { error: 'Invalid section specified.' };
+      }
+
+      if (affectedRows === 0) {
+        console.log('No rows updated for PRJ_ID:', prjId);
+        return { error: 'No changes were applied.' };
+      }
+
+      console.log(`Project updated: PRJ_ID ${prjId}, section ${section}, affectedRows: ${affectedRows}`);
+      return { success: true, updatedBy };
+    } catch (error) {
+      console.error('Error updating project:', error.message);
+      if (error.message.includes('Pool is closed') && retryCount < maxRetries) {
+        console.log('Pool is closed, retrying connection...');
+        retryCount++;
+        continue;
+      }
+      return { error: `Failed to update project: ${error.message}` };
+    } 
+  }
+
+  return { error: 'Failed to update project after multiple retries: Pool is closed' };
+}
+
+export async function fetchprojectsbyorgid() {
+  let pool;
+  try {
+    const cookieStore = cookies();
+    const cookie = cookieStore.get('jwt_token');
+    const token = cookie?.value;
+
+    if (!token) {
+      console.log('No token found');
+      throw new Error('No token found. Please log in.');
+    }
+
+    const decoded = decodeJwt(token);
+    if (!decoded || !decoded.orgid) {
+      console.log('Invalid token or orgid not found');
+      throw new Error('Invalid token or orgid not found.');
+    }
+
+    const orgId = decoded.orgid;
+    if (!orgId) {
+      console.log('orgId is undefined or invalid');
+      throw new Error('Organization ID is missing or invalid.');
+    }
+
+    console.log(`Fetching projects for orgId: ${orgId}`);
+    pool = await DBconnection();
+    console.log('MySQL connected');
+    const [rows] = await pool.execute(
+      `SELECT PRJ_ID, PRJ_NAME, PRS_DESC, ACCNT_ID, ORG_ID, BILL_RATE, BILL_TYPE, OT_BILL_RATE, OT_BILL_TYPE,
+              BILLABLE_FLAG, START_DT, END_DT, CLIENT_ID, PAY_TERM, INVOICE_EMAIL, INVOICE_FAX, INVOICE_PHONE,
+              Createdby, Updatedby,last_updated_date
+       FROM C_PROJECT WHERE ORG_ID = ?`,
+      [orgId]
+    );
+    console.log('Fetched projects:', rows);
+    return rows;
+  } catch (error) {
+    console.error('Error fetching projects:', error.message);
+    throw new Error(`Failed to fetch projects: ${error.message}`);
+  } 
+}
+
+export async function fetchaccountsbyorgid() {
+  let pool;
+  try {
+    const cookieStore = cookies();
+    const token = cookieStore.get('jwt_token')?.value;
+
+    if (!token) {
+      console.log('No token found');
+      throw new Error('No token found. Please log in.');
+    }
+
+    const decoded = decodeJwt(token);
+    if (!decoded || !decoded.orgid) {
+      console.log('Invalid token or orgid not found');
+      throw new Error('Invalid token or orgid not found.');
+    }
+
+    const orgId = decoded.orgid;
+    if (!orgId) {
+      console.log('orgId is undefined or invalid');
+      throw new Error('Organization ID is missing or invalid.');
+    }
+
+    console.log(`Fetching accounts for orgId: ${orgId}`);
+    pool = await DBconnection();
+    console.log('MySQL connection pool acquired');
+    const [rows] = await pool.execute(
+      `SELECT ACCNT_ID, ALIAS_NAME FROM C_ACCOUNT WHERE ORGID = ? AND ACTIVE_FLAG = 1`,
+      [orgId]
+    );
+    if (rows.length === 0) {
+      console.log('No accounts found for orgId:', orgId);
+      throw new Error('No accounts found for the given organization.');
+    }
+
+    console.log('Fetched accounts:', rows);
+    return rows;
+  } catch (error) {
+    console.error('Error fetching account:', error.message);
+    throw new Error(`Failed to fetch account: ${error.message}`);
+  } 
+}
+
+export async function fetchProjectById(prjId) {
+  let pool;
+  try {
+    const cookieStore = cookies();
+    const token = cookieStore.get('jwt_token')?.value;
+
+    if (!token) {
+      console.log('No token found');
+      throw new Error('No token found. Please log in.');
+    }
+
+    const decoded = decodeJwt(token);
+    if (!decoded || !decoded.orgid) {
+      console.log('Invalid token or orgid not found');
+      throw new Error('Invalid token or orgid not found.');
+    }
+
+    const orgId = decoded.orgid;
+    if (!orgId) {
+      console.log('orgId is undefined or invalid');
+      throw new Error('Organization ID is missing or invalid.');
+    }
+
+    if (!prjId) {
+      console.log('Project ID is required');
+      throw new Error('Project ID is required.');
+    }
+
+    console.log(`Fetching project for prjId: ${prjId}, orgId: ${orgId}`);
+    pool = await DBconnection();
+    console.log('MySQL connection pool acquired');
+    const [rows] = await pool.execute(
+      `SELECT PRJ_ID, PRJ_NAME, PRS_DESC, ACCNT_ID, ORG_ID, BILL_RATE, BILL_TYPE, OT_BILL_RATE, OT_BILL_TYPE,
+              BILLABLE_FLAG, START_DT, END_DT, CLIENT_ID, PAY_TERM, INVOICE_EMAIL, INVOICE_FAX, INVOICE_PHONE,
+              Createdby, Updatedby,last_updated_date
+       FROM C_PROJECT WHERE PRJ_ID = ? AND ORG_ID = ?`,
+      [prjId, orgId]
+    );
+
+    if (rows.length === 0) {
+      console.log('No project found for prjId:', prjId);
+      throw new Error('No project found for the given ID.');
+    }
+
+    console.log('Fetched project:', rows[0]);
+    return rows[0];
+  } catch (error) {
+    console.error('Error fetching project:', error.message);
+    throw new Error(`Failed to fetch project: ${error.message}`);
+  }
+}
+
+'use server';
+
+import DBconnection from '@/app/utils/config/db';
+import { cookies } from 'next/headers';
+
+// Simple function to decode JWT without verification
+const decodeJwt = (token) => {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = Buffer.from(base64, 'base64').toString('utf8');
+    return JSON.parse(jsonPayload);
+  } catch (error) {
+    console.error('Error decoding JWT:', error);
+    return null;
+  }
+};
+
+// Helper function to get current user's empid-name
+const getCurrentUserEmpIdName = async (pool, userId, orgId) => {
+  try {
+    // Fetch empid from C_USER using username (userId)
+    const [userRows] = await pool.execute(
+      'SELECT empid FROM C_USER WHERE username = ? AND orgid = ?',
+      [userId, orgId]
+    );
+    if (userRows.length === 0) {
+      console.error('User not found in C_USER for username:', userId);
+      return 'unknown';
+    }
+    const empid = userRows[0].empid;
+
+    // Fetch employee name from C_EMP
+    const [empRows] = await pool.execute(
+      'SELECT EMP_FST_NAME, EMP_LAST_NAME,roleid FROM C_EMP WHERE empid = ? AND orgid = ?',
+      [empid, orgId]
+    );
+    if (empRows.length === 0) {
+      console.error('Employee not found in C_EMP for empid:', empid);
+      return `${empid}-unknown`;
+    }
+     const { EMP_FST_NAME, EMP_LAST_NAME } = empRows[0];
+    return `${empid}-${EMP_FST_NAME} ${EMP_LAST_NAME}`;
+  } catch (error) {
+    console.error('Error fetching empid-name:', error.message);
+    return 'system';
+  }
+};
+
+export async function addProject(prevState, formData) {
+  // Extract form data
+  const prjName = formData.get('prjName')?.trim();
+  const prsDesc = formData.get('prsDesc')?.trim() || null;
+  const accntId = formData.get('accntId')?.trim();
+  const billRate = formData.get('billRate') ? parseFloat(formData.get('billRate')) : null;
+  const billType = formData.get('billType')?.trim() || null;
+  const otBillRate = formData.get('otBillRate') ? parseFloat(formData.get('otBillRate')) : null;
+  const otBillType = formData.get('otBillType')?.trim() || null;
+  const billableFlag = formData.get('billableFlag')?.trim() || 'No';
+  const startDt = formData.get('startDt') || null;
+  const endDt = formData.get('endDt') || null;
+  const clientId = formData.get('clientId')?.trim() || null;
+  const payTerm = formData.get('payTerm')?.trim() || null;
+  const invoiceEmail = formData.get('invoiceEmail')?.trim() || null;
+  const invoiceFax = formData.get('invoiceFax')?.trim() || null;
+  const invoicePhone = formData.get('invoicePhone')?.trim() || null;
+  const billTypes = JSON.parse(formData.get('billTypes') || '[]');
+  const otBillTypes = JSON.parse(formData.get('otBillTypes') || '[]');
+  const payTerms = JSON.parse(formData.get('payTerms') || '[]');
+
+  // Log form data for debugging
+  console.log('Form data received:', {
+    prjName,
+    prsDesc,
+    accntId,
+    orgId: 'from JWT',
+    billRate,
+    billType,
+    otBillRate,
+    otBillType,
+    billableFlag,
+    startDt,
+    endDt,
+    clientId,
+    payTerm,
+    invoiceEmail,
+    invoiceFax,
+    invoicePhone,
+    billTypes,
+    otBillTypes,
+    payTerms,
+  });
+
+  // Get the JWT token from cookies
+  const cookieStore = cookies();
+  const token = cookieStore.get('jwt_token')?.value;
+
+  if (!token) {
+    console.log('Redirecting: No token found');
+    return { error: 'No token found. Please log in.' };
+  }
+
+  // Decode the token to get the orgid and userId
+  const decoded = decodeJwt(token);
+  if (!decoded || !decoded.orgid || !decoded.userId) {
+    console.log('Redirecting: Invalid token or orgid/userId not found');
+    return { error: 'Invalid token or orgid/userId not found.' };
+  }
+
+  const orgId = decoded.orgid;
+  const userId = decoded.userId;
+
+  // Validation for required fields
+  if (!prjName || prjName.trim() === '') {
+    console.log('Redirecting: Project name is required');
+    return { error: 'Project name is required.' };
+  }
+  if (!accntId) {
+    console.log('Redirecting: Account is required');
+    return { error: 'Account is required.' };
+  }
+  if (!orgId) {
+    console.log('Redirecting: Organization ID is required');
+    return { error: 'Organization ID is required.' };
+  }
+  if (!clientId) {
+    console.log('Redirecting: Client is required');
+    return { error: 'Client is required.' };
+  }
+
+  // Validate billType if provided
+  if (billType && !billTypes.some(type => type.Name === billType)) {
+    console.log('Redirecting: Invalid bill type');
+    return { error: 'Invalid bill type.' };
+  }
+
+  // Validate otBillType if provided
+  if (otBillType && !otBillTypes.some(type => type.Name === otBillType)) {
+    console.log('Redirecting: Invalid OT bill type');
+    return { error: 'Invalid OT bill type.' };
+  }
+
+  // Validate payTerm if provided
+  if (payTerm && !payTerms.some(term => term.Name === payTerm)) {
+    console.log('Redirecting: Invalid pay term');
+    return { error: 'Invalid pay term.' };
+  }
+
+  let pool;
+  let retryCount = 0;
+  const maxRetries = 2;
+
+  while (retryCount <= maxRetries) {
+    try {
+      console.log(`Attempting to connect to MySQL (attempt ${retryCount + 1})...`);
+      pool = await DBconnection();
+      console.log('MySQL connection pool acquired');
+
+      // Validate accntId
+      const [accountCheck] = await pool.execute(
+        'SELECT ACCNT_ID FROM C_ACCOUNT WHERE ACCNT_ID = ? AND ORGID = ? AND ACTIVE_FLAG = 1',
+        [accntId, orgId]
+      );
+      if (accountCheck.length === 0) {
+        console.log('Redirecting: Invalid or inactive account');
+        return { error: 'Invalid or inactive account.' };
+      }
+
+      // Validate clientId
+      const [clientCheck] = await pool.execute(
+        'SELECT ACCNT_ID FROM C_ACCOUNT WHERE ACCNT_ID = ? AND ORGID = ? AND ACTIVE_FLAG = 1',
+        [clientId, orgId]
+      );
+      if (clientCheck.length === 0) {
+        console.log('Redirecting: Invalid or inactive client');
+        return { error: 'Invalid or inactive client.' };
+      }
+
+      // Get current user's empid-name
+      const createdBy = await getCurrentUserEmpIdName(pool, userId, orgId);
+     // const updatedBy= await getCurrentUserEmpIdName(pool, userId, orgId);
+      // Get the current number of records in C_PROJECT and add 1 for PRJ_ID
+      const [countResult] = await pool.query('SELECT COUNT(*) AS count FROM C_PROJECT WHERE ORG_ID = ?', [orgId]);
+      const prjCount = countResult[0].count;
+      const prjId = `${orgId}-${prjCount + 1}`; // Generate PRJ_ID with orgId prefix
+
+      // Define insert columns (all 18 columns from C_PROJECT schema)
+      const insertColumns = [
+        'PRJ_ID', 'PRJ_NAME', 'PRS_DESC', 'ACCNT_ID', 'ORG_ID', 'BILL_RATE', 'BILL_TYPE',
+        'OT_BILL_RATE', 'OT_BILL_TYPE', 'BILLABLE_FLAG', 'START_DT', 'END_DT', 'CLIENT_ID',
+        'PAY_TERM', 'INVOICE_EMAIL', 'INVOICE_FAX', 'INVOICE_PHONE', 'ROW_ID','Createdby'
+      ];
+
+      // Define values (matching all 18 columns)
+      const values = [
+        prjId,
+        prjName,
+        prsDesc,
+        accntId,
+        parseInt(orgId, 10),
+        billRate,
+        billType,
+        otBillRate,
+        otBillType,
+        billableFlag === 'Yes' ? 1 : 0,
+        startDt,
+        endDt,
+        clientId,
+        payTerm,
+        invoiceEmail,
+        invoiceFax,
+        invoicePhone,
+        null, // ROW_ID (auto-incremented by database)
+        createdBy,
+      ];
+
+      // Log column and value counts for debugging
+      console.log('Inserting project with', values.length, 'values');
+      console.log('Column count:', insertColumns.length);
+
+      // Ensure column and value counts match
+      if (values.length !== insertColumns.length) {
+        console.error('Mismatch: values length =', values.length, 'columns length =', insertColumns.length);
+        return { error: 'Internal error: column count mismatch' };
+      }
+
+      // Prepare query
+      const placeholders = values.map(() => '?').join(', ');
+      const query = `INSERT INTO C_PROJECT (${insertColumns.join(', ')}) VALUES (${placeholders})`;
+
+      // Log query values for debugging
+      console.log('Executing query with values:', values);
+
+      // Execute query
+      await pool.query(query, values);
+      console.log(`Project added with PRJ_ID: ${prjId}`);
+
+      return { success: true }; // Indicate success
+    } catch (error) {
+      console.error('Error adding project:', error.message);
+      if (error.message.includes('Pool is closed') && retryCount < maxRetries) {
+        console.log('Pool is closed, retrying connection...');
+        retryCount++;
+        continue;
+      }
+      return { error: `Failed to add project: ${error.message}` };
+    } 
+  }
+
+  return { error: 'Failed to add project after multiple retries: Pool is closed' };
+}
+
+export async function fetchAccountsByOrgId(orgId) {
+  let connection;
+  try {
+    connection = await DBconnection();
+    console.log('Fetching accounts for orgId:', orgId);
+    const [rows] = await connection.execute(
+      'SELECT ACCNT_ID, ALIAS_NAME FROM C_ACCOUNT WHERE ORGID = ? AND ACTIVE_FLAG = 1',
+      [orgId]
+    );
+    console.log('Fetched accounts:', rows);
+    return rows;
+  } catch (error) {
+    console.error('Error fetching accounts:', {
+      message: error.message,
+      code: error.code,
+      sql: error.sql,
+      sqlState: error.sqlState,
+      sqlMessage: error.sqlMessage,
+      orgId: orgId,
+    });
+    throw new Error('Failed to fetch accounts: ' + error.message);
+  } 
+}
+
+and make sure you dont change any logic and  take below code as refrence in which path file is inserted
+"use server";
+
+import DBconnection from "@/app/utils/config/db";
+import { cookies } from "next/headers";
+import fs from "fs/promises";
+import path from "path";
+import { v4 as uuidv4 } from "uuid";
+
+const decodeJwt = (token) => {
+  try {
+    const base64Url = token.split(".")[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    return JSON.parse(Buffer.from(base64, "base64").toString("utf8"));
+  } catch (error) {
+    console.error("JWT decoding error:", error);
+    return null;
+  }
+};
+
+const getWeekStartDate = (date) => {
+  try {
+    const d = new Date(date);
+    if (isNaN(d)) throw new Error("Invalid date");
+    const day = d.getDay();
+    d.setDate(d.getDate() - day);
+    return d.toISOString().split("T")[0];
+  } catch (error) {
+    console.error("Invalid date error:", error);
+    return new Date().toISOString().split("T")[0];
+  }
+};
+
+const getWeekEndDate = (weekStart) => {
+  const d = new Date(weekStart);
+  d.setDate(d.getDate() + 6);
+  return d.toISOString().split("T")[0];
+};
+
+const getAllSubordinates = async (pool, superiorEmpId, visited = new Set()) => {
+  if (visited.has(superiorEmpId)) return [];
+  visited.add(superiorEmpId);
+
+  try {
+    const [directSubordinates] = await pool.execute(
+      "SELECT empid, EMP_FST_NAME, EMP_LAST_NAME FROM C_EMP WHERE superior = ?",
+      [superiorEmpId]
+    );
+    console.log("Direct subordinates for:", superiorEmpId, directSubordinates);
+
+    let allSubordinates = directSubordinates.map(sub => ({ ...sub, isDelegated: false }));
+    for (const subordinate of directSubordinates) {
+      const nestedSubordinates = await getAllSubordinates(pool, subordinate.empid, visited);
+      allSubordinates = allSubordinates.concat(nestedSubordinates);
+    }
+    return allSubordinates;
+  } catch (error) {
+    console.error("Error in getAllSubordinates:", error);
+    return [];
+  }
+};
+
+const getDelegatedSubordinates = async (pool, userEmpId) => {
+  const [delegateRows] = await pool.execute(
+    "SELECT senderempid FROM delegate WHERE receiverempid = ? AND menuid = (SELECT id FROM menu WHERE name = 'TimeSheets') AND isactive = 1 AND (submenuid IS NULL OR submenuid = 0)",
+    [userEmpId]
+  );
+  const delegatedSuperiors = delegateRows.map((row) => row.senderempid);
+  console.log("Delegated superiors:", delegatedSuperiors);
+
+  let allSubordinates = [];
+  for (const superiorId of delegatedSuperiors) {
+    const subordinates = await getAllSubordinates(pool, superiorId, new Set());
+    allSubordinates = allSubordinates.concat(subordinates.map(sub => ({ ...sub, isDelegated: true })));
+  }
+
+  if (delegatedSuperiors.length > 0) {
+    const placeholders = delegatedSuperiors.map(() => "?").join(",");
+    const [hierarchyRows] = await pool.execute(
+      `SELECT empid, superior, EMP_FST_NAME, EMP_LAST_NAME FROM C_EMP WHERE superior IN (${placeholders})`,
+      [...delegatedSuperiors]
+    );
+    const subordinateIds = hierarchyRows.map((row) => row.empid);
+    for (const subId of subordinateIds) {
+      const nestedSubordinates = await getAllSubordinates(pool, subId, new Set());
+      allSubordinates = allSubordinates.concat(nestedSubordinates.map(sub => ({ ...sub, isDelegated: true })));
+    }
+  }
+
+  return allSubordinates.filter(
+    (sub, index, self) => index === self.findIndex((s) => s.empid === sub.empid)
+  );
+};
+
+const isSuperior = async (pool, userEmpId, employeeId) => {
+  if (!userEmpId || !employeeId || userEmpId === employeeId) return false;
+  const subordinates = await getAllSubordinates(pool, userEmpId);
+  const delegatedSubordinates = await getDelegatedSubordinates(pool, userEmpId);
+  return subordinates.some((sub) => sub.empid === employeeId) || delegatedSubordinates.some((sub) => sub.empid === employeeId);
+};
+
+export async function fetchSuperiorName(empId) {
+  if (!empId) return { error: "Employee ID is required." };
+
+  try {
+    const pool = await DBconnection();
+    const [employeeRows] = await pool.execute("SELECT superior FROM C_EMP WHERE empid = ?", [empId]);
+    if (!employeeRows.length) return { error: "Employee not found." };
+
+    const superiorId = employeeRows[0].superior;
+    if (!superiorId) return { superiorName: "" };
+
+    const [superiorRows] = await pool.execute(
+      "SELECT EMP_FST_NAME, EMP_LAST_NAME FROM C_EMP WHERE empid = ?",
+      [superiorId]
+    );
+    if (!superiorRows.length) return { superiorName: "" };
+
+    const superiorName = `${superiorRows[0].EMP_FST_NAME} ${superiorRows[0].EMP_LAST_NAME || ""}`.trim();
+    return { superiorName };
+  } catch (error) {
+    console.error("Error fetching superior name:", error);
+    return { error: "Failed to fetch superior name." };
+  }
+}
+
+export async function fetchTimesheetAndProjects(selectedDate) {
+  const token = cookies().get("jwt_token")?.value;
+  if (!token) return { error: "No token found. Please log in." };
+
+  const decoded = decodeJwt(token);
+  if (!decoded || !decoded.userId) return { error: "Invalid token or user ID not found." };
+
+  const pool = await DBconnection();
+  const [userRows] = await pool.execute("SELECT empid FROM C_USER WHERE username = ?", [decoded.userId]);
+  if (!userRows.length) return { error: "User not found in C_USER table." };
+
+  const employeeId = userRows[0].empid;
+  const weekStart = getWeekStartDate(selectedDate);
+  const weekEnd = getWeekEndDate(weekStart);
+  const year = new Date(weekStart).getFullYear();
+
+  const [projRows] = await pool.execute(
+    `SELECT pe.PRJ_ID, COALESCE(p.PRJ_NAME, 'Unnamed Project') AS PRJ_NAME, pe.BILL_RATE, pe.BILL_TYPE 
+     FROM C_PROJ_EMP pe 
+     LEFT JOIN C_PROJECT p ON pe.PRJ_ID = p.PRJ_ID 
+     WHERE pe.EMP_ID = ? 
+     AND pe.START_DT <= ? 
+     AND COALESCE(pe.END_DT, '9999-12-31') >= ?`,
+    [employeeId, weekEnd, weekStart]
+  );
+
+  const timesheets = [];
+  const attachments = {};
+  for (const project of projRows) {
+    const [timesheetRows] = await pool.execute(
+      "SELECT * FROM timesheets WHERE employee_id = ? AND week_start_date = ? AND project_id = ?",
+      [employeeId, weekStart, project.PRJ_ID]
+    );
+    const timesheet = timesheetRows[0] || {
+      employee_id: employeeId,
+      project_id: project.PRJ_ID,
+      week_start_date: weekStart,
+      year,
+      sun_hours: null,
+      mon_hours: null,
+      tue_hours: null,
+      wed_hours: null,
+      thu_hours: null,
+      fri_hours: null,
+      sat_hours: null,
+      sun_comment: "",
+      mon_comment: "",
+      tue_comment: "",
+      wed_comment: "",
+      thu_comment: "",
+      fri_comment: "",
+      sat_comment: "",
+      is_submitted: 0,
+      is_approved: 0,
+      invoice_path: null,
+      invoice_generated_at: null,
+      temp_key: `temp-${Date.now()}-${project.PRJ_ID}`,
+    };
+    timesheets.push(timesheet);
+
+    const [attachmentRows] = await pool.execute(
+      "SELECT DISTINCT attachment_id, employee_id, week_start_date, year, timesheet_id, file_path, file_name, uploaded_at FROM timesheet_attachments WHERE employee_id = ? AND week_start_date = ?",
+      [employeeId, weekStart]
+    );
+    attachments[timesheet.timesheet_id || timesheet.temp_key] = attachmentRows;
+  }
+
+  return { timesheets, projects: projRows, attachments, serverWeekStart: weekStart, currentUserEmpId: employeeId };
+}
+
+export async function fetchTimesheetsForSuperior(selectedDate) {
+  const token = cookies().get("jwt_token")?.value;
+  if (!token) return { error: "No token found. Please log in." };
+
+  const decoded = decodeJwt(token);
+  if (!decoded || !decoded.userId) return { error: "Invalid token or user ID not found." };
+
+  const pool = await DBconnection();
+  const [userRows] = await pool.execute("SELECT empid FROM C_USER WHERE username = ?", [decoded.userId]);
+  if (!userRows.length) return { error: "User not found in C_USER table." };
+
+  const superiorEmpId = userRows[0].empid;
+  const weekStart = getWeekStartDate(selectedDate);
+  const weekEnd = getWeekEndDate(weekStart);
+  const year = new Date(weekStart).getFullYear();
+
+  const directSubordinates = await getAllSubordinates(pool, superiorEmpId);
+  const delegatedSubordinates = await getDelegatedSubordinates(pool, superiorEmpId);
+  const allSubordinates = [...directSubordinates, ...delegatedSubordinates].filter(
+    (sub, index, self) => index === self.findIndex((s) => s.empid === sub.empid) && sub.empid !== superiorEmpId
+  );
+
+  const timesheets = [];
+  const projects = {};
+  const attachments = {};
+  for (const employee of allSubordinates) {
+    const [projRows] = await pool.execute(
+      `SELECT pe.PRJ_ID, COALESCE(p.PRJ_NAME, 'Unnamed Project') AS PRJ_NAME, pe.BILL_RATE, pe.BILL_TYPE 
+       FROM C_PROJ_EMP pe 
+       LEFT JOIN C_PROJECT p ON pe.PRJ_ID = p.PRJ_ID 
+       WHERE pe.EMP_ID = ? 
+       AND pe.START_DT <= ? 
+       AND COALESCE(pe.END_DT, '9999-12-31') >= ?`,
+      [employee.empid, weekEnd, weekStart]
+    );
+    projects[employee.empid] = projRows;
+
+    for (const project of projRows) {
+      const [timesheetRows] = await pool.execute(
+        "SELECT * FROM timesheets WHERE employee_id = ? AND week_start_date = ? AND project_id = ?",
+        [employee.empid, weekStart, project.PRJ_ID]
+      );
+      const ts = timesheetRows[0] || {
+        employee_id: employee.empid,
+        project_id: project.PRJ_ID,
+        week_start_date: weekStart,
+        year,
+        sun_hours: null,
+        mon_hours: null,
+        tue_hours: null,
+        wed_hours: null,
+        thu_hours: null,
+        fri_hours: null,
+        sat_hours: null,
+        sun_comment: "",
+        mon_comment: "",
+        tue_comment: "",
+        wed_comment: "",
+        thu_comment: "",
+        fri_comment: "",
+        sat_comment: "",
+        is_submitted: 0,
+        is_approved: 0,
+        invoice_path: null,
+        invoice_generated_at: null,
+        temp_key: `temp-${Date.now()}-${project.PRJ_ID}`,
+        employeeName: `${employee.EMP_FST_NAME} ${employee.EMP_LAST_NAME || ""}${employee.isDelegated ? " [del]" : ""}`.trim(),
+      };
+      timesheets.push(ts);
+
+      const [attachmentRows] = await pool.execute(
+        "SELECT DISTINCT attachment_id, employee_id, week_start_date, year, timesheet_id, file_path, file_name, uploaded_at FROM timesheet_attachments WHERE employee_id = ? AND week_start_date = ?",
+        [employee.empid, weekStart]
+      );
+      attachments[ts.timesheet_id || ts.temp_key] = attachmentRows;
+    }
+  }
+
+  return { timesheets, employees: allSubordinates, projects, attachments, serverWeekStart: weekStart, currentUserEmpId: superiorEmpId };
+}
+
+export async function saveTimesheet(formData) {
+  if (!formData) return { error: "Invalid form data received." };
+
+  const token = cookies().get("jwt_token")?.value;
+  if (!token) return { error: "No token found. Please log in." };
+
+  const decoded = decodeJwt(token);
+  if (!decoded || !decoded.userId) return { error: "Invalid token or user ID not found." };
+
+  const pool = await DBconnection();
+  const [userRows] = await pool.execute("SELECT empid FROM C_USER WHERE username = ?", [decoded.userId]);
+  if (!userRows.length) return { error: "User not found in C_USER table." };
+
+  const currentUserEmpId = userRows[0].empid;
+  const timesheetsData = [];
+  const updatedAttachments = {};
+
+  const timesheetIndices = [];
+  for (let key of formData.keys()) {
+    const match = key.match(/^timesheets\[(\d+)\]/);
+    if (match && !timesheetIndices.includes(match[1])) {
+      timesheetIndices.push(match[1]);
+    }
+  }
+
+  for (const index of timesheetIndices) {
+    const timesheetId = formData.get(`timesheets[${index}][timesheet_id]`) || null;
+    const employeeId = formData.get(`timesheets[${index}][employee_id]`);
+    const projectId = formData.get(`timesheets[${index}][project_id]`);
+    const weekStartDate = formData.get(`timesheets[${index}][week_start_date]`);
+    const year = formData.get(`timesheets[${index}][year]`);
+    if (!projectId || !weekStartDate) continue;
+
+    let existingTimesheet = null;
+    if (timesheetId) {
+      const [rows] = await pool.execute("SELECT * FROM timesheets WHERE timesheet_id = ? AND employee_id = ?", [timesheetId, employeeId]);
+      existingTimesheet = rows[0];
+    } else {
+      const [rows] = await pool.execute(
+        "SELECT * FROM timesheets WHERE employee_id = ? AND week_start_date = ? AND project_id = ?",
+        [employeeId, weekStartDate, projectId]
+      );
+      existingTimesheet = rows[0];
+    }
+
+    const isSuperiorUser = await isSuperior(pool, currentUserEmpId, employeeId);
+
+    if (existingTimesheet) {
+      if (existingTimesheet.is_approved === 1 && currentUserEmpId === employeeId && !isSuperiorUser) continue; // Employee can't edit approved
+      if (existingTimesheet.is_submitted === 1 && currentUserEmpId === employeeId && !isSuperiorUser) continue; // Employee can't edit submitted
+    }
+
+    const fields = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+    const hours = fields.map((day) => ({
+      hours: formData.get(`timesheets[${index}][${day}_hours]`) !== null ? parseFloat(formData.get(`timesheets[${index}][${day}_hours]`)) || null : existingTimesheet?.[`${day}_hours`] || null,
+      comment: formData.get(`timesheets[${index}][${day}_comment]`) !== null ? formData.get(`timesheets[${index}][${day}_comment]`) || "" : existingTimesheet?.[`${day}_comment`] || "",
+    }));
+    const isSubmitted = formData.get(`timesheets[${index}][is_submitted]`) !== null ? parseInt(formData.get(`timesheets[${index}][is_submitted]`) || "0") : existingTimesheet?.is_submitted || 0;
+    const isApproved = formData.get(`timesheets[${index}][is_approved]`) !== null ? parseInt(formData.get(`timesheets[${index}][is_approved]`) || "0") : existingTimesheet?.is_approved || 0;
+
+    let finalTimesheetId = timesheetId || existingTimesheet?.timesheet_id;
+
+    if (finalTimesheetId) {
+      await pool.execute(
+        `UPDATE timesheets SET 
+          sun_hours = ?, mon_hours = ?, tue_hours = ?, wed_hours = ?, thu_hours = ?, fri_hours = ?, sat_hours = ?, 
+          sun_comment = ?, mon_comment = ?, tue_comment = ?, wed_comment = ?, thu_comment = ?, fri_comment = ?, sat_comment = ?, 
+          is_submitted = ?, is_approved = ?, approved_by = ?, updated_at = CURRENT_TIMESTAMP 
+          WHERE timesheet_id = ? AND employee_id = ?`,
+        [
+          ...hours.map((h) => h.hours),
+          ...hours.map((h) => h.comment),
+          isSubmitted,
+          isApproved,
+          isApproved ? currentUserEmpId : null,
+          finalTimesheetId,
+          employeeId,
+        ]
+      );
+    } else {
+      const [result] = await pool.execute(
+        `INSERT INTO timesheets (
+          employee_id, project_id, week_start_date, year, 
+          sun_hours, mon_hours, tue_hours, wed_hours, thu_hours, fri_hours, sat_hours, 
+          sun_comment, mon_comment, tue_comment, wed_comment, thu_comment, fri_comment, sat_comment, 
+          is_submitted, is_approved, approved_by, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+        [
+          employeeId,
+          projectId,
+          weekStartDate,
+          year,
+          ...hours.map((h) => h.hours),
+          ...hours.map((h) => h.comment),
+          isSubmitted,
+          isApproved,
+          isApproved ? currentUserEmpId : null,
+        ]
+      );
+      finalTimesheetId = result.insertId;
+    }
+
+    timesheetsData.push({ timesheetId: finalTimesheetId, employeeId, weekStartDate, year, isSubmitted });
+  }
+
+  // Handle attachments once for the week, using the first timesheet ID
+  const attachmentFiles = formData.getAll("attachment");
+  const firstTimesheetId = timesheetsData.length > 0 ? timesheetsData[0].timesheetId : null;
+  const employeeId = timesheetsData.length > 0 ? timesheetsData[0].employeeId : null; // Use the employeeId from the timesheet
+  if (attachmentFiles.length > 0 && attachmentFiles[0].size > 0 && employeeId) {
+    const allowedTypes = ["image/jpeg", "image/png", "application/pdf", "text/plain"];
+    const maxFileSize = 5 * 1024 * 1024;
+
+    const uploadDir = path.join(process.cwd(), "public", "uploads", employeeId, timesheetsData[0].weekStartDate.replace(/-/g, ""));
+    try {
+      await fs.mkdir(uploadDir, { recursive: true });
+      for (const attachmentFile of attachmentFiles) {
+        if (!allowedTypes.includes(attachmentFile.type)) return { error: `Invalid file type for ${attachmentFile.name}. Allowed types: ${allowedTypes.join(", ")}` };
+        if (attachmentFile.size > maxFileSize) return { error: `File ${attachmentFile.name} exceeds the 5MB size limit.` };
+
+        const fileExtension = path.extname(attachmentFile.name) || ".bin";
+        const uniqueFileName = `${uuidv4()}${fileExtension}`;
+        const filePath = path.join(uploadDir, uniqueFileName);
+
+        await fs.writeFile(filePath, Buffer.from(await attachmentFile.arrayBuffer()));
+        const [insertResult] = await pool.execute(
+          "INSERT INTO timesheet_attachments (employee_id, week_start_date, year, timesheet_id, file_path, file_name, uploaded_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
+          [
+            employeeId,
+            timesheetsData[0].weekStartDate,
+            timesheetsData[0].year,
+            firstTimesheetId,
+            `/uploads/${employeeId}/${timesheetsData[0].weekStartDate.replace(/-/g, "")}/${uniqueFileName}`,
+            attachmentFile.name,
+          ]
+        );
+
+        updatedAttachments[firstTimesheetId] = updatedAttachments[firstTimesheetId] || [];
+        updatedAttachments[firstTimesheetId].push({
+          attachment_id: insertResult.insertId,
+          employee_id: employeeId,
+          week_start_date: timesheetsData[0].weekStartDate,
+          year: timesheetsData[0].year,
+          timesheet_id: firstTimesheetId,
+          file_path: `/uploads/${employeeId}/${timesheetsData[0].weekStartDate.replace(/-/g, "")}/${uniqueFileName}`,
+          file_name: attachmentFile.name,
+          uploaded_at: new Date().toISOString(),
+        });
+      }
+    } catch (error) {
+      return { error: `Failed to save attachment: ${error.message}` };
+    }
+  } else if (timesheetsData.length > 0 && formData.get("timesheets[0][is_submitted]") === "1" && !attachmentFiles.length) {
+    const [existingAttachments] = await pool.execute(
+      "SELECT COUNT(*) as count FROM timesheet_attachments WHERE employee_id = ? AND week_start_date = ?",
+      [employeeId || currentUserEmpId, timesheetsData[0].weekStartDate]
+    );
+    if (existingAttachments[0].count === 0) {
+      return { error: "No attachments found. Please check 'No Attachment' or upload at least one attachment." };
+    }
+  }
+
+  const attachmentRows = timesheetsData.length > 0
+    ? await pool.execute(
+        "SELECT DISTINCT attachment_id, employee_id, week_start_date, year, timesheet_id, file_path, file_name, uploaded_at FROM timesheet_attachments WHERE employee_id = ? AND week_start_date = ?",
+        [employeeId || currentUserEmpId, timesheetsData[0].weekStartDate]
+      )[0]
+    : [];
+
+  return {
+    success: true,
+    timesheetIds: timesheetsData.map((td) => td.timesheetId),
+    attachments: attachmentRows,
+  };
+}
+
+export async function removeAttachment(attachmentId, timesheetId) {
+  const token = cookies().get("jwt_token")?.value;
+  if (!token) return { error: "No token found. Please log in." };
+
+  const decoded = decodeJwt(token);
+  if (!decoded || !decoded.userId) return { error: "Invalid token or user ID not found." };
+
+  const pool = await DBconnection();
+  const [userRows] = await pool.execute("SELECT empid FROM C_USER WHERE username = ?", [decoded.userId]);
+  if (!userRows.length) return { error: "User not found in C_USER table." };
+
+  const currentUserEmpId = userRows[0].empid;
+  try {
+    const [attachmentRows] = await pool.execute(
+      "SELECT employee_id, file_path, timesheet_id FROM timesheet_attachments WHERE attachment_id = ? AND timesheet_id = ?",
+      [attachmentId, timesheetId]
+    );
+    if (!attachmentRows.length) return { error: "Attachment not found." };
+
+    const { employee_id: employeeId, file_path: filePath, timesheet_id } = attachmentRows[0];
+    const [timesheetRows] = await pool.execute(
+      "SELECT is_submitted, is_approved FROM timesheets WHERE timesheet_id = ? AND employee_id = ?",
+      [timesheetId, employeeId]
+    );
+    if (!timesheetRows.length) return { error: "Timesheet not found." };
+
+    const { is_submitted, is_approved } = timesheetRows[0];
+    const isSuperiorUser = await isSuperior(pool, currentUserEmpId, employeeId);
+    if (is_approved === 1 && currentUserEmpId === employeeId && !isSuperiorUser) return { error: "You cannot remove attachments from your own approved timesheet." };
+    if (is_submitted === 1 && currentUserEmpId === employeeId && !isSuperiorUser) return { error: "You cannot remove attachments from your own submitted timesheet." };
+    if (is_submitted === 1 && !isSuperiorUser && currentUserEmpId !== employeeId) return { error: "Only a superior can remove attachments from a submitted timesheet." };
+
+    await pool.execute("DELETE FROM timesheet_attachments WHERE attachment_id = ? AND timesheet_id = ?", [attachmentId, timesheetId]);
+    const absolutePath = path.join(process.cwd(), "public", filePath);
+    try {
+      await fs.unlink(absolutePath);
+    } catch (error) {
+      console.warn(`Failed to delete file at ${absolutePath}: ${error.message}`);
+    }
+
+    return { success: true };
+  } catch (error) {
+    return { error: `Failed to remove attachment: ${error.message}` };
+  }
+}
+
+export async function fetchPendingTimesheets() {
+  const token = cookies().get("jwt_token")?.value;
+  if (!token) return { error: "No token found. Please log in." };
+
+  const decoded = decodeJwt(token);
+  if (!decoded || !decoded.userId) return { error: "Invalid token or user ID not found." };
+
+  const pool = await DBconnection();
+  const [userRows] = await pool.execute("SELECT empid FROM C_USER WHERE username = ?", [decoded.userId]);
+  if (!userRows.length) return { error: "User not found in C_USER table." };
+
+  const userEmpId = userRows[0].empid;
+  const directSubordinates = await getAllSubordinates(pool, userEmpId);
+  const delegatedSubordinates = await getDelegatedSubordinates(pool, userEmpId);
+  const allSubordinates = [...directSubordinates, ...delegatedSubordinates].filter(
+    (sub, index, self) => index === self.findIndex((s) => s.empid === sub.empid) && sub.empid !== userEmpId
+  );
+
+  if (!allSubordinates.length) return { error: "You are not authorized to view pending timesheets." };
+
+  const employeeIds = allSubordinates.map((emp) => emp.empid);
+  const [timesheetRows] = await pool.execute(
+    `SELECT t.*, COALESCE(p.PRJ_NAME, 'Unnamed Project') AS project_name, e.EMP_FST_NAME, e.EMP_LAST_NAME
+     FROM timesheets t
+     LEFT JOIN C_PROJECT p ON t.project_id = p.PRJ_ID
+     LEFT JOIN C_EMP e ON t.employee_id = e.empid
+     WHERE t.employee_id IN (${employeeIds.map(() => "?").join(",")}) AND t.is_submitted = 1 AND t.is_approved = 0`,
+    employeeIds
+  );
+
+  const timesheets = timesheetRows.map((ts) => {
+    const employee = allSubordinates.find((emp) => emp.empid === ts.employee_id);
+    return {
+      ...ts,
+      employee_name: `${ts.EMP_FST_NAME} ${ts.EMP_LAST_NAME || ""}${employee?.isDelegated ? " [del]" : ""}`.trim(),
+      total_hours: ["sun_hours", "mon_hours", "tue_hours", "wed_hours", "thu_hours", "fri_hours", "sat_hours"].reduce(
+        (sum, day) => sum + (parseFloat(ts[day]) || 0),
+        0
+      ),
+    };
+  });
+
+  return { timesheets, employees: allSubordinates };
+}
+
+export async function approveTimesheet(timesheetId, employeeId, isApproved) {
+  const token = cookies().get("jwt_token")?.value;
+  if (!token) return { error: "No token found. Please log in." };
+
+  const decoded = decodeJwt(token);
+  if (!decoded || !decoded.userId) return { error: "Invalid token or user ID not found." };
+
+  const pool = await DBconnection();
+  const [userRows] = await pool.execute("SELECT empid FROM C_USER WHERE username = ?", [decoded.userId]);
+  if (!userRows.length) return { error: "User not found in C_USER table." };
+
+  const currentUserEmpId = userRows[0].empid;
+  const [timesheetRows] = await pool.execute(
+    "SELECT * FROM timesheets WHERE timesheet_id = ? AND employee_id = ?",
+    [timesheetId, employeeId]
+  );
+  if (!timesheetRows.length) return { error: "Timesheet not found." };
+
+  const isSuperiorUser = await isSuperior(pool, currentUserEmpId, employeeId);
+  if (!isSuperiorUser && currentUserEmpId !== employeeId) return { error: "You are not authorized to approve or unapprove this timesheet." };
+  if (currentUserEmpId === employeeId) return { error: "You cannot approve or unapprove your own timesheet." };
+
+  await pool.execute(
+    `UPDATE timesheets SET is_approved = ?, approved_by = ?, updated_at = CURRENT_TIMESTAMP WHERE timesheet_id = ? AND employee_id = ?`,
+    [isApproved ? 1 : 0, isApproved ? currentUserEmpId : null, timesheetId, employeeId]
+  );
+
+  // Verify the update
+  const [updatedRows] = await pool.execute(
+    "SELECT is_approved, approved_by FROM timesheets WHERE timesheet_id = ? AND employee_id = ?",
+    [timesheetId, employeeId]
+  );
+  if (updatedRows.length && updatedRows[0].is_approved !== isApproved) {
+    console.error("Approval update failed to persist:", updatedRows[0]);
+    return { error: "Failed to update approval status." };
+  }
+
+  return { success: true, timesheetId, isApproved: updatedRows[0].is_approved, approvedBy: updatedRows[0].approved_by };
+}

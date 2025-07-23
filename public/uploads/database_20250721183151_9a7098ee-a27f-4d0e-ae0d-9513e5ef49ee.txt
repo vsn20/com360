@@ -1,0 +1,109 @@
+C_SRV_REQ_ATT
+	#	Name	Type	Collation	Attributes	Null	Default	Comments	Extra	Action
+	1	SR_ATT_ID Primary	int(11)			No	None		AUTO_INCREMENT	Change Change	Drop Drop	
+	2	SR_ID Index	varchar(255)	latin1_swedish_ci		Yes	NULL			Change Change	Drop Drop	
+	3	TYPE_CD	varchar(50)	latin1_swedish_ci		Yes	NULL			Change Change	Drop Drop	
+	4	FILE_PATH	varchar(255)	latin1_swedish_ci		Yes	NULL			Change Change	Drop Drop	
+	5	FILE_NAME	varchar(255)	latin1_swedish_ci		Yes	NULL			Change Change	Drop Drop	
+	6	COMMENTS	text	latin1_swedish_ci		Yes	NULL			Change Change	Drop Drop	
+	7	CREATED	timestamp			No	current_timestamp()			Change Change	Drop Drop	
+	8	CREATED_BY Index	varchar(255)	latin1_swedish_ci		Yes	NULL			Change Change	Drop Drop	
+	9	LAST_UPD	timestamp			No	current_timestamp()		ON UPDATE CURRENT_TIMESTAMP()	Change Change	Drop Drop	
+	10	LAST_UPD_BY	varchar(255)	latin1_swedish_ci		Yes	NULL			Change Change	Drop Drop	
+	11	ATTACHMENT_STATUS	varchar(50)	latin1_swedish_ci		Yes	NULL			Change Change	Drop Drop	
+With selected:  Check all With selected:        
+ Propose table structure Propose table structure Documentation Move columns Move columns Normalize Normalize
+Add column  Add 
+1
+ column(s)   
+after ATTACHMENT_STATUS
+ 
+Indexes Documentation
+Action	Keyname	Type	Unique	Packed	Column	Cardinality	Collation	Null	Comment
+Edit Edit	Rename Rename	Drop Drop	PRIMARY	BTREE	Yes	No	SR_ATT_ID	0	A	No	
+Edit Edit	Rename Rename	Drop Drop	idx_sr_id	BTREE	No	No	SR_ID	0	A	Yes	
+Edit Edit	Rename Rename	Drop Drop	idx_created_by	BTREE	No	No	CREATED_BY	0	A	Yes	
+
+
+WHERE ALL THE ATTACHMENTS WILL BE STORED WITH RESPECT TO SR_ID AND CREATEDBY
+
+C_SRV_REQ
+
+#	Name	Type	Collation	Attributes	Null	Default	Comments	Extra	Action
+	1	SR_NUM Primary	varchar(255)	latin1_swedish_ci		No	None			Change Change	Drop Drop	
+	2	CREATED	timestamp			No	current_timestamp()			Change Change	Drop Drop	
+	3	CREATED_BY Index	varchar(255)	latin1_swedish_ci		Yes	NULL			Change Change	Drop Drop	
+	4	LAST_UPD	timestamp			No	current_timestamp()		ON UPDATE CURRENT_TIMESTAMP()	Change Change	Drop Drop	
+	5	LAST_UPD_BY Index	varchar(255)	latin1_swedish_ci		Yes	NULL			Change Change	Drop Drop	
+	6	ORG_ID Index	int(11)			Yes	NULL			Change Change	Drop Drop	
+	7	STATUS_CD	varchar(50)	latin1_swedish_ci		Yes	NULL			Change Change	Drop Drop	
+	8	PRIORITY_CD	varchar(50)	latin1_swedish_ci		Yes	NULL			Change Change	Drop Drop	
+	9	TYPE_CD	varchar(50)	latin1_swedish_ci		Yes	NULL			Change Change	Drop Drop	
+	10	SUB_TYPE_CD	varchar(50)	latin1_swedish_ci		Yes	NULL			Change Change	Drop Drop	
+	11	PAR_ROW_ID Index	varchar(255)	latin1_swedish_ci		Yes	NULL			Change Change	Drop Drop	
+	12	DESCRIPTION	text	latin1_swedish_ci		Yes	NULL			Change Change	Drop Drop	
+	13	COMMENTS	text	latin1_swedish_ci		Yes	NULL			Change Change	Drop Drop	
+	14	ASSIGNED_TO Index	varchar(255)	latin1_swedish_ci		Yes	NULL			Change Change	Drop Drop	
+	15	DUE_DATE	date			Yes	NULL			Change Change	Drop Drop	
+	16	ESCALATED_FLAG	tinyint(1)			Yes	0			Change Change	Drop Drop	
+	17	ESCALATED_TO Index	varchar(255)	latin1_swedish_ci		Yes	NULL			Change Change	Drop Drop	
+	18	ESCALATED_DATE	date			Yes	NULL			Change Change	Drop Drop	
+	19	CONTACT_ID	varchar(255)	latin1_swedish_ci		Yes	NULL			Change Change	Drop Drop	
+	20	ACCOUNT_ID	varchar(255)	latin1_swedish_ci		Yes	NULL			Change Change	Drop Drop	
+	21	ASSET_ID	varchar(255)	latin1_swedish_ci		Yes	NULL			Change Change	Drop Drop	
+	22	SERVICE_NAME	varchar(255)	latin1_swedish_ci		No	None			Change Change	Drop Drop	
+	23	CATEGORY_CD	varchar(50)	latin1_swedish_ci		Yes	NULL			Change Change	Drop Drop	
+With selected:  Check all With selected:        
+ Propose table structure Propose table structure Documentation Move columns Move columns Normalize Normalize
+Add column  Add 
+1
+ column(s)   
+after CATEGORY_CD
+ 
+Indexes Documentation
+Action	Keyname	Type	Unique	Packed	Column	Cardinality	Collation	Null	Comment
+Edit Edit	Rename Rename	Drop Drop	PRIMARY	BTREE	Yes	No	SR_NUM	5	A	No	
+Edit Edit	Rename Rename	Drop Drop	fk_org_id	BTREE	No	No	ORG_ID	2	A	Yes	
+Edit Edit	Rename Rename	Drop Drop	fk_created_by	BTREE	No	No	CREATED_BY	2	A	Yes	
+Edit Edit	Rename Rename	Drop Drop	fk_last_upd_by	BTREE	No	No	LAST_UPD_BY	2	A	Yes	
+Edit Edit	Rename Rename	Drop Drop	fk_assigned_to	BTREE	No	No	ASSIGNED_TO	2	A	Yes	
+Edit Edit	Rename Rename	Drop Drop	fk_escalated_to	BTREE	No	No	ESCALATED_TO	2	A	Yes	
+Edit Edit	Rename Rename	Drop Drop	fk_par_row_id	BTREE	No	No	PAR_ROW_ID	2	A	Yes	
+Create an index on 
+1
+ columns 
+
+this where request is stored
+
+
+
+
+
+
+C_SRV_ACTIVITIES
+	#	Name	Type	Collation	Attributes	Null	Default	Comments	Extra	Action
+	1	ACT_ID Primary	int(11)			No	None			Change Change	Drop Drop	
+	2	SR_ID Index	varchar(255)	latin1_swedish_ci		Yes	NULL			Change Change	Drop Drop	
+	3	TYPE	varchar(50)	latin1_swedish_ci		Yes	NULL			Change Change	Drop Drop	
+	4	SUB_TYPE	varchar(50)	latin1_swedish_ci		Yes	NULL			Change Change	Drop Drop	
+	5	COMMENTS	text	latin1_swedish_ci		Yes	NULL			Change Change	Drop Drop	
+	6	START_DATE	date			Yes	NULL			Change Change	Drop Drop	
+	7	END_DATE	date			Yes	NULL			Change Change	Drop Drop	
+	8	CREATED	timestamp			No	current_timestamp()			Change Change	Drop Drop	
+	9	CREATED_BY	varchar(255)	latin1_swedish_ci		Yes	NULL			Change Change	Drop Drop	
+	10	LAST_UPD	timestamp			No	current_timestamp()		ON UPDATE CURRENT_TIMESTAMP()	Change Change	Drop Drop	
+	11	LAST_UPD_BY	varchar(255)	latin1_swedish_ci		Yes	NULL			Change Change	Drop Drop	
+With selected:  Check all With selected:        
+ Propose table structure Propose table structure Documentation Move columns Move columns Normalize Normalize
+Add column  Add 
+1
+ column(s)   
+after LAST_UPD_BY
+ 
+Indexes Documentation
+Action	Keyname	Type	Unique	Packed	Column	Cardinality	Collation	Null	Comment
+Edit Edit	Rename Rename	Drop Drop	PRIMARY	BTREE	Yes	No	ACT_ID	0	A	No	
+Edit Edit	Rename Rename	Drop Drop	C_SRV_ACTIVITIES_ibfk_1	BTREE	No	No	SR_ID	0	A	Yes	
+Create an index on 
+1
+ columns 

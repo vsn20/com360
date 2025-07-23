@@ -1,0 +1,63 @@
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { fetchreqbyid } from '@/app/serverActions/ServiceRequests/Requests';
+
+const Requests = () => {
+  const [requests, setRequests] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetchreqbyid();
+        setRequests(response.rows || []);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching requests:', err);
+        setError(err.message || 'Failed to load service requests');
+        setRequests([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  return (
+    <div>
+      {error && <div className="error-message">{error}</div>}
+      {isLoading && <div className="loading-message">Loading...</div>}
+      {!isLoading && !error && requests.length === 0 && (
+        <p>No service requests found.</p>
+      )}
+      {!isLoading && requests.length > 0 && (
+        <table>
+          <thead>
+            <tr>
+              <th>Service Request ID</th>
+              <th>Service Name</th>
+              <th>Status</th>
+              <th>Assigned By</th>
+            </tr>
+          </thead>
+          <tbody>
+            {requests.map((req) => (
+              <tr key={req.SR_NUM}>
+                <td>SR-{req.SR_NUM}</td>
+                <td>{req.SERVICE_NAME || '-'}</td>
+                <td>{req.STATUS_CD || '-'}</td>
+                <td>{req.CREATED_BY || '-'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+};
+
+export default Requests;
