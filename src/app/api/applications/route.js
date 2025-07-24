@@ -38,12 +38,12 @@ export async function GET(request) {
         a.status,
         a.resumepath,
         a.candidate_id,
+        a.salary_expected,
         o.orgname,
-        r.jobtitle
+        ej.display_job_name
       FROM applications a
       JOIN C_ORG o ON a.orgid = o.orgid
       JOIN externaljobs ej ON a.jobid = ej.jobid
-      LEFT JOIN org_role_table r ON ej.roleid = r.roleid
       WHERE a.candidate_id = ?
     `, [candidate_id]);
 

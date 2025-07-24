@@ -1,4 +1,3 @@
-
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -53,6 +52,7 @@ export default function Applications() {
                 <th>Organization</th>
                 <th>Job Title</th>
                 <th>Applied Date</th>
+                <th>Salary Expected</th>
                 <th>Status</th>
                 <th>Resume</th>
               </tr>
@@ -62,8 +62,9 @@ export default function Applications() {
                 <tr key={app.applicationid}>
                   <td>{app.applicationid}</td>
                   <td>{app.orgname}</td>
-                  <td>{app.jobtitle}</td>
+                  <td>{app.display_job_name}</td>
                   <td>{new Date(app.applieddate).toLocaleDateString()}</td>
+                  <td>${Number(app.salary_expected).toLocaleString()}</td>
                   <td className={`status-${app.status.toLowerCase()}`}>
                     {app.status}
                   </td>

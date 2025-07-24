@@ -19,22 +19,23 @@ export async function GET() {
         appliedJobs = applications.map((app) => app.jobid);
       } catch (jwtError) {
         console.warn('JWT verification failed:', jwtError.message);
-        // Continue with empty appliedJobs instead of throwing error
       }
     }
 
     const [orgs] = await pool.query('SELECT orgid, orgname FROM C_ORG');
 
     const [jobs] = await pool.query(`
-      SELECT ej.jobid, ej.orgid, ej.roleid, ej.lastdate_for_application, ej.active,
-             o.orgname, r.jobtitle, r.type, r.description, r.keyresponsibilities,
-             s.value AS state_value, c.value AS country_value
+      SELECT ej.jobid, ej.orgid, ej.lastdate_for_application, ej.active,
+             ej.display_job_name, ej.job_type AS job_type_id, ej.description,
+             ej.countryid, ej.stateid, ej.custom_state_name,
+             o.orgname, c.value AS country_value, s.value AS state_value,
+             g.name AS job_type
       FROM externaljobs ej
       JOIN C_ORG o ON ej.orgid = o.orgid
-      JOIN org_role_table r ON ej.roleid = r.roleid
-      LEFT JOIN C_STATE s ON ej.stateid = s.ID
       LEFT JOIN C_COUNTRY c ON ej.countryid = c.ID
-      WHERE ej.active = 1 AND r.is_active = 1
+      LEFT JOIN C_STATE s ON ej.stateid = s.ID
+      LEFT JOIN generic_values g ON ej.job_type = g.id
+      WHERE ej.active = 1
     `);
 
     return Response.json({ orgs, jobs, appliedJobs });
