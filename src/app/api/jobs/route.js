@@ -12,8 +12,9 @@ export async function GET() {
     if (token) {
       try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        // Get all applied jobs for this candidate
         const [applications] = await pool.query(
-          `SELECT jobid FROM applications WHERE candidate_id = ? AND status = 'submitted'`,
+          `SELECT jobid FROM applications WHERE candidate_id = ?`,
           [decoded.cid]
         );
         appliedJobs = applications.map((app) => app.jobid);

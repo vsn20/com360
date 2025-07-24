@@ -30,6 +30,11 @@ const JobsPage = () => {
       .catch((error) => console.error('Error fetching jobs:', error));
   }, []);
 
+  // Function to check if user has already applied for a job
+  const hasApplied = (jobId) => {
+    return appliedJobs.includes(jobId);
+  };
+
   const handleOrgChange = (e) => {
     const orgid = e.target.value;
     setSelectedOrg(orgid);
@@ -151,7 +156,7 @@ const JobsPage = () => {
                     </span>
                   </div>
                   <div className={styles.jobDate}><Calendar size={14} /> Apply by: {job.lastdate_for_application}</div>
-                  {appliedJobs.includes(job.jobid) ? (
+                  {hasApplied(job.jobid) ? (
                     <div className={styles.alreadyApplied}>Already Applied</div>
                   ) : (
                     <Link href={`/jobs/apply/${job.jobid}`}>
@@ -182,7 +187,7 @@ const JobsPage = () => {
               </div>
               <h3 className={styles.jobDetailsHeading}>Job Description</h3>
               <p className={styles.jobDetailsText}>{selectedJob.description}</p>
-              {appliedJobs.includes(selectedJob.jobid) ? (
+              {hasApplied(selectedJob.jobid) ? (
                 <div className={styles.alreadyApplied}>Already Applied</div>
               ) : (
                 <Link href={`/jobs/apply/${selectedJob.jobid}`}>
