@@ -9,6 +9,7 @@ export default function ApplyPage() {
   const router = useRouter();
   const params = useParams();
   const [resume, setResume] = useState(null);
+  const [salaryExpected, setSalaryExpected] = useState('');
   const [message, setMessage] = useState('');
   const [jobDetails, setJobDetails] = useState(null);
   const [hasApplied, setHasApplied] = useState(false);
@@ -19,7 +20,7 @@ export default function ApplyPage() {
     const fetchJobDetails = async () => {
       try {
         const res = await fetch(`/api/jobs/fetchapplicationdetails/${jobid}`, {
-          credentials: 'include' // Ensure cookies are sent
+          credentials: 'include'
         });
         if (!res.ok) {
           throw new Error('Failed to fetch job details');
@@ -63,15 +64,21 @@ export default function ApplyPage() {
       return;
     }
 
+    if (!salaryExpected || isNaN(salaryExpected) || salaryExpected <= 0) {
+      setMessage('Please enter a valid expected salary.');
+      return;
+    }
+
     const formData = new FormData();
     formData.append('resume', resume);
     formData.append('jobid', jobid);
+    formData.append('salary_expected', salaryExpected);
 
     try {
       const res = await fetch('/api/jobs/apply', {
         method: 'POST',
         body: formData,
-        credentials: 'include' // Ensure cookies are sent
+        credentials: 'include'
       });
 
       const result = await res.json();
@@ -94,7 +101,7 @@ export default function ApplyPage() {
     <div className={styles.container}>
       <div className={styles.header}>
         <h2 className={styles.title}>
-          Apply for {jobDetails?.jobtitle || 'Job'} #{jobid}
+          Apply for {jobDetails?.display_job_name || 'Job'} #{jobid}
         </h2>
         {jobDetails && (
           <div className={styles.jobDetails}>
@@ -102,11 +109,10 @@ export default function ApplyPage() {
               <Building2 size={16} /> {jobDetails.orgname}
             </span>
             <span className={styles.jobDetailItem}>
-              <Briefcase size={16} /> {jobDetails.type}
+              <Briefcase size={16} /> {jobDetails.job_type}
             </span>
             <span className={styles.jobDetailItem}>
-              <MapPin size={16} /> {jobDetails.state_value || 'N/A'},{' '}
-              {jobDetails.country_value || 'N/A'}
+              <MapPin size={16} /> {jobDetails.countryid === 185 ? jobDetails.state_value || 'N/A' : jobDetails.custom_state_name || 'N/A'}, {jobDetails.country_value || 'N/A'}
             </span>
           </div>
         )}
@@ -120,6 +126,18 @@ export default function ApplyPage() {
             accept=".pdf"
             className={styles.fileInput}
             onChange={(e) => setResume(e.target.files[0])}
+            required
+            disabled={hasApplied}
+          />
+        </div>
+        <div className={styles.formGroup}>
+          <label className={styles.label}>Expected Salary (USD)</label>
+          <input
+            type="number"
+            className={styles.input}
+            value={salaryExpected}
+            onChange={(e) => setSalaryExpected(e.target.value)}
+            placeholder="Enter expected salary"
             required
             disabled={hasApplied}
           />

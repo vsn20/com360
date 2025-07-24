@@ -9,7 +9,7 @@ const JobsPage = () => {
   const [orgs, setOrgs] = useState([]);
   const [jobs, setJobs] = useState([]);
   const [selectedOrg, setSelectedOrg] = useState('');
-  const [selectedOrgType, setSelectedOrgType] = useState('');
+  const [selectedJobType, setSelectedJobType] = useState('');
   const [selectedLocation, setSelectedLocation] = useState('');
   const [selectedJob, setSelectedJob] = useState(null);
   const [appliedJobs, setAppliedJobs] = useState([]);
@@ -30,22 +30,27 @@ const JobsPage = () => {
       .catch((error) => console.error('Error fetching jobs:', error));
   }, []);
 
+  // Function to check if user has already applied for a job
+  const hasApplied = (jobId) => {
+    return appliedJobs.includes(jobId);
+  };
+
   const handleOrgChange = (e) => {
     const orgid = e.target.value;
     setSelectedOrg(orgid);
-    setSelectedOrgType('');
+    setSelectedJobType('');
     setSelectedLocation('');
     const filtered = jobs.filter((job) => (!orgid || job.orgid == orgid));
     setSelectedJob(filtered.length ? filtered[0] : null);
   };
 
-  const handleOrgTypeChange = (type) => {
-    setSelectedOrgType(type);
+  const handleJobTypeChange = (type) => {
+    setSelectedJobType(type);
     const filtered = jobs.filter(
       (job) =>
         job.orgid == selectedOrg &&
-        (!type || job.type === type) &&
-        (!selectedLocation || job.country_value === selectedLocation)
+        (!type || job.job_type === type) &&
+        (!selectedLocation || (job.countryid === 185 ? job.state_value === selectedLocation : job.custom_state_name === selectedLocation))
     );
     setSelectedJob(filtered.length ? filtered[0] : null);
   };
@@ -55,15 +60,15 @@ const JobsPage = () => {
     const filtered = jobs.filter(
       (job) =>
         job.orgid == selectedOrg &&
-        (!selectedOrgType || job.type === selectedOrgType) &&
-        (!location || job.country_value === location)
+        (!selectedJobType || job.job_type === selectedJobType) &&
+        (!location || (job.countryid === 185 ? job.state_value === location : job.custom_state_name === location))
     );
     setSelectedJob(filtered.length ? filtered[0] : null);
   };
 
   const filteredJobs = selectedOrg ? jobs.filter((job) => job.orgid == selectedOrg) : jobs;
-  const uniqueOrgTypes = [...new Set(filteredJobs.map((job) => job.type))];
-  const uniqueLocations = [...new Set(filteredJobs.map((job) => job.country_value).filter((loc) => loc))];
+  const uniqueJobTypes = [...new Set(filteredJobs.map((job) => job.job_type))];
+  const uniqueLocations = [...new Set(filteredJobs.map((job) => job.countryid === 185 ? job.state_value : job.custom_state_name).filter((loc) => loc))];
 
   return (
     <div className={styles.container}>
@@ -83,16 +88,16 @@ const JobsPage = () => {
               <label className={styles.filterLabel}><Filter size={16} /> Job Type</label>
               <div className={styles.buttonGroup}>
                 <button
-                  className={`${styles.filterButton} ${selectedOrgType === '' ? styles.active : ''}`}
-                  onClick={() => handleOrgTypeChange('')}
+                  className={`${styles.filterButton} ${selectedJobType === '' ? styles.active : ''}`}
+                  onClick={() => handleJobTypeChange('')}
                 >
                   All
                 </button>
-                {uniqueOrgTypes.map((type) => (
+                {uniqueJobTypes.map((type) => (
                   <button
                     key={type}
-                    className={`${styles.filterButton} ${selectedOrgType === type ? styles.active : ''}`}
-                    onClick={() => handleOrgTypeChange(type)}
+                    className={`${styles.filterButton} ${selectedJobType === type ? styles.active : ''}`}
+                    onClick={() => handleJobTypeChange(type)}
                   >
                     {type}
                   </button>
@@ -129,8 +134,8 @@ const JobsPage = () => {
             filteredJobs
               .filter(
                 (job) =>
-                  (!selectedOrgType || job.type === selectedOrgType) &&
-                  (!selectedLocation || job.country_value === selectedLocation)
+                  (!selectedJobType || job.job_type === selectedJobType) &&
+                  (!selectedLocation || (job.countryid === 185 ? job.state_value === selectedLocation : job.custom_state_name === selectedLocation))
               )
               .map((job) => (
                 <div
@@ -138,20 +143,20 @@ const JobsPage = () => {
                   className={`${styles.jobCard} ${selectedJob?.jobid === job.jobid ? styles.selected : ''}`}
                   onClick={() => setSelectedJob(job)}
                 >
-                  <div className={styles.jobTitle}><Briefcase size={16} /> {job.jobtitle}</div>
+                  <div className={styles.jobTitle}><Briefcase size={16} /> {job.display_job_name}</div>
                   <div className={styles.jobDetailsWrapper}>
                     <span className={styles.jobDetailItem}>
                       <Building2 size={14} /> {job.orgname}
                     </span>
                     <span className={styles.jobDetailItem}>
-                      <Briefcase size={14} /> {job.type}
+                      <Briefcase size={14} /> {job.job_type}
                     </span>
                     <span className={styles.jobDetailItem}>
-                      <MapPin size={14} /> {job.state_value || 'N/A'}, {job.country_value || 'N/A'}
+                      <MapPin size={14} /> {job.countryid === 185 ? job.state_value || 'N/A' : job.custom_state_name || 'N/A'}, {job.country_value || 'N/A'}
                     </span>
                   </div>
                   <div className={styles.jobDate}><Calendar size={14} /> Apply by: {job.lastdate_for_application}</div>
-                  {appliedJobs.includes(job.jobid) ? (
+                  {hasApplied(job.jobid) ? (
                     <div className={styles.alreadyApplied}>Already Applied</div>
                   ) : (
                     <Link href={`/jobs/apply/${job.jobid}`}>
@@ -168,23 +173,21 @@ const JobsPage = () => {
         <div className={styles.jobDetails}>
           {selectedJob ? (
             <div className={styles.jobDetailsContent}>
-              <h2 className={styles.jobDetailsTitle}>{selectedJob.jobtitle}</h2>
+              <h2 className={styles.jobDetailsTitle}>{selectedJob.display_job_name}</h2>
               <div className={styles.jobDetailsWrapper}>
                 <span className={styles.jobDetailItem}>
                   <Building2 size={16} /> {selectedJob.orgname}
                 </span>
                 <span className={styles.jobDetailItem}>
-                  <Briefcase size={16} /> {selectedJob.type}
+                  <Briefcase size={16} /> {selectedJob.job_type}
                 </span>
                 <span className={styles.jobDetailItem}>
-                  <MapPin size={16} /> {selectedJob.state_value || 'N/A'}, {selectedJob.country_value || 'N/A'}
+                  <MapPin size={16} /> {selectedJob.countryid === 185 ? selectedJob.state_value || 'N/A' : selectedJob.custom_state_name || 'N/A'}, {selectedJob.country_value || 'N/A'}
                 </span>
               </div>
               <h3 className={styles.jobDetailsHeading}>Job Description</h3>
               <p className={styles.jobDetailsText}>{selectedJob.description}</p>
-              <h3 className={styles.jobDetailsHeading}>Key Responsibilities</h3>
-              <p className={styles.jobDetailsText}>{selectedJob.keyresponsibilities}</p>
-              {appliedJobs.includes(selectedJob.jobid) ? (
+              {hasApplied(selectedJob.jobid) ? (
                 <div className={styles.alreadyApplied}>Already Applied</div>
               ) : (
                 <Link href={`/jobs/apply/${selectedJob.jobid}`}>

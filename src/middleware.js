@@ -69,16 +69,19 @@ export async function middleware(request) {
     }
   }
 
-  // Handle resume paths (/uploads/resumes/*)
-  const isResumePath = pathname.match(/^\/Uploads\/resumes\/(.+)_(.+)_(.+\.pdf)$/);
+  // Handle resume paths (/uploads/resumes/applicationid_date.pdf)
+  const isResumePath = pathname.match(/^\/Uploads\/resumes\/(.+)_(.+)\.pdf$/);
   if (isResumePath) {
+    const applicationId = isResumePath[1]; // Extract applicationid from path
     const jobToken = request.cookies.get('job_jwt_token')?.value;
+    
     if (!jobToken) {
       console.log("No job_jwt_token found for resume path, redirecting to jobs login");
       return NextResponse.redirect(new URL('/jobs/jobslogin', request.url));
     }
 
     try {
+      // Verify the job token first
       const verifyResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/jobs/verify-token`, {
         method: 'POST',
         headers: {
@@ -93,7 +96,6 @@ export async function middleware(request) {
 
       if (verifyResponse.ok && result.success) {
         const candidate_id = result.user?.cid;
-        const resumeCandidateId = isResumePath[1];
 
         if (!candidate_id) {
           console.log('No candidate_id found in verify-token response');
@@ -103,16 +105,39 @@ export async function middleware(request) {
           });
         }
 
-        if (candidate_id.toString() !== resumeCandidateId) {
-          console.log(`Unauthorized: candidate_id ${candidate_id} does not match resume candidate_id ${resumeCandidateId}`);
-          return new Response(JSON.stringify({ error: 'Unauthorized: Cannot access another candidate\'s resume' }), {
-            status: 401,
+        // Use API route to verify resume access
+        try {
+          const verifyResumeResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/jobs/verify-resume-access`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 
+              applicationId: applicationId,
+              token: jobToken 
+            }),
+          });
+
+          const verifyResult = await verifyResumeResponse.json();
+
+          if (!verifyResumeResponse.ok) {
+            console.log(`Resume access verification failed: ${verifyResult.error}`);
+            return new Response(JSON.stringify({ error: `Unauthorized: ${verifyResult.error}` }), {
+              status: verifyResumeResponse.status,
+              headers: { 'Content-Type': 'application/json' },
+            });
+          }
+
+          console.log(`Access granted to resume path ${pathname} for candidate_id ${candidate_id} and applicationid ${applicationId}`);
+          return NextResponse.next();
+
+        } catch (apiError) {
+          console.error('Error verifying resume access:', apiError.message);
+          return new Response(JSON.stringify({ error: 'Internal server error' }), {
+            status: 500,
             headers: { 'Content-Type': 'application/json' },
           });
         }
-
-        console.log(`Access granted to resume path ${pathname} for candidate_id ${candidate_id}`);
-        return NextResponse.next();
       }
 
       console.log("Invalid job_jwt_token for resume path, redirecting to jobs login");

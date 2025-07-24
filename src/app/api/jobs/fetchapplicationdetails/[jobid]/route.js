@@ -4,13 +4,12 @@ import { verify } from 'jsonwebtoken';
 export async function GET(request, { params }) {
   try {
     const pool = await DBconnection();
-    const { jobid } = params; // Destructure params to access jobid
+    const { jobid } = params;
 
-    console.log('Fetching job details for jobid:', jobid); // Debug log
+    console.log('Fetching job details for jobid:', jobid);
 
-    // Extract JWT from 'job_jwt_token' cookie using request.cookies
     const token = request.cookies.get('job_jwt_token')?.value;
-    console.log('job_jwt_token:', token ? 'Present' : 'Missing'); // Debug log
+    console.log('job_jwt_token:', token ? 'Present' : 'Missing');
 
     if (!token) {
       return Response.json({ error: 'Unauthorized: Missing job_jwt_token' }, { status: 401 });
@@ -18,36 +17,36 @@ export async function GET(request, { params }) {
 
     let candidate_id;
     try {
-      const decoded = verify(token, process.env.JWT_SECRET); // Replace with your JWT secret
+      const decoded = verify(token, process.env.JWT_SECRET);
       candidate_id = decoded.cid;
-      console.log('Decoded candidate_id:', candidate_id); // Debug log
+      console.log('Decoded candidate_id:', candidate_id);
     } catch (error) {
       console.error('JWT verification error:', error.message);
       return Response.json({ error: 'Unauthorized: Invalid job_jwt_token' }, { status: 401 });
     }
 
-    // Check if the candidate has already applied for this job
     const [existingApplication] = await pool.query(
       `SELECT applicationid FROM applications WHERE jobid = ? AND candidate_id = ?`,
       [jobid, candidate_id]
     );
-    console.log('Existing application:', existingApplication); // Debug log
+    console.log('Existing application:', existingApplication);
 
-    // Fetch job details
     const [jobDetails] = await pool.query(`
       SELECT ej.jobid, ej.orgid, ej.lastdate_for_application,
-             o.orgname, r.jobtitle, r.type, r.description, r.keyresponsibilities,
-             s.value AS state_value, c.value AS country_value
+             ej.display_job_name, ej.job_type AS job_type_id, ej.description,
+             ej.countryid, ej.stateid, ej.custom_state_name,
+             o.orgname, c.value AS country_value, s.value AS state_value,
+             g.name AS job_type
       FROM externaljobs ej
       JOIN C_ORG o ON ej.orgid = o.orgid
-      JOIN org_role_table r ON ej.roleid = r.roleid
-      LEFT JOIN C_STATE s ON ej.stateid = s.ID
       LEFT JOIN C_COUNTRY c ON ej.countryid = c.ID
-      WHERE ej.jobid = ? AND ej.active = 1 AND r.is_active = 1
+      LEFT JOIN C_STATE s ON ej.stateid = s.ID
+      LEFT JOIN generic_values g ON ej.job_type = g.id
+      WHERE ej.jobid = ? AND ej.active = 1
     `, [jobid]);
 
     if (jobDetails.length === 0) {
-      console.log('Job not found for jobid:', jobid); // Debug log
+      console.log('Job not found for jobid:', jobid);
       return Response.json({ error: 'Job not found' }, { status: 404 });
     }
 

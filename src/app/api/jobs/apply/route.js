@@ -29,11 +29,16 @@ export async function POST(request) {
     const formData = await request.formData();
     const jobid = formData.get('jobid');
     const resume = formData.get('resume');
+    const salary_expected = formData.get('salary_expected');
 
-    console.log('Form data - jobid:', jobid, 'resume:', resume ? 'Present' : 'Missing'); // Debug log
+    console.log('Form data - jobid:', jobid, 'resume:', resume ? 'Present' : 'Missing', 'salary_expected:', salary_expected); // Debug log
 
-    if (!jobid || !resume) {
-      return Response.json({ error: 'Missing jobid or resume' }, { status: 400 });
+    if (!jobid || !resume || !salary_expected) {
+      return Response.json({ error: 'Missing jobid, resume, or salary_expected' }, { status: 400 });
+    }
+
+    if (isNaN(salary_expected) || salary_expected <= 0) {
+      return Response.json({ error: 'Invalid salary_expected value' }, { status: 400 });
     }
 
     // Check if the candidate has already applied for this job
@@ -58,6 +63,19 @@ export async function POST(request) {
       return Response.json({ error: 'Job not found or inactive' }, { status: 404 });
     }
 
+    const { orgid } = jobDetails[0];
+
+    // Generate applicationid as (orgid-no of applications+1)
+    const [applicationCount] = await pool.query(
+      `SELECT COUNT(*) as count FROM applications WHERE jobid IN (
+        SELECT jobid FROM externaljobs WHERE orgid = ?
+      )`,
+      [orgid]
+    );
+    const applicationNumber = applicationCount[0].count + 1;
+    const applicationid = `${orgid}-${applicationNumber}`;
+    console.log('Generated applicationid:', applicationid); // Debug log
+
     // Fetch application status from generic_names and generic_values
     const [statusGid] = await pool.query(
       `SELECT g_id FROM generic_names WHERE Name = 'application_status' AND active = 1`
@@ -70,7 +88,7 @@ export async function POST(request) {
 
     const [statusValue] = await pool.query(
       `SELECT Name FROM generic_values WHERE g_id = ? AND orgid = ? AND isactive = 1 AND cutting = 1`,
-      [statusGid[0].g_id, jobDetails[0].orgid]
+      [statusGid[0].g_id, orgid]
     );
     console.log('Status value:', statusValue); // Debug log
 
@@ -78,7 +96,7 @@ export async function POST(request) {
     console.log('Using application status:', applicationStatus); // Debug log
 
     // Ensure the uploads/resumes directory exists
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'resumes');
+    const uploadDir = path.join(process.cwd(), 'public', 'Uploads', 'resumes');
     try {
       await mkdir(uploadDir, { recursive: true });
       console.log('Upload directory ensured:', uploadDir); // Debug log
@@ -93,7 +111,7 @@ export async function POST(request) {
       day: '2-digit',
       year: 'numeric'
     }).replace(/\//g, '-'); // Convert to mm-dd-yyyy
-    const resumePath = `/uploads/resumes/${candidate_id}_${jobid}_${formattedDate}.pdf`;
+    const resumePath = `/Uploads/resumes/${applicationid}_${formattedDate}.pdf`;
     const filePath = path.join(process.cwd(), 'public', resumePath);
     const buffer = Buffer.from(await resume.arrayBuffer());
     try {
@@ -106,9 +124,9 @@ export async function POST(request) {
 
     // Insert application into the database
     await pool.query(
-      `INSERT INTO applications (orgid, jobid, applieddate, status, resumepath, candidate_id)
-       VALUES (?, ?, CURDATE(), ?, ?, ?)`,
-      [jobDetails[0].orgid, jobid, applicationStatus, resumePath, candidate_id]
+      `INSERT INTO applications (applicationid, orgid, jobid, applieddate, status, resumepath, candidate_id, salary_expected)
+       VALUES (?, ?, ?, CURDATE(), ?, ?, ?, ?)`,
+      [applicationid, orgid, jobid, applicationStatus, resumePath, candidate_id, salary_expected]
     );
 
     return Response.json({ success: true });
