@@ -214,7 +214,7 @@ export async function updateEmployee(prevState, formData) {
       // Validate status
       if (status) {
         const [statusCheck] = await pool.execute(
-          'SELECT id FROM generic_values WHERE g_id = 3 AND Name = ? AND cutting = 1 AND orgid = ? AND isactive = 1',
+          'SELECT id FROM generic_values WHERE g_id = 3 AND Name = ? AND orgid = ? AND isactive = 1',
           [status, orgid]
         );
         if (statusCheck.length === 0) {
@@ -226,7 +226,7 @@ export async function updateEmployee(prevState, formData) {
       // Validate job title
       if (jobTitle) {
         const [jobTitleCheck] = await pool.execute(
-          'SELECT job_title FROM org_jobtitles WHERE job_title = ? AND orgid = ? AND is_active = 1',
+          'SELECT job_title FROM org_jobtitles WHERE job_title_id = ? AND orgid = ? AND is_active = 1',
           [jobTitle, orgid]
         );
         if (jobTitleCheck.length === 0) {
@@ -268,7 +268,7 @@ export async function updateEmployee(prevState, formData) {
       const [result] = await pool.query(
         `UPDATE C_EMP 
          SET 
-           roleid = ?, 
+        
            HIRE = ?, 
            LAST_WORK_DATE = ?, 
            TERMINATED_DATE = ?, 
@@ -284,7 +284,7 @@ export async function updateEmployee(prevState, formData) {
            LAST_UPDATED_BY = ? 
          WHERE empid = ? AND orgid = ?`,
         [
-          primaryRoleId, hireDate, lastWorkDate, terminatedDate, rejoinDate, superior,
+           hireDate, lastWorkDate, terminatedDate, rejoinDate, superior,
           status, jobTitle, payFrequency, deptId, finalDeptName, workCompClass,
           'system', empid, orgid,
         ]

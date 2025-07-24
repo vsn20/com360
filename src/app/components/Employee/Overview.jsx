@@ -599,7 +599,7 @@ useEffect(() => {
   };
 
   const getJobTitleName = (jobTitle) => {
-    const job = jobTitles.find(j => j.job_title === jobTitle);
+    const job = jobTitles.find(j => j.job_title_id === jobTitle);
     return job ? `${job.job_title} (Level: ${job.level || 'N/A'}, Salary Range: $${job.min_salary || 'N/A'} - $${job.max_salary || 'N/A'})` : 'No Job Title';
   };
 
@@ -997,8 +997,8 @@ const requestSort = (column) => {
                 <select id="jobTitle" name="jobTitle">
                   <option value="">Select Job Title</option>
                   {jobTitles.map((job) => (
-                    <option key={job.job_title} value={job.job_title}>
-                      {`${job.job_title} (Level: ${job.level})`}
+                    <option key={job.job_title_id} value={job.job_title_id}>
+                      {`${job.job_title} (Level: ${job.level || 'N/A'}, Salary Range: $${job.min_salary || 'N/A'} - $${job.max_salary || 'N/A'})`}
                     </option>
                   ))}
                 </select>
@@ -1630,8 +1630,8 @@ const requestSort = (column) => {
                       <select name="jobTitle" value={formData.jobTitle} onChange={handleFormChange}>
                         <option value="">Select Job Title</option>
                         {jobTitles.map((job) => (
-                          <option key={job.job_title} value={job.job_title}>
-                            {`${job.job_title} (Level: ${job.level || 'N/A'}, Salary Range: $${job.min_salary || 'N/A'} - $${job.max_salary || 'N/A'})`}
+                          <option key={job.job_title_id} value={job.job_title_id}>
+                            {`${job.job_title} (Level: ${job.level || 'N/A'}, Salary Rane: $${job.min_salary || 'N/A'} - $${job.max_salary || 'N/A'})`}
                           </option>
                         ))}
                       </select>

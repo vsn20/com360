@@ -106,7 +106,7 @@ export default async function OverviewPage({ searchParams }) {
 
     // Fetch active job titles for the organization
     [jobTitles] = await pool.query(
-      'SELECT job_title, level, min_salary, max_salary FROM org_jobtitles WHERE orgid = ? AND is_active = 1',
+      'SELECT job_title_id,job_title, level, min_salary, max_salary FROM org_jobtitles WHERE orgid = ? AND is_active = 1',
       [orgid]
     );
 
