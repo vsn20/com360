@@ -163,7 +163,17 @@ export async function addExternalJob(prevState, formData) {
       const [countResult] = await pool.query('SELECT COUNT(*) AS count FROM externaljobs WHERE orgid = ?', [orgId]);
       const jobCount = countResult[0].count;
       const jobid = `${orgId}-${jobCount + 1}`;
-
+      const s=new Date();
+     const postedDate = new Date();
+if (lastDateForApplication) {
+  const lastDate = new Date(lastDateForApplication);
+  if (isNaN(lastDate.getTime())) {
+    return { error: 'Invalid last date for application.' };
+  }
+  if (postedDate >= lastDate) {
+    return { error: 'Last date for application must be after the posted date.' };
+  }
+}
       const createdBy = await getCurrentUserEmpIdName(pool, userId, orgId);
 
       const insertColumns = [
@@ -176,7 +186,7 @@ export async function addExternalJob(prevState, formData) {
       const values = [
         jobid,
         parseInt(orgId, 10),
-        new Date(), // posteddate will use CURRENT_TIMESTAMP
+        s, // posteddate will use CURRENT_TIMESTAMP
         lastDateForApplication,
         addressLane1,
         addressLane2,
