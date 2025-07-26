@@ -69,19 +69,16 @@ export async function getEmployees(orgid) {
 export async function scheduleInterview(formData) {
   const cookieStore = cookies();
   const token = cookieStore.get("jwt_token")?.value;
-  
-  if (!token) 
-  {
-      console.log('Redirecting: No token found');
-      return { error: 'No token found. Please log in.' };
+
+  if (!token) {
+    console.log('Redirecting: No token found');
+    return { error: 'No token found. Please log in.' };
   }
-  
-  // Decode the token to get the orgid and userId
+
   const decoded = decodeJwt(token);
-  if (!decoded || !decoded.orgid || !decoded.userId) 
-  {
-      console.log('Redirecting: Invalid token or orgid/userId not found');
-      return { error: 'Invalid token or orgid/userId not found.' };
+  if (!decoded || !decoded.orgid || !decoded.userId) {
+    console.log('Redirecting: Invalid token or orgid/userId not found');
+    return { error: 'Invalid token or orgid/userId not found.' };
   }
   const userId = decoded.userId;
 
@@ -90,6 +87,7 @@ export async function scheduleInterview(formData) {
 
     const orgid = formData.get('orgid');
     const application_id = formData.get('application_id');
+    const status = formData.get('status');
     const start_date = formData.get('start_date') === '0000-00-00' || formData.get('start_date') === '000000' ? null : formData.get('start_date');
     const start_am_pm = formData.get('start_am_pm');
     const end_date = formData.get('end_date') === '0000-00-00' || formData.get('end_date') === '000000' ? null : formData.get('end_date');
@@ -100,8 +98,74 @@ export async function scheduleInterview(formData) {
     const empid = formData.get('empid');
     const panelMembers = JSON.parse(formData.get('panelMembers'));
 
-    // Log empid and orgid for debugging
     console.log('EmpID:', empid, 'OrgID:', orgid);
+
+    // Validate required fields and date/time logic for scheduled status
+    if (status === 'scheduled') {
+      if (!start_date || !start_time) {
+        throw new Error('Start date and time are required for scheduled status.');
+      }
+      if (!start_am_pm || !['AM', 'PM'].includes(start_am_pm)) {
+        throw new Error('Start AM/PM must be AM or PM.');
+      }
+      if (end_date) {
+        // Validate start_date <= end_date
+        if (start_date > end_date) {
+          throw new Error('Start date must be earlier than or equal to end date.');
+        }
+        // If start_date === end_date and end_time is provided, validate start_time < end_time
+        if (start_date === end_date && end_time) {
+          if (!end_am_pm || !['AM', 'PM'].includes(end_am_pm)) {
+            throw new Error('End AM/PM must be AM or PM when end time is provided.');
+          }
+          // Convert times to 24-hour format for comparison
+          let startHours = parseInt(start_time.split(':')[0], 10);
+          let startMinutes = parseInt(start_time.split(':')[1], 10);
+          let endHours = parseInt(end_time.split(':')[0], 10);
+          let endMinutes = parseInt(end_time.split(':')[1], 10);
+
+          if (start_am_pm === 'PM' && startHours !== 12) startHours += 12;
+          if (start_am_pm === 'AM' && startHours === 12) startHours = 0;
+          if (end_am_pm === 'PM' && endHours !== 12) endHours += 12;
+          if (end_am_pm === 'AM' && endHours === 12) endHours = 0;
+
+          const startTotalMinutes = startHours * 60 + startMinutes;
+          const endTotalMinutes = endHours * 60 + endMinutes;
+
+          if (startTotalMinutes >= endTotalMinutes) {
+            throw new Error('Start time must be earlier than end time on the same date.');
+          }
+        }
+      }
+      if (panelMembers.length === 0) {
+        throw new Error('At least one panel member is required for scheduled status.');
+      }
+      const hasEmployee = panelMembers.some(member => member.is_he_employee === '1');
+      if (!hasEmployee) {
+        throw new Error('At least one panel member must be a company employee.');
+      }
+    }
+
+    // For hold or rejected, only update applications.status and log activity
+    if (status === 'hold' || status === 'rejected') {
+      await pool.query(
+        `UPDATE applications SET status = ? WHERE applicationid = ? AND orgid = ?`,
+        [status, application_id, orgid]
+      );
+
+      const employeename = await getCurrentUserEmpIdName(pool, userId, orgid);
+      console.log('Employee Name:', employeename);
+      if (employeename === 'unknown' || employeename === 'system') {
+        throw new Error(`Failed to fetch valid employee name for userId: ${userId}`);
+      }
+      const description = `Status changed to ${status}(while shortlisting) by ${employeename} on ${new Date().toISOString()}`;
+      await pool.query(
+        `INSERT INTO applications_activity (orgid, application_id, activity_description) VALUES (?, ?, ?)`,
+        [orgid, application_id, description]
+      );
+
+      return { success: true };
+    }
 
     // Generate unique interview_id
     const [s] = await pool.query(
@@ -165,7 +229,7 @@ export async function scheduleInterview(formData) {
     // Insert into applications_activity
     const employeename = await getCurrentUserEmpIdName(pool, userId, orgid);
     console.log('Employee Name:', employeename);
-    const description = `Scheduled by ${employeename} on ${new Date().toISOString()}`;
+    const description = `Scheduled by ${employeename}(while shortlisting) on ${new Date().toISOString()}`;
     await pool.query(
       `INSERT INTO applications_activity (orgid, application_id, activity_description) VALUES (?, ?, ?)`,
       [orgid, application_id, description]

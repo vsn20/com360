@@ -142,9 +142,43 @@ export async function updateInterview(formData) {
 
     console.log('EmpID:', empid, 'OrgID:', orgid, 'UserID:', userId);
 
-    // Validate required fields for scheduled status
-    if (status === 'scheduled' && (!start_date || !start_time)) {
-      throw new Error('Start date and time are required for scheduled status.');
+    // Validate required fields and date/time logic for scheduled status
+    if (status === 'scheduled') {
+      if (!start_date || !start_time) {
+        throw new Error('Start date and time are required for scheduled status.');
+      }
+      if (!start_am_pm || !['AM', 'PM'].includes(start_am_pm)) {
+        throw new Error('Start AM/PM must be AM or PM.');
+      }
+      if (end_date) {
+        // Validate start_date <= end_date
+        if (start_date > end_date) {
+          throw new Error('Start date must be earlier than or equal to end date.');
+        }
+        // If start_date === end_date and end_time is provided, validate start_time < end_time
+        if (start_date === end_date && end_time) {
+          if (!end_am_pm || !['AM', 'PM'].includes(end_am_pm)) {
+            throw new Error('End AM/PM must be AM or PM when end time is provided.');
+          }
+          // Convert times to 24-hour format for comparison
+          let startHours = parseInt(start_time.split(':')[0], 10);
+          let startMinutes = parseInt(start_time.split(':')[1], 10);
+          let endHours = parseInt(end_time.split(':')[0], 10);
+          let endMinutes = parseInt(end_time.split(':')[1], 10);
+
+          if (start_am_pm === 'PM' && startHours !== 12) startHours += 12;
+          if (start_am_pm === 'AM' && startHours === 12) startHours = 0;
+          if (end_am_pm === 'PM' && endHours !== 12) endHours += 12;
+          if (end_am_pm === 'AM' && endHours === 12) endHours = 0;
+
+          const startTotalMinutes = startHours * 60 + startMinutes;
+          const endTotalMinutes = endHours * 60 + endMinutes;
+
+          if (startTotalMinutes >= endTotalMinutes) {
+            throw new Error('Start time must be earlier than end time on the same date.');
+          }
+        }
+      }
     }
 
     // Fetch interview_id
@@ -157,51 +191,47 @@ export async function updateInterview(formData) {
     }
     const interview_id = interviewRows[0].interview_id;
 
-    // Prepare update for interview_table
-    const updateFields = [];
-    const updateValues = [];
-
-    // Only update confirm based on status
+    // Update interview_table
     if (status === 'hold' || status === 'rejected') {
-      updateFields.push('confirm = ?');
-      updateValues.push('0');
+      // Only update confirm to 0 for hold or rejected
+      await pool.query(
+        'UPDATE interview_table SET confirm = ? WHERE orgid = ? AND interview_id = ?',
+        ['0', orgid, interview_id]
+      );
     } else if (status === 'scheduled') {
-      updateFields.push('confirm = ?');
-      updateValues.push('1');
-    }
+      // Update confirm and other fields for scheduled
+      const updateFields = ['confirm = ?'];
+      const updateValues = ['1'];
 
-    // Include other fields only if provided in formData
-    if (formData.get('start_date')) {
-      updateFields.push('start_date = ?');
-      updateValues.push(start_date);
-    }
-    if (formData.get('start_am_pm')) {
-      updateFields.push('start_am_pm = ?');
-      updateValues.push(start_am_pm);
-    }
-    if (formData.get('end_date')) {
-      updateFields.push('end_date = ?');
-      updateValues.push(end_date);
-    }
-    if (formData.get('end_am_pm')) {
-      updateFields.push('end_am_pm = ?');
-      updateValues.push(end_am_pm);
-    }
-    if (formData.get('start_time')) {
-      updateFields.push('start_time = ?');
-      updateValues.push(start_time);
-    }
-    if (formData.get('end_time')) {
-      updateFields.push('end_time = ?');
-      updateValues.push(end_time);
-    }
-    if (formData.get('meeting_link')) {
-      updateFields.push('meeting_link = ?');
-      updateValues.push(meeting_link);
-    }
+      if (start_date) {
+        updateFields.push('start_date = ?');
+        updateValues.push(start_date);
+      }
+      if (start_am_pm) {
+        updateFields.push('start_am_pm = ?');
+        updateValues.push(start_am_pm);
+      }
+      if (end_date) {
+        updateFields.push('end_date = ?');
+        updateValues.push(end_date);
+      }
+      if (end_am_pm) {
+        updateFields.push('end_am_pm = ?');
+        updateValues.push(end_am_pm);
+      }
+      if (start_time) {
+        updateFields.push('start_time = ?');
+        updateValues.push(start_time);
+      }
+      if (end_time) {
+        updateFields.push('end_time = ?');
+        updateValues.push(end_time);
+      }
+      if (meeting_link) {
+        updateFields.push('meeting_link = ?');
+        updateValues.push(meeting_link);
+      }
 
-    // Perform update on interview_table only if there are fields to update
-    if (updateFields.length > 0) {
       updateValues.push(orgid, interview_id);
       await pool.query(
         `UPDATE interview_table SET ${updateFields.join(', ')} WHERE orgid = ? AND interview_id = ?`,
@@ -265,7 +295,7 @@ export async function updateInterview(formData) {
     if (employeename === 'unknown' || employeename === 'system') {
       throw new Error(`Failed to fetch valid employee name for userId: ${userId}`);
     }
-    const description = `Interview updated to ${status} by ${employeename} on ${new Date().toISOString()}`;
+    const description = `Interview updated to ${status}(after scheduled) by ${employeename} on ${new Date().toISOString()}`;
     await pool.query(
       `INSERT INTO applications_activity (orgid, application_id, activity_description) VALUES (?, ?, ?)`,
       [orgid, application_id, description]

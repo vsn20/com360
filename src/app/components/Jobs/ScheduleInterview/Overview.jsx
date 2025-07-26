@@ -54,6 +54,7 @@ const Overview = ({ scheduledetails, applieddetails, orgid, empid, time }) => {
                   <th>Application ID</th>
                   <th>Candidate Name</th>
                   <th>Job Name-Job ID</th>
+                  <th>Resume</th>
                   <th>Status</th>
                 </tr>
               </thead>
@@ -63,6 +64,11 @@ const Overview = ({ scheduledetails, applieddetails, orgid, empid, time }) => {
                     <td>{details.applicationid}</td>
                     <td>{`${details.first_name} ${details.last_name}`}</td>
                     <td>{`${details.job_title} - ${details.jobid}`}</td>
+                    <td>
+                    <a href={details.resumepath} target="_blank" rel="noopener noreferrer">
+                      View Resume
+                    </a>
+                    </td>
                     <td>{details.status}</td>
                   </tr>
                 ))}

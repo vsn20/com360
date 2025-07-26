@@ -201,3 +201,48 @@
     gap: 10px;
   }
 }
+
+/* Existing styles in jobtitles.css assumed to include .form-group, .form-row, etc. */
+
+/* Container for time inputs and dropdowns */
+.time-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.time-inputs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Style for text time input */
+.time-text-input {
+  width: 80px;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+/* Style for hour and minute dropdowns */
+.time-select {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  width: 80px;
+}
+
+/* Disabled state */
+.time-text-input:disabled,
+.time-select:disabled {
+  background-color: #f0f0f0;
+  cursor: not-allowed;
+}
+
+/* Colon separator */
+.time-inputs span {
+  font-size: 14px;
+  color: #333;
+}
