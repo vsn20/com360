@@ -23,8 +23,22 @@ export async function POST(request) {
 
     // Grant access to upload paths for everyone
     let isUploadPath = pathname && pathname.match(/^\/Uploads\/[^/]+\/[^/]+\/[^/]+$/);
-    const isNewUploadPath = pathname && pathname.match(/^\/Uploads\/UPLOAD\/[^/]+\/[^/]+\/[^/]+$/);
-    if (isUploadPath || isNewUploadPath) {
+    const isResumePath = pathname && pathname.match(/^\/uploads\/resumes\/[^_]+_[^/]+\.pdf$/);
+    if (isUploadPath || isResumePath) {
+      // Check if the first character of applicationid (from pathname) matches orgid
+      if (isResumePath) {
+        const applicationidMatch = pathname.match(/^\/uploads\/resumes\/([^_]+)_/);
+        if (applicationidMatch) {
+          const appIdFirstChar = parseInt(applicationidMatch[1].charAt(0));
+          if (appIdFirstChar === parseInt(orgid)) {
+            console.log(`Access granted to ${pathname} for empid ${empid} (resume path with matching orgid ${orgid})`);
+            return NextResponse.json({ success: true, accessibleItems: [] });
+          } else {
+            console.log(`Access denied to ${pathname} for empid ${empid} (orgid mismatch: ${appIdFirstChar} vs ${orgid})`);
+            return NextResponse.json({ error: 'Access denied due to orgid mismatch', accessibleItems: [] }, { status: 403 });
+          }
+        }
+      }
       console.log(`Universal access granted to ${pathname} for empid ${empid} (upload path)`);
       return NextResponse.json({ success: true, accessibleItems: [] });
     }
@@ -253,7 +267,7 @@ export async function POST(request) {
     const ispendingapproval = pathname.match(/^\/userscreens\/timesheets\/pendingapproval$/);
     const isaddleave = pathname.match(/^\/userscreens\/leaves\/addleave$/);
     const ispendingleaves = pathname.match(/^\/userscreens\/leaves\/pending$/);
-     isUploadPath = pathname.match(/^\/Uploads\/[^/]+\/[^/]+\/[^/]+$/);
+    isUploadPath = pathname.match(/^\/Uploads\/[^/]+\/[^/]+\/[^/]+$/);
 
     if (isEditEmployeePath && accessiblePaths.includes('/userscreens/employee/edit/:empid')) {
       console.log(`Access granted to ${pathname} for empid ${empid} (dynamic employee edit route)`);
