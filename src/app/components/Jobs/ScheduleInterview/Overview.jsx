@@ -36,11 +36,12 @@ const Overview = ({ scheduledetails, applieddetails, orgid, empid, time }) => {
     <div className="employee-overview-container">
       {applyinterview && (
         <>
-          <button className="back-button" onClick={handleback}>x</button>
+         
           <SubmittingApplication
             applieddetails={applieddetails}
             orgid={orgid}
             empid={empid}
+            handlesback={handleback}
           />
         </>
       )}
