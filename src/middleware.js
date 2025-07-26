@@ -70,7 +70,7 @@ export async function middleware(request) {
   }
 
   // Handle resume paths (/uploads/resumes/applicationid_date.pdf)
-  const isResumePath = pathname.match(/^\/Uploads\/resumes\/(.+)_(.+)\.pdf$/);
+  const isResumePath = pathname.match(/^\/uploads\/resumes\/(.+)_(.+)\.pdf$/);
   if (isResumePath) {
     const applicationId = isResumePath[1]; // Extract applicationid from path
     const jobToken = request.cookies.get('job_jwt_token')?.value;
