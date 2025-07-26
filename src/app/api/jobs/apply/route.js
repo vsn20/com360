@@ -96,7 +96,7 @@ export async function POST(request) {
     console.log('Using application status:', applicationStatus); // Debug log
 
     // Ensure the uploads/resumes directory exists
-    const uploadDir = path.join(process.cwd(), 'public', 'Uploads', 'resumes');
+    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'resumes');
     try {
       await mkdir(uploadDir, { recursive: true });
       console.log('Upload directory ensured:', uploadDir); // Debug log
@@ -111,7 +111,7 @@ export async function POST(request) {
       day: '2-digit',
       year: 'numeric'
     }).replace(/\//g, '-'); // Convert to mm-dd-yyyy
-    const resumePath = `/Uploads/resumes/${applicationid}_${formattedDate}.pdf`;
+    const resumePath = `/uploads/resumes/${applicationid}_${formattedDate}.pdf`;
     const filePath = path.join(process.cwd(), 'public', resumePath);
     const buffer = Buffer.from(await resume.arrayBuffer());
     try {
