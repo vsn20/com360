@@ -20,6 +20,11 @@ const SubmittingApplication = ({ applieddetails, orgid, empid,handlesback }) => 
     return '';
   };
 
+  
+const getdisplayprojectid = (prjid) => {
+  return prjid.split('-')[1] || prjid;
+};
+
   const handleback = () => {
     router.refresh();
     setselectedid(null);
@@ -63,7 +68,7 @@ const SubmittingApplication = ({ applieddetails, orgid, empid,handlesback }) => 
             <tbody>
               {applieddetails.map((detail) => (
                 <tr key={detail.applicationid}>
-                  <td>{detail.applicationid}</td>
+                  <td>{getdisplayprojectid(detail.applicationid)}</td>
                   <td>{detail.candidate_id}</td>
                   <td>{`${detail.first_name} ${detail.last_name}`}</td>
                   <td>{`${detail.job_title} - ${detail.jobid}`}</td>

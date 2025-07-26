@@ -157,6 +157,12 @@ const Scheduling = ({ id, name, orgid, empid, handleback }) => {
     setPanelMembers((prev) => prev.filter((_, i) => i !== index));
   };
 
+
+  
+const getdisplayprojectid = (prjid) => {
+  return prjid.split('-')[1] || prjid;
+};
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -213,7 +219,7 @@ const Scheduling = ({ id, name, orgid, empid, handleback }) => {
 
   return (
     <div className="employee-details-container">
-      <h2>Scheduling Interview for {name} (Application ID: {id})</h2>
+      <h2>Scheduling Interview for {name} (Application ID: {getdisplayprojectid(id)})</h2>
       {success && <div className="success-message">{success}</div>}
       {error && <div className="error-message">{error}</div>}
       {isLoading && <div className="loading-message">Saving...</div>}
