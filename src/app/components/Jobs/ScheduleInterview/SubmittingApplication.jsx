@@ -4,7 +4,7 @@ import Scheduling from './Scheduling';
 import { useRouter } from 'next/navigation';
 import './jobtitles.css'; // Import jobtitles.css
 
-const SubmittingApplication = ({ applieddetails, orgid, empid }) => {
+const SubmittingApplication = ({ applieddetails, orgid, empid,handlesback }) => {
   const router = useRouter();
   const [selectedid, setselectedid] = useState(null);
   const [selectedname, setselectedname] = useState(null);
@@ -46,6 +46,7 @@ const SubmittingApplication = ({ applieddetails, orgid, empid }) => {
         </>
       ) : (
         <>
+        <button onClick={handlesback} className='back-button'>x</button>
           <table className="employee-table">
             <thead>
               <tr>
