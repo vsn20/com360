@@ -142,6 +142,44 @@ export async function updateInterview(formData) {
 
     console.log('EmpID:', empid, 'OrgID:', orgid, 'UserID:', userId);
 
+    // Fetch interview_id
+    let interview_id;
+    let isNewRecord = false;
+    const [interviewRows] = await pool.query(
+      'SELECT interview_id FROM interview_table WHERE orgid = ? AND application_id = ?',
+      [orgid, application_id]
+    );
+
+    if (interviewRows.length === 0) {
+      // If no interview exists and status is not "scheduled," only update applications table
+      if (status !== 'scheduled') {
+        const employeename = await getCurrentUserEmpIdName(pool, userId, orgid);
+        if (employeename === 'unknown' || employeename === 'system') {
+          throw new Error(`Failed to fetch valid employee name for userId: ${userId}`);
+        }
+        const description = `Interview updated to ${status} by ${employeename} on ${new Date().toISOString()}`;
+        await pool.query(
+          `UPDATE applications SET status = ? WHERE orgid = ? AND applicationid = ?`,
+          [status, orgid, application_id]
+        );
+        await pool.query(
+          `INSERT INTO applications_activity (orgid, application_id, activity_description) VALUES (?, ?, ?)`,
+          [orgid, application_id, description]
+        );
+        return { success: true };
+      }
+      // Proceed with creating new interview for "scheduled" status
+      const [s] = await pool.query(
+        'SELECT COUNT(*) AS count FROM interview_table WHERE orgid = ?',
+        [orgid]
+      );
+      const m = s[0].count;
+      interview_id = `${orgid}-${m + 1}`;
+      isNewRecord = true;
+    } else {
+      interview_id = interviewRows[0].interview_id;
+    }
+
     // Validate required fields and date/time logic for scheduled status
     if (status === 'scheduled') {
       if (!start_date || !start_time) {
@@ -151,16 +189,13 @@ export async function updateInterview(formData) {
         throw new Error('Start AM/PM must be AM or PM.');
       }
       if (end_date) {
-        // Validate start_date <= end_date
         if (start_date > end_date) {
           throw new Error('Start date must be earlier than or equal to end date.');
         }
-        // If start_date === end_date and end_time is provided, validate start_time < end_time
         if (start_date === end_date && end_time) {
           if (!end_am_pm || !['AM', 'PM'].includes(end_am_pm)) {
             throw new Error('End AM/PM must be AM or PM when end time is provided.');
           }
-          // Convert times to 24-hour format for comparison
           let startHours = parseInt(start_time.split(':')[0], 10);
           let startMinutes = parseInt(start_time.split(':')[1], 10);
           let endHours = parseInt(end_time.split(':')[0], 10);
@@ -181,121 +216,97 @@ export async function updateInterview(formData) {
       }
     }
 
-    // Fetch interview_id
-    let interview_id;
-    let isNewRecord = false;
-    const [interviewRows] = await pool.query(
-      'SELECT interview_id FROM interview_table WHERE orgid = ? AND application_id = ?',
-      [orgid, application_id]
-    );
-    if (interviewRows.length === 0) {
-      // Generate interview_id
-      const [s] = await pool.query(
-        'SELECT COUNT(*) AS count FROM interview_table WHERE orgid = ?',
-        [orgid]
-      );
-      const m = s[0].count;
-      interview_id = `${orgid}-${m + 1}`;
-
-      // Insert new record into interview_table
+    // Insert or update interview_table
+    if (isNewRecord && status === 'scheduled') {
       const insertFields = ['orgid', 'application_id', 'interview_id', 'confirm'];
-      const insertValues = [orgid, application_id, interview_id, status === 'scheduled' ? '1' : '0'];
+      const insertValues = [orgid, application_id, interview_id, '1'];
       const placeholders = ['?', '?', '?', '?'];
 
-      if (status === 'scheduled') {
-        if (start_date) {
-          insertFields.push('start_date');
-          insertValues.push(start_date);
-          placeholders.push('?');
-        }
-        if (start_am_pm) {
-          insertFields.push('start_am_pm');
-          insertValues.push(start_am_pm);
-          placeholders.push('?');
-        }
-        if (end_date) {
-          insertFields.push('end_date');
-          insertValues.push(end_date);
-          placeholders.push('?');
-        }
-        if (end_am_pm) {
-          insertFields.push('end_am_pm');
-          insertValues.push(end_am_pm);
-          placeholders.push('?');
-        }
-        if (start_time) {
-          insertFields.push('start_time');
-          insertValues.push(start_time);
-          placeholders.push('?');
-        }
-        if (end_time) {
-          insertFields.push('end_time');
-          insertValues.push(end_time);
-          placeholders.push('?');
-        }
-        if (meeting_link) {
-          insertFields.push('meeting_link');
-          insertValues.push(meeting_link);
-          placeholders.push('?');
-        }
+      if (start_date) {
+        insertFields.push('start_date');
+        insertValues.push(start_date);
+        placeholders.push('?');
+      }
+      if (start_am_pm) {
+        insertFields.push('start_am_pm');
+        insertValues.push(start_am_pm);
+        placeholders.push('?');
+      }
+      if (end_date) {
+        insertFields.push('end_date');
+        insertValues.push(end_date);
+        placeholders.push('?');
+      }
+      if (end_am_pm) {
+        insertFields.push('end_am_pm');
+        insertValues.push(end_am_pm);
+        placeholders.push('?');
+      }
+      if (start_time) {
+        insertFields.push('start_time');
+        insertValues.push(start_time);
+        placeholders.push('?');
+      }
+      if (end_time) {
+        insertFields.push('end_time');
+        insertValues.push(end_time);
+        placeholders.push('?');
+      }
+      if (meeting_link) {
+        insertFields.push('meeting_link');
+        insertValues.push(meeting_link);
+        placeholders.push('?');
       }
 
       await pool.query(
         `INSERT INTO interview_table (${insertFields.join(', ')}) VALUES (${placeholders.join(', ')})`,
         insertValues
       );
-      isNewRecord = true;
 
-      // Insert panel members for new record if status is scheduled
-      if (status === 'scheduled') {
-        if (panelMembers.length === 0) {
-          throw new Error('At least one panel member is required for scheduled status.');
-        }
-        const hasEmployee = panelMembers.some(member => member.is_he_employee === '1');
-        if (!hasEmployee) {
-          throw new Error('At least one panel member must be a company employee.');
-        }
-
-        for (const member of panelMembers) {
-          let emailToInsert = member.email;
-          if (member.is_he_employee === '1' && (!member.email || member.email === 'null')) {
-            const [empRows] = await pool.query(
-              'SELECT email FROM C_EMP WHERE empid = ? AND orgid = ? AND STATUS = "ACTIVE"',
-              [member.empid, orgid]
-            );
-            if (empRows.length === 0 || !empRows[0].email) {
-              throw new Error(`No valid email found for employee ID ${member.empid}`);
-            }
-            emailToInsert = empRows[0].email;
-          }
-
-          await pool.query(
-            `INSERT INTO interview_panel (orgid, interview_id, empid, email, is_he_employee)
-             VALUES (?, ?, ?, ?, ?)`,
-            [
-              orgid,
-              interview_id,
-              member.empid || null,
-              emailToInsert,
-              member.is_he_employee,
-            ]
-          );
-        }
+      // Insert panel members
+      if (panelMembers.length === 0) {
+        throw new Error('At least one panel member is required for scheduled status.');
       }
-    } else {
-      interview_id = interviewRows[0].interview_id;
+      const hasEmployee = panelMembers.some(member => member.is_he_employee === '1');
+      if (!hasEmployee) {
+        throw new Error('At least one panel member must be a company employee.');
+      }
+
+      for (const member of panelMembers) {
+        let emailToInsert = member.email;
+        if (member.is_he_employee === '1' && (!member.email || member.email === 'null')) {
+          const [empRows] = await pool.query(
+            'SELECT email FROM C_EMP WHERE empid = ? AND orgid = ? AND STATUS = "ACTIVE"',
+            [member.empid, orgid]
+          );
+          if (empRows.length === 0 || !empRows[0].email) {
+            throw new Error(`No valid email found for employee ID ${member.empid}`);
+          }
+          emailToInsert = empRows[0].email;
+        }
+
+        await pool.query(
+          `INSERT INTO interview_panel (orgid, interview_id, empid, email, is_he_employee)
+           VALUES (?, ?, ?, ?, ?)`,
+          [
+            orgid,
+            interview_id,
+            member.empid || null,
+            emailToInsert,
+            member.is_he_employee,
+          ]
+        );
+      }
     }
 
-    // Update interview_table only for existing records
+    // Update interview_table for existing records
     if (!isNewRecord) {
       if (status === 'hold' || status === 'rejected') {
-        // Only update confirm to 0 for hold or rejected
         await pool.query(
           'UPDATE interview_table SET confirm = ? WHERE orgid = ? AND interview_id = ?',
           ['0', orgid, interview_id]
         );
       } else if (status === 'scheduled') {
-        // Update confirm and other fields for scheduled
         const updateFields = ['confirm = ?'];
         const updateValues = ['1'];
 
@@ -334,23 +345,14 @@ export async function updateInterview(formData) {
           updateValues
         );
       }
-    }
 
-    // Update applications table
-    await pool.query(
-      `UPDATE applications SET status = ? WHERE orgid = ? AND applicationid = ?`,
-      [status, orgid, application_id]
-    );
-
-    // Handle interview_panel for existing records
-    if (!isNewRecord) {
+      // Update interview_panel for existing records
       await pool.query(
         'DELETE FROM interview_panel WHERE orgid = ? AND interview_id = ?',
         [orgid, interview_id]
       );
 
       if (status === 'scheduled') {
-        // Validate panel members
         if (panelMembers.length === 0) {
           throw new Error('At least one panel member is required for scheduled status.');
         }
@@ -359,7 +361,6 @@ export async function updateInterview(formData) {
           throw new Error('At least one panel member must be a company employee.');
         }
 
-        // Insert new panel members
         for (const member of panelMembers) {
           let emailToInsert = member.email;
           if (member.is_he_employee === '1' && (!member.email || member.email === 'null')) {
@@ -388,13 +389,18 @@ export async function updateInterview(formData) {
       }
     }
 
+    // Update applications table (for both new and existing records)
+    await pool.query(
+      `UPDATE applications SET status = ? WHERE orgid = ? AND applicationid = ?`,
+      [status, orgid, application_id]
+    );
+
     // Insert into applications_activity
     const employeename = await getCurrentUserEmpIdName(pool, userId, orgid);
-    console.log('Employee Name:', employeename);
     if (employeename === 'unknown' || employeename === 'system') {
       throw new Error(`Failed to fetch valid employee name for userId: ${userId}`);
     }
-    const description = `Interview updated to ${status}(after scheduled) by ${employeename} on ${new Date().toISOString()}`;
+    const description = `Interview updated to ${status} by ${employeename} on ${new Date().toISOString()}`;
     await pool.query(
       `INSERT INTO applications_activity (orgid, application_id, activity_description) VALUES (?, ?, ?)`,
       [orgid, application_id, description]

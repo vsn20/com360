@@ -15,6 +15,7 @@ const decodeJwt = (token) => {
 
 export async function middleware(request) {
   console.log("Middleware called for path:", request.nextUrl.pathname);
+  console.log("All cookies:", Object.fromEntries(request.cookies.getAll().map(c => [c.name, c.value])));
 
   // Define public paths that don't require authentication
   const publicPaths = [
@@ -34,7 +35,7 @@ export async function middleware(request) {
   const { pathname } = request.nextUrl;
 
   // Handle org logo paths (/uploads/orglogos/:orgid.jpg)
-  const isOrgLogoPath = pathname.match(/^\/uploads\/orglogos\/(\d+)\.jpg$/);
+  const isOrgLogoPath = pathname.match(/^\/Uploads\/orglogos\/(\d+)\.jpg$/);
   if (isOrgLogoPath) {
     const requestedOrgId = isOrgLogoPath[1]; // Extract orgid from path
     const token = request.cookies.get('jwt_token')?.value;
@@ -45,7 +46,6 @@ export async function middleware(request) {
     }
 
     try {
-      // Decode JWT to get user details
       const decoded = decodeJwt(token);
       if (!decoded || !decoded.orgid) {
         console.log("Invalid or missing orgid in JWT for org logo path, redirecting to login");
@@ -73,54 +73,89 @@ export async function middleware(request) {
   const isResumePath = pathname.match(/^\/uploads\/resumes\/(.+)_(.+)\.pdf$/);
   if (isResumePath) {
     const applicationId = isResumePath[1]; // Extract applicationid from path
+    const jwtToken = request.cookies.get('jwt_token')?.value;
     const jobToken = request.cookies.get('job_jwt_token')?.value;
-    const generalToken = request.cookies.get('jwt_token')?.value;
+    const authHeader = request.headers.get('authorization'); // Check for Authorization header
+    const headerToken = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
 
-    if (!jobToken && !generalToken) {
-      console.log("No job_jwt_token or jwt_token found for resume path, redirecting to login");
+    console.log('Resume path detected:', pathname);
+    console.log('jwt_token:', jwtToken || 'not found');
+    console.log('job_jwt_token:', jobToken || 'not found');
+    console.log('Authorization header token:', headerToken || 'not found');
+
+    if (!jwtToken && !jobToken && !headerToken) {
+      console.log("No jwt_token, job_jwt_token, or Authorization header found for resume path, redirecting to login");
       return NextResponse.redirect(new URL('/login', request.url));
     }
 
     try {
-      // Prefer job_token if available, otherwise fall back to general token
-      const tokenToUse = jobToken || generalToken;
-      const verifyResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/verify-token`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Cookie: `jwt_token=${tokenToUse}`,
-        },
-        body: JSON.stringify({ token: tokenToUse, pathname }),
-      });
-
-      const result = await verifyResponse.json();
-      console.log('Verify Token Response for resume path:', result);
-
-      if (verifyResponse.ok && result.success) {
-        // Check if the resume path is accessible based on orgid match (as per API logic)
-        const decoded = decodeJwt(tokenToUse);
-        if (decoded && decoded.orgid) {
-          const appIdFirstChar = parseInt(applicationId.charAt(0));
-          if (appIdFirstChar === parseInt(decoded.orgid)) {
-            console.log(`Access granted to resume path ${pathname} for orgid ${decoded.orgid} and applicationid ${applicationId}`);
-            return NextResponse.next();
-          } else {
-            console.log(`Access denied to ${pathname} for orgid ${decoded.orgid} (orgid mismatch with ${appIdFirstChar})`);
-            return new Response(JSON.stringify({ error: 'Unauthorized: orgid mismatch' }), {
-              status: 403,
-              headers: { 'Content-Type': 'application/json' },
-            });
-          }
-        }
-        console.log('No orgid in decoded token for resume path');
-        return new Response(JSON.stringify({ error: 'Unauthorized: Invalid token data' }), {
-          status: 401,
-          headers: { 'Content-Type': 'application/json' },
+      // Prioritize jwt_token for organization users
+      if (jwtToken || (headerToken && !jobToken)) {
+        const tokenToUse = jwtToken || headerToken;
+        console.log(`Verifying jwt_token for resume path with applicationId: ${applicationId}`);
+        const verifyResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/verify-token`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Cookie: jwtToken ? `jwt_token=${jwtToken}` : '',
+          },
+          body: JSON.stringify({ token: tokenToUse, pathname }),
         });
-      }
 
-      console.log("Invalid token for resume path, redirecting to login");
-      return NextResponse.redirect(new URL('/login', request.url));
+        const result = await verifyResponse.json();
+        console.log('Verify Token Response for resume path:', result);
+
+        if (verifyResponse.ok && result.success) {
+          const decoded = decodeJwt(tokenToUse);
+          if (decoded && decoded.orgid) {
+            const appIdFirstChar = parseInt(applicationId.charAt(0));
+            if (appIdFirstChar === parseInt(decoded.orgid)) {
+              console.log(`Access granted to resume path ${pathname} for orgid ${decoded.orgid} and applicationId ${applicationId}`);
+              return NextResponse.next();
+            } else {
+              console.log(`Access denied to ${pathname} for orgid ${decoded.orgid} (orgid mismatch with ${appIdFirstChar})`);
+              return new Response(JSON.stringify({ error: 'Unauthorized: orgid mismatch' }), {
+                status: 403,
+                headers: { 'Content-Type': 'application/json' },
+              });
+            }
+          }
+          console.log('No orgid in decoded token for resume path');
+          return new Response(JSON.stringify({ error: 'Unauthorized: Invalid token data' }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+
+        console.log("Invalid jwt_token for resume path, redirecting to login");
+        return NextResponse.redirect(new URL('/login', request.url));
+      } else if (jobToken || headerToken) {
+        // Use job_jwt_token for candidate access
+        const tokenToUse = jobToken || headerToken;
+        console.log(`Verifying job_jwt_token for resume path with applicationId: ${applicationId}`);
+        const verifyResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/jobs/verify-resume-access`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Cookie: jobToken ? `job_jwt_token=${jobToken}` : '',
+          },
+          body: JSON.stringify({ token: tokenToUse, applicationId }),
+        });
+
+        const result = await verifyResponse.json();
+        console.log('Verify Resume Access Response for resume path:', result);
+
+        if (verifyResponse.ok && result.success) {
+          console.log(`Access granted to resume path ${pathname} for candidate_id ${result.candidate_id} and applicationId ${applicationId}`);
+          return NextResponse.next();
+        } else {
+          console.log(`Access denied to resume path ${pathname}: ${result.error}`);
+          return new Response(JSON.stringify({ error: result.error || 'Unauthorized: Invalid job token' }), {
+            status: verifyResponse.status || 401,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+      }
     } catch (error) {
       console.error('Error verifying token for resume path:', error.message);
       return NextResponse.redirect(new URL('/login', request.url));
@@ -175,7 +210,7 @@ export async function middleware(request) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // Check if the path matches /uploads/... (excluding /uploads/resumes/* and /uploads/orglogos/*)
+  // Check if the path matches /Uploads/... (excluding /Uploads/resumes/* and /Uploads/orglogos/*)
   const isUploadPath = pathname.match(/^\/Uploads\/(?!resumes\/|orglogos\/).+/);
   if (isUploadPath) {
     console.log(`Authenticated user accessing upload path: ${pathname}`);
