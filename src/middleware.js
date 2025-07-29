@@ -35,7 +35,7 @@ export async function middleware(request) {
   const { pathname } = request.nextUrl;
 
   // Handle org logo paths (/uploads/orglogos/:orgid.jpg)
-  const isOrgLogoPath = pathname.match(/^\/Uploads\/orglogos\/(\d+)\.jpg$/);
+  const isOrgLogoPath = pathname.match(/^\/uploads\/orglogos\/(\d+)\.jpg$/);
   if (isOrgLogoPath) {
     const requestedOrgId = isOrgLogoPath[1]; // Extract orgid from path
     const token = request.cookies.get('jwt_token')?.value;
