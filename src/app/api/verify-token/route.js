@@ -21,17 +21,19 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Missing empid or orgid in token' }, { status: 400 });
     }
 
-    // Grant access to upload paths for everyone
+    // Grant access to upload paths for authenticated users
     let isUploadPath = pathname && pathname.match(/^\/Uploads\/[^/]+\/[^/]+\/[^/]+$/);
     const isResumePath = pathname && pathname.match(/^\/uploads\/resumes\/[^_]+_[^/]+\.pdf$/);
-    if (isUploadPath || isResumePath) {
-      // Check if the first character of applicationid (from pathname) matches orgid
-      if (isResumePath) {
-        const applicationidMatch = pathname.match(/^\/uploads\/resumes\/([^_]+)_/);
+    const isOfferLetterPath = pathname && pathname.match(/^\/uploads\/offerletter\/[^_]+_[^/]+\.pdf$/);
+
+    if (isUploadPath || isResumePath || isOfferLetterPath) {
+      // Check if the first character of applicationid (from pathname) matches orgid for resume or offer letter paths
+      if (isResumePath || isOfferLetterPath) {
+        const applicationidMatch = pathname.match(/^\/uploads\/(resumes|offerletter)\/([^_]+)_/);
         if (applicationidMatch) {
-          const appIdFirstChar = parseInt(applicationidMatch[1].charAt(0));
+          const appIdFirstChar = parseInt(applicationidMatch[2].charAt(0));
           if (appIdFirstChar === parseInt(orgid)) {
-            console.log(`Access granted to ${pathname} for empid ${empid} (resume path with matching orgid ${orgid})`);
+            console.log(`Access granted to ${pathname} for empid ${empid} (${isResumePath ? 'resume' : 'offer letter'} path with matching orgid ${orgid})`);
             return NextResponse.json({ success: true, accessibleItems: [] });
           } else {
             console.log(`Access denied to ${pathname} for empid ${empid} (orgid mismatch: ${appIdFirstChar} vs ${orgid})`);

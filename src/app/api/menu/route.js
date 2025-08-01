@@ -124,7 +124,7 @@ export async function GET(request) {
       });
     }
 
-    console.log("Menu items:", JSON.stringify(menuItems, null, 2));
+   // console.log("Menu items:", JSON.stringify(menuItems, null, 2));
     return NextResponse.json(menuItems);
   } catch (error) {
     console.error("Menu API error:", error.message);

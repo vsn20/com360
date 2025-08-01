@@ -1,3 +1,4 @@
+
 import { NextResponse } from 'next/server';
 
 // Function to decode JWT (server-side, reused from your layout)
@@ -69,7 +70,69 @@ export async function middleware(request) {
     }
   }
 
-  // Handle resume paths (/uploads/resumes/applicationid_date.pdf)
+  // Handle offer letter paths (/uploads/offerletter/:applicationid_:timestamp.pdf)
+  const isOfferLetterPath = pathname.match(/^\/uploads\/offerletter\/(.+)_(.+)\.pdf$/);
+  if (isOfferLetterPath) {
+    const applicationId = isOfferLetterPath[1]; // Extract applicationid from path
+    const jwtToken = request.cookies.get('jwt_token')?.value;
+    const authHeader = request.headers.get('authorization'); // Check for Authorization header
+    const headerToken = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+
+    console.log('Offer letter path detected:', pathname);
+    console.log('jwt_token:', jwtToken || 'not found');
+    console.log('Authorization header token:', headerToken || 'not found');
+
+    if (!jwtToken && !headerToken) {
+      console.log("No jwt_token or Authorization header found for offer letter path, redirecting to login");
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+
+    try {
+      const tokenToUse = jwtToken || headerToken;
+      console.log(`Verifying jwt_token for offer letter path with applicationId: ${applicationId}`);
+      const verifyResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/verify-token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: jwtToken ? `jwt_token=${jwtToken}` : '',
+        },
+        body: JSON.stringify({ token: tokenToUse, pathname }),
+      });
+
+      const result = await verifyResponse.json();
+      console.log('Verify Token Response for offer letter path:', result);
+
+      if (verifyResponse.ok && result.success) {
+        const decoded = decodeJwt(tokenToUse);
+        if (decoded && decoded.orgid) {
+          const appIdFirstChar = parseInt(applicationId.charAt(0));
+          if (appIdFirstChar === parseInt(decoded.orgid)) {
+            console.log(`Access granted to offer letter path ${pathname} for orgid ${decoded.orgid} and applicationId ${applicationId}`);
+            return NextResponse.next();
+          } else {
+            console.log(`Access denied to ${pathname} for orgid ${decoded.orgid} (orgid mismatch with ${appIdFirstChar})`);
+            return new Response(JSON.stringify({ error: 'Unauthorized: orgid mismatch' }), {
+              status: 403,
+              headers: { 'Content-Type': 'application/json' },
+            });
+          }
+        }
+        console.log('No orgid in decoded token for offer letter path');
+        return new Response(JSON.stringify({ error: 'Unauthorized: Invalid token data' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      console.log("Invalid jwt_token for offer letter path, redirecting to login");
+      return NextResponse.redirect(new URL('/login', request.url));
+    } catch (error) {
+      console.error('Error verifying token for offer letter path:', error.message);
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+  }
+
+  // Handle resume paths (/uploads/resumes/:applicationid_:timestamp.pdf)
   const isResumePath = pathname.match(/^\/uploads\/resumes\/(.+)_(.+)\.pdf$/);
   if (isResumePath) {
     const applicationId = isResumePath[1]; // Extract applicationid from path
@@ -210,8 +273,8 @@ export async function middleware(request) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // Check if the path matches /Uploads/... (excluding /Uploads/resumes/* and /Uploads/orglogos/*)
-  const isUploadPath = pathname.match(/^\/Uploads\/(?!resumes\/|orglogos\/).+/);
+  // Check if the path matches /uploads/... (excluding /uploads/resumes/* and /uploads/orglogos/*)
+  const isUploadPath = pathname.match(/^\/uploads\/(?!resumes\/|orglogos\/).+/);
   if (isUploadPath) {
     console.log(`Authenticated user accessing upload path: ${pathname}`);
     try {
