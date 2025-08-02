@@ -77,7 +77,12 @@ async function generateOfferLetterPdf(offerLetterData, details, orgid, employeen
 
 
   const [jobtitleforempid] = await pool.query(`select JOB_TITLE from C_EMP where empid=?`, [empid]);
-  const jobstitle = jobtitleforempid[0].JOB_TITLE;
+  let jobstitle = jobtitleforempid[0].JOB_TITLE;
+  const [realtitle]=await pool.query(
+      `select job_title from org_jobtitles where job_title_id=? and orgid=?`,
+      [jobstitle, orgid]
+    );
+    jobstitle=realtitle[0].job_title;
   const dateandday = new Date();
   const [jobtype] = await pool.query('select Name from generic_values where id=? and orgid=?', [parseInt(offerLetterData.finalised_jobtype), orgid]);
   const s = jobtype[0].Name;
