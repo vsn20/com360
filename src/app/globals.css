@@ -88,7 +88,7 @@ html, body {
 }
 .button {
   background-color: #0FD46C;
-  color: black !important;
+  color:white !important;
   padding: 5px 10px;
   border: none;
   border-radius: 5px;
@@ -103,7 +103,7 @@ html, body {
 .button:hover {
   background-color: #0CB25A;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  color: white !important; /* Force white on hover */
+  color: black !important ; /* Force white on hover */
 }
 
 .title{
