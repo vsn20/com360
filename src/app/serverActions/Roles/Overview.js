@@ -46,7 +46,7 @@ export async function fetchRolesByOrgId() {
     const [rows] = await pool.execute(
       `SELECT DISTINCT roleid, orgid, rolename, is_active, CREATED_DATE 
        FROM org_role_table 
-       WHERE orgid = ? AND is_active = 1`,
+       WHERE orgid = ?`,
       [orgId]
     );
     console.log('Fetched roles:', rows);
@@ -150,7 +150,7 @@ export async function fetchMenusAndSubmenus() {
     const [adminRoleRows] = await pool.execute(
       `SELECT roleid 
        FROM org_role_table 
-       WHERE orgid = ? AND isadmin = 1 AND is_active = 1`,
+       WHERE orgid = ? AND isadmin = 1 `,//AND is_active = 1
       [orgId]
     );
 
@@ -166,7 +166,7 @@ export async function fetchMenusAndSubmenus() {
       `SELECT DISTINCT m.id AS menuid, m.name AS menuname, m.url AS menuurl, m.hassubmenu 
        FROM menu m 
        JOIN role_menu_permissions rmp ON m.id = rmp.menuid 
-       WHERE rmp.roleid = ? AND m.is_active = 1`,
+       WHERE rmp.roleid = ? `,//AND m.is_active = 1
       [adminRoleId]
     );
 
@@ -175,7 +175,7 @@ export async function fetchMenusAndSubmenus() {
       `SELECT DISTINCT sm.id AS submenuid, sm.name AS submenuname, sm.url AS submenuurl, sm.menuid 
        FROM submenu sm 
        JOIN role_menu_permissions rmp ON sm.id = rmp.submenuid 
-       WHERE rmp.roleid = ? AND sm.is_active = 1`,
+       WHERE rmp.roleid = ? `,//AND sm.is_active = 1
       [adminRoleId]
     );
 

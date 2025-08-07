@@ -42,8 +42,7 @@ export default async function AddRolePage({ searchParams }) {
         `SELECT r.rolename, r.roleid 
          FROM emp_role_assign era 
          JOIN org_role_table r ON era.roleid = r.roleid 
-         WHERE era.empid = ? AND r.orgid = ? AND r.is_active = 1 
-         LIMIT 1`,
+         WHERE era.empid = ? AND r.orgid = ?`,
         [decoded.empid, orgid]
       );
 

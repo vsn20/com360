@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { fetchRolesByOrgId, fetchRoleById, fetchMenusAndSubmenus, updateRole, addRole } from '@/app/serverActions/Roles/Overview';
 import './rolesoverview.css';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Loading from '../Loading/Loading';
 
 const Overview = ({ currentRole, orgid, error }) => {
   const searchparams = useSearchParams();
@@ -35,9 +36,18 @@ const Overview = ({ currentRole, orgid, error }) => {
   const [addform_loading, addform_setLoading] = useState(true);
   const [addform_success, addform_setsuccess] = useState(null);
   const [sortConfig, setSortConfig] = useState({ column: 'roleid', direction: 'asc' }); // Default sort
+  const [currentPage, setCurrentPage] = useState(1); // Pagination state
+  const [pageInputValue, setPageInputValue] = useState('1'); // Temporary input state
+  const [rolesLoading, setRolesLoading] = useState(true); // New loading state for roles
+  const [searchQuery, setSearchQuery] = useState(''); // State for rolename search
+  const [isActiveFilter, setIsActiveFilter] = useState('all'); // State for is_active filter
+  const [startDate, setStartDate] = useState(''); // State for start date filter
+  const [endDate, setEndDate] = useState(''); // State for end date filter
+  const rolesPerPage = 3; // Number of roles per page
 
   useEffect(() => {
     const loadData = async () => {
+      setRolesLoading(true);
       try {
         const roleData = await fetchRolesByOrgId(parseInt(orgid, 10));
         setRoles([...roleData].sort((a, b) => sortRoles(a, b, 'roleid', 'asc'))); // Initial sort by roleid asc
@@ -53,6 +63,8 @@ const Overview = ({ currentRole, orgid, error }) => {
           setFeaturesError(null);
           router.refresh();
         }, 4000);
+      } finally {
+        setRolesLoading(false);
       }
     };
     loadData();
@@ -61,6 +73,7 @@ const Overview = ({ currentRole, orgid, error }) => {
   useEffect(() => {
     const loadRoleData = async () => {
       if (selectedRole) {
+        setRolesLoading(true);
         try {
           const roleData = await fetchRoleById(selectedRole.roleid);
           setRoleDetails(roleData.role);
@@ -103,6 +116,8 @@ const Overview = ({ currentRole, orgid, error }) => {
             setFeaturesError(null);
             router.refresh();
           }, 4000);
+        } finally {
+          setRolesLoading(false);
         }
       }
     };
@@ -145,6 +160,11 @@ const Overview = ({ currentRole, orgid, error }) => {
     handleBackClick();
   }, [searchparams.get('refresh')]);
 
+  useEffect(() => {
+    // Sync pageInputValue with currentPage
+    setPageInputValue(currentPage.toString());
+  }, [currentPage]);
+
   const handleRoleClick = (role) => {
     setSelectedRole(role);
     setEditingDetails(false);
@@ -152,6 +172,8 @@ const Overview = ({ currentRole, orgid, error }) => {
     setDetailsError(null);
     setFeaturesError(null);
     setisadd(false);
+    //setCurrentPage(1); // Reset to first page when selecting a role
+    //setPageInputValue('1');
   };
 
   const handleBackClick = () => {
@@ -165,6 +187,8 @@ const Overview = ({ currentRole, orgid, error }) => {
     setDetailsError(null);
     setFeaturesError(null);
     setisadd(false);
+    //setCurrentPage(1); // Reset to first page when going back
+    //setPageInputValue('1');
     router.refresh();
   };
 
@@ -181,6 +205,8 @@ const Overview = ({ currentRole, orgid, error }) => {
     addform_setFormError(null);
     if (formRef.current) formRef.current.reset();
     setisadd(true);
+    setCurrentPage(1); // Reset to first page when adding a role
+    setPageInputValue('1');
   };
 
   const handleDetailsEdit = () => {
@@ -196,6 +222,7 @@ const Overview = ({ currentRole, orgid, error }) => {
       }, 4000);
       return;
     }
+    setRolesLoading(true);
     try {
       const formDataToSubmit = new FormData();
       formDataToSubmit.append('roleid', formData.roleid);
@@ -223,6 +250,8 @@ const Overview = ({ currentRole, orgid, error }) => {
         setDetailsError(null);
         router.refresh();
       }, 4000);
+    } finally {
+      setRolesLoading(false);
     }
   };
 
@@ -242,6 +271,7 @@ const Overview = ({ currentRole, orgid, error }) => {
   };
 
   const handleFeatureSave = async () => {
+    setRolesLoading(true);
     try {
       const formDataToSubmit = new FormData();
       formDataToSubmit.append('roleid', formData.roleid);
@@ -284,6 +314,8 @@ const Overview = ({ currentRole, orgid, error }) => {
         setFeaturesError(null);
         router.refresh();
       }, 4000);
+    } finally {
+      setRolesLoading(false);
     }
   };
 
@@ -401,6 +433,8 @@ const Overview = ({ currentRole, orgid, error }) => {
           setEditingFeatures(false);
           setDetailsError(null);
           setFeaturesError(null);
+          setCurrentPage(1); // Reset to first page after adding
+          setPageInputValue('1');
         }, 2000);
       }
     } catch (err) {
@@ -658,10 +692,104 @@ const Overview = ({ currentRole, orgid, error }) => {
       column,
       direction: prev.column === column && prev.direction === 'asc' ? 'desc' : 'asc',
     }));
+    // setCurrentPage(1); // Reset to first page when sorting
+    // setPageInputValue('1');
   };
 
-  if (addform_loading) {
-    return <div>Loading...</div>;
+  // Search and filter logic
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+    setCurrentPage(1); // Reset to first page when searching
+    setPageInputValue('1');
+  };
+
+  const handleIsActiveFilterChange = (e) => {
+    setIsActiveFilter(e.target.value);
+    setCurrentPage(1); // Reset to first page when filtering
+    setPageInputValue('1');
+  };
+
+  const handleStartDateChange = (e) => {
+    setStartDate(e.target.value);
+    setCurrentPage(1); // Reset to first page when filtering
+    setPageInputValue('1');
+  };
+
+  const handleEndDateChange = (e) => {
+    setEndDate(e.target.value);
+    setCurrentPage(1); // Reset to first page when filtering
+    setPageInputValue('1');
+  };
+
+  // Filter roles based on search query, is_active filter, and date range
+  const filteredRoles = roles.filter(role => {
+    const matchesSearch = role.rolename.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesFilter = isActiveFilter === 'all' ||
+                         (isActiveFilter === 'yes' && role.is_active) ||
+                         (isActiveFilter === 'no' && !role.is_active);
+    let matchesDate = true;
+    if (role.CREATED_DATE && (startDate || endDate)) {
+      const createdDate = new Date(role.CREATED_DATE);
+      const start = startDate ? new Date(startDate) : null;
+      const end = endDate ? new Date(endDate) : null;
+      if (start && end && start > end) {
+        return false; // Invalid date range
+      }
+      if (start) {
+        start.setHours(0, 0, 0, 0);
+        matchesDate = matchesDate && createdDate >= start;
+      }
+      if (end) {
+        end.setHours(23, 59, 59, 999);
+        matchesDate = matchesDate && createdDate <= end;
+      }
+    }
+    return matchesSearch && matchesFilter && matchesDate;
+  });
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredRoles.length / rolesPerPage);
+  const indexOfLastRole = currentPage * rolesPerPage;
+  const indexOfFirstRole = indexOfLastRole - rolesPerPage;
+  const currentRoles = filteredRoles.slice(indexOfFirstRole, indexOfLastRole);
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(prev => prev + 1);
+      setPageInputValue((currentPage + 1).toString());
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
+      setPageInputValue((currentPage - 1).toString());
+    }
+  };
+
+  const handlePageInputChange = (e) => {
+    setPageInputValue(e.target.value);
+  };
+
+  const handlePageInputKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      const value = parseInt(pageInputValue, 10);
+      if (!isNaN(value) && value >= 1 && value <= totalPages) {
+        setCurrentPage(value);
+        setPageInputValue(value.toString());
+      } else {
+        setPageInputValue(currentPage.toString()); // Revert to current page if invalid
+      }
+    }
+  };
+
+  // Centralized loading state
+  if (addform_loading || rolesLoading) {
+    return (
+      <div>
+        <Loading/>
+      </div>
+    );
   }
 
   // Separate menus with and without submenus for add form
@@ -807,6 +935,9 @@ const Overview = ({ currentRole, orgid, error }) => {
 
   return (
     <div className="roles-overview-container">
+      {/* <style jsx>{`
+        
+      `}</style> */}
       {detailsError && <div className="error-message">{detailsError}</div>}
       {isadd && (
         <div className="add-role-container">
@@ -966,68 +1097,133 @@ const Overview = ({ currentRole, orgid, error }) => {
         </div>
       )}
       {!isadd && !selectedRole && (
-  <div className="roles-list" style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-      <div className="title">Existing Roles</div>
-      <button
-        className="button"
-        onClick={() => handleaddrole()}
-        style={{
-          cursor: "pointer",
-          marginLeft: "auto",
-        }}
-      >
-        Add Role
-      </button>
-    </div>
-    {roles.length === 0 && !detailsError ? (
-      <p className="empty-state">No active roles found.</p>
-    ) : (
-      <div className="table-wrapper">
-        <table className="roles-table four-column">
-          <colgroup>
-            <col />
-            <col />
-            <col />
-            <col />
-          </colgroup>
-          <thead>
-            <tr>
-              <th className={sortConfig.column === 'roleid' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('roleid')}>
-                Role ID
-              </th>
-              <th className={sortConfig.column === 'rolename' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('rolename')}>
-                Role Name
-              </th>
-              <th className={sortConfig.column === 'is_active' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('is_active')}>
-                Is Active
-              </th>
-              <th className={sortConfig.column === 'created_date' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('created_date')}>
-                Created Date
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {roles.map((role) => (
-              <tr key={`${role.roleid}-${role.orgid}`} onClick={() => handleRoleClick(role)} style={{ cursor: 'pointer' }}>
-                <td className="id-cell">
-                  <span className="role-indicator"></span>Role-{getDisplayRoleId(role.roleid)}
-                </td>
-                <td className="name-cell">{role.rolename}</td>
-                <td className={role.is_active ? 'status-badge active' : 'status-badge inactive'}>
-                  {role.is_active ? 'Yes' : 'No'}
-                </td>
-                <td className="date-cell">
-                  {role.CREATED_DATE ? new Date(role.CREATED_DATE).toLocaleDateString() : 'N/A'}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    )}
-  </div>
-)}
+        <div className="roles-list" style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <div className="title">Existing Roles</div>
+            <button
+              className="button"
+              onClick={() => handleaddrole()}
+              style={{
+                cursor: "pointer",
+                marginLeft: "auto",
+              }}
+            >
+              Add Role
+            </button>
+          </div>
+          <div className="search-filter-container">
+            <input
+              type="text"
+              placeholder="Search by Role Name"
+              value={searchQuery}
+              onChange={handleSearchChange}
+              className="search-input"
+            />
+            <select
+              value={isActiveFilter}
+              onChange={handleIsActiveFilterChange}
+              className="filter-select"
+            >
+              <option value="all">All Statuses</option>
+              <option value="yes">Active (Yes)</option>
+              <option value="no">Inactive (No)</option>
+            </select>
+            <div className="date-filter-container">
+              <input
+                type="date"
+                value={startDate}
+                onChange={handleStartDateChange}
+                className="date-input"
+                placeholder="Start Date"
+              />
+              <input
+                type="date"
+                value={endDate}
+                onChange={handleEndDateChange}
+                className="date-input"
+                placeholder="End Date"
+              />
+            </div>
+          </div>
+          {filteredRoles.length === 0 && !detailsError ? (
+            <p className="empty-state">No roles found.</p>
+          ) : (
+            <>
+              <div className="table-wrapper">
+                <table className="roles-table four-column">
+                  <colgroup>
+                    <col />
+                    <col />
+                    <col />
+                    <col />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th className={sortConfig.column === 'roleid' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('roleid')}>
+                        Role ID
+                      </th>
+                      <th className={sortConfig.column === 'rolename' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('rolename')}>
+                        Role Name
+                      </th>
+                      <th className={sortConfig.column === 'is_active' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('is_active')}>
+                        Is Active
+                      </th>
+                      <th className={sortConfig.column === 'created_date' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('created_date')}>
+                        Created Date
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentRoles.map((role) => (
+                      <tr key={`${role.roleid}-${role.orgid}`} onClick={() => handleRoleClick(role)} style={{ cursor: 'pointer' }}>
+                        <td className="id-cell">
+                          <span className="role-indicator"></span>Role-{getDisplayRoleId(role.roleid)}
+                        </td>
+                        <td className="name-cell">{role.rolename}</td>
+                        <td className={role.is_active ? 'status-badge active' : 'status-badge inactive'}>
+                          {role.is_active ? 'Yes' : 'No'}
+                        </td>
+                        <td className="date-cell">
+                          {role.CREATED_DATE ? new Date(role.CREATED_DATE).toLocaleDateString() : 'N/A'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {filteredRoles.length > rolesPerPage && (
+                <div className="pagination-container">
+                  <button
+                    className="pagination-button"
+                    onClick={handlePrevPage}
+                    disabled={currentPage === 1}
+                  >
+                    ← Previous
+                  </button>
+                  <span className="pagination-text">
+                    Page{' '}
+                    <input
+                      type="text"
+                      value={pageInputValue}
+                      onChange={handlePageInputChange}
+                      onKeyPress={handlePageInputKeyPress}
+                      className="pagination-input"
+                    />{' '}
+                    of {totalPages}
+                  </span>
+                  <button
+                    className="pagination-button"
+                    onClick={handleNextPage}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
       {selectedRole && roleDetails && !isadd && (
         <div className="role-details-container">
           <div className="header-section">
