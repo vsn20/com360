@@ -966,46 +966,68 @@ const Overview = ({ currentRole, orgid, error }) => {
         </div>
       )}
       {!isadd && !selectedRole && (
-        <div className="roles-list" style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <div className="title">Existing Roles</div>
-            <button
-              className="button"
-              onClick={() => handleaddrole()}
-              style={{
-                cursor: "pointer",
-                marginLeft: "auto",
-              }}
-            >
-              Add Role
-            </button>
-          </div>
-          {roles.length === 0 && !detailsError ? (
-            <p>No active roles found.</p>
-          ) : (
-            <table className="roles-table">
-              <thead>
-                <tr>
-                  <th onClick={() => requestSort('roleid')}>Role ID</th>
-                  <th onClick={() => requestSort('rolename')}>Role Name</th>
-                  <th onClick={() => requestSort('is_active')}>Is Active</th>
-                  <th onClick={() => requestSort('created_date')}>Created Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {roles.map((role) => (
-                  <tr key={`${role.roleid}-${role.orgid}`} onClick={() => handleRoleClick(role)} style={{ cursor: 'pointer' }}>
-                    <td>Role-{getDisplayRoleId(role.roleid)}</td>
-                    <td>{role.rolename}</td>
-                    <td>{role.is_active ? 'Yes' : 'No'}</td>
-                    <td>{new Date(role.CREATED_DATE).toLocaleDateString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      )}
+  <div className="roles-list" style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+      <div className="title">Existing Roles</div>
+      <button
+        className="button"
+        onClick={() => handleaddrole()}
+        style={{
+          cursor: "pointer",
+          marginLeft: "auto",
+        }}
+      >
+        Add Role
+      </button>
+    </div>
+    {roles.length === 0 && !detailsError ? (
+      <p className="empty-state">No active roles found.</p>
+    ) : (
+      <div className="table-wrapper">
+        <table className="roles-table four-column">
+          <colgroup>
+            <col />
+            <col />
+            <col />
+            <col />
+          </colgroup>
+          <thead>
+            <tr>
+              <th className={sortConfig.column === 'roleid' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('roleid')}>
+                Role ID
+              </th>
+              <th className={sortConfig.column === 'rolename' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('rolename')}>
+                Role Name
+              </th>
+              <th className={sortConfig.column === 'is_active' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('is_active')}>
+                Is Active
+              </th>
+              <th className={sortConfig.column === 'created_date' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('created_date')}>
+                Created Date
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {roles.map((role) => (
+              <tr key={`${role.roleid}-${role.orgid}`} onClick={() => handleRoleClick(role)} style={{ cursor: 'pointer' }}>
+                <td className="id-cell">
+                  <span className="role-indicator"></span>Role-{getDisplayRoleId(role.roleid)}
+                </td>
+                <td className="name-cell">{role.rolename}</td>
+                <td className={role.is_active ? 'status-badge active' : 'status-badge inactive'}>
+                  {role.is_active ? 'Yes' : 'No'}
+                </td>
+                <td className="date-cell">
+                  {role.CREATED_DATE ? new Date(role.CREATED_DATE).toLocaleDateString() : 'N/A'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </div>
+)}
       {selectedRole && roleDetails && !isadd && (
         <div className="role-details-container">
           <div className="header-section">

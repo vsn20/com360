@@ -11,32 +11,6 @@
   align-items: stretch;
 }
 
-.roles-table {
-  width: 100%;
-  border-collapse: collapse;
-  background-color: #fff;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  margin-top: 10px;
-}
-
-.roles-table th,
-.roles-table td {
-  padding: 12px;
-  text-align: left;
-  border-bottom: 1px solid #ddd;
-}
-
-.roles-table th {
-  background-color: #f4f4f4;
-}
-
-.roles-table tr:hover {
-  background-color: #f5f5f5;
-  cursor: pointer;
-}
-
-
-
 .role-details-container {
   display: flex;
   flex-direction: column;
@@ -93,7 +67,6 @@
   gap: 10px;
   margin-top: 15px;
 }
-
 
 .error-message {
   color: #dc3545;
@@ -558,45 +531,4 @@
 
 .role-details-block {
   margin-bottom: 30px;
-}
-
-/* Responsive Design */
-@media (max-width: 1200px) {
-  .features-row,
-  .permissions-row {
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
-
-@media (max-width: 992px) {
-  .features-row,
-  .permissions-row {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-@media (max-width: 768px) {
-  .features-row,
-  .permissions-row {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  
-  .add-role-form {
-    padding: 20px;
-  }
-  
-  .form-section {
-    gap: 20px;
-  }
-}
-
-@media (max-width: 576px) {
-  .features-row,
-  .permissions-row {
-    grid-template-columns: 1fr;
-  }
-  
-  .role-name-section {
-    max-width: 100%;
-  }
 }

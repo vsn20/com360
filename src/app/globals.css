@@ -7,24 +7,12 @@
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   width: 100%;
   height: 100%;
   margin: 0;
   padding: 0;
-}
-
-
-
-
-#navid a:first-child {
-  font-family: 'Orbitron', sans-serif;
-  font-weight: bold;
-  color: #0FD46C;
-  font-size: 15px;
-  
-  
-  
 }
 
 /* Global navbar styles */
@@ -39,11 +27,11 @@ html, body {
   display: flex;
   align-items: center;
   padding: 0 20px;
-  background-color: rgba(255, 255, 255, 0.7); /* translucent white */
-  backdrop-filter: saturate(180%) blur(10px); /* blur effect */
-  -webkit-backdrop-filter: saturate(180%) blur(10px); /* Safari support */
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1); /* subtle border */
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* subtle shadow */
+  background-color: rgba(255, 255, 255, 0.7);
+  backdrop-filter: saturate(180%) blur(10px);
+  -webkit-backdrop-filter: saturate(180%) blur(10px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 #navid a {
@@ -61,11 +49,11 @@ html, body {
 #navid a::after {
   content: "";
   position: absolute;
-  bottom: -5px; /* Position under the text */
+  bottom: -5px;
   left: 0;
   width: 0%;
   height: 2px;
-  background-color: #0FD46C; /* Your brand color */
+  background-color: #0FD46C;
   transition: width 0.3s ease;
 }
 
@@ -81,14 +69,22 @@ html, body {
   font-weight: bold;
 }
 
+#navid a:first-child {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: bold;
+  color: #0FD46C;
+  font-size: 15px;
+}
+
 .menu-icon {
   width: 25px;
   height: 25px;
   cursor: pointer;
 }
+
 .button {
   background-color: #0FD46C;
-  color:white !important;
+  color: white !important;
   padding: 5px 10px;
   border: none;
   border-radius: 5px;
@@ -97,14 +93,15 @@ html, body {
   font-family: Arial, sans-serif;
   transition: background-color 0.3s ease, transform 0.1s ease, color 0.3s ease;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  text-decoration: none !important; /* to override default <a> style */
+  text-decoration: none !important;
 }
 
 .button:hover {
   background-color: #0CB25A;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  color: black !important ; /* Force white on hover */
+  color: black !important;
 }
+
 /* Common styles shared by both buttons */
 .save,
 .cancel {
@@ -142,7 +139,7 @@ html, body {
   color: black !important;
 }
 
-.title{
+.title {
   font-size: 16px;
   color: #0fd46c;
   margin: 0;
@@ -151,51 +148,240 @@ html, body {
 }
 
 .back-button {
-            padding: 8px 12px 8px 8px;
-            background-color: transparent;
-            color: #6c757d !important;
-            border: 1px solid #dee2e6;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 14px;
-            font-family: Arial, sans-serif;
-            font-weight: 500;
-            text-decoration: none !important;
-            transition: all 0.3s ease;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            position: relative;
-        }
+  padding: 8px 12px 8px 8px;
+  background-color: transparent;
+  color: #6c757d !important;
+  border: 1px solid #dee2e6;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: Arial, sans-serif;
+  font-weight: 500;
+  text-decoration: none !important;
+  transition: all 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+}
 
-        .back-button::before {
-            content: '‹';
-            font-size: 18px;
-            font-weight: bold;
-            color: #6c757d;
-            transition: color 0.3s ease;
-        }
+.back-button::before {
+  content: '‹';
+  font-size: 18px;
+  font-weight: bold;
+  color: #6c757d;
+  transition: color 0.3s ease;
+}
 
-        .back-button::after {
-            content: 'Back';
-            font-size: 13px;
-        }
+.back-button::after {
+  content: 'Back';
+  font-size: 13px;
+}
 
-        .back-button:hover {
-            background-color: #f8f9fa;
-            border-color: #6c757d;
-            color: #495057 !important;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-            transform: translateX(-2px);
-        }
+.back-button:hover {
+  background-color: #f8f9fa;
+  border-color: #6c757d;
+  color: #495057 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transform: translateX(-2px);
+}
 
-        .back-button:hover::before {
-            color: #495057;
-        }
+.back-button:hover::before {
+  color: #495057;
+}
+
 
 body {
   background-color: #f3f2ef;
 }
 
+/* Enhanced Generalized Table Styles */
+/* Existing table styles (unchanged) */
+.table-wrapper {
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  margin-top: 10px;
+}
 
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #fff;
+  table-layout: fixed;
+}
+
+/* Column width classes */
+table.four-column col:nth-child(1) {
+  width: 15%;
+}
+
+table.four-column col:nth-child(2) {
+  width: 35%;
+}
+
+table.four-column col:nth-child(3) {
+  width: 15%;
+}
+
+table.four-column col:nth-child(4) {
+  width: 35%;
+}
+
+th {
+  background-color: #f8fafc;
+  padding: 16px 20px;
+  text-align: left;
+  border-bottom: 2px solid #e5e7eb;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  position: relative;
+}
+
+th:hover {
+  background-color: #f1f5f9;
+}
+
+th.sortable::after {
+  content: '';
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-bottom: 4px solid #9ca3af;
+  opacity: 0.5;
+}
+
+th.sortable.sort-asc::after {
+  border-bottom: 4px solid #0fd46c;
+  border-top: none;
+  opacity: 1;
+}
+
+th.sortable.sort-desc::after {
+  border-top: 4px solid #0fd46c;
+  border-bottom: none;
+  opacity: 1;
+}
+
+td {
+  padding: 16px 20px;
+  text-align: left;
+  border-bottom: 1px solid #f3f4f6;
+  color: #374151;
+  vertical-align: middle;
+  transition: all 0.2s ease;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Enhanced row hover effects */
+tbody tr {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  cursor: pointer;
+}
+
+tbody tr:hover {
+  background: linear-gradient(135deg, #f8fafc, #f0f9ff);
+  transform: translateX(4px);
+  box-shadow: 4px 0 12px rgba(15, 212, 108, 0.1);
+}
+
+/* Role Indicator */
+.role-indicator {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background-color: #0fd46c;
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+/* Status badge styles */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 9999px;
+}
+
+.status-badge.active {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.status-badge.inactive {
+  background-color: #fee2e2;
+  color: #dc2626;
+}
+
+/* Specific cell styling */
+.id-cell {
+  display: flex;
+  align-items: center;
+}
+
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 48px 20px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+
+  th,
+  td {
+    padding: 12px 15px;
+  }
+
+  table.four-column col:nth-child(1) {
+    width: 20%;
+  }
+
+  table.four-column col:nth-child(2) {
+    width: 30%;
+  }
+
+  table.four-column col:nth-child(3) {
+    width: 20%;
+  }
+
+  table.four-column col:nth-child(4) {
+    width: 30%;
+  }
+}
+
+@media (max-width: 576px) {
+
+  th,
+  td {
+    padding: 10px 12px;
+  }
+
+  table.four-column col:nth-child(1) {
+    width: 25%;
+  }
+
+  table.four-column col:nth-child(2) {
+    width: 25%;
+  }
+
+  table.four-column col:nth-child(3) {
+    width: 25%;
+  }
+
+  table.four-column col:nth-child(4) {
+    width: 25%;
+  }
+}

@@ -273,7 +273,7 @@
 
 .main {
   padding: 20px;
-  min-height: calc(100vh - 104px); /* Account for navbar + submenu height */
+  min-height: calc(100vh ); /* Account for navbar + submenu height */
   background-color: #f9fafb;
   font-size: 12px;
   font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
