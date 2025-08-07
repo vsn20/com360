@@ -312,6 +312,7 @@ tbody tr:hover {
   align-items: center;
   padding: 4px 12px;
   border-radius: 9999px;
+  margin-left: 15px;
 }
 
 .status-badge.active {
