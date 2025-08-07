@@ -102,6 +102,17 @@ body {
   color: black !important;
 }
 
+.button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.button:hover:not(:disabled) {
+  background-color: #0CB25A;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  color: black !important;
+}
+
 /* Common styles shared by both buttons */
 .save,
 .cancel {
@@ -148,47 +159,47 @@ body {
 }
 
 .back-button {
-  padding: 8px 12px 8px 8px;
-  background-color: transparent;
+  padding: 8px 12px 8px 8px !important; 
+  background-color: transparent !important;
   color: #6c757d !important;
-  border: 1px solid #dee2e6;
-  border-radius: 20px;
-  cursor: pointer;
-  font-size: 14px;
-  font-family: Arial, sans-serif;
-  font-weight: 500;
+  border: 1px solid #dee2e6 !important;
+  border-radius: 20px !important;
+  cursor: pointer !important;
+  font-size: 14px !important;
+  font-family: Arial, sans-serif !important;
+  font-weight: 500 !important;
   text-decoration: none !important;
-  transition: all 0.3s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  position: relative;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  position: relative !important;
 }
 
 .back-button::before {
-  content: '‹';
-  font-size: 18px;
-  font-weight: bold;
-  color: #6c757d;
-  transition: color 0.3s ease;
+  content: '‹' !important;
+  font-size: 18px  !important;
+  font-weight: bold !important;
+  color: #6c757d !important;
+  transition: color 0.3s ease !important;
 }
 
 .back-button::after {
-  content: 'Back';
-  font-size: 13px;
+  content: 'Back' !important;
+  font-size: 13px !important;
 }
 
 .back-button:hover {
-  background-color: #f8f9fa;
-  border-color: #6c757d;
+  background-color: #f8f9fa !important;
+  border-color: #6c757d !important;
   color: #495057 !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  transform: translateX(-2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+  transform: translateX(-2px) !important;
 }
 
 .back-button:hover::before {
-  color: #495057;
+  color: #495057 !important;
 }
 
 
@@ -394,23 +405,6 @@ tbody tr:hover {
           align-items: center;
           margin-top: 20px;
           gap: 10px;
-        }
-        .pagination-button {
-          background-color: #007bff;
-          color: white;
-          border: none;
-          padding: 8px 12px;
-          border-radius: 4px;
-          cursor: pointer;
-          font-size: 14px;
-          transition: background-color 0.3s;
-        }
-        .pagination-button:disabled {
-          background-color: #cccccc;
-          cursor: not-allowed;
-        }
-        .pagination-button:hover:not(:disabled) {
-          background-color: #0056b3;
         }
         .pagination-input {
           width: 40px;

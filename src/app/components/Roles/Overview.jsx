@@ -1194,7 +1194,7 @@ const Overview = ({ currentRole, orgid, error }) => {
               {filteredRoles.length > rolesPerPage && (
                 <div className="pagination-container">
                   <button
-                    className="pagination-button"
+                    className="button"
                     onClick={handlePrevPage}
                     disabled={currentPage === 1}
                   >
@@ -1212,7 +1212,7 @@ const Overview = ({ currentRole, orgid, error }) => {
                     of {totalPages}
                   </span>
                   <button
-                    className="pagination-button"
+                    className="button"
                     onClick={handleNextPage}
                     disabled={currentPage === totalPages}
                   >
