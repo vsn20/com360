@@ -287,12 +287,14 @@ const Overview = ({ currentRole, orgid, error }) => {
           );
         } else {
           updatedPermissions.push({ menuid, submenuid });
-        }
-        if (menu.hassubmenu === 'yes') {
-          const remainingSubmenus = updatedPermissions.filter(p => p.menuid === menuid && p.submenuid);
-          if (remainingSubmenus.length === 0) {
-            updatedPermissions = updatedPermissions.filter(p => p.menuid !== menuid);
+          // Auto-check parent menu when submenu is checked
+          if (!updatedPermissions.some(p => p.menuid === menuid && !p.submenuid)) {
+            updatedPermissions.push({ menuid, submenuid: null });
           }
+        }
+        const remainingSubmenus = updatedPermissions.filter(p => p.menuid === menuid && p.submenuid);
+        if (remainingSubmenus.length === 0) {
+          updatedPermissions = updatedPermissions.filter(p => p.menuid !== menuid || p.submenuid !== null);
         }
       } else {
         if (exists) {
@@ -358,12 +360,23 @@ const Overview = ({ currentRole, orgid, error }) => {
         setTimeout(() => addform_setFormError(null), 4000);
       } else {
         addform_setsuccess("Role added successfully");
+        // Reload the roles data to include the newly added role
+        const updatedRoles = await fetchRolesByOrgId(parseInt(orgid, 10));
+        setRoles([...updatedRoles].sort((a, b) => sortRoles(a, b, sortConfig.column, sortConfig.direction)));
+        
         setTimeout(() => {
           addform_setsuccess(null);
-          setisadd(true);
           addform_setPermissions([]);
           if (formRef.current) formRef.current.reset();
-          router.refresh();
+          // Redirect back to the roles list
+          setisadd(false);
+          setSelectedRole(null);
+          setRoleDetails(null);
+          setPermissions([]);
+          setEditingDetails(false);
+          setEditingFeatures(false);
+          setDetailsError(null);
+          setFeaturesError(null);
         }, 2000);
       }
     } catch (err) {
@@ -394,12 +407,14 @@ const Overview = ({ currentRole, orgid, error }) => {
           );
         } else {
           updatedPermissions.push({ menuid, submenuid });
-        }
-        if (menu.hassubmenu === 'yes') {
-          const remainingSubmenus = updatedPermissions.filter(p => p.menuid === menuid && p.submenuid);
-          if (remainingSubmenus.length === 0) {
-            updatedPermissions = updatedPermissions.filter(p => p.menuid !== menuid);
+          // Auto-check parent menu when submenu is checked
+          if (!updatedPermissions.some(p => p.menuid === menuid && !p.submenuid)) {
+            updatedPermissions.push({ menuid, submenuid: null });
           }
+        }
+        const remainingSubmenus = updatedPermissions.filter(p => p.menuid === menuid && p.submenuid);
+        if (remainingSubmenus.length === 0) {
+          updatedPermissions = updatedPermissions.filter(p => p.menuid !== menuid || p.submenuid !== null);
         }
       } else {
         if (exists) {
@@ -416,9 +431,84 @@ const Overview = ({ currentRole, orgid, error }) => {
         }
       }
 
-      console.log('Updated permissions:', updatedPermissions);
       return updatedPermissions;
     });
+  };
+
+  const handleSelectAllToggle = () => {
+    const allPermissions = [
+      ...addform_availableMenus.map(menu => ({ menuid: menu.menuid, submenuid: null })),
+      ...addform_availableSubmenus.map(submenu => ({ menuid: submenu.menuid, submenuid: submenu.submenuid }))
+    ];
+    const allSelected = addform_permissions.length === allPermissions.length;
+    addform_setPermissions(allSelected ? [] : [...new Map(allPermissions.map(p => [JSON.stringify(p), p])).values()]);
+  };
+
+  const isAllSelected = () => {
+    const allPermissions = [
+      ...addform_availableMenus.map(menu => ({ menuid: menu.menuid, submenuid: null })),
+      ...addform_availableSubmenus.map(submenu => ({ menuid: submenu.menuid, submenuid: submenu.submenuid }))
+    ];
+    return addform_permissions.length === allPermissions.length;
+  };
+
+  const handleStandardFeaturesToggle = () => {
+    const standardPermissions = menusWithoutSubmenus.map(menu => ({ menuid: menu.menuid, submenuid: null }));
+    const allStandardSelected = standardPermissions.every(stdPerm => 
+      addform_permissions.some(p => p.menuid === stdPerm.menuid && !p.submenuid)
+    );
+    
+    if (allStandardSelected) {
+      // Remove all standard features
+      addform_setPermissions(prev => prev.filter(p => 
+        !standardPermissions.some(stdPerm => stdPerm.menuid === p.menuid && !p.submenuid)
+      ));
+    } else {
+      // Add all standard features
+      addform_setPermissions(prev => {
+        const existingPermissions = prev.filter(p => 
+          !standardPermissions.some(stdPerm => stdPerm.menuid === p.menuid && !p.submenuid)
+        );
+        return [...existingPermissions, ...standardPermissions];
+      });
+    }
+  };
+
+  const handleAdvancedFeaturesToggle = () => {
+    const advancedPermissions = [
+      ...menusWithSubmenus.map(menu => ({ menuid: menu.menuid, submenuid: null })),
+      ...addform_availableSubmenus.filter(submenu => 
+        menusWithSubmenus.some(menu => menu.menuid === submenu.menuid)
+      ).map(submenu => ({ menuid: submenu.menuid, submenuid: submenu.submenuid }))
+    ];
+    
+    const allAdvancedSelected = advancedPermissions.every(advPerm => 
+      addform_permissions.some(p => 
+        p.menuid === advPerm.menuid && 
+        ((advPerm.submenuid === null && !p.submenuid) || (p.submenuid === advPerm.submenuid))
+      )
+    );
+    
+    if (allAdvancedSelected) {
+      // Remove all advanced features
+      addform_setPermissions(prev => prev.filter(p => 
+        !advancedPermissions.some(advPerm => 
+          p.menuid === advPerm.menuid && 
+          ((advPerm.submenuid === null && !p.submenuid) || (p.submenuid === advPerm.submenuid))
+        )
+      ));
+    } else {
+      // Add all advanced features
+      addform_setPermissions(prev => {
+        const existingPermissions = prev.filter(p => 
+          !advancedPermissions.some(advPerm => 
+            p.menuid === advPerm.menuid && 
+            ((advPerm.submenuid === null && !p.submenuid) || (p.submenuid === advPerm.submenuid))
+          )
+        );
+        return [...existingPermissions, ...advancedPermissions];
+      });
+    }
   };
 
   const getDisplayRoleId = (roleid) => {
@@ -466,141 +556,195 @@ const Overview = ({ currentRole, orgid, error }) => {
     return <div>Loading...</div>;
   }
 
+  // Separate menus with and without submenus
+  const menusWithoutSubmenus = addform_availableMenus.filter(menu => menu.hassubmenu !== 'yes');
+  const menusWithSubmenus = addform_availableMenus.filter(menu => menu.hassubmenu === 'yes');
+
   return (
     <div className="roles-overview-container">
       {detailsError && <div className="error-message">{detailsError}</div>}
       {isadd && (
-        <div style={{ padding: "20px", maxWidth: "600px", margin: "0 auto" }}>
-          <button className="back-button" onClick={handleBackClick}>x</button>
-          <h1>Add Role</h1>
+        <div className="add-role-container">
+          <div className="header-section">
+            <h1 className="title">Add Role</h1>
+            <button className="back-button" onClick={handleBackClick}>x</button>
+          </div>
           
           {addform_formerror && <p style={{ color: "red" }}>{addform_formerror}</p>}
           {addform_success && <p style={{ color: "green" }}>{addform_success}</p>}
-          <form action={addform_handleSubmit} ref={formRef}>
-            <div style={{ marginBottom: "20px" }}>
-              <label htmlFor="orgid" style={{ display: "block", marginBottom: "5px" }}>
-                Organization ID:
-              </label>
-              <input
-                type="text"
-                id="orgid"
-                name="orgid"
-                value={orgid || ''}
-                style={{
-                  width: "100%",
-                  padding: "8px",
-                  borderRadius: "5px",
-                  border: "1px solid #ccc",
-                  backgroundColor: "#f0f0f0",
-                }}
-                disabled
-              />
-            </div>
-            <div style={{ marginBottom: "20px" }}>
-              <label htmlFor="roleName" style={{ display: "block", marginBottom: "5px" }}>
-                Role Name: *
-              </label>
-              <input
-                type="text"
-                id="roleName"
-                name="roleName"
-                placeholder="Enter role name (e.g., Manager)"
-                style={{
-                  width: "100%",
-                  padding: "8px",
-                  borderRadius: "5px",
-                  border: "1px solid #ccc",
-                }}
-                required
-              />
-            </div>
-            <div style={{ marginBottom: "20px" }}>
-              <h3>Select Features: *</h3>
-              {addform_availableMenus.length === 0 ? (
-                <p>No features available.</p>
-              ) : (
-                addform_availableMenus.map((menu) => (
-                  <div key={`menu-${menu.menuid}`} style={{ margin: "10px 0" }}>
-                    <label style={{ display: "flex", alignItems: "center" }}>
+          <form action={addform_handleSubmit} ref={formRef} className="add-role-form">
+            <div className="form-section">
+              <div className="role-name-section">
+                <label htmlFor="roleName" className="role-name-label">
+                  Role Name: *
+                </label>
+                <input
+                  type="text"
+                  id="roleName"
+                  name="roleName"
+                  placeholder="Enter role name (e.g., Manager)"
+                  className="role-name-input"
+                  required
+                />
+              </div>
+              
+              <div className="features-section">
+                <div className="features-header">
+                  <div className="features-title">Select Features: *</div>
+                  <div className="toggle-buttons">
+                    <label className="toggle-checkbox-label">
                       <input
                         type="checkbox"
-                        checked={addform_permissions.some((p) => p.menuid === menu.menuid && !p.submenuid)}
-                        onChange={() => addform_handlePermissionToggle(menu.menuid)}
-                        style={{ marginRight: "10px" }}
+                        checked={isAllSelected()}
+                        onChange={handleSelectAllToggle}
+                        className="toggle-checkbox"
                       />
-                      {menu.menuname}
                     </label>
-                    {menu.hassubmenu === 'yes' && addform_availableSubmenus
-                      .filter((sm) => sm.menuid === menu.menuid)
-                      .map((submenu) => (
-                        <div key={`submenu-${submenu.submenuid}`} style={{ margin: "5px 0", marginLeft: "20px" }}>
-                          <label style={{ display: "flex", alignItems: "center" }}>
-                            <input
-                              type="checkbox"
-                              checked={addform_permissions.some(
-                                (p) => p.menuid === menu.menuid && p.submenuid === submenu.submenuid
-                              )}
-                              onChange={() => addform_handlePermissionToggle(menu.menuid, submenu.submenuid)}
-                              style={{ marginRight: "10px" }}
-                            />
-                            {submenu.submenuname}
-                          </label>
+                  </div>
+                </div>
+
+                {/* Menus without submenus */}
+                {menusWithoutSubmenus.length > 0 && (
+                  <div className="menus-without-submenus">
+                    <div className="menu-category-header">
+                      <div className="menu-category-title">Standalone Features</div>
+                      <label className="category-toggle-label">
+                        <input
+                          type="checkbox"
+                          checked={menusWithoutSubmenus.every(menu => 
+                            addform_permissions.some(p => p.menuid === menu.menuid && !p.submenuid)
+                          )}
+                          onChange={handleStandardFeaturesToggle}
+                          className="category-toggle-checkbox"
+                        />
+                      </label>
+                    </div>
+                    <div className="features-grid">
+                      {Array.from({ length: Math.ceil(menusWithoutSubmenus.length / 5) }, (_, row) => (
+                        <div key={`no-submenu-row-${row}`} className="features-row">
+                          {menusWithoutSubmenus.slice(row * 5, (row * 5) + 5).map((menu) => (
+                            <div key={`menu-${menu.menuid}`} className="feature-item">
+                              <label className="feature-label">
+                                <span className="feature-name">{menu.menuname}</span>
+                                <input
+                                  type="checkbox"
+                                  checked={addform_permissions.some((p) => p.menuid === menu.menuid && !p.submenuid)}
+                                  onChange={() => addform_handlePermissionToggle(menu.menuid)}
+                                  className="feature-checkbox"
+                                />
+                              </label>
+                            </div>
+                          ))}
                         </div>
                       ))}
+                    </div>
                   </div>
-                ))
-              )}
+                )}
+
+                {/* Menus with submenus */}
+                {menusWithSubmenus.length > 0 && (
+                  <div className="menus-with-submenus">
+                    <div className="menu-category-header">
+                      <div className="menu-category-title">Expandable Features</div>
+                      <label className="category-toggle-label">
+                        <input
+                          type="checkbox"
+                          checked={(() => {
+                            const advancedPermissions = [
+                              ...menusWithSubmenus.map(menu => ({ menuid: menu.menuid, submenuid: null })),
+                              ...addform_availableSubmenus.filter(submenu => 
+                                menusWithSubmenus.some(menu => menu.menuid === submenu.menuid)
+                              ).map(submenu => ({ menuid: submenu.menuid, submenuid: submenu.submenuid }))
+                            ];
+                            return advancedPermissions.every(advPerm => 
+                              addform_permissions.some(p => 
+                                p.menuid === advPerm.menuid && 
+                                ((advPerm.submenuid === null && !p.submenuid) || (p.submenuid === advPerm.submenuid))
+                              )
+                            );
+                          })()}
+                          onChange={handleAdvancedFeaturesToggle}
+                          className="category-toggle-checkbox"
+                        />
+                      </label>
+                    </div>
+                    <div className="features-grid">
+                      {Array.from({ length: Math.ceil(menusWithSubmenus.length / 5) }, (_, row) => (
+                        <div key={`submenu-row-${row}`} className="features-row">
+                          {menusWithSubmenus.slice(row * 5, (row * 5) + 5).map((menu) => (
+                            <div key={`menu-${menu.menuid}`} className="feature-item-with-submenus">
+                              <label className="feature-label main-feature">
+                                <span className="feature-name">{menu.menuname}</span>
+                                <input
+                                  type="checkbox"
+                                  checked={addform_permissions.some((p) => p.menuid === menu.menuid && !p.submenuid)}
+                                  onChange={() => addform_handlePermissionToggle(menu.menuid)}
+                                  className="feature-checkbox"
+                                />
+                              </label>
+                              <div className="submenus-container">
+                                {addform_availableSubmenus
+                                  .filter((sm) => sm.menuid === menu.menuid)
+                                  .map((submenu) => (
+                                    <label key={`submenu-${submenu.submenuid}`} className="feature-label submenu-label">
+                                      <span className="submenu-name">{submenu.submenuname}</span>
+                                      <input
+                                        type="checkbox"
+                                        checked={addform_permissions.some(
+                                          (p) => p.menuid === menu.menuid && p.submenuid === submenu.submenuid
+                                        )}
+                                        onChange={() => addform_handlePermissionToggle(menu.menuid, submenu.submenuid)}
+                                        className="feature-checkbox"
+                                      />
+                                    </label>
+                                  ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-            <button
-              type="submit"
-              disabled={addform_loading}
-              style={{
-                padding: "10px 20px",
-                backgroundColor: addform_loading ? "#ccc" : "#0070f3",
-                color: "white",
-                border: "none",
-                borderRadius: "5px",
-                cursor: addform_loading ? "not-allowed" : "pointer",
-              }}
-            >
-              Add Role
-            </button>
+            <div className="submit-section">
+              <button
+                type="submit"
+                disabled={addform_loading}
+                className="button"
+              >
+                Add Role
+              </button>
+            </div>
           </form>
         </div>
       )}
       {!isadd && !selectedRole && (
-        <div className="roles-list">
-          <button
-            onClick={() => { handleaddrole() }}
-            style={{
-              padding: "10px 20px",
-              backgroundColor: "#0070f3",
-              color: "white",
-              border: "none",
-              borderRadius: "5px",
-              cursor: "pointer",
-            }}
-          >
-            Add Role
-          </button>
+        <div className="roles-list" style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <div className="title">Existing Roles</div>
+            <button
+              className="button"
+              onClick={() => handleaddrole()}
+              style={{
+                cursor: "pointer",
+                marginLeft: "auto",
+              }}
+            >
+              Add Role
+            </button>
+          </div>
           {roles.length === 0 && !detailsError ? (
             <p>No active roles found.</p>
           ) : (
             <table className="roles-table">
               <thead>
                 <tr>
-                  <th onClick={() => requestSort('roleid')}>
-                    Role ID {/*{sortConfig.column === 'roleid' && (sortConfig.direction === 'asc' ? '↑' : '↓')} */}
-                  </th>
-                  <th onClick={() => requestSort('rolename')}>
-                    Role Name {/* {sortConfig.column === 'rolename' && (sortConfig.direction === 'asc' ? '↑' : '↓')} */}
-                  </th>
-                  <th onClick={() => requestSort('is_active')}>
-                    Is Active {/* {sortConfig.column === 'is_active' && (sortConfig.direction === 'asc' ? '↑' : '↓')}*/}
-                  </th>
-                  <th onClick={() => requestSort('created_date')}>
-                    Created Date {/*{sortConfig.column === 'created_date' && (sortConfig.direction === 'asc' ? '↑' : '↓')}*/}
-                  </th>
+                  <th onClick={() => requestSort('roleid')}>Role ID</th>
+                  <th onClick={() => requestSort('rolename')}>Role Name</th>
+                  <th onClick={() => requestSort('is_active')}>Is Active</th>
+                  <th onClick={() => requestSort('created_date')}>Created Date</th>
                 </tr>
               </thead>
               <tbody>

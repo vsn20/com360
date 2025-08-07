@@ -105,6 +105,15 @@ html, body {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   color: white !important; /* Force white on hover */
 }
+
+.title{
+  font-size: 16px;
+  color: #0fd46c;
+  margin: 0;
+  padding: 10px 0;
+  font-weight: bold;
+}
+
 body {
   background-color: #f3f2ef;
 }
