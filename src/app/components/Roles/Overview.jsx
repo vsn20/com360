@@ -812,7 +812,7 @@ const Overview = ({ currentRole, orgid, error }) => {
         <div className="add-role-container">
           <div className="header-section">
             <h1 className="title">Add Role</h1>
-            <button className="back-button" onClick={handleBackClick}>x</button>
+            <button className="back-button" onClick={handleBackClick}></button>
           </div>
           
           {addform_formerror && <p style={{ color: "red" }}>{addform_formerror}</p>}
@@ -1010,7 +1010,7 @@ const Overview = ({ currentRole, orgid, error }) => {
         <div className="role-details-container">
           <div className="header-section">
             <h1 className="title">Edit Role</h1>
-            <button className="back-button" onClick={handleBackClick}>x</button>
+            <button className="back-button" onClick={handleBackClick}></button>
           </div>
           <div className="role-details-block">
             <div className="roledetails-header">
@@ -1036,8 +1036,8 @@ const Overview = ({ currentRole, orgid, error }) => {
                   </div>
                 </div>
                 <div className="form-buttons">
-                  <button type="submit" className="save-button">Save</button>
-                  <button type="button" className="cancel-button" onClick={handleDetailsCancel}>Cancel</button>
+                  <button type="submit" className="save">Save</button>
+                  <button type="button" className="cancel" onClick={handleDetailsCancel}>Cancel</button>
                 </div>
               </form>
             ) : (
@@ -1074,8 +1074,8 @@ const Overview = ({ currentRole, orgid, error }) => {
               
               {editingFeatures && (
                 <div className="form-buttons">
-                  <button className="save-button" onClick={handleFeatureSave}>Save</button>
-                  <button className="cancel-button" onClick={handleFeatureCancel}>Cancel</button>
+                  <button className="save" onClick={handleFeatureSave}>Save</button>
+                  <button className="cancel" onClick={handleFeatureCancel}>Cancel</button>
                 </div>
               )}
             </div>
