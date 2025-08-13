@@ -16,6 +16,7 @@ const Overview = ({
   priority,
   serviceRequests,
   previousServiceRequests,
+  noofrows,
 }) => {
   const searchparams = useSearchParams();
   const router = useRouter();
@@ -31,6 +32,18 @@ const Overview = ({
   const [allServiceRequests, setAllServiceRequests] = useState(serviceRequests || []);
   const [req, setreq] = useState(false);
   const [parentServiceRequests, setParentServiceRequests] = useState([]);
+  
+  // Pagination and filtering state
+  const [sortConfig, setSortConfig] = useState({ column: 'SR_NUM', direction: 'asc' });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageInputValue, setPageInputValue] = useState('1');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [priorityFilter, setPriorityFilter] = useState('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const requestsPerPage = parseInt(noofrows?.Name, 10) || 10;
+
   const [formData, setFormData] = useState({
     serviceName: '',
     statusCd: 'Open',
@@ -61,17 +74,24 @@ const Overview = ({
   const formatDate = (date) => {
     if (!date) return '';
     if (date instanceof Date) {
-      // Use local date components to preserve YYYY-MM-DD
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
       return `${year}-${month}-${day}`;
     }
     if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}(T.*)?$/)) {
-      // If it's already a date string (YYYY-MM-DD), return it as is
       return date.split('T')[0];
     }
-    return ''; // Fallback for invalid dates
+    return '';
+  };
+
+  const formatDateDisplay = (date) => {
+    if (!date) return 'N/A';
+    try {
+      return new Date(date).toLocaleDateString();
+    } catch (error) {
+      return 'N/A';
+    }
   };
 
   useEffect(() => {
@@ -79,13 +99,24 @@ const Overview = ({
   }, [searchparams.get('refresh')]);
 
   useEffect(() => {
-    setAllServiceRequests(serviceRequests); // Initialize with serviceRequests prop
+    setAllServiceRequests(serviceRequests);
   }, [serviceRequests]);
+
+  useEffect(() => {
+    if (allServiceRequests.length > 0) {
+      setAllServiceRequests([...allServiceRequests].sort((a, b) => 
+        sortServiceRequests(a, b, sortConfig.column, sortConfig.direction)
+      ));
+    }
+  }, [sortConfig]);
+
+  useEffect(() => {
+    setPageInputValue(currentPage.toString());
+  }, [currentPage]);
 
   useEffect(() => {
     const loadServiceRequestDetails = async () => {
       if (!selectedSrNum) {
-        console.log('No selectedSrNum, resetting details');
         setServiceRequestDetails(null);
         setFormData({
           serviceName: '',
@@ -210,10 +241,12 @@ const Overview = ({
     setIsAdd(true);
     setreq(false);
     setParentServiceRequests([]);
+    setCurrentPage(1);
+    setPageInputValue('1');
   };
 
   const handleEdit = (section) => {
-    if (isResolved) return; // Prevent editing if status is Resolved
+    if (isResolved) return;
     if (section === 'basic') setIsEditingBasic(true);
     if (section === 'additional') setIsEditingAdditional(true);
     if (section === 'description') setIsEditingDescription(true);
@@ -236,7 +269,6 @@ const Overview = ({
       comments: '',
       attachmentStatus: '',
     }));
-    console.log('New files selected:', newFiles);
     setNewFiles((prev) => [...prev, ...newFiles]);
   };
 
@@ -389,29 +421,167 @@ const Overview = ({
     }
   };
 
-  const getdisplayprojectid = (prjid) => {
-    return prjid.split('-')[1] || prjid;
-  };
-  const getdisplayemployeeid = (prjid) => {
-    return prjid.split('_')[1] || prjid;
+  // Sorting and filtering functions
+  const sortServiceRequests = (a, b, column, direction) => {
+    let aValue, bValue;
+    switch (column) {
+      case 'SR_NUM':
+        aValue = parseInt(a.SR_NUM.split('-')[1] || a.SR_NUM);
+        bValue = parseInt(b.SR_NUM.split('-')[1] || b.SR_NUM);
+        return direction === 'asc' ? aValue - bValue : bValue - aValue;
+      case 'SERVICE_NAME':
+        aValue = a.SERVICE_NAME || '';
+        bValue = b.SERVICE_NAME || '';
+        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      case 'STATUS_CD':
+        aValue = a.STATUS_CD || '';
+        bValue = b.STATUS_CD || '';
+        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      case 'PRIORITY_CD':
+        aValue = a.PRIORITY_CD || '';
+        bValue = b.PRIORITY_CD || '';
+        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      case 'CREATED_DATE':
+        aValue = new Date(a.CREATED_DATE || 0).getTime();
+        bValue = new Date(b.CREATED_DATE || 0).getTime();
+        return direction === 'asc' ? aValue - bValue : bValue - aValue;
+      default:
+        return 0;
+    }
   };
 
+  const requestSort = (column) => {
+    setSortConfig(prev => ({
+      column,
+      direction: prev.column === column && prev.direction === 'asc' ? 'desc' : 'asc',
+    }));
+  };
+
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+    setCurrentPage(1);
+    setPageInputValue('1');
+  };
+
+  const handleStatusFilterChange = (e) => {
+    setStatusFilter(e.target.value);
+    setCurrentPage(1);
+    setPageInputValue('1');
+  };
+
+  const handlePriorityFilterChange = (e) => {
+    setPriorityFilter(e.target.value);
+    setCurrentPage(1);
+    setPageInputValue('1');
+  };
+
+  const handleStartDateChange = (e) => {
+    setStartDate(e.target.value);
+    setCurrentPage(1);
+    setPageInputValue('1');
+  };
+
+  const handleEndDateChange = (e) => {
+    setEndDate(e.target.value);
+    setCurrentPage(1);
+    setPageInputValue('1');
+  };
+
+  const filteredServiceRequests = allServiceRequests.filter(request => {
+    const matchesSearch = request.SERVICE_NAME?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                         request.SR_NUM?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || request.STATUS_CD === statusFilter;
+    const matchesPriority = priorityFilter === 'all' || request.PRIORITY_CD === priorityFilter;
+    
+    let matchesDate = true;
+    if (request.CREATED_DATE && (startDate || endDate)) {
+      const createdDate = new Date(request.CREATED_DATE);
+      const start = startDate ? new Date(startDate) : null;
+      const end = endDate ? new Date(endDate) : null;
+      if (start && end && start > end) {
+        return false;
+      }
+      if (start) {
+        start.setHours(0, 0, 0, 0);
+        matchesDate = matchesDate && createdDate >= start;
+      }
+      if (end) {
+        end.setHours(23, 59, 59, 999);
+        matchesDate = matchesDate && createdDate <= end;
+      }
+    }
+    return matchesSearch && matchesStatus && matchesPriority && matchesDate;
+  });
+
+  const totalPages = Math.ceil(filteredServiceRequests.length / requestsPerPage);
+  const indexOfLastRequest = currentPage * requestsPerPage;
+  const indexOfFirstRequest = indexOfLastRequest - requestsPerPage;
+  const currentRequests = filteredServiceRequests.slice(indexOfFirstRequest, indexOfLastRequest);
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(prev => prev + 1);
+      setPageInputValue((currentPage + 1).toString());
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
+      setPageInputValue((currentPage - 1).toString());
+    }
+  };
+
+  const handlePageInputChange = (e) => {
+    setPageInputValue(e.target.value);
+  };
+
+  const handlePageInputKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      const value = parseInt(pageInputValue, 10);
+      if (!isNaN(value) && value >= 1 && value <= totalPages) {
+        setCurrentPage(value);
+        setPageInputValue(value.toString());
+      } else {
+        setPageInputValue(currentPage.toString());
+      }
+    }
+  };
+
+  const getdisplayprojectid = (prjid) => {
+    return prjid?.split('-')[1] || prjid;
+  };
+  
+  const getdisplayemployeeid = (prjid) => {
+    return prjid?.split('_')[1] || prjid;
+  };
+
+  // Get unique status and priority values for filters
+  const uniqueStatuses = [...new Set(allServiceRequests.map(req => req.STATUS_CD).filter(Boolean))];
+  const uniquePriorities = [...new Set(allServiceRequests.map(req => req.PRIORITY_CD).filter(Boolean))];
+
+  if (isLoading && !serviceRequestDetails) {
+    return (
+      <div className="service-requests-overview-container">
+        <div className="loading-message">Loading...</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="employee-overview-container">
+    <div className="service-requests-overview-container">
       {error && <div className="error-message">{error}</div>}
-      {isLoading && <div className="loading-message">Loading...</div>}
+      
       {req && !isAdd ? (
-        <>
-          <Requests
-            orgid={orgid}
-            empid={empid}
-            type={type}
-            subtype={subtype}
-            priority={priority}
-            previousServiceRequests={previousServiceRequests}
-            onBack={handleBack}
-          />
-        </>
+        <Requests
+          orgid={orgid}
+          empid={empid}
+          type={type}
+          subtype={subtype}
+          priority={priority}
+          previousServiceRequests={previousServiceRequests}
+          onBack={handleBack}
+        />
       ) : isAdd && !req ? (
         <AddServiceReq
           orgid={orgid}
@@ -424,51 +594,164 @@ const Overview = ({
           onBack={handleBack}
         />
       ) : !selectedSrNum ? (
-        <div className="employee-list">
-          <button onClick={handleAddServiceRequest} className="save-button">
-            Add Service Request
-          </button>
-          <button onClick={handlerequest} className="save-button">
-            Requests
-          </button>
-          {allServiceRequests.length === 0 && !error ? (
-            <p>No service requests found.</p>
+        <div className="service-requests-list" style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <div className="title">Service Requests</div>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button className="button" onClick={handlerequest}>
+                Requests
+              </button>
+              <button className="button" onClick={handleAddServiceRequest}>
+                Add Service Request
+              </button>
+            </div>
+          </div>
+
+          <div className="search-filter-container">
+            <input
+              type="text"
+              placeholder="Search by Service Name or SR ID"
+              value={searchQuery}
+              onChange={handleSearchChange}
+              className="search-input"
+            />
+            <select
+              value={statusFilter}
+              onChange={handleStatusFilterChange}
+              className="filter-select"
+            >
+              <option value="all">All Status</option>
+              {uniqueStatuses.map((status) => (
+                <option key={status} value={status}>{status}</option>
+              ))}
+            </select>
+            <select
+              value={priorityFilter}
+              onChange={handlePriorityFilterChange}
+              className="filter-select"
+            >
+              <option value="all">All Priority</option>
+              {uniquePriorities.map((priority) => (
+                <option key={priority} value={priority}>{priority}</option>
+              ))}
+            </select>
+            <div className="date-filter-container">
+              <input
+                type="date"
+                value={startDate}
+                onChange={handleStartDateChange}
+                className="date-input"
+                placeholder="Start Date"
+              />
+              <input
+                type="date"
+                value={endDate}
+                onChange={handleEndDateChange}
+                className="date-input"
+                placeholder="End Date"
+              />
+            </div>
+          </div>
+
+          {filteredServiceRequests.length === 0 && !error ? (
+            <p className="empty-state">No service requests found.</p>
           ) : (
-            <table className="employee-table">
-              <thead>
-                <tr>
-                  <th>Service Request ID</th>
-                  <th>Service Name</th>
-                  <th>Status</th>
-                  <th>Priority</th>
-                </tr>
-              </thead>
-              <tbody>
-                {allServiceRequests.map((request) => (
-                  <tr
-                    key={request.SR_NUM}
-                    onClick={() => handleRowClick(request.SR_NUM)}
-                    className={selectedSrNum === request.SR_NUM ? 'selected-row' : ''}
+            <>
+              <div className="table-wrapper">
+                <table className="service-requests-table four-column">
+                  <colgroup>
+                    <col />
+                    <col />
+                    <col />
+                    <col />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th className={sortConfig.column === 'SR_NUM' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('SR_NUM')}>
+                        Service Request ID
+                      </th>
+                      <th className={sortConfig.column === 'SERVICE_NAME' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('SERVICE_NAME')}>
+                        Service Name
+                      </th>
+                      <th className={sortConfig.column === 'STATUS_CD' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('STATUS_CD')}>
+                        Status
+                      </th>
+                      <th className={sortConfig.column === 'PRIORITY_CD' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('PRIORITY_CD')}>
+                        Priority
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentRequests.map((request) => (
+                      <tr
+                        key={request.SR_NUM}
+                        onClick={() => handleRowClick(request.SR_NUM)}
+                        style={{ cursor: 'pointer' }}
+                        className={selectedSrNum === request.SR_NUM ? 'selected-row' : ''}
+                      >
+                        <td className="id-cell">
+                          <span className="role-indicator"></span>SR-{getdisplayprojectid(request.SR_NUM)}
+                        </td>
+                        <td className="name-cell">{request.SERVICE_NAME || '-'}</td>
+                        <td className="status-cell">
+                          <span className={`status-badge ${request.STATUS_CD?.toLowerCase() === 'resolved' ? 'inactive' : 'active'}`}>
+                            {request.STATUS_CD || '-'}
+                          </span>
+                        </td>
+                        <td className="priority-cell">{request.PRIORITY_CD || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              
+              {filteredServiceRequests.length > requestsPerPage && (
+                <div className="pagination-container">
+                  <button
+                    className="button"
+                    onClick={handlePrevPage}
+                    disabled={currentPage === 1}
                   >
-                    <td>SR-{getdisplayprojectid(request.SR_NUM)}</td>
-                    <td>{request.SERVICE_NAME || '-'}</td>
-                    <td>{request.STATUS_CD || '-'}</td>
-                    <td>{request.PRIORITY_CD||'-'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    ← Previous
+                  </button>
+                  <span className="pagination-text">
+                    Page{' '}
+                    <input
+                      type="text"
+                      value={pageInputValue}
+                      onChange={handlePageInputChange}
+                      onKeyPress={handlePageInputKeyPress}
+                      className="pagination-input"
+                    />{' '}
+                    of {totalPages}
+                  </span>
+                  <button
+                    className="button"
+                    onClick={handleNextPage}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       ) : (
         serviceRequestDetails && (
-          <div className="employee-details-container">
-            <button className="back-button" onClick={handleBack}>
-              x
-            </button>
+          <div className="service-request-details-container">
+            <div className="header-section">
+              <div className="title">Edit Service Request</div>
+              <button className="back-button" onClick={handleBack}></button>
+            </div>
 
             <div className="details-block">
-              <h3>Basic Details</h3>
+              <div className="section-header">
+                <div>Basic Details</div>
+                {!isResolved && !isEditingBasic && (
+                  <button className="button" onClick={() => handleEdit('basic')}>Edit</button>
+                )}
+              </div>
               {isEditingBasic ? (
                 <form
                   onSubmit={(e) => {
@@ -477,15 +760,6 @@ const Overview = ({
                   }}
                 >
                   <div className="form-row">
-                    {/* <div className="form-group">
-                      <label>Service Request ID</label>
-                      <input
-                        type="text"
-                        value={`SR-${selectedSrNum}`}
-                        readOnly
-                        className="bg-gray-100"
-                      />
-                    </div> */}
                     <div className="form-group">
                       <label>Organization ID</label>
                       <input
@@ -594,14 +868,14 @@ const Overview = ({
                   <div className="form-buttons">
                     <button
                       type="submit"
-                      className="save-button"
+                      className="save"
                       disabled={isLoading}
                     >
                       {isLoading ? 'Saving...' : 'Save'}
                     </button>
                     <button
                       type="button"
-                      className="cancel-button"
+                      className="cancel"
                       onClick={() => setIsEditingBasic(false)}
                       disabled={isLoading}
                     >
@@ -610,69 +884,64 @@ const Overview = ({
                   </div>
                 </form>
               ) : (
-                <div>
+                <div className="view-details">
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Service Request ID</label>
                       <p>SR-{getdisplayprojectid(serviceRequestDetails.SR_NUM)}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Organization ID</label>
                       <p>{serviceRequestDetails.ORG_ID || '-'}</p>
                     </div>
                   </div>
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Service Name</label>
                       <p>{serviceRequestDetails.SERVICE_NAME || '-'}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Status</label>
                       <p>{serviceRequestDetails.STATUS_CD || '-'}</p>
                     </div>
                   </div>
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Priority</label>
                       <p>{serviceRequestDetails.PRIORITY_CD || '-'}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Type</label>
                       <p>{serviceRequestDetails.TYPE_CD || '-'}</p>
                     </div>
                   </div>
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Sub-Type</label>
                       <p>{serviceRequestDetails.SUB_TYPE_CD || '-'}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Assigned To</label>
                       <p>{getdisplayemployeeid(serviceRequestDetails.ASSIGNED_TO) || '-'}</p>
                     </div>
                   </div>
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Due Date</label>
-                      <p>{formatDate(serviceRequestDetails.DUE_DATE)}</p>
+                      <p>{formatDate(serviceRequestDetails.DUE_DATE) || '-'}</p>
                     </div>
                   </div>
-                  {!isResolved && (
-                    <div className="details-buttons">
-                      <button
-                        className="edit-button"
-                        onClick={() => handleEdit('basic')}
-                      >
-                        Edit
-                      </button>
-                    </div>
-                  )}
                 </div>
               )}
             </div>
 
             <div className="details-block">
-              <h3>Additional Details</h3>
+              <div className="section-header">
+                <div>Additional Details</div>
+                {!isResolved && !isEditingAdditional && (
+                  <button className="button" onClick={() => handleEdit('additional')}>Edit</button>
+                )}
+              </div>
               {isEditingAdditional ? (
                 <form
                   onSubmit={(e) => {
@@ -765,14 +1034,14 @@ const Overview = ({
                   <div className="form-buttons">
                     <button
                       type="submit"
-                      className="save-button"
+                      className="save"
                       disabled={isLoading}
                     >
                       {isLoading ? 'Saving...' : 'Save'}
                     </button>
                     <button
                       type="button"
-                      className="cancel-button"
+                      className="cancel"
                       onClick={() => setIsEditingAdditional(false)}
                       disabled={isLoading}
                     >
@@ -781,23 +1050,23 @@ const Overview = ({
                   </div>
                 </form>
               ) : (
-                <div>
+                <div className="view-details">
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Escalated</label>
                       <p>{serviceRequestDetails.ESCALATED_FLAG ? 'Yes' : 'No'}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Escalated To</label>
                       <p>{serviceRequestDetails.ESCALATED_TO || '-'}</p>
                     </div>
                   </div>
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Escalated Date</label>
-                      <p>{formatDate(serviceRequestDetails.ESCALATED_DATE)}</p>
+                      <p>{formatDate(serviceRequestDetails.ESCALATED_DATE) || '-'}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Parent SR ID</label>
                       <p>
                         {serviceRequestDetails.PAR_ROW_ID
@@ -807,37 +1076,32 @@ const Overview = ({
                     </div>
                   </div>
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Contact ID</label>
                       <p>{serviceRequestDetails.CONTACT_ID || '-'}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Account ID</label>
                       <p>{serviceRequestDetails.ACCOUNT_ID || '-'}</p>
                     </div>
                   </div>
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Asset ID</label>
                       <p>{serviceRequestDetails.ASSET_ID || '-'}</p>
                     </div>
                   </div>
-                  {!isResolved && (
-                    <div className="details-buttons">
-                      <button
-                        className="edit-button"
-                        onClick={() => handleEdit('additional')}
-                      >
-                        Edit
-                      </button>
-                    </div>
-                  )}
                 </div>
               )}
             </div>
 
             <div className="details-block">
-              <h3>Description and Comments</h3>
+              <div className="section-header">
+                <div>Description and Comments</div>
+                {!isResolved && !isEditingDescription && (
+                  <button className="button" onClick={() => handleEdit('description')}>Edit</button>
+                )}
+              </div>
               {isEditingDescription ? (
                 <form
                   onSubmit={(e) => {
@@ -872,14 +1136,14 @@ const Overview = ({
                   <div className="form-buttons">
                     <button
                       type="submit"
-                      className="save-button"
+                      className="save"
                       disabled={isLoading}
                     >
                       {isLoading ? 'Saving...' : 'Save'}
                     </button>
                     <button
                       type="button"
-                      className="cancel-button"
+                      className="cancel"
                       onClick={() => setIsEditingDescription(false)}
                       disabled={isLoading}
                     >
@@ -888,35 +1152,30 @@ const Overview = ({
                   </div>
                 </form>
               ) : (
-                <div>
+                <div className="view-details">
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Description</label>
                       <p>{serviceRequestDetails.DESCRIPTION || '-'}</p>
                     </div>
                   </div>
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Comments</label>
                       <p>{serviceRequestDetails.COMMENTS || '-'}</p>
                     </div>
                   </div>
-                  {!isResolved && (
-                    <div className="details-buttons">
-                      <button
-                        className="edit-button"
-                        onClick={() => handleEdit('description')}
-                      >
-                        Edit
-                      </button>
-                    </div>
-                  )}
                 </div>
               )}
             </div>
 
             <div className="details-block">
-              <h3>Attachments</h3>
+              <div className="section-header">
+                <div>Attachments</div>
+                {!isResolved && !isEditingAttachments && (
+                  <button className="button" onClick={() => handleEdit('attachments')}>Edit</button>
+                )}
+              </div>
               {isEditingAttachments ? (
                 <form
                   onSubmit={(e) => {
@@ -938,151 +1197,125 @@ const Overview = ({
                   {(existingFiles.length > 0 || newFiles.length > 0) && (
                     <div className="form-row">
                       <div className="form-group">
-                        <h4>Attached Files</h4>
-                        <table className="attachment-table">
-                          <thead>
-                            <tr>
-                              <th>File Name</th>
-                              <th>Type</th>
-                              <th>Comments</th>
-                              {/* <th>Status</th> */}
-                              <th>Action</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {existingFiles.map((fileObj, index) => (
-                              <tr key={`existing-${index}`}>
-                                <td>
-                                  <a
-                                    href={`/Uploads/${fileObj.file_path}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                  >
-                                    {fileObj.name}
-                                  </a>
-                                </td>
-                                <td>
-                                  <input
-                                    type="text"
-                                    value={fileObj.type}
-                                    onChange={(e) =>
-                                      handleFileCommentChange(
-                                        index,
-                                        e.target.value,
-                                        true
-                                      )
-                                    }
-                                    placeholder="Enter file type"
-                                  />
-                                </td>
-                                <td>
-                                  <input
-                                    type="text"
-                                    value={fileObj.comments}
-                                    onChange={(e) =>
-                                      handleFileCommentChange(
-                                        index,
-                                        e.target.value,
-                                        true
-                                      )
-                                    }
-                                    placeholder="Add comments"
-                                  />
-                                </td>
-                                {/* <td>
-                                  <input
-                                    type="text"
-                                    value={fileObj.attachmentStatus}
-                                    onChange={(e) =>
-                                      handleFileStatusChange(
-                                        index,
-                                        e.target.value,
-                                        true
-                                      )
-                                    }
-                                    placeholder="Enter status"
-                                  />
-                                </td> */}
-                                <td>
-                                  <button
-                                    type="button"
-                                    className="cancel-button"
-                                    onClick={() => handleRemoveFile(index, true)}
-                                  >
-                                    Remove
-                                  </button>
-                                </td>
+                        <div>Attached Files</div>
+                        <div className="table-wrapper">
+                          <table className="attachment-table">
+                            <thead>
+                              <tr>
+                                <th>File Name</th>
+                                <th>Type</th>
+                                <th>Comments</th>
+                                <th>Action</th>
                               </tr>
-                            ))}
-                            {newFiles.map((fileObj, index) => (
-                              <tr key={`new-${index}`}>
-                                <td>{fileObj.name}</td>
-                                <td>
-                                  <input
-                                    type="text"
-                                    value={fileObj.type}
-                                    onChange={(e) =>
-                                      handleFileCommentChange(
-                                        index,
-                                        e.target.value
-                                      )
-                                    }
-                                    placeholder="Enter file type"
-                                  />
-                                </td>
-                                <td>
-                                  <input
-                                    type="text"
-                                    value={fileObj.comments}
-                                    onChange={(e) =>
-                                      handleFileCommentChange(
-                                        index,
-                                        e.target.value
-                                      )
-                                    }
-                                    placeholder="Add comments"
-                                  />
-                                </td>
-                                {/* <td>
-                                  <input
-                                    type="text"
-                                    value={fileObj.attachmentStatus}
-                                    onChange={(e) =>
-                                      handleFileStatusChange(
-                                        index,
-                                        e.target.value
-                                      )
-                                    }
-                                    placeholder="Enter status"
-                                  />
-                                </td> */}
-                                <td>
-                                  <button
-                                    type="button"
-                                    className="cancel-button"
-                                    onClick={() => handleRemoveFile(index)}
-                                  >
-                                    Remove
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                            </thead>
+                            <tbody>
+                              {existingFiles.map((fileObj, index) => (
+                                <tr key={`existing-${index}`}>
+                                  <td>
+                                    <a
+                                      href={`/Uploads/${fileObj.file_path}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                    >
+                                      {fileObj.name}
+                                    </a>
+                                  </td>
+                                  <td>
+                                    <input
+                                      type="text"
+                                      value={fileObj.type}
+                                      onChange={(e) =>
+                                        handleFileCommentChange(
+                                          index,
+                                          e.target.value,
+                                          true
+                                        )
+                                      }
+                                      placeholder="Enter file type"
+                                    />
+                                  </td>
+                                  <td>
+                                    <input
+                                      type="text"
+                                      value={fileObj.comments}
+                                      onChange={(e) =>
+                                        handleFileCommentChange(
+                                          index,
+                                          e.target.value,
+                                          true
+                                        )
+                                      }
+                                      placeholder="Add comments"
+                                    />
+                                  </td>
+                                  <td>
+                                    <button
+                                      type="button"
+                                      className="cancel"
+                                      onClick={() => handleRemoveFile(index, true)}
+                                    >
+                                      Remove
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                              {newFiles.map((fileObj, index) => (
+                                <tr key={`new-${index}`}>
+                                  <td>{fileObj.name}</td>
+                                  <td>
+                                    <input
+                                      type="text"
+                                      value={fileObj.type}
+                                      onChange={(e) =>
+                                        handleFileCommentChange(
+                                          index,
+                                          e.target.value
+                                        )
+                                      }
+                                      placeholder="Enter file type"
+                                    />
+                                  </td>
+                                  <td>
+                                    <input
+                                      type="text"
+                                      value={fileObj.comments}
+                                      onChange={(e) =>
+                                        handleFileCommentChange(
+                                          index,
+                                          e.target.value
+                                        )
+                                      }
+                                      placeholder="Add comments"
+                                    />
+                                  </td>
+                                  <td>
+                                    <button
+                                      type="button"
+                                      className="cancel"
+                                      onClick={() => handleRemoveFile(index)}
+                                    >
+                                      Remove
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     </div>
                   )}
                   <div className="form-buttons">
                     <button
                       type="submit"
-                      className="save-button"
+                      className="save"
                       disabled={isLoading}
                     >
                       {isLoading ? 'Saving...' : 'Save'}
                     </button>
                     <button
                       type="button"
-                      className="cancel-button"
+                      className="cancel"
                       onClick={() => setIsEditingAttachments(false)}
                       disabled={isLoading}
                     >
@@ -1091,50 +1324,40 @@ const Overview = ({
                   </div>
                 </form>
               ) : (
-                <div>
+                <div className="view-details">
                   <div className="details-row">
                     {existingFiles.length > 0 && (
-                      <div className="details-group">
-                        <h4>Attached Files</h4>
-                        <table className="attachment-table">
-                          <thead>
-                            <tr>
-                              <th>File Name</th>
-                              <th>Comments</th>
-                              {/* <th>Status</th> */}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {existingFiles.map((fileObj, index) => (
-                              <tr key={index}>
-                                <td>
-                                  <a
-                                    href={`/Uploads/${fileObj.file_path}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                  >
-                                    {fileObj.name}
-                                  </a>
-                                </td>
-                                <td>{fileObj.comments || '-'}</td>
-                                {/* <td>{fileObj.attachmentStatus || '-'}</td> */}
+                      <div className="details-g">
+                        <div>Attached Files</div>
+                        <div className="table-wrapper">
+                          <table className="attachment-table">
+                            <thead>
+                              <tr>
+                                <th>File Name</th>
+                                <th>Comments</th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                            </thead>
+                            <tbody>
+                              {existingFiles.map((fileObj, index) => (
+                                <tr key={index}>
+                                  <td>
+                                    <a
+                                      href={`/Uploads/${fileObj.file_path}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                    >
+                                      {fileObj.name}
+                                    </a>
+                                  </td>
+                                  <td>{fileObj.comments || '-'}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     )}
                   </div>
-                  {!isResolved && (
-                    <div className="details-buttons">
-                      <button
-                        className="edit-button"
-                        onClick={() => handleEdit('attachments')}
-                      >
-                        Edit
-                      </button>
-                    </div>
-                  )}
                 </div>
               )}
             </div>

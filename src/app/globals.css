@@ -349,6 +349,43 @@ tbody tr:hover {
   padding: 48px 20px;
 }
 
+/* Rows per Page Container */
+.rows-per-page-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+/* Rows per Page Label */
+.rows-per-page-label {
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+}
+
+/* Rows per Page Input */
+.rows-per-page-input {
+  width: 60px;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  text-align: center;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.rows-per-page-input:focus {
+  outline: none;
+  border-color: #0fd46c;
+  box-shadow: 0 0 0 2px rgba(15, 212, 108, 0.25);
+}
+
+.rows-per-page-input:disabled {
+  background-color: #f0f0f0;
+  cursor: not-allowed;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
 
