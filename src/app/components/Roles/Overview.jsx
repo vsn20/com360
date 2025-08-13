@@ -1272,12 +1272,19 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
               )}
             </>
           )}
-              <input 
-                  type='text'
-                  value={duplicate}
-                   onChange={pagechanging}
-                  onKeyPress={handlerolesInputKeyPress}
-                 />
+              {filteredRoles.length > 0 && (
+                <div className="rows-per-page-container">
+                  <label className="rows-per-page-label">Rows/ Page</label>
+                  <input
+                    type="text"
+                    value={duplicate}
+                    onChange={pagechanging}
+                    onKeyPress={handlerolesInputKeyPress}
+                    className="rows-per-page-input"
+                    aria-label="Number of rows per page"
+                  />
+                </div>
+              )}
         </div>
       )}
       {selectedRole && roleDetails && !isadd && (

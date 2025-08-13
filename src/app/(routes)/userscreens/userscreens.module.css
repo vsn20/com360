@@ -276,7 +276,7 @@
   min-height: calc(100vh ); /* Account for navbar + submenu height */
   background-color: #f9fafb;
   font-size: 12px;
-  font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif !important;
 }
 
 .dropdown p {
