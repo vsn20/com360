@@ -58,7 +58,7 @@ export default async function AddRolePage({ searchParams }) {
         [orgid]
       );
       noofrows=noofrowsintable[0];
-      console.log("ssssssssssssssssssssssss",noofrows);
+      //console.log("ssssssssssssssssssssssss",noofrows);
 
     }
     catch(error){

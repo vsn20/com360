@@ -43,7 +43,8 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
   const [isActiveFilter, setIsActiveFilter] = useState('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const rolesPerPage = parseInt(noofrows?.Name, 10) || 10;
+  const [rolesPerPage,setroleperpage]=useState(10);
+  const [duplicate,setduplicate]=useState(10);
 
   useEffect(() => {
     const loadData = async () => {
@@ -777,6 +778,22 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
     }
   };
 
+    const handlerolesInputKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      const value = parseInt(duplicate, 10);
+      if (!isNaN(value) && value >= 1) {
+       setroleperpage(value);
+       setduplicate(value);
+      } else {
+       setduplicate(10);
+      }
+    }
+  };
+
+  const pagechanging=(e)=>{
+   setduplicate(e.target.value)
+  }
+
   if (addform_loading || rolesLoading) {
     return (
       <div>
@@ -1220,6 +1237,7 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
                     ))}
                   </tbody>
                 </table>
+                
               </div>
               {filteredRoles.length > rolesPerPage && (
                 <div className="pagination-container">
@@ -1249,9 +1267,17 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
                     Next →
                   </button>
                 </div>
+
+                
               )}
             </>
           )}
+              <input 
+                  type='text'
+                  value={duplicate}
+                   onChange={pagechanging}
+                  onKeyPress={handlerolesInputKeyPress}
+                 />
         </div>
       )}
       {selectedRole && roleDetails && !isadd && (
