@@ -15,10 +15,6 @@ const triggerDownload = (fileUrl, fileName) => {
   document.body.removeChild(anchor);
 };
 
-
-
-
-
 // Custom Multi-Select Dropdown Component
 const MultiSelectDropdown = ({ options, selectedValues, onChange, name, required }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -126,15 +122,8 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
   const [editingStatus, setEditingStatus] = useState(false);
   const [offerLetterUrls, setOfferLetterUrls] = useState({});
 
-
-
-  const getdisplayprojectid = (prjid) => {
-  return prjid.split('-')[1] || prjid;
-};
- const getdisplayid = (prjid) => {
-  return prjid.split('_')[1] || prjid;
-};
-
+  const getdisplayprojectid = (prjid) => prjid.split('-')[1] || prjid;
+  const getdisplayid = (prjid) => prjid.split('_')[1] || prjid;
 
   // Reset states on route change (refresh)
   useEffect(() => {
@@ -176,8 +165,8 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
         setOfferLetterData({
           finalised_salary: result.data?.offerletter?.finalised_salary || '',
           finalised_roleids: result.data?.offerletter?.finalised_roleids || [],
-          finalised_jobtitle: result.data?.offerletter?.finalised_jobtitle || '', // Stores job_title_id
-          finalised_department: result.data?.offerletter?.finalised_department || '', // Stores department id
+          finalised_jobtitle: result.data?.offerletter?.finalised_jobtitle || '',
+          finalised_department: result.data?.offerletter?.finalised_department || '',
           finalised_jobtype: result.data?.offerletter?.finalised_jobtype || '',
           finalised_pay_term: result.data?.offerletter?.finalised_pay_term || '',
           reportto_empid: result.data?.offerletter?.reportto_empid || '',
@@ -236,18 +225,15 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
   const handleCopy = () => {
     setOfferLetterData((prev) => ({
       ...prev,
-      finalised_jobtitle: details?.jobid || '', // Use jobid (job_title_id)
-      // adress_lane_1: details?.addresslane1 || '',
-      // adress_lane_2: details?.addresslane2 || '',
-      // zipcode: details?.zipcode || '',
+      finalised_jobtitle: details?.expected_job_title || '',
     }));
   };
 
   const handleEditStatus = () => {
-    if (details?.status === 'offerletter-processing' && details?.offerletter?.offer_letter_sent === 1) {
-      setError('Cannot edit: Offer letter has already been sent.');
-      return;
-    }
+    // if (details?.status === 'offerletter-processing' && details?.offerletter?.offer_letter_sent === 1) {
+    //   setError('Cannot edit: Offer letter has already been sent.');
+    //   return;
+    // }
     setEditingStatus(true);
     setError(null);
   };
@@ -304,8 +290,8 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
     setOfferLetterData({
       finalised_salary: details?.offerletter?.finalised_salary || '',
       finalised_roleids: details?.offerletter?.finalised_roleids || [],
-      finalised_jobtitle: details?.offerletter?.finalised_jobtitle || '', // Stores job_title_id
-      finalised_department: details?.offerletter?.finalised_department || '', // Stores department id
+      finalised_jobtitle: details?.offerletter?.finalised_jobtitle || '',
+      finalised_department: details?.offerletter?.finalised_department || '',
       finalised_jobtype: details?.offerletter?.finalised_jobtype || '',
       finalised_pay_term: details?.offerletter?.finalised_pay_term || '',
       reportto_empid: details?.offerletter?.reportto_empid || '',
@@ -350,7 +336,6 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
       {success && <div className="success-message">{success}</div>}
       {generate ? (
         <>
-          {/* <button onClick={handleBack}>x</button> */}
           <OfferGenerating
             empid={empid}
             orgid={orgid}
@@ -645,7 +630,7 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
                 <div className="details-row">
                   <div className="details-group">
                     <label>Interview ID</label>
-                    <p>{getdisplayprojectid(details?.interview_id )|| '-'}</p>
+                    <p>{getdisplayprojectid(details?.interview_id) || '-'}</p>
                   </div>
                   <div className="details-group">
                     <label>Application ID</label>
@@ -667,7 +652,7 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
                   </div>
                 </div>
                 <div className="details-row">
-                  <div className="details-group">
+                  {/* <div className="details-group">
                     <label>Interview Start Date</label>
                     <p>{formatDate(details?.start_date)}</p>
                   </div>
@@ -690,7 +675,7 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
                   <div className="details-group">
                     <label>Meeting Link</label>
                     <p>{details?.meeting_link || '-'}</p>
-                  </div>
+                  </div> */}
                   <div className="details-group">
                     <label>Applied Date</label>
                     <p>{formatDate(details?.applieddate)}</p>
@@ -707,18 +692,16 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
                       <span className="no-resume-text">No Resume</span>
                     )}
                   </div>
-                  <div className="details-group">
+                  {/* <div className="details-group">
                     <label>Offer Letter Timestamp</label>
                     <p>{formatDate(details?.offerletter_timestamp)}</p>
-                  </div>
+                  </div> */}
                 </div>
                 <div className="details-row">
                   <div className="details-group">
                     <label>Salary Expected</label>
                     <p>{details?.salary_expected || '-'}</p>
                   </div>
-                </div>
-                <div className="details-row">
                   <div className="details-group">
                     <label>Status</label>
                     <p>{details?.status || '-'}</p>
@@ -741,6 +724,78 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
             )}
           </div>
 
+          {details?.rounds && details.rounds.length > 0 && (
+            <div className="details-block">
+              <h3>Rounds</h3>
+              {details.rounds.map((round, index) => (
+                <div key={`${round.Roundid}-${index}`} className="round-block">
+                  <h5>Round {round.RoundNo || index + 1}</h5>
+                  <div className="details-row">
+                    <div className="details-group">
+                      <label>Start Date</label>
+                      <p>{formatDate(round.start_date)}</p>
+                    </div>
+                    <div className="details-group">
+                      <label>Start Time</label>
+                      <p>{round.start_time && round.start_am_pm ? `${round.start_time} ${round.start_am_pm}` : '-'}</p>
+                    </div>
+                  </div>
+                  <div className="details-row">
+                    <div className="details-group">
+                      <label>End Date</label>
+                      <p>{formatDate(round.end_date)}</p>
+                    </div>
+                    <div className="details-group">
+                      <label>End Time</label>
+                      <p>{round.end_time && round.end_am_pm ? `${round.end_time} ${round.end_am_pm}` : '-'}</p>
+                    </div>
+                  </div>
+                  <div className="details-row">
+                    <div className="details-group">
+                      <label>Meeting Link</label>
+                      <p>{round.meeting_link || '-'}</p>
+                    </div>
+                  </div>
+                  <div className="details-row">
+                    <div className="details-group">
+                      <label>Marks</label>
+                      <p>{round.marks || '-'}</p>
+                    </div>
+                    <div className="details-group">
+                      <label>Comments</label>
+                      <p>{round.comments || '-'}</p>
+                    </div>
+                    <div className="details-group">
+                      <label>Status</label>
+                      <p>{round.status || '-'}</p>
+                    </div>
+                  </div>
+                  {round.panelMembers && round.panelMembers.length > 0 && (
+                    <div>
+                      <h6>Panel Members</h6>
+                      {round.panelMembers.map((member, memberIndex) => (
+                        <div key={`${round.Roundid}-member-${memberIndex}`} className="details-row">
+                          <div className="details-group">
+                            <label>Employee ID</label>
+                            <p>{member.empid ? getdisplayid(member.empid) : '-'}</p>
+                          </div>
+                          <div className="details-group">
+                            <label>Email</label>
+                            <p>{member.email || '-'}</p>
+                          </div>
+                          <div className="details-group">
+                            <label>Is Employee</label>
+                            <p>{member.is_he_employee === 1 ? 'Yes' : 'No'}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="details-block">
             <h3>Address Details</h3>
             <div className="details-row">
@@ -760,32 +815,6 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
               </div>
             </div>
           </div>
-
-          <div className="details-block">
-            <h3>Interview Panel</h3>
-            {details?.panel_members?.length > 0 ? (
-              details.panel_members.map((member, index) => (
-                <div className="details-row" key={index}>
-                  <div className="details-group">
-                    <label>Panel Member Employee Id</label>
-
-                    <p>{member?.is_he_employee ?`${getdisplayid(member?.empid)}` :'-'}</p>
-                  </div>
-                  <div className="details-group">
-                    <label>Panel Member Email</label>
-                  
-                    <p>{member?.email || '-'}</p>
-                  </div>
-                  <div className="details-group">
-                    <label>Is Employee</label>
-                    <p>{member?.is_he_employee ? 'Yes' : 'No'}</p>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p>No panel members found.</p>
-            )}
-          </div>
         </div>
       ) : (
         <>
@@ -794,7 +823,7 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
             <thead>
               <tr>
                 <th>Interview ID</th>
-                <th>Application Id</th>
+                <th>Application ID</th>
                 <th>Applicant Name</th>
                 <th>Status</th>
                 <th>Offer Letter</th>

@@ -34,15 +34,15 @@ try {
         orgid = decoded.orgid;
         empid = decoded.empid;
         [interviewdetails]=await pool.query(
-       'select a.orgid,a.interview_id,a.application_id,b.status,b.offerletter_timestamp,b.candidate_id,c.first_name,c.last_name from interview_table as a join applications as b on a.application_id=b.applicationid join candidate as c on b.candidate_id=c.cid  where b.status=? and a.orgid=? and a.interview_completed=1 and a.confirm=1',
-       ['offerletter-processing',orgid]
+       'select a.orgid,a.interview_id,a.application_id,b.status,b.candidate_id,c.first_name,c.last_name from interview_table as a join applications as b on a.application_id=b.applicationid join candidate as c on b.candidate_id=c.cid  where a.offer_letter_generated!=1 and   a.orgid=? and a.interview_completed=1 and a.confirm=1',
+       [orgid]
         );
          [acceptingtime]=await pool.query(
           'SELECT id, Name FROM generic_values WHERE g_id = 16 AND orgid = ? AND isactive = 1',
           [orgid]
         );
         [offerlettergenerated]=await pool.query(
-       'select a.orgid,a.interview_id,a.application_id,b.status,b.offerletter_timestamp,b.candidate_id,c.first_name,c.last_name from interview_table as a join applications as b on a.application_id=b.applicationid join candidate as c on b.candidate_id=c.cid  where a.offer_letter_generated=1 and a.orgid=? and a.interview_completed=1 and a.confirm=1',
+       'select a.orgid,a.interview_id,a.application_id,b.status,b.candidate_id,c.first_name,c.last_name from interview_table as a join applications as b on a.application_id=b.applicationid join candidate as c on b.candidate_id=c.cid  where a.offer_letter_generated=1 and a.orgid=? and a.interview_completed=1 and a.confirm=1',
        [orgid]
         );
         console.log("interviews details",interviewdetails);

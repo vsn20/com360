@@ -440,6 +440,7 @@ const Overview = ({
                   <th>Service Request ID</th>
                   <th>Service Name</th>
                   <th>Status</th>
+                  <th>Priority</th>
                 </tr>
               </thead>
               <tbody>
@@ -452,6 +453,7 @@ const Overview = ({
                     <td>SR-{getdisplayprojectid(request.SR_NUM)}</td>
                     <td>{request.SERVICE_NAME || '-'}</td>
                     <td>{request.STATUS_CD || '-'}</td>
+                    <td>{request.PRIORITY_CD||'-'}</td>
                   </tr>
                 ))}
               </tbody>

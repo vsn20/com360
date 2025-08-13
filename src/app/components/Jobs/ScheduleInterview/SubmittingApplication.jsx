@@ -71,7 +71,7 @@ const getdisplayprojectid = (prjid) => {
                   <td>{getdisplayprojectid(detail.applicationid)}</td>
                   <td>{detail.candidate_id}</td>
                   <td>{`${detail.first_name} ${detail.last_name}`}</td>
-                  <td>{`${detail.job_title} - ${detail.jobid}`}</td>
+                  <td>{`${detail.display_job_name} - ${detail.jobid}`}</td>
                   <td>{formatDate(detail.applieddate)}</td>
                   <td>{detail.status}</td>
                   <td>

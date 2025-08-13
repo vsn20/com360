@@ -600,7 +600,7 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
       {!selectedSrNum ? (
         <div className="employee-list">
           <button className="back-button" onClick={onBack} disabled={isLoading}>
-            Back
+            
           </button>
           {!isLoading && !error && requests.length === 0 && (
             <p>No service requests found.</p>
@@ -612,6 +612,7 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
                   <th>Service Request ID</th>
                   <th>Service Name</th>
                   <th>Status</th>
+                  <th>Priority</th>
                   <th>Created By</th>
                 </tr>
               </thead>
@@ -625,6 +626,7 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
                     <td>SR-{getdisplayprojectid(req.SR_NUM)}</td>
                     <td>{req.SERVICE_NAME || '-'}</td>
                     <td>{req.STATUS_CD || '-'}</td>
+                    <td>{req.PRIORITY_CD}</td>
                     <td>{req.CREATED_BY || '-'}</td>
                   </tr>
                 ))}
@@ -636,7 +638,7 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
         serviceRequestDetails && (
           <div className="employee-details-container">
             <button className="back-button" onClick={handleBack}>
-              x
+              
             </button>
 
             <div className="details-block">
@@ -864,7 +866,7 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
                             <tr key={index}>
                               <td>
                                 <a
-                                  href={`/Uploads/${fileObj.file_path}`}
+                                  href={`/uploads/ServiceRequests/${fileObj.file_path}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                 >
@@ -911,7 +913,7 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
                         <tr key={index}>
                           <td>
                             <a
-                              href={`/Uploads/${fileObj.file_path}`}
+                              href={`/uploads/ServiceRequests/${fileObj.file_path}`}
                               target="_blank"
                               rel="noopener noreferrer"
                             >

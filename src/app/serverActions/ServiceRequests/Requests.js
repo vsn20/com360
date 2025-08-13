@@ -40,10 +40,36 @@ export async function fetchreqbyid() {
     const pool = await DBconnection();
     console.log('Connection established');
 
-    const [rows] = await pool.query(
+   // console.log('empiddddd',empid);
+    const [features]=await pool.query(
+      `select roleid from emp_role_assign where empid=? and orgid=?`,[empid,orgid]
+    );
+    const roleids=features.map(details=>details.roleid)
+    //console.log("roleeeeeeeeee",roleids);
+    let menuresults=[];
+    if(roleids.length>0){
+     [menuresults]=await pool.query( 
+        `select alldata from role_menu_permissions where roleid in (?) and menuid=11 and alldata=1`,[roleids]
+       );
+      }
+    let rows;
+    const allpermissions=menuresults.length>0;
+   //console.log("permissssssssssssssssssss",allpermissions);
+    if(allpermissions){
+          [rows] = await pool.query(
+      'SELECT SR_NUM, SERVICE_NAME, STATUS_CD, CREATED_BY,PRIORITY_CD FROM C_SRV_REQ WHERE ORG_ID = ?',
+      [orgid]
+      
+    );
+    }else{
+      [rows] = await pool.query(
       'SELECT SR_NUM, SERVICE_NAME, STATUS_CD, CREATED_BY FROM C_SRV_REQ WHERE ASSIGNED_TO = ? AND ORG_ID = ?',
       [empid, orgid]
     );
+
+    }
+
+     
 
     if (rows.length === 0) {
       console.log('No service requests found for ASSIGNED_TO:', empid);
@@ -236,7 +262,7 @@ export async function addAttachment(attachmentData, file) {
       throw new Error('Invalid or unauthorized authentication token');
     }
 
-    const uploadDir = path.join(process.cwd(), 'public', 'Uploads');
+    const uploadDir = path.join(process.cwd(), 'public', 'uploads','ServiceRequests');
     await mkdir(uploadDir, { recursive: true });
     const timestamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
     const uuid = uuidv4();

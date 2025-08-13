@@ -47,6 +47,55 @@ const getCurrentUserEmpIdName = async (pool, userId, orgId) => {
   }
 };
 
+export async function fetchAllInterviewsForEmployee({ orgid, empid, editing }) {
+  const cookieStore = cookies();
+  const token = cookieStore.get("jwt_token")?.value;
+
+  if (!token) {
+    console.log('Redirecting: No token found');
+    return { success: false, error: 'No token found. Please log in.' };
+  }
+
+  const decoded = decodeJwt(token);
+  if (!decoded || !decoded.orgid || !decoded.userId) {
+    console.log('Redirecting: Invalid token or orgid/userId not found');
+    return { success: false, error: 'Invalid token or orgid/userId not found.' };
+  }
+
+  try {
+    const pool = await DBconnection();
+    let query = `
+      SELECT DISTINCT c.applicationid, b.interview_id, d.first_name, d.last_name, e.display_job_name, c.status,
+              d.email, c.resumepath, c.offerletter_timestamp, e.jobid
+       FROM interview_panel AS a
+       JOIN interview_table AS b ON a.interview_id = b.interview_id AND a.orgid = b.orgid
+       JOIN applications AS c ON c.applicationid = b.application_id
+       JOIN candidate AS d ON d.cid = c.candidate_id
+       JOIN externaljobs AS e ON e.jobid = c.jobid
+       WHERE a.orgid = ?
+    `;
+    let params = [orgid];
+
+    if (editing === 0) {
+      query += ' AND a.empid = ?';
+      params.push(empid);
+    }
+
+    const [rows] = await pool.query(query, params);
+
+    return {
+      success: true,
+      interviews: rows,
+    };
+  } catch (error) {
+    console.error('Error in fetchAllInterviewsForEmployee:', error);
+    return {
+      success: false,
+      error: 'Failed to fetch interviews',
+    };
+  }
+};
+
 export async function fetchDetailsById({ orgid, interview_id, acceptingtime, empid }) {
   const cookieStore = cookies();
   const token = cookieStore.get("jwt_token")?.value;
@@ -65,14 +114,13 @@ export async function fetchDetailsById({ orgid, interview_id, acceptingtime, emp
   try {
     const pool = await DBconnection();
     const [rows] = await pool.query(
-      `SELECT c.applicationid, b.interview_id, d.first_name, d.last_name, e.job_title, c.status,
-              b.start_date, b.start_time, b.start_am_pm, b.end_date, b.end_time, b.end_am_pm,
-              b.meeting_link, d.email, c.resumepath, c.offerletter_timestamp
+      `SELECT DISTINCT c.applicationid, b.interview_id, d.first_name, d.last_name, e.display_job_name, c.status,
+              d.email, c.resumepath, c.offerletter_timestamp, e.jobid
        FROM interview_panel AS a
        JOIN interview_table AS b ON a.interview_id = b.interview_id AND a.orgid = b.orgid
        JOIN applications AS c ON c.applicationid = b.application_id
        JOIN candidate AS d ON d.cid = c.candidate_id
-       JOIN org_jobtitles AS e ON e.job_title_id = c.jobid
+       JOIN externaljobs AS e ON e.jobid = c.jobid
        WHERE b.interview_id = ? AND a.orgid = ?`,
       [interview_id, orgid]
     );
@@ -112,7 +160,78 @@ export async function fetchDetailsById({ orgid, interview_id, acceptingtime, emp
   }
 };
 
-export async function update({ orgid, empid, interview_id, status, acceptingtime }) {
+export async function fetchRoundsByInterviewId({ orgid, interview_id, empid, editing }) {
+  try {
+    const pool = await DBconnection();
+    let query = `
+      SELECT r.*, ip.empid AS panel_empid, ip.email, ip.is_he_employee
+      FROM C_INTERVIEW_ROUNDS r
+      LEFT JOIN interview_panel ip ON r.Roundid = ip.Roundid AND r.orgid = ip.orgid AND r.interview_id = ip.interview_id
+      WHERE r.orgid = ? AND r.interview_id = ?
+    `;
+    let params = [orgid, interview_id];
+
+    if (editing === 0) {
+      query += ' AND (ip.empid = ? OR ip.empid IS NULL)';
+      params.push(empid);
+    }
+
+    const [rows] = await pool.query(query, params);
+
+    // Group rounds and collect unique panel members
+    const roundsMap = new Map();
+    rows.forEach(row => {
+      const roundId = row.Roundid;
+      if (!roundsMap.has(roundId)) {
+        roundsMap.set(roundId, {
+          Roundid: row.Roundid,
+          orgid: row.orgid,
+          interview_id: row.interview_id,
+          application_id: row.application_id,
+          RoundNo: row.RoundNo,
+          marks: row.marks,
+          comments: row.comments,
+          status: row.status,
+          start_date: row.start_date,
+          start_am_pm: row.start_am_pm,
+          end_date: row.end_date,
+          end_am_pm: row.end_am_pm,
+          start_time: row.start_time,
+          end_time: row.end_time,
+          meeting_link: row.meeting_link,
+          Confirm: row.Confirm,
+          panelMembers: [],
+        });
+      }
+      const round = roundsMap.get(roundId);
+      if (row.panel_empid) {
+        const panelMember = {
+          empid: row.panel_empid || null,
+          email: row.email || '',
+          is_he_employee: String(row.is_he_employee),
+        };
+        // Add panel member only if not already present (avoid duplicates)
+        if (!round.panelMembers.some(pm => pm.empid === panelMember.empid)) {
+          round.panelMembers.push(panelMember);
+        }
+      }
+    });
+
+    const rounds = Array.from(roundsMap.values());
+
+    return {
+      success: true,
+      rounds: rounds,
+    };
+  } catch (error) {
+    console.error('Error fetching rounds:', error);
+    return {
+      success: false,
+      error: 'Failed to fetch rounds',
+    };
+  }
+}
+export async function update({ orgid, empid, interview_id, status, acceptingtime, rounds }) {
   const cookieStore = cookies();
   const token = cookieStore.get("jwt_token")?.value;
 
@@ -130,84 +249,59 @@ export async function update({ orgid, empid, interview_id, status, acceptingtime
 
   try {
     const pool = await DBconnection();
+    let changes=false;
+    
 
-    // Fetch applicationid and offerletter_timestamp from interview_table and applications
-    const [applicationRows] = await pool.query(
-      `SELECT a.applicationid, a.offerletter_timestamp 
-       FROM applications AS a 
-       JOIN interview_table AS b 
-       ON a.applicationid = b.application_id 
-       WHERE b.interview_id = ? AND a.orgid = ?`,
-      [interview_id, orgid]
-    );
-
-    if (applicationRows.length === 0) {
-      console.error('No application found for interview_id:', interview_id, 'orgid:', orgid);
-      return { success: false, error: 'No application found for the given interview ID' };
-    }
-
-    const { applicationid, offerletter_timestamp } = applicationRows[0];
-
-    // Check if editing is allowed based on offerletter_timestamp and acceptingtime
-    let canEdit = true;
-    if (offerletter_timestamp) {
-      const acceptingHours = acceptingtime ? parseInt(acceptingtime, 10) : 0;
-      if (isNaN(acceptingHours)) {
-        console.error('Invalid acceptingtime:', acceptingtime);
-        return { success: false, error: 'Invalid accepting time' };
-      }
-
-      const offerTimestamp = new Date(offerletter_timestamp);
-      const currentTime = new Date();
-      const maxEditTime = new Date(offerTimestamp.getTime() + acceptingHours * 60 * 60 * 1000);
-
-      if (currentTime > maxEditTime) {
-        canEdit = false;
+    // Update only the C_INTERVIEW_ROUNDS table
+    for (const round of rounds) {
+     const[result]= await pool.query(
+        `UPDATE C_INTERVIEW_ROUNDS 
+         SET marks = ?, comments = ?, status = ?, start_date = ?, start_time = ?, end_date = ?, end_time = ?, meeting_link = ?, start_am_pm = ?, end_am_pm = ?
+         WHERE Roundid = ? AND orgid = ? AND interview_id = ?`,
+        [
+          round.marks || null,
+          round.comments || null,
+          round.status || null,
+          round.start_date || null,
+          round.start_time || null,
+          round.end_date || null,
+          round.end_time || null,
+          round.meeting_link || null,
+          round.start_am_pm || null,
+          round.end_am_pm || null,
+          round.Roundid,
+          orgid,
+          interview_id
+        ]
+      );
+       if (round.marks!==""||round.comments!==""||round.status!=="") {
+        changes = true;
       }
     }
 
-    if (!canEdit) {
-      console.log('Edit not allowed: Time window for editing has expired');
-      return { success: false, error: 'Editing is not allowed as the time window has expired' };
-    }
-
-    // Update applications table with status and offerletter_timestamp
-    if (status === 'offerletter-processing') {
-      await pool.query(
-        `UPDATE applications 
-         SET status = ?, offerletter_timestamp = ? 
-         WHERE orgid = ? AND applicationid = ?`,
-        [status, new Date(), orgid, applicationid]
-      );
-    } else {
-      await pool.query(
-        `UPDATE applications 
-         SET status = ?, offerletter_timestamp = ? 
-         WHERE orgid = ? AND applicationid = ?`,
-        [status, null, orgid, applicationid]
+    if(changes){
+       await pool.query(
+        `update interview_table set interview_completed=1 where interview_id=?`,[interview_id]
       );
     }
 
-    // Log activity in applications_activity
     const employeename = await getCurrentUserEmpIdName(pool, userId, orgid);
-    console.log('Employee Name:', employeename);
-    const description = `Status(${status}) changed by ${employeename}(after interviewing) on ${new Date().toISOString()}`;
-    await pool.query(
-      `INSERT INTO applications_activity (orgid, application_id, activity_description) 
-       VALUES (?, ?, ?)`,
-      [orgid, applicationid, description]
-    );
+    const description = `Rounds updated by ${employeename} on ${new Date().toISOString()}`;
+    // await pool.query(
+    //   `INSERT INTO applications_activity (orgid, application_id, activity_description) 
+    //    VALUES (?, ?, ?)`,
+    //   [orgid, (await pool.query(`SELECT application_id FROM interview_table WHERE interview_id = ? AND orgid = ?`, [interview_id, orgid]))[0][0].applicationid, description]
+    // );
 
-    console.log('Interview status updated:', { interview_id, status });
     return {
       success: true,
-      message: 'Interview status updated successfully',
+      message: 'Rounds updated successfully',
     };
   } catch (error) {
     console.error('Error in update:', error);
     return {
       success: false,
-      error: 'Failed to update interview status',
+      error: 'Failed to update rounds',
     };
   }
 }

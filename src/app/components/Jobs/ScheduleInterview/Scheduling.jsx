@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { scheduleInterview, getEmployees } from '@/app/serverActions/Jobs/ScheduleInterview/Scheduling';
+import { scheduleInterview, getEmployees, deleteInterviewRound } from '@/app/serverActions/Jobs/ScheduleInterview/Scheduling';
 import './jobtitles.css';
 
 const Scheduling = ({ id, name, orgid, empid, handleback }) => {
@@ -10,7 +10,15 @@ const Scheduling = ({ id, name, orgid, empid, handleback }) => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [employees, setEmployees] = useState([]);
-  const [interviewForm, setInterviewForm] = useState({
+  const [rounds, setRounds] = useState([]);
+  const [applicationStatus, setApplicationStatus] = useState('scheduled');
+  const [isAddingPanelMember, setIsAddingPanelMember] = useState(false);
+  const [panelMemberForms, setPanelMemberForms] = useState({});
+  const [showRoundNameForm, setShowRoundNameForm] = useState(false);
+  const [newRoundName, setNewRoundName] = useState('');
+
+  const getInitialRoundForm = () => ({
+    name: '',
     start_date: '',
     start_am_pm: 'AM',
     end_date: '',
@@ -18,25 +26,28 @@ const Scheduling = ({ id, name, orgid, empid, handleback }) => {
     start_time: '',
     end_time: '',
     meeting_link: '',
-    status: 'scheduled',
+    panelMembers: [],
+    startHours: '',
+    startMinutes: '',
+    endHours: '',
+    endMinutes: '',
   });
-  const [panelMembers, setPanelMembers] = useState([]);
-  const [newPanelMember, setNewPanelMember] = useState({
+
+  const getInitialPanelMemberForm = () => ({
     is_he_employee: '1',
     empid: '',
     email: '',
   });
-  const [startHours, setStartHours] = useState('');
-  const [startMinutes, setStartMinutes] = useState('');
-  const [endHours, setEndHours] = useState('');
-  const [endMinutes, setEndMinutes] = useState('');
 
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
         const result = await getEmployees(orgid);
         if (result.success) {
-          setEmployees(result.employees);
+          const uniqueEmployees = Array.from(
+            new Map(result.employees.map(emp => [emp.empid, emp])).values()
+          );
+          setEmployees(uniqueEmployees);
         } else {
           setError(result.error || 'Failed to fetch employees.');
         }
@@ -47,88 +58,94 @@ const Scheduling = ({ id, name, orgid, empid, handleback }) => {
     fetchEmployees();
   }, [orgid]);
 
-  const handleInterviewChange = (e) => {
-    const { name, value } = e.target;
-    if (name === 'start_time' || name === 'end_time') {
-      // Validate time input (HH:mm, hours 1-12, minutes 00-59)
-      if (value && !/^(0?[1-9]|1[0-2]):[0-5][0-9]$/.test(value)) {
-        setError('Please enter time in HH:mm format (e.g., 12:30).');
-        return;
-      }
-      const [h, m] = value ? value.split(':').map(Number) : ['', ''];
-      if (name === 'start_time') {
-        setStartHours(h ? h.toString() : '');
-        setStartMinutes(m ? m.toString().padStart(2, '0') : '');
-      } else {
-        setEndHours(h ? h.toString() : '');
-        setEndMinutes(m ? m.toString().padStart(2, '0') : '');
-      }
-      setInterviewForm((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
-      setError('');
-    } else {
-      setInterviewForm((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
-    }
+  const getdisplayprojectid = (prjid) => {
+    return prjid.split('-')[1] || prjid;
   };
 
-  const handleTimeDropdownChange = (e) => {
-    const { name, value } = e.target;
-    if (name === 'startHours') {
-      setStartHours(value);
-      setInterviewForm((prev) => ({
-        ...prev,
-        start_time: value && startMinutes ? `${value}:${startMinutes}` : '',
-      }));
-    } else if (name === 'startMinutes') {
-      setStartMinutes(value);
-      setInterviewForm((prev) => ({
-        ...prev,
-        start_time: startHours && value ? `${startHours}:${value}` : '',
-      }));
-    } else if (name === 'endHours') {
-      setEndHours(value);
-      setInterviewForm((prev) => ({
-        ...prev,
-        end_time: value && endMinutes ? `${value}:${endMinutes}` : '',
-      }));
-    } else if (name === 'endMinutes') {
-      setEndMinutes(value);
-      setInterviewForm((prev) => ({
-        ...prev,
-        end_time: endHours && value ? `${endHours}:${value}` : '',
-      }));
-    }
-    setError('');
+  const handleStatusChange = (e) => {
+    setApplicationStatus(e.target.value);
   };
 
-  const handlePanelChange = (e) => {
+  const handleRoundChange = (e, roundIndex) => {
     const { name, value } = e.target;
-    setNewPanelMember((prev) => {
-      const updated = { ...prev, [name]: value };
-      if (name === 'empid' && prev.is_he_employee === '1') {
-        const selectedEmployee = employees.find((emp) => emp.empid === value);
-        updated.email = selectedEmployee ? selectedEmployee.email : '';
-      } else if (name === 'is_he_employee' && value === '0') {
-        updated.empid = '';
-        updated.email = '';
+
+    setRounds(prevRounds => {
+      const updatedRounds = [...prevRounds];
+      const updatedRound = { ...updatedRounds[roundIndex], [name]: value };
+
+      if (name === 'start_time' || name === 'end_time') {
+        if (value && !/^(0?[1-9]|1[0-2]):[0-5][0-9]$/.test(value)) {
+          setError('Please enter time in HH:mm format (e.g., 12:30).');
+        } else {
+          setError('');
+          const [h, m] = value ? value.split(':').map(Number) : ['', ''];
+          if (name === 'start_time') {
+            updatedRound.startHours = h ? h.toString() : '';
+            updatedRound.startMinutes = m ? m.toString().padStart(2, '0') : '';
+          } else {
+            updatedRound.endHours = h ? h.toString() : '';
+            updatedRound.endMinutes = m ? m.toString().padStart(2, '0') : '';
+          }
+        }
       }
-      return updated;
+      updatedRounds[roundIndex] = updatedRound;
+      return updatedRounds;
     });
   };
 
-  const handleAddPanelMember = () => {
-    if (interviewForm.status === 'hold' || interviewForm.status === 'rejected') return;
+  const handleTimeDropdownChange = (e, roundIndex) => {
+    const { name, value } = e.target;
+    setRounds(prevRounds => {
+      const updatedRounds = [...prevRounds];
+      const updatedRound = { ...updatedRounds[roundIndex], [name]: value };
+
+      if (name.includes('start')) {
+        const hours = name === 'startHours' ? value : updatedRound.startHours;
+        const minutes = name === 'startMinutes' ? value : updatedRound.startMinutes;
+        updatedRound.start_time = hours && minutes ? `${hours}:${minutes}` : '';
+      } else {
+        const hours = name === 'endHours' ? value : updatedRound.endHours;
+        const minutes = name === 'endMinutes' ? value : updatedRound.endMinutes;
+        updatedRound.end_time = hours && minutes ? `${hours}:${minutes}` : '';
+      }
+
+      updatedRounds[roundIndex] = updatedRound;
+      return updatedRounds;
+    });
+    setError('');
+  };
+
+  const handlePanelFormChange = (e, roundIndex) => {
+    const { name, value } = e.target;
+    setPanelMemberForms(prev => {
+        const updatedForm = { ...(prev[roundIndex] || getInitialPanelMemberForm()), [name]: value };
+
+        if (name === 'empid' && updatedForm.is_he_employee === '1') {
+            const selectedEmployee = employees.find((emp) => emp.empid === value);
+            updatedForm.email = selectedEmployee ? selectedEmployee.email : '';
+        } else if (name === 'is_he_employee' && value === '0') {
+            updatedForm.empid = '';
+            updatedForm.email = '';
+        }
+
+        return { ...prev, [roundIndex]: updatedForm };
+    });
+  };
+
+  const handleAddPanelMember = (roundIndex) => {
+    if (isAddingPanelMember) return;
+    setIsAddingPanelMember(true);
+
+    const newPanelMember = panelMemberForms[roundIndex] || getInitialPanelMemberForm();
+
     if (newPanelMember.is_he_employee === '1' && !newPanelMember.empid) {
       setError('Please select an employee.');
+      setIsAddingPanelMember(false);
       return;
     }
     if (newPanelMember.is_he_employee === '0' && !newPanelMember.email) {
       setError('Please enter an email.');
+      setIsAddingPanelMember(false);
       return;
     }
     let emailToAdd = newPanelMember.email;
@@ -136,74 +153,112 @@ const Scheduling = ({ id, name, orgid, empid, handleback }) => {
       const selectedEmployee = employees.find((emp) => emp.empid === newPanelMember.empid);
       if (!selectedEmployee || !selectedEmployee.email) {
         setError('Selected employee does not have an email.');
+        setIsAddingPanelMember(false);
         return;
       }
       emailToAdd = selectedEmployee.email;
     }
-    setPanelMembers((prev) => [
-      ...prev,
-      {
-        empid: newPanelMember.is_he_employee === '1' ? newPanelMember.empid : null,
-        email: emailToAdd,
-        is_he_employee: newPanelMember.is_he_employee,
-      },
-    ]);
-    setNewPanelMember({ is_he_employee: '1', empid: '', email: '' });
+
+    const memberToAdd = {
+      empid: newPanelMember.is_he_employee === '1' ? newPanelMember.empid : null,
+      email: emailToAdd,
+      is_he_employee: newPanelMember.is_he_employee,
+    };
+
+    setRounds(prev => {
+      const updatedRounds = [...prev];
+      const targetPanelMembers = updatedRounds[roundIndex].panelMembers;
+
+      const isDuplicate = targetPanelMembers.some(
+        (member) =>
+          (member.is_he_employee === '1' && member.empid === memberToAdd.empid) ||
+          (member.is_he_employee === '0' && member.email === memberToAdd.email)
+      );
+
+      if (isDuplicate) {
+        setError('');
+        return prev;
+      }
+
+      updatedRounds[roundIndex].panelMembers = [...targetPanelMembers, memberToAdd];
+      return updatedRounds;
+    });
+
+    setPanelMemberForms(prev => ({...prev, [roundIndex]: getInitialPanelMemberForm()}));
+    setError('');
+    setIsAddingPanelMember(false);
+  };
+
+  const handleRemovePanelMember = (roundIndex, memberIndex) => {
+    setRounds((prev) => {
+      const updated = [...prev];
+      updated[roundIndex].panelMembers = updated[roundIndex].panelMembers.filter((_, i) => i !== memberIndex);
+      return updated;
+    });
+  };
+
+  const handleAddRound = () => {
+    setShowRoundNameForm(true);
+  };
+
+  const handleRoundNameSubmit = (e) => {
+    e.preventDefault();
+    if (!newRoundName.trim()) {
+      setError('Round name is required.');
+      return;
+    }
+    setRounds((prev) => [...prev, { ...getInitialRoundForm(), name: newRoundName.trim() }]);
+    setNewRoundName('');
+    setShowRoundNameForm(false);
     setError('');
   };
 
-  const handleRemovePanelMember = (index) => {
-    if (interviewForm.status === 'hold' || interviewForm.status === 'rejected') return;
-    setPanelMembers((prev) => prev.filter((_, i) => i !== index));
+  const handleRoundNameCancel = () => {
+    setNewRoundName('');
+    setShowRoundNameForm(false);
+    setError('');
   };
 
-
-  
-const getdisplayprojectid = (prjid) => {
-  return prjid.split('-')[1] || prjid;
-};
+  const handleDeleteRound = async (roundIndex, roundId) => {
+    if (roundId) {
+      const result = await deleteInterviewRound(orgid, roundId);
+      if (!result.success) {
+        setError(result.error || 'Failed to delete round');
+        return;
+      }
+    }
+    setRounds((prev) => prev.filter((_, i) => i !== roundIndex));
+    setPanelMemberForms(prev => {
+        const newForms = {...prev};
+        delete newForms[roundIndex];
+        return newForms;
+    })
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
     setIsLoading(true);
-    if (interviewForm.status === 'scheduled') {
-      if (!interviewForm.start_date || !interviewForm.start_time) {
-        setError('Start date and time are required for scheduled status.');
-        setIsLoading(false);
-        return;
-      }
-      if (panelMembers.length === 0) {
-        setError('At least one panel member is required for scheduled status.');
-        setIsLoading(false);
-        return;
-      }
-      const hasEmployee = panelMembers.some((member) => member.is_he_employee === '1');
-      if (!hasEmployee) {
-        setError('At least one panel member must be a company employee.');
-        setIsLoading(false);
-        return;
-      }
+
+    if (applicationStatus === 'scheduled' && rounds.length === 0) {
+      setError('At least one interview round is required when status is scheduled.');
+      setIsLoading(false);
+      return;
     }
+
     const formData = new FormData();
     formData.append('orgid', orgid);
     formData.append('application_id', id);
-    formData.append('status', interviewForm.status);
-    formData.append('start_date', interviewForm.status === 'scheduled' ? (interviewForm.start_date || '0000-00-00') : null);
-    formData.append('start_am_pm', interviewForm.status === 'scheduled' ? (interviewForm.start_am_pm || null) : null);
-    formData.append('end_date', interviewForm.status === 'scheduled' ? (interviewForm.end_date || '0000-00-00') : null);
-    formData.append('end_am_pm', interviewForm.status === 'scheduled' ? (interviewForm.end_am_pm || null) : null);
-    formData.append('start_time', interviewForm.status === 'scheduled' ? (interviewForm.start_time || null) : null);
-    formData.append('end_time', interviewForm.status === 'scheduled' ? (interviewForm.end_time || null) : null);
-    formData.append('meeting_link', interviewForm.status === 'scheduled' ? (interviewForm.meeting_link || null) : null);
     formData.append('empid', empid);
-    formData.append('panelMembers', interviewForm.status === 'scheduled' ? JSON.stringify(panelMembers) : JSON.stringify([]));
+    formData.append('applicationStatus', applicationStatus);
+    formData.append('rounds', JSON.stringify(rounds));
+
     const result = await scheduleInterview(formData);
     if (result?.error) {
       setError(result.error);
     } else if (result?.success) {
-      setSuccess(`Interview ${interviewForm.status === 'scheduled' ? 'scheduled' : 'status updated'} successfully.`);
+      setSuccess('Interview details saved successfully.');
       setTimeout(() => {
         handleback();
       }, 2000);
@@ -211,65 +266,54 @@ const getdisplayprojectid = (prjid) => {
     setIsLoading(false);
   };
 
-  const isNonEditable = interviewForm.status === 'hold' || interviewForm.status === 'rejected';
-
-  // Generate options for hours (1-12) and minutes (00-59)
   const hourOptions = Array.from({ length: 12 }, (_, i) => i + 1);
   const minuteOptions = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
 
-  return (
-    <div className="employee-details-container">
-      <h2>Scheduling Interview for {name} (Application ID: {getdisplayprojectid(id)})</h2>
-      {success && <div className="success-message">{success}</div>}
-      {error && <div className="error-message">{error}</div>}
-      {isLoading && <div className="loading-message">Saving...</div>}
-      <form onSubmit={handleSubmit} className="details-block">
-        <h3>Interview Details</h3>
-        <div className="form-row">
-          <div className="form-group">
-            <label>Status*</label>
-            <select
-              name="status"
-              value={interviewForm.status}
-              onChange={handleInterviewChange}
-              required
-            >
-              <option value="scheduled">Scheduled</option>
-              <option value="hold">Hold</option>
-              <option value="rejected">Rejected</option>
-            </select>
-          </div>
+  const renderRoundForm = (round, roundIndex) => {
+    const panelMemberForm = panelMemberForms[roundIndex] || getInitialPanelMemberForm();
+    return (
+    <div key={roundIndex} className="details-block">
+      <h3>{round.name || `Round ${roundIndex + 1}`}</h3>
+      <div className="form-row">
+        <div className="form-group">
+          <label>Round Name*</label>
+          <input
+            type="text"
+            name="name"
+            value={round.name}
+            onChange={(e) => handleRoundChange(e, roundIndex)}
+            required
+          />
         </div>
+      </div>
+      <div>
         <div className="form-row">
           <div className="form-group">
-            <label>Start Date{interviewForm.status === 'scheduled' ? '*' : ''}</label>
+            <label>Start Date*</label>
             <input
               type="date"
               name="start_date"
-              value={interviewForm.start_date}
-              onChange={handleInterviewChange}
-              required={interviewForm.status === 'scheduled'}
-              disabled={isNonEditable}
+              value={round.start_date}
+              onChange={(e) => handleRoundChange(e, roundIndex)}
+              required
             />
           </div>
           <div className="form-group time-group">
-            <label>Start Time{interviewForm.status === 'scheduled' ? '*' : ''}</label>
+            <label>Start Time*</label>
             <div className="time-inputs">
               <input
                 type="text"
                 name="start_time"
-                value={interviewForm.start_time}
-                onChange={handleInterviewChange}
+                value={round.start_time}
+                onChange={(e) => handleRoundChange(e, roundIndex)}
                 placeholder="HH:mm"
-                required={interviewForm.status === 'scheduled'}
-                disabled={isNonEditable}
+                required
                 className="time-text-input"
               />
               <select
                 name="startHours"
-                value={startHours}
-                onChange={handleTimeDropdownChange}
-                disabled={isNonEditable}
+                value={round.startHours}
+                onChange={(e) => handleTimeDropdownChange(e, roundIndex)}
                 className="time-select"
               >
                 <option value="">HH</option>
@@ -280,9 +324,8 @@ const getdisplayprojectid = (prjid) => {
               <span>:</span>
               <select
                 name="startMinutes"
-                value={startMinutes}
-                onChange={handleTimeDropdownChange}
-                disabled={isNonEditable}
+                value={round.startMinutes}
+                onChange={(e) => handleTimeDropdownChange(e, roundIndex)}
                 className="time-select"
               >
                 <option value="">MM</option>
@@ -296,9 +339,8 @@ const getdisplayprojectid = (prjid) => {
             <label>AM/PM</label>
             <select
               name="start_am_pm"
-              value={interviewForm.start_am_pm}
-              onChange={handleInterviewChange}
-              disabled={isNonEditable}
+              value={round.start_am_pm}
+              onChange={(e) => handleRoundChange(e, roundIndex)}
             >
               <option value="AM">AM</option>
               <option value="PM">PM</option>
@@ -311,9 +353,8 @@ const getdisplayprojectid = (prjid) => {
             <input
               type="date"
               name="end_date"
-              value={interviewForm.end_date}
-              onChange={handleInterviewChange}
-              disabled={isNonEditable}
+              value={round.end_date}
+              onChange={(e) => handleRoundChange(e, roundIndex)}
             />
           </div>
           <div className="form-group time-group">
@@ -322,17 +363,15 @@ const getdisplayprojectid = (prjid) => {
               <input
                 type="text"
                 name="end_time"
-                value={interviewForm.end_time}
-                onChange={handleInterviewChange}
+                value={round.end_time}
+                onChange={(e) => handleRoundChange(e, roundIndex)}
                 placeholder="HH:mm"
-                disabled={isNonEditable}
                 className="time-text-input"
               />
               <select
                 name="endHours"
-                value={endHours}
-                onChange={handleTimeDropdownChange}
-                disabled={isNonEditable}
+                value={round.endHours}
+                onChange={(e) => handleTimeDropdownChange(e, roundIndex)}
                 className="time-select"
               >
                 <option value="">HH</option>
@@ -343,9 +382,8 @@ const getdisplayprojectid = (prjid) => {
               <span>:</span>
               <select
                 name="endMinutes"
-                value={endMinutes}
-                onChange={handleTimeDropdownChange}
-                disabled={isNonEditable}
+                value={round.endMinutes}
+                onChange={(e) => handleTimeDropdownChange(e, roundIndex)}
                 className="time-select"
               >
                 <option value="">MM</option>
@@ -359,9 +397,8 @@ const getdisplayprojectid = (prjid) => {
             <label>AM/PM</label>
             <select
               name="end_am_pm"
-              value={interviewForm.end_am_pm}
-              onChange={handleInterviewChange}
-              disabled={isNonEditable}
+              value={round.end_am_pm}
+              onChange={(e) => handleRoundChange(e, roundIndex)}
             >
               <option value="AM">AM</option>
               <option value="PM">PM</option>
@@ -374,10 +411,9 @@ const getdisplayprojectid = (prjid) => {
             <input
               type="url"
               name="meeting_link"
-              value={interviewForm.meeting_link}
-              onChange={handleInterviewChange}
+              value={round.meeting_link}
+              onChange={(e) => handleRoundChange(e, roundIndex)}
               placeholder="Enter meeting link"
-              disabled={isNonEditable}
             />
           </div>
         </div>
@@ -387,23 +423,21 @@ const getdisplayprojectid = (prjid) => {
             <label>Is Panel Member an Employee?</label>
             <select
               name="is_he_employee"
-              value={newPanelMember.is_he_employee}
-              onChange={handlePanelChange}
-              disabled={isNonEditable}
+              value={panelMemberForm.is_he_employee}
+              onChange={(e) => handlePanelFormChange(e, roundIndex)}
             >
               <option value="1">Yes</option>
               <option value="0">No</option>
             </select>
           </div>
-          {newPanelMember.is_he_employee === '1' ? (
+          {panelMemberForm.is_he_employee === '1' ? (
             <>
               <div className="form-group">
                 <label>Select Employee</label>
                 <select
                   name="empid"
-                  value={newPanelMember.empid}
-                  onChange={handlePanelChange}
-                  disabled={isNonEditable}
+                  value={panelMemberForm.empid}
+                  onChange={(e) => handlePanelFormChange(e, roundIndex)}
                 >
                   <option value="">Select an employee</option>
                   {employees.map((emp) => (
@@ -418,11 +452,10 @@ const getdisplayprojectid = (prjid) => {
                 <input
                   type="email"
                   name="email"
-                  value={newPanelMember.email}
+                  value={panelMemberForm.email}
                   readOnly
                   className="bg-gray-100"
                   placeholder="Employee email"
-                  disabled={isNonEditable}
                 />
               </div>
             </>
@@ -432,10 +465,9 @@ const getdisplayprojectid = (prjid) => {
               <input
                 type="email"
                 name="email"
-                value={newPanelMember.email}
-                onChange={handlePanelChange}
+                value={panelMemberForm.email}
+                onChange={(e) => handlePanelFormChange(e, roundIndex)}
                 placeholder="Enter email"
-                disabled={isNonEditable}
               />
             </div>
           )}
@@ -443,14 +475,14 @@ const getdisplayprojectid = (prjid) => {
             <button
               type="button"
               className="save-button"
-              onClick={handleAddPanelMember}
-              disabled={isNonEditable}
+              onClick={() => handleAddPanelMember(roundIndex)}
+              disabled={isAddingPanelMember}
             >
-              Add Panel Member
+              {isAddingPanelMember ? 'Adding...' : 'Add Panel Member'}
             </button>
           </div>
         </div>
-        {panelMembers.length > 0 && (
+        {round.panelMembers.length > 0 && (
           <div className="details-block">
             <h4>Added Panel Members</h4>
             <table className="employee-table">
@@ -463,7 +495,7 @@ const getdisplayprojectid = (prjid) => {
                 </tr>
               </thead>
               <tbody>
-                {panelMembers.map((member, index) => {
+                {round.panelMembers.map((member, index) => {
                   const employee = member.is_he_employee === '1' ? employees.find((emp) => emp.empid === member.empid) : null;
                   return (
                     <tr key={index}>
@@ -474,8 +506,7 @@ const getdisplayprojectid = (prjid) => {
                         <button
                           type="button"
                           className="cancel-button"
-                          onClick={() => handleRemovePanelMember(index)}
-                          disabled={isNonEditable}
+                          onClick={() => handleRemovePanelMember(roundIndex, index)}
                         >
                           Remove
                         </button>
@@ -488,19 +519,112 @@ const getdisplayprojectid = (prjid) => {
           </div>
         )}
         <div className="form-buttons">
-          <button type="submit" className="save-button" disabled={isLoading}>
-            {isLoading ? 'Saving...' : 'Save'}
-          </button>
           <button
             type="button"
             className="cancel-button"
-            onClick={handleback}
+            onClick={() => handleDeleteRound(roundIndex, round.Roundid)}
             disabled={isLoading}
           >
-            Cancel
+            Delete Round
           </button>
         </div>
-      </form>
+      </div>
+    </div>
+    )
+  };
+
+  return (
+    <div className="employee-details-container">
+      <h2>Scheduling Interview for {name} (Application ID: {getdisplayprojectid(id)})</h2>
+      {success && <div className="success-message">{success}</div>}
+      {error && <div className="error-message">{error}</div>}
+      {isLoading && <div className="loading-message">Saving...</div>}
+
+      <div className="details-block">
+        <h3>Application Status</h3>
+        <div className="form-row">
+          <div className="form-group">
+            <label>Status*</label>
+            <select
+              name="applicationStatus"
+              value={applicationStatus}
+              onChange={handleStatusChange}
+              required
+            >
+              <option value="scheduled">Scheduled</option>
+              <option value="hold">Hold</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {applicationStatus === 'scheduled' && (
+        <div className="details-block">
+          <h3>Interview Rounds</h3>
+          {rounds.map((round, index) => renderRoundForm(round, index))}
+          {showRoundNameForm ? (
+            <div className="form-row">
+              <div className="form-group">
+                <label>Round Name*</label>
+                <input
+                  type="text"
+                  value={newRoundName}
+                  onChange={(e) => setNewRoundName(e.target.value)}
+                  placeholder="Enter round name"
+                  required
+                />
+              </div>
+              <div className="form-buttons">
+                <button
+                  type="button"
+                  className="save-button"
+                  onClick={handleRoundNameSubmit}
+                  disabled={isLoading}
+                >
+                  Submit
+                </button>
+                <button
+                  type="button"
+                  className="cancel-button"
+                  onClick={handleRoundNameCancel}
+                  disabled={isLoading}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="save-button"
+              onClick={handleAddRound}
+              disabled={isLoading}
+            >
+              Add Round
+            </button>
+          )}
+        </div>
+      )}
+
+      <div className="form-buttons">
+        <button
+          type="button"
+          className="save-button"
+          onClick={handleSubmit}
+          disabled={isLoading}
+        >
+          {isLoading ? 'Saving...' : 'Save'}
+        </button>
+        <button
+          type="button"
+          className="cancel-button"
+          onClick={handleback}
+          disabled={isLoading}
+        >
+          Back
+        </button>
+      </div>
     </div>
   );
 };

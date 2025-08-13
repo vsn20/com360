@@ -112,7 +112,7 @@ const getdisplayprojectid = (prjid) => {
                   <tr key={details.applicationid} onClick={() => handlerowclick(details.applicationid, details.status)}>
                     <td>{getdisplayprojectid(details.applicationid)}</td>
                     <td>{`${details.first_name} ${details.last_name}`}</td>
-                    <td>{`${details.job_title} - ${getdisplayprojectid(details.jobid)}`}</td>
+                    <td>{`${details.display_job_name} - ${getdisplayprojectid(details.jobid)}`}</td>
                     <td>
                       <a href={details.resumepath} target="_blank" rel="noopener noreferrer">
                         View Resume

@@ -172,7 +172,7 @@ const AddServiceReq = ({ orgid, empid, employees, type, subtype, priority, previ
       {isLoading && <div className="loading-message">Creating...</div>}
       <h2>Create New Service Request</h2>
       <button className="back-button" onClick={onBack} disabled={isLoading}>
-        Back
+        
       </button>
       <form onSubmit={handleSubmit}>
         <div className="details-block">

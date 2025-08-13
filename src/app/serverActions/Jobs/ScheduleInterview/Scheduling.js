@@ -66,6 +66,24 @@ export async function getEmployees(orgid) {
   }
 }
 
+export async function deleteInterviewRound(orgid, roundId) {
+  try {
+    const pool = await DBconnection();
+    await pool.query(
+      `DELETE FROM interview_panel WHERE orgid = ? AND Roundid = ?`,
+      [orgid, roundId]
+    );
+    await pool.query(
+      `DELETE FROM C_INTERVIEW_ROUNDS WHERE orgid = ? AND Roundid = ?`,
+      [orgid, roundId]
+    );
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting interview round:', error);
+    return { error: `Failed to delete interview round: ${error.message}` };
+  }
+}
+
 export async function scheduleInterview(formData) {
   const cookieStore = cookies();
   const token = cookieStore.get("jwt_token")?.value;
@@ -87,21 +105,70 @@ export async function scheduleInterview(formData) {
 
     const orgid = formData.get('orgid');
     const application_id = formData.get('application_id');
-    const status = formData.get('status');
-    const start_date = formData.get('start_date') === '0000-00-00' || formData.get('start_date') === '000000' ? null : formData.get('start_date');
-    const start_am_pm = formData.get('start_am_pm');
-    const end_date = formData.get('end_date') === '0000-00-00' || formData.get('end_date') === '000000' ? null : formData.get('end_date');
-    const end_am_pm = formData.get('end_am_pm');
-    const start_time = formData.get('start_time');
-    const end_time = formData.get('end_time');
-    const meeting_link = formData.get('meeting_link');
     const empid = formData.get('empid');
-    const panelMembers = JSON.parse(formData.get('panelMembers'));
+    const applicationStatus = formData.get('applicationStatus');
+    const rounds = JSON.parse(formData.get('rounds'));
 
-    console.log('EmpID:', empid, 'OrgID:', orgid);
+    // Update applications table with status
+    await pool.query(
+      `UPDATE applications SET status = ? WHERE applicationid = ? AND orgid = ?`,
+      [applicationStatus, application_id, orgid]
+    );
 
-    // Validate required fields and date/time logic for scheduled status
-    if (status === 'scheduled') {
+    const employeename = await getCurrentUserEmpIdName(pool, userId, orgid);
+    if (employeename === 'unknown' || employeename === 'system') {
+      throw new Error(`Failed to fetch valid employee name for userId: ${userId}`);
+    }
+
+    // Log application status change
+    const statusDescription = `Application status changed to ${applicationStatus} by ${employeename} on ${new Date().toISOString()}`;
+    await pool.query(
+      `INSERT INTO applications_activity (orgid, application_id, activity_description) VALUES (?, ?, ?)`,
+      [orgid, application_id, statusDescription]
+    );
+
+    // If no rounds provided, just return after updating status
+    if (rounds.length === 0) {
+      return { success: true };
+    }
+
+    // Generate or verify interview_id
+    let interview_id;
+    const [existingInterview] = await pool.query(
+      'SELECT interview_id FROM interview_table WHERE orgid = ? AND application_id = ?',
+      [orgid, application_id]
+    );
+
+    if (existingInterview.length === 0) {
+      const [s] = await pool.query(
+        'SELECT COUNT(*) AS count FROM interview_table WHERE orgid = ?',
+        [orgid]
+      );
+      const m = s[0].count;
+      interview_id = `${orgid}-${m + 1}`;
+
+      // Insert into interview_table
+      if (applicationStatus === 'scheduled') {
+        await pool.query(
+          `INSERT INTO interview_table (orgid, interview_id, application_id, confirm)
+           VALUES (?, ?, ?, 1)`,
+          [orgid, interview_id, application_id]
+        );
+      } else {
+        await pool.query(
+          `INSERT INTO interview_table (orgid, interview_id, application_id, confirm)
+           VALUES (?, ?, ?, 0)`,
+          [orgid, interview_id, application_id]
+        );
+      }
+    } else {
+      interview_id = existingInterview[0].interview_id;
+    }
+
+    for (const round of rounds) {
+      const { name, start_date, start_am_pm, end_date, end_am_pm, start_time, end_time, meeting_link, panelMembers } = round;
+
+      // Validate required fields and date/time logic
       if (!start_date || !start_time) {
         throw new Error('Start date and time are required for scheduled status.');
       }
@@ -109,16 +176,13 @@ export async function scheduleInterview(formData) {
         throw new Error('Start AM/PM must be AM or PM.');
       }
       if (end_date) {
-        // Validate start_date <= end_date
         if (start_date > end_date) {
           throw new Error('Start date must be earlier than or equal to end date.');
         }
-        // If start_date === end_date and end_time is provided, validate start_time < end_time
         if (start_date === end_date && end_time) {
           if (!end_am_pm || !['AM', 'PM'].includes(end_am_pm)) {
             throw new Error('End AM/PM must be AM or PM when end time is provided.');
           }
-          // Convert times to 24-hour format for comparison
           let startHours = parseInt(start_time.split(':')[0], 10);
           let startMinutes = parseInt(start_time.split(':')[1], 10);
           let endHours = parseInt(end_time.split(':')[0], 10);
@@ -144,96 +208,65 @@ export async function scheduleInterview(formData) {
       if (!hasEmployee) {
         throw new Error('At least one panel member must be a company employee.');
       }
-    }
 
-    // For hold or rejected, only update applications.status and log activity
-    if (status === 'hold' || status === 'rejected') {
-      await pool.query(
-        `UPDATE applications SET status = ? WHERE applicationid = ? AND orgid = ?`,
-        [status, application_id, orgid]
+      // Insert into C_INTERVIEW_ROUNDS with name as RoundNo
+      const [result] = await pool.query(
+        `INSERT INTO C_INTERVIEW_ROUNDS (
+          orgid, interview_id, application_id, RoundNo, start_date, start_am_pm, 
+          end_date, end_am_pm, start_time, end_time, meeting_link, status, Confirm
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'scheduled', '1')`,
+        [
+          orgid,
+          interview_id,
+          application_id,
+          name || `Round ${rounds.indexOf(round) + 1}`,
+          start_date || null,
+          start_am_pm || null,
+          end_date || null,
+          end_am_pm || null,
+          start_time || null,
+          end_time || null,
+          meeting_link || null,
+        ]
       );
 
-      const employeename = await getCurrentUserEmpIdName(pool, userId, orgid);
-      console.log('Employee Name:', employeename);
-      if (employeename === 'unknown' || employeename === 'system') {
-        throw new Error(`Failed to fetch valid employee name for userId: ${userId}`);
+      const roundId = result.insertId;
+
+      // Insert panel members
+      for (const member of panelMembers) {
+        let emailToInsert = member.email;
+        if (member.is_he_employee === '1' && (!member.email || member.email === 'null')) {
+          const [empRows] = await pool.query(
+            'SELECT email FROM C_EMP WHERE empid = ? AND orgid = ? AND STATUS = "ACTIVE"',
+            [member.empid, orgid]
+          );
+          if (empRows.length === 0 || !empRows[0].email) {
+            throw new Error(`No valid email found for employee ID ${member.empid}`);
+          }
+          emailToInsert = empRows[0].email;
+        }
+
+        await pool.query(
+          `INSERT INTO interview_panel (orgid, interview_id, empid, email, is_he_employee, Roundid)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [
+            orgid,
+            interview_id,
+            member.empid || null,
+            emailToInsert,
+            member.is_he_employee,
+            roundId,
+          ]
+        );
       }
-      const description = `Status changed to ${status}(while shortlisting) by ${employeename} on ${new Date().toISOString()}`;
+
+      // Log round scheduling activity
+      const description = `Scheduled ${name || `Round ${rounds.indexOf(round) + 1}`} by ${employeename}(while shortlisting) on ${new Date().toISOString()}`;
       await pool.query(
         `INSERT INTO applications_activity (orgid, application_id, activity_description) VALUES (?, ?, ?)`,
         [orgid, application_id, description]
       );
-
-      return { success: true };
     }
-
-    // Generate unique interview_id
-    const [s] = await pool.query(
-      'SELECT COUNT(*) AS count FROM interview_table WHERE orgid = ?',
-      [orgid]
-    );
-    const m = s[0].count;
-    const interview_id = `${orgid}-${m + 1}`;
-
-    // Insert into interview_table
-    await pool.query(
-      `INSERT INTO interview_table (orgid, interview_id, application_id, start_date, start_am_pm, end_date, end_am_pm, end_time, meeting_link, start_time, confirm)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '1')`,
-      [
-        orgid,
-        interview_id,
-        application_id,
-        start_date,
-        start_am_pm,
-        end_date,
-        end_am_pm || null,
-        end_time || null,
-        meeting_link || null,
-        start_time,
-      ]
-    );
-
-    // Insert panel members into interview_panel
-    for (const member of panelMembers) {
-      let emailToInsert = member.email;
-      if (member.is_he_employee === '1' && (!member.email || member.email === 'null')) {
-        const [empRows] = await pool.query(
-          'SELECT email FROM C_EMP WHERE empid = ? AND orgid = ? AND STATUS = "ACTIVE"',
-          [member.empid, orgid]
-        );
-        if (empRows.length === 0 || !empRows[0].email) {
-          throw new Error(`No valid email found for employee ID ${member.empid}`);
-        }
-        emailToInsert = empRows[0].email;
-      }
-
-      await pool.query(
-        `INSERT INTO interview_panel (orgid, interview_id, empid, email, is_he_employee)
-         VALUES (?, ?, ?, ?, ?)`,
-        [
-          orgid,
-          interview_id,
-          member.empid || null,
-          emailToInsert,
-          member.is_he_employee,
-        ]
-      );
-    }
-
-    // Update applications table status
-    await pool.query(
-      `UPDATE applications SET status = 'scheduled' WHERE applicationid = ? AND orgid = ?`,
-      [application_id, orgid]
-    );
-
-    // Insert into applications_activity
-    const employeename = await getCurrentUserEmpIdName(pool, userId, orgid);
-    console.log('Employee Name:', employeename);
-    const description = `Scheduled by ${employeename}(while shortlisting) on ${new Date().toISOString()}`;
-    await pool.query(
-      `INSERT INTO applications_activity (orgid, application_id, activity_description) VALUES (?, ?, ?)`,
-      [orgid, application_id, description]
-    );
 
     return { success: true };
   } catch (error) {

@@ -4,7 +4,6 @@ import { cookies } from "next/headers";
 import fs from "fs";
 import path from "path";
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
-import { time } from "console";
 
 // Helper Functions
 const decodeJwt = (token) => {
@@ -54,7 +53,7 @@ const getCurrentUserEmpIdName = async (pool, userId, orgId) => {
 
 async function generateOfferLetterPdf(offerLetterData, details, orgid, employeename) {
   const pool = await DBconnection();
-  const [rows] = await pool.query(`select orgname from C_ORG where orgid=?`, [orgid]);
+  const [rows] = await pool.query(`SELECT orgname FROM C_ORG WHERE orgid = ?`, [orgid]);
   const cookieStore = cookies();
   const token = cookieStore.get("jwt_token")?.value;
   if (!token) return { success: false, error: 'No token found. Please log in.' };
@@ -62,47 +61,38 @@ async function generateOfferLetterPdf(offerLetterData, details, orgid, employeen
   const decoded = decodeJwt(token);
   const empid = decoded.empid;
 
-  let [state]=await pool.query(
-    `select VALUE from C_STATE where ID=?`,
-    [offerLetterData.stateid]
+  let [state] = await pool.query(`SELECT VALUE FROM C_STATE WHERE ID = ?`, [offerLetterData.stateid]);
+  state = state[0]?.VALUE || offerLetterData.stateid;
+
+  let [country] = await pool.query(`SELECT VALUE FROM C_COUNTRY WHERE ID = ?`, [offerLetterData.countryid]);
+  country = country[0]?.VALUE || offerLetterData.countryid;
+
+  const [jobtitleforempid] = await pool.query(`SELECT JOB_TITLE FROM C_EMP WHERE empid = ?`, [empid]);
+  let jobstitle = jobtitleforempid[0]?.JOB_TITLE;
+  const [realtitle] = await pool.query(
+    `SELECT job_title FROM org_jobtitles WHERE job_title_id = ? AND orgid = ?`,
+    [jobstitle, orgid]
   );
+  jobstitle = realtitle[0]?.job_title;
 
-  state=state[0].VALUE||offerLetterData.stateid;
-
-  let [country]=await pool.query(
-     `select VALUE from C_COUNTRY where ID=?`,[offerLetterData.countryid]
-  );
-
-  country=country[0].VALUE||offerLetterData.countryid;
-
-
-  const [jobtitleforempid] = await pool.query(`select JOB_TITLE from C_EMP where empid=?`, [empid]);
-  let jobstitle = jobtitleforempid[0].JOB_TITLE;
-  const [realtitle]=await pool.query(
-      `select job_title from org_jobtitles where job_title_id=? and orgid=?`,
-      [jobstitle, orgid]
-    );
-    jobstitle=realtitle[0].job_title;
-  const dateandday = new Date();
-  const [jobtype] = await pool.query('select Name from generic_values where id=? and orgid=?', [parseInt(offerLetterData.finalised_jobtype), orgid]);
-  const s = jobtype[0].Name;
+  const [jobtype] = await pool.query('SELECT Name FROM generic_values WHERE id = ? AND orgid = ?', [parseInt(offerLetterData.finalised_jobtype), orgid]);
+  const s = jobtype[0]?.Name;
 
   const [reportToRows] = await pool.query(
-    `select EMP_FST_NAME, EMP_LAST_NAME, JOB_TITLE from C_EMP where empid=?`,
+    `SELECT EMP_FST_NAME, EMP_LAST_NAME, JOB_TITLE FROM C_EMP WHERE empid = ?`,
     [offerLetterData.reportto_empid]
   );
   let titlejob = 'Manager';
   if (reportToRows.length > 0 && reportToRows[0].JOB_TITLE) {
     const [titlejobRows] = await pool.query(
-      `select job_title from org_jobtitles where job_title_id=? and orgid=?`,
+      `SELECT job_title FROM org_jobtitles WHERE job_title_id = ? AND orgid = ?`,
       [reportToRows[0].JOB_TITLE, orgid]
     );
     titlejob = titlejobRows.length > 0 ? titlejobRows[0].job_title : 'Manager';
   }
   const reportToName = reportToRows.length > 0 ? `${reportToRows[0].EMP_FST_NAME} ${reportToRows[0].EMP_LAST_NAME}` : 'Unknown';
-  const reportToTitle = titlejob; // Use titlejob instead of JOB_TITLE
+  const reportToTitle = titlejob;
 
-  // Fetch job title name for finalised_jobtitle
   let finalisedJobTitleName = offerLetterData.finalised_jobtitle;
   if (offerLetterData.finalised_jobtitle) {
     const [jobTitleRows] = await pool.query(
@@ -112,7 +102,6 @@ async function generateOfferLetterPdf(offerLetterData, details, orgid, employeen
     finalisedJobTitleName = jobTitleRows.length > 0 ? jobTitleRows[0].job_title : 'Not specified';
   }
 
-  // Fetch department name for finalised_department
   let finalisedDepartmentName = offerLetterData.finalised_department;
   if (offerLetterData.finalised_department) {
     const [deptRows] = await pool.query(
@@ -122,7 +111,6 @@ async function generateOfferLetterPdf(offerLetterData, details, orgid, employeen
     finalisedDepartmentName = deptRows.length > 0 ? deptRows[0].name : 'Not specified';
   }
 
-  // Fetch role names for finalised_roleids
   const roleids = offerLetterData.finalised_roleids || [];
   let roleNames = [];
   if (roleids.length > 0) {
@@ -134,7 +122,7 @@ async function generateOfferLetterPdf(offerLetterData, details, orgid, employeen
     roleNames = roleRows.map(row => row.rolename);
   }
 
-  const orgname = rows[0].orgname;
+  const orgname = rows[0]?.orgname;
   const pdfDoc = await PDFDocument.create();
   const timesRomanFont = await pdfDoc.embedFont(StandardFonts.TimesRoman);
   const timesRomanBoldFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
@@ -222,12 +210,11 @@ async function generateOfferLetterPdf(offerLetterData, details, orgid, employeen
   drawParagraph(`4. Fringe Benefits.`, fontSize, 18, true);
   drawParagraph(`You will be entitled to ${orgname}'s customary employee benefits afforded to similarly situated ${orgname} employees.`);
   drawParagraph(`5. Employment Agreement.`, fontSize, 18, true);
-  drawParagraph(`This agreement will be executed by ${orgname} and you. Our goal is to work together to continue to build our business. You will report directly to ${reportToName}, ${titlejob}. All work assignments will be given to you by ${orgname}. You will be a direct employee of ${orgname}. Your work schedule will be set by ${orgname}. Your performance reviews will be performed by ${orgname}. Only ${orgname} has the ability to hire, fire, or discipline you for poor work performance. You will use ${orgname}’s tools / instrumentalities to perform the duties of your employment. Our desire is to have a long-term relationship with you in which your compensation and role in the company are based on your performance and contribution to the company. Your employment relationship with ${orgname} is at-will. You may terminate your employment with ${orgname} at any time and for any reason whatsoever simply by notifying ${orgname}. Likewise, ${orgname} may terminate your employment at any time and for any reason whatsoever, with or without cause or advance notice. This at-will employment relationship cannot be changed except in a writing signed by a Company officer.`);
+  drawParagraph(`This agreement will be executed by ${orgname} and you. Our goal is to work together to continue to build our business. You will report directly to ${reportToName}, ${reportToTitle}. All work assignments will be given to you by ${orgname}. You will be a direct employee of ${orgname}. Your work schedule will be set by ${orgname}. Your performance reviews will be performed by ${orgname}. Only ${orgname} has the ability to hire, fire, or discipline you for poor work performance. You will use ${orgname}’s tools / instrumentalities to perform the duties of your employment. Our desire is to have a long-term relationship with you in which your compensation and role in the company are based on your performance and contribution to the company. Your employment relationship with ${orgname} is at-will. You may terminate your employment with ${orgname} at any time and for any reason whatsoever simply by notifying ${orgname}. Likewise, ${orgname} may terminate your employment at any time and for any reason whatsoever, with or without cause or advance notice. This at-will employment relationship cannot be changed except in a writing signed by a Company officer.`);
   y -= 10;
   drawParagraph(`We are genuinely excited about you joining ${orgname}. We look forward to a long, enjoyable, challenging, and mutually beneficial relationship with you.`);
   y -= 20;
   drawLine(`Sincerely,`, fontSize, true);
-
 
   if (signatureImage) {
     const signatureWidth = 50;
@@ -271,17 +258,17 @@ async function generateOfferLetterPdf(offerLetterData, details, orgid, employeen
 export async function fetchalldetails(interviewid) {
   try {
     const pool = await DBconnection();
-    const [mainRows] = await pool.query(
+   const [mainRows] = await pool.query(
       `SELECT 
-        a.orgid, a.interview_id, a.application_id, a.start_date, a.start_am_pm, a.start_time,
-        a.end_date, a.end_am_pm, a.end_time, a.meeting_link, b.applieddate, b.jobid, b.status,
+        a.orgid, a.interview_id, a.application_id, b.applieddate, b.jobid, b.status,
         b.resumepath, b.salary_expected, b.custom_salary_by_interviewer, b.offerletter_timestamp,
         c.first_name, c.last_name, c.email, c.mobilenumber, c.dateofbirth, c.addresslane1,
-        c.addresslane2, c.zipcode, c.gender, e.job_title, e.min_salary, e.max_salary, e.level
+        c.addresslane2, c.zipcode, c.gender, e.display_job_name,e.expected_job_title,z.job_title,z.max_salary,z.min_salary,z.level
       FROM interview_table AS a
       JOIN applications AS b ON a.application_id = b.applicationid
       JOIN candidate AS c ON b.candidate_id = c.cid
-      JOIN org_jobtitles AS e ON b.jobid = e.job_title_id
+      JOIN externaljobs AS e ON b.jobid = e.jobid
+      JOIN org_jobtitles as z on z.job_title_id=e.expected_job_title
       WHERE a.interview_id = ?`,
       [interviewid]
     );
@@ -306,11 +293,52 @@ export async function fetchalldetails(interviewid) {
       [mainRows[0]?.application_id]
     );
 
-    // Fetch roleids from application_role_assign
     const [roleRows] = await pool.query(
       `SELECT roleid FROM application_role_assign WHERE applicationid = ? AND orgid = ?`,
       [mainRows[0]?.application_id, mainRows[0]?.orgid]
     );
+
+    const [roundsRows] = await pool.query(
+      `SELECT r.*, ip.empid AS panel_empid, ip.email, ip.is_he_employee
+       FROM C_INTERVIEW_ROUNDS r
+       LEFT JOIN interview_panel ip ON r.Roundid = ip.Roundid AND r.orgid = ip.orgid AND r.interview_id = ip.interview_id
+       WHERE r.interview_id = ? AND r.orgid = ?`,
+      [interviewid, mainRows[0].orgid]
+    );
+
+    const rounds = roundsRows.reduce((acc, row) => {
+      let round = acc.find(r => r.Roundid === row.Roundid);
+      if (!round) {
+        round = {
+          Roundid: row.Roundid,
+          orgid: row.orgid,
+          interview_id: row.interview_id,
+          application_id: row.application_id,
+          RoundNo: row.RoundNo,
+          marks: row.marks,
+          comments: row.comments,
+          status: row.status,
+          start_date: row.start_date,
+          start_am_pm: row.start_am_pm,
+          end_date: row.end_date,
+          end_am_pm: row.end_am_pm,
+          start_time: row.start_time,
+          end_time: row.end_time,
+          meeting_link: row.meeting_link,
+          Confirm: row.Confirm,
+          panelMembers: [],
+        };
+        acc.push(round);
+      }
+      if (row.panel_empid) {
+        round.panelMembers.push({
+          empid: row.panel_empid,
+          email: row.email,
+          is_he_employee: row.is_he_employee,
+        });
+      }
+      return acc;
+    }, []);
 
     return {
       success: true,
@@ -321,6 +349,7 @@ export async function fetchalldetails(interviewid) {
           ...offerRows[0],
           finalised_roleids: roleRows.map(row => row.roleid),
         } : null,
+        rounds: rounds,
       },
     };
   } catch (error) {
@@ -339,7 +368,7 @@ export async function fetchDropdownData(orgid) {
     const [states] = await pool.query('SELECT ID, VALUE FROM C_STATE WHERE ACTIVE = 1');
     const [employeeRows] = await pool.query('SELECT e.empid, e.EMP_FST_NAME, e.EMP_LAST_NAME FROM C_EMP e WHERE e.orgid = ?', [orgid]);
     const [jobtype] = await pool.query('SELECT id, g_id, Name FROM generic_values WHERE g_id = 14 AND isactive = 1 AND orgid = ?', [orgid]);
-    const [roles] = await pool.query('SELECT roleid, rolename FROM org_role_table WHERE orgid = ?', [orgid]);
+    const [roles] = await pool.query('SELECT roleid, rolename FROM org_role_table WHERE orgid = ? AND is_active = 1', [orgid]);
 
     const employees = employeeRows.map(emp => ({
       empid: emp.empid,
@@ -382,6 +411,11 @@ export async function updateStatus(applicationid, status, interview_id) {
           'UPDATE offerletters SET confirmed = 0 WHERE applicationid = ?',
           [applicationid]
         );
+      } else {
+        await connection.query(
+          'UPDATE interview_table SET offer_letter_generated = 1 WHERE interview_id = ?',
+          [interview_id]
+        );
       }
 
       const employeename = await getCurrentUserEmpIdName(pool, userId, orgid);
@@ -401,6 +435,8 @@ export async function updateStatus(applicationid, status, interview_id) {
     } catch (error) {
       await connection.rollback();
       throw error;
+    } finally {
+      connection.release();
     }
   } catch (error) {
     console.error('Error updating status:', error);
@@ -415,10 +451,8 @@ export async function saveOfferLetter(applicationid, offerLetterData, orgid, det
     await connection.beginTransaction();
 
     try {
-      // Normalize applicationid
       const normalizedApplicationId = applicationid;
 
-      // Check if offer letter has been sent
       const [existingOffer] = await connection.query(
         'SELECT offer_letter_sent FROM offerletters WHERE applicationid = ?',
         [normalizedApplicationId]
@@ -429,8 +463,7 @@ export async function saveOfferLetter(applicationid, offerLetterData, orgid, det
         return { success: false, error: 'Cannot update: Offer letter has already been sent.' };
       }
 
-      // Validate roleids
-      const roleids = [...new Set(offerLetterData.finalised_roleids || [])]; // Deduplicate
+      const roleids = [...new Set(offerLetterData.finalised_roleids || [])];
       if (roleids.length === 0) {
         await connection.rollback();
         return { success: false, error: 'At least one role is required.' };
@@ -447,7 +480,6 @@ export async function saveOfferLetter(applicationid, offerLetterData, orgid, det
         }
       }
 
-      // Validate job_title_id
       if (offerLetterData.finalised_jobtitle) {
         const [jobTitle] = await connection.execute(
           'SELECT job_title_id FROM org_jobtitles WHERE job_title_id = ? AND orgid = ? AND is_active = 1',
@@ -459,7 +491,6 @@ export async function saveOfferLetter(applicationid, offerLetterData, orgid, det
         }
       }
 
-      // Validate department id
       if (offerLetterData.finalised_department) {
         const [dept] = await connection.execute(
           'SELECT id FROM org_departments WHERE id = ? AND orgid = ? AND isactive = 1',
@@ -471,14 +502,11 @@ export async function saveOfferLetter(applicationid, offerLetterData, orgid, det
         }
       }
 
-
-
-      let timestamp = new Date().toISOString().replace(/[-:T.]/g, '');
-    timestamp = new Date().toLocaleDateString('en-US', {
-      month: '2-digit',
-      day: '2-digit',
-      year: 'numeric'
-    }).replace(/\//g, '-'); 
+      const timestamp = new Date().toLocaleDateString('en-US', {
+        month: '2-digit',
+        day: '2-digit',
+        year: 'numeric'
+      }).replace(/\//g, '-');
       const offerletterPath = path.join(
         process.cwd(),
         'public',
@@ -515,27 +543,8 @@ export async function saveOfferLetter(applicationid, offerLetterData, orgid, det
         'SELECT applicationid FROM offerletters WHERE applicationid = ?',
         [normalizedApplicationId]
       );
-      console.log('Checking existing rows for applicationid:', normalizedApplicationId, 'Found:', existingRows);
 
       if (existingRows.length > 0) {
-        console.log('Updating offer letter with params:', {
-          offerletter_url,
-          expected_join_date: offerLetterData.expected_join_date,
-          adress_lane_1: offerLetterData.adress_lane_1 || '',
-          adress_lane_2: offerLetterData.adress_lane_2 || '',
-          zipcode: offerLetterData.zipcode,
-          stateid: offerLetterData.stateid,
-          countryid: offerLetterData.countryid,
-          custom_state_name: offerLetterData.custom_state_name || '',
-          finalised_salary: offerLetterData.finalised_salary,
-          finalised_jobtitle: offerLetterData.finalised_jobtitle,
-          finalised_department: offerLetterData.finalised_department,
-          finalised_jobtype: offerLetterData.finalised_jobtype,
-          finalised_pay_term: offerLetterData.finalised_pay_term,
-          reportto_empid: offerLetterData.reportto_empid,
-          applicationid: applicationid
-        });
-
         const [result] = await connection.query(
           `UPDATE offerletters SET
             offerletter_url = ?,
@@ -563,34 +572,15 @@ export async function saveOfferLetter(applicationid, offerLetterData, orgid, det
             offerLetterData.custom_state_name || '', offerLetterData.finalised_salary,
             offerLetterData.finalised_jobtitle, offerLetterData.finalised_department,
             offerLetterData.finalised_jobtype, offerLetterData.finalised_pay_term,
-            offerLetterData.reportto_empid, applicationid
+            offerLetterData.reportto_empid, normalizedApplicationId
           ]
         );
 
         if (result.affectedRows === 0) {
           await connection.rollback();
-          console.error('Failed to update offer letter for applicationid:', normalizedApplicationId);
-          return { success: false, error: `Failed to update offer letter for applicationid: ${normalizedApplicationId}. No rows affected.` };
+          return { success: false, error: `Failed to update offer letter for applicationid: ${normalizedApplicationId}.` };
         }
       } else {
-        console.log('Inserting new offer letter with params:', {
-          applicationid: normalizedApplicationId,
-          offerletter_url,
-          expected_join_date: offerLetterData.expected_join_date,
-          adress_lane_1: offerLetterData.adress_lane_1 || '',
-          adress_lane_2: offerLetterData.adress_lane_2 || '',
-          zipcode: offerLetterData.zipcode,
-          stateid: offerLetterData.stateid,
-          countryid: offerLetterData.countryid,
-          custom_state_name: offerLetterData.custom_state_name || '',
-          finalised_salary: offerLetterData.finalised_salary,
-          finalised_jobtitle: offerLetterData.finalised_jobtitle,
-          finalised_department: offerLetterData.finalised_department,
-          finalised_jobtype: offerLetterData.finalised_jobtype,
-          finalised_pay_term: offerLetterData.finalised_pay_term,
-          reportto_empid: offerLetterData.reportto_empid
-        });
-
         const [result] = await connection.query(
           `INSERT INTO offerletters (
             applicationid, offerletter_url, offerletter_generated_timestamp, expected_join_date,
@@ -611,19 +601,15 @@ export async function saveOfferLetter(applicationid, offerLetterData, orgid, det
 
         if (result.affectedRows === 0) {
           await connection.rollback();
-          console.error('Failed to insert offer letter for applicationid:', normalizedApplicationId);
           return { success: false, error: `Failed to insert offer letter for applicationid: ${normalizedApplicationId}.` };
         }
       }
 
-      // Remove existing role assignments
       const [deleteResult] = await connection.query(
         'DELETE FROM application_role_assign WHERE applicationid = ? AND orgid = ?',
         [normalizedApplicationId, orgid]
       );
-      console.log(`Removed ${deleteResult.affectedRows} existing role assignments for applicationid ${normalizedApplicationId}`);
 
-      // Insert new role assignments
       for (const roleid of roleids) {
         const [roleAssignResult] = await connection.query(
           `INSERT INTO application_role_assign (applicationid, orgid, roleid) 
@@ -631,7 +617,6 @@ export async function saveOfferLetter(applicationid, offerLetterData, orgid, det
            ON DUPLICATE KEY UPDATE roleid = roleid`,
           [normalizedApplicationId, orgid, roleid]
         );
-        console.log(`Assigned role ${roleid} to application ${normalizedApplicationId}, affectedRows: ${roleAssignResult.affectedRows}`);
       }
 
       const [salaryResult] = await connection.query(
@@ -641,7 +626,6 @@ export async function saveOfferLetter(applicationid, offerLetterData, orgid, det
 
       if (salaryResult.affectedRows === 0) {
         await connection.rollback();
-        console.error('Failed to update custom_salary_by_interviewer for applicationid:', normalizedApplicationId);
         return { success: false, error: `Failed to update custom_salary_by_interviewer for applicationid: ${normalizedApplicationId}.` };
       }
 
