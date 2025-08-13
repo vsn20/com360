@@ -784,8 +784,12 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
       if (!isNaN(value) && value >= 1) {
        setroleperpage(value);
        setduplicate(value);
+        setCurrentPage(1);
+    setPageInputValue('1');
       } else {
        setduplicate(10);
+        setCurrentPage(1);
+    setPageInputValue('1');
       }
     }
   };

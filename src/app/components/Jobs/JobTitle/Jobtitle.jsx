@@ -132,9 +132,13 @@ const Jobtitle = ({ orgid, empid, jobtitles }) => {
       if (!isNaN(value) && value >= 1) {
         setJobsPerPage(value);
         setJobsPerPageInput(value.toString());
+        setCurrentPage(1);
+        setPageInputValue('1');
         
       } else {
         setJobsPerPageInput(jobsPerPage.toString()); // Revert to current jobsPerPage
+         setCurrentPage(1);
+        setPageInputValue('1');
       }
     }
   };
