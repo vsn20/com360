@@ -12,7 +12,7 @@ const generateToken = (userId, empid, username, rolename, orgid, orgname) => {
 
 export async function loginaction(logindetails) {
   const { username, password } = logindetails;
-  console.log("Login details received:", { username, password });
+ // console.log("Login details received:", { username, password });
 
   try {
     const pool = await DBconnection();
@@ -78,8 +78,8 @@ export async function loginaction(logindetails) {
 
     // Generate JWT token with empid
     const token = generateToken(user.username, user.empid, user.username, rolename, user.orgid, orgName);
-    console.log("Generated JWT token payload:", JSON.stringify({ userId: user.username, empid: user.empid, username, rolename, orgid: user.orgid, orgname: orgName }));
-    console.log("Generated JWT token:", token);
+   // console.log("Generated JWT token payload:", JSON.stringify({ userId: user.username, empid: user.empid, username, rolename, orgid: user.orgid, orgname: orgName }));
+    //console.log("Generated JWT token:", token);
 
     // Set JWT token in cookies
     const cookieStore = cookies();
@@ -109,7 +109,7 @@ export async function loginaction(logindetails) {
 
     const menuData = await menuResponse.json();
     const features = menuData.map(item => item.href || item.submenu.map(sub => sub.href)).flat();
-    console.log("Features fetched from /api/menu:", features);
+   // console.log("Features fetched from /api/menu:", features);
 
     // Update last login timestamp
     await pool.query(

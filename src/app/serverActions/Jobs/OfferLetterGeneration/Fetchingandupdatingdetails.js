@@ -64,30 +64,26 @@ async function generateOfferLetterPdf(offerLetterData, details, orgid, employeen
   const empid = decoded.empid;
 
   const [jobtitleforempid] = await pool.query(`select JOB_TITLE from C_EMP where empid=?`, [empid]);
- let jobstitle = jobtitleforempid[0].JOB_TITLE;
-  const [realtitle]=await pool.query(
-      `select job_title from org_jobtitles where job_title_id=? and orgid=?`,
-      [jobstitle, orgid]
-    );
-    jobstitle=realtitle[0].job_title;
+  let jobstitle = jobtitleforempid[0].JOB_TITLE;
+  const [realtitle] = await pool.query(
+    `select job_title from org_jobtitles where job_title_id=? and orgid=?`,
+    [jobstitle, orgid]
+  );
+  jobstitle = realtitle[0].job_title;
 
   const [jobtype] = await pool.query('select Name from generic_values where id=? and orgid=?', [parseInt(offerLetterData.finalised_jobtype), orgid]);
   const s = jobtype[0].Name;
 
-
-   let [state]=await pool.query(
+  let [state] = await pool.query(
     `select VALUE from C_STATE where ID=?`,
     [offerLetterData.stateid]
   );
+  state = state[0].VALUE || offerLetterData.stateid;
 
-  state=state[0].VALUE||offerLetterData.stateid;
-
-  let [country]=await pool.query(
-     `select VALUE from C_COUNTRY where ID=?`,[offerLetterData.countryid]
+  let [country] = await pool.query(
+    `select VALUE from C_COUNTRY where ID=?`, [offerLetterData.countryid]
   );
-
-  country=country[0].VALUE||offerLetterData.countryid;
-
+  country = country[0].VALUE || offerLetterData.countryid;
 
   // Fetch job title name for finalised_jobtitle
   let finalisedJobTitleName = offerLetterData.finalised_jobtitle;
@@ -229,7 +225,6 @@ async function generateOfferLetterPdf(offerLetterData, details, orgid, employeen
   drawParagraph(`We are genuinely excited about you joining ${orgname}. We look forward to a long, enjoyable, challenging, and mutually beneficial relationship with you.`);
   y -= 20;
   drawLine(`Sincerely,`, fontSize, true);
- 
 
   if (signatureImage) {
     const signatureWidth = 50;
@@ -275,15 +270,15 @@ export async function fetchalldetails(interviewid) {
     const pool = await DBconnection();
     const [mainRows] = await pool.query(
       `SELECT 
-        a.orgid, a.interview_id, a.application_id, a.start_date, a.start_am_pm, a.start_time,
-        a.end_date, a.end_am_pm, a.end_time, a.meeting_link, b.applieddate, b.jobid, b.status,
+        a.orgid, a.interview_id, a.application_id, b.applieddate, b.jobid, b.status,
         b.resumepath, b.salary_expected, b.custom_salary_by_interviewer, b.offerletter_timestamp,
         c.first_name, c.last_name, c.email, c.mobilenumber, c.dateofbirth, c.addresslane1,
-        c.addresslane2, c.zipcode, c.gender, e.job_title, e.min_salary, e.max_salary, e.level
+        c.addresslane2, c.zipcode, c.gender, e.display_job_name,e.expected_job_title,z.job_title,z.max_salary,z.min_salary,z.level
       FROM interview_table AS a
       JOIN applications AS b ON a.application_id = b.applicationid
       JOIN candidate AS c ON b.candidate_id = c.cid
-      JOIN org_jobtitles AS e ON b.jobid = e.job_title_id
+      JOIN externaljobs AS e ON b.jobid = e.jobid
+      JOIN org_jobtitles as z on z.job_title_id=e.expected_job_title
       WHERE a.interview_id = ?`,
       [interviewid]
     );
@@ -314,6 +309,49 @@ export async function fetchalldetails(interviewid) {
       [mainRows[0]?.application_id, mainRows[0]?.orgid]
     );
 
+    // Fetch rounds and their panel members
+    const [roundsRows] = await pool.query(
+      `SELECT r.*, ip.empid AS panel_empid, ip.email, ip.is_he_employee
+       FROM C_INTERVIEW_ROUNDS r
+       LEFT JOIN interview_panel ip ON r.Roundid = ip.Roundid AND r.orgid = ip.orgid AND r.interview_id = ip.interview_id
+       WHERE r.interview_id = ? AND r.orgid = ?`,
+      [interviewid, mainRows[0].orgid]
+    );
+
+    const rounds = roundsRows.reduce((acc, row) => {
+      let round = acc.find(r => r.Roundid === row.Roundid);
+      if (!round) {
+        round = {
+          Roundid: row.Roundid,
+          orgid: row.orgid,
+          interview_id: row.interview_id,
+          application_id: row.application_id,
+          RoundNo: row.RoundNo,
+          marks: row.marks,
+          comments: row.comments,
+          status: row.status,
+          start_date: row.start_date,
+          start_am_pm: row.start_am_pm,
+          end_date: row.end_date,
+          end_am_pm: row.end_am_pm,
+          start_time: row.start_time,
+          end_time: row.end_time,
+          meeting_link: row.meeting_link,
+          Confirm: row.Confirm,
+          panelMembers: [],
+        };
+        acc.push(round);
+      }
+      if (row.panel_empid) {
+        round.panelMembers.push({
+          empid: row.panel_empid,
+          email: row.email,
+          is_he_employee:row.is_he_employee,
+        });
+      }
+      return acc;
+    }, []);
+
     return {
       success: true,
       data: {
@@ -323,6 +361,7 @@ export async function fetchalldetails(interviewid) {
           ...offerRows[0],
           finalised_roleids: roleRows.map(row => row.roleid),
         } : null,
+        rounds: rounds,
       },
     };
   } catch (error) {
@@ -428,15 +467,15 @@ export async function saveOfferLetter(applicationid, offerLetterData, orgid, det
       const normalizedApplicationId = applicationid;
 
       // Check if offer letter has been sent
-      const [existingOffer] = await connection.query(
-        'SELECT offer_letter_sent FROM offerletters WHERE applicationid = ?',
-        [normalizedApplicationId]
-      );
+      // const [existingOffer] = await connection.query(
+      //   'SELECT offer_letter_sent FROM offerletters WHERE applicationid = ?',
+      //   [normalizedApplicationId]
+      // );
 
-      if (existingOffer.length > 0 && existingOffer[0].offer_letter_sent === 1) {
-        await connection.rollback();
-        return { success: false, error: 'Cannot update: Offer letter has already been sent.' };
-      }
+      // if (existingOffer.length > 0 && existingOffer[0].offer_letter_sent === 1) {
+      //   await connection.rollback();
+      //   return { success: false, error: 'Cannot update: Offer letter has already been sent.' };
+      // }
 
       // Validate roleids
       const roleids = [...new Set(offerLetterData.finalised_roleids || [])]; // Deduplicate
@@ -482,10 +521,10 @@ export async function saveOfferLetter(applicationid, offerLetterData, orgid, det
 
       let timestamp = new Date().toISOString().replace(/[-:T.]/g, '');
       timestamp = new Date().toLocaleDateString('en-US', {
-      month: '2-digit',
-      day: '2-digit',
-      year: 'numeric'
-    }).replace(/\//g, '-'); 
+        month: '2-digit',
+        day: '2-digit',
+        year: 'numeric'
+      }).replace(/\//g, '-');
       const offerletterPath = path.join(
         process.cwd(),
         'public',

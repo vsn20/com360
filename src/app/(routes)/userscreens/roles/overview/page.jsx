@@ -21,6 +21,7 @@ export default async function AddRolePage({ searchParams }) {
 
   let orgid = null;
   let currentRole = null;
+  let noofrows=null;
   try {
     const cookieStore = cookies();
     const token = cookieStore.get('jwt_token')?.value;
@@ -51,6 +52,14 @@ export default async function AddRolePage({ searchParams }) {
       } else {
         console.log('No active role found for empid:', decoded.empid);
       }
+
+      const[noofrowsintable]=await pool.query(
+        `select id,Name from generic_values where g_id=17 and orgid=? and isactive=1 LIMIT 1`,
+        [orgid]
+      );
+      noofrows=noofrowsintable[0];
+      console.log("ssssssssssssssssssssssss",noofrows);
+
     }
     catch(error){
       console.error('Error decoding token or fetching role:', error);
@@ -69,6 +78,7 @@ export default async function AddRolePage({ searchParams }) {
     <Overview
       currentRole={currentRole}
       orgid={orgid}
+      noofrows={noofrows}
       error={error}
     />
   );

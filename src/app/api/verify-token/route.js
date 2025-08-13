@@ -14,7 +14,7 @@ export async function POST(request) {
 
     // Verify the JWT token
     const decoded = jwt.verify(token, JWT_SECRET);
-    console.log("Token verified in API, decoded payload:", decoded);
+   // console.log("Token verified in API, decoded payload:", decoded);
 
     const { empid, orgid } = decoded;
     if (!empid || !orgid) {
@@ -254,7 +254,7 @@ export async function POST(request) {
     }
 
     accessibleItems.sort((a, b) => a.priority - b.priority);
-    console.log("Accessible items for user:", JSON.stringify(accessibleItems, null, 2));
+   // console.log("Accessible items for user:", JSON.stringify(accessibleItems, null, 2));
 
     if (!pathname) {
       return NextResponse.json({ success: true, accessibleItems });

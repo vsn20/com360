@@ -52,7 +52,7 @@ export default async function ServiceRequestsPage() {
           [orgid]
         );
         [serviceRequests] = await pool.query(
-          'SELECT SR_NUM, SERVICE_NAME, STATUS_CD FROM C_SRV_REQ WHERE CREATED_BY = ? AND ORG_ID = ?',
+          'SELECT SR_NUM, SERVICE_NAME, STATUS_CD,PRIORITY_CD FROM C_SRV_REQ WHERE CREATED_BY = ? AND ORG_ID = ?',
           [empid, orgid]
         );
       } else {

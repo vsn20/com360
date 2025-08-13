@@ -1,6 +1,5 @@
 'use client'
 import React, { useEffect, useState } from 'react'
-import { Filter } from '@/app/serverActions/Jobs/OfferLetterGeneration/OfferLetter';
 import Details from './Details';
 import { useRouter } from 'next/navigation';
 const OfferGenerating = ({empid,orgid,interviewdetails,acceptingtime,handlebAck}) => {
@@ -15,15 +14,7 @@ const OfferGenerating = ({empid,orgid,interviewdetails,acceptingtime,handlebAck}
 
 
   useEffect(()=>{
-    const filter=async()=>{
-         const acceptingTimeValue = Array.isArray(acceptingtime) && acceptingtime.length > 0 ? acceptingtime[0].Name : '48';
-      const res=await Filter(interviewdetails,acceptingTimeValue);
-      console.log(res.f);
-      if(res.success){
-          setfiletered(res.f)
-      }
-    }
-    filter();
+    setfiletered(interviewdetails);
   },[interviewdetails,orgid]);
 
   const selectid=(id)=>{

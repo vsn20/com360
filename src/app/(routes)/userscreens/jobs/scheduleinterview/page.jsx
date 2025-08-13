@@ -31,19 +31,19 @@ const page = async () => {
         orgid = decoded.orgid;
         empid = decoded.empid;
         [applieddetails] = await pool.query(
-          'SELECT a.applicationid, a.applieddate, a.jobid, o.job_title, a.status, a.candidate_id, c.first_name, c.last_name, a.resumepath FROM applications a LEFT JOIN org_jobtitles o ON a.jobid = o.job_title_id AND a.orgid = o.orgid LEFT JOIN candidate c ON a.candidate_id = c.cid WHERE a.orgid = ? AND status = ?',
+          'SELECT a.applicationid, a.applieddate, a.jobid, o.display_job_name, a.status, a.candidate_id, c.first_name, c.last_name, a.resumepath FROM applications a LEFT JOIN externaljobs o ON a.jobid = o.jobid AND a.orgid = o.orgid LEFT JOIN candidate c ON a.candidate_id = c.cid WHERE a.orgid = ? AND status = ?',
           [orgid, 'applied']
         );
 
         [scheduledetails] = await pool.query(
-          'SELECT a.applicationid, a.applieddate, a.jobid, o.job_title, a.status, a.candidate_id, c.first_name, c.last_name, a.resumepath FROM applications a LEFT JOIN org_jobtitles o ON a.jobid = o.job_title_id AND a.orgid = o.orgid LEFT JOIN candidate c ON a.candidate_id = c.cid WHERE a.orgid = ? AND status != ?',
+          'SELECT a.applicationid, a.applieddate, a.jobid, o.display_job_name, a.status, a.candidate_id, c.first_name, c.last_name, a.resumepath FROM applications a LEFT JOIN externaljobs o ON a.jobid = o.jobid AND a.orgid = o.orgid LEFT JOIN candidate c ON a.candidate_id = c.cid WHERE a.orgid = ? AND status != ?',
           [orgid, 'applied']
         );
         [time] = await pool.query(
           'SELECT id, Name FROM generic_values WHERE g_id = 15 AND orgid = ? AND isactive = 1',
           [orgid]
         );
-        console.log(scheduledetails);
+        console.log(applieddetails);
       }
     }
   } catch (error) {

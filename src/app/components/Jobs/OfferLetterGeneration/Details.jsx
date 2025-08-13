@@ -44,7 +44,7 @@ const MultiSelectDropdown = ({ options, selectedValues, onChange, name, required
                       handleSelect(value);
                     }}
                   >
-                    ×
+                    x
                   </button>
                 </span>
               );
@@ -175,21 +175,20 @@ const Details = ({ selectid, orgid, empid, handleback }) => {
   const handleCopy = () => {
     setOfferLetterData((prev) => ({
       ...prev,
-      finalised_jobtitle: details.jobid || '', // Use jobid (job_title_id)
+      finalised_jobtitle: details.expected_job_title || '', // Use jobid (job_title_id)
       // adress_lane_1: details.addresslane1 || '',
       // adress_lane_2: details.addresslane2 || '',
       // zipcode: details.zipcode || '',
     }));
   };
 
-
   const getdisplayprojectid = (prjid) => {
-  return prjid.split('-')[1] || prjid;
-};
+    return prjid.split('-')[1] || prjid;
+  };
 
- const getdisplayid = (prjid) => {
-  return prjid.split('_')[1] || prjid;
-};
+  const getdisplayid = (prjid) => {
+    return prjid.split('_')[1] || prjid;
+  };
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -608,30 +607,6 @@ const Details = ({ selectid, orgid, empid, handleback }) => {
                 </div>
                 <div className="details-row">
                   <div className="details-group">
-                    <label>Interview Start Date</label>
-                    <p>{formatDate(details.start_date)}</p>
-                  </div>
-                  <div className="details-group">
-                    <label>Interview Start Time</label>
-                    <p>{details.start_time && details.start_am_pm ? `${details.start_time} ${details.start_am_pm}` : '-'}</p>
-                  </div>
-                </div>
-                <div className="details-row">
-                  <div className="details-group">
-                    <label>Interview End Date</label>
-                    <p>{formatDate(details.end_date)}</p>
-                  </div>
-                  <div className="details-group">
-                    <label>Interview End Time</label>
-                    <p>{details.end_time && details.end_am_pm ? `${details.end_time} ${details.end_am_pm}` : '-'}</p>
-                  </div>
-                </div>
-                <div className="details-row">
-                  <div className="details-group">
-                    <label>Meeting Link</label>
-                    <p>{details.meeting_link || '-'}</p>
-                  </div>
-                  <div className="details-group">
                     <label>Applied Date</label>
                     <p>{formatDate(details.applieddate)}</p>
                   </div>
@@ -647,10 +622,10 @@ const Details = ({ selectid, orgid, empid, handleback }) => {
                       <span className="no-resume-text">No Resume</span>
                     )}
                   </div>
-                  <div className="details-group">
+                  {/* <div className="details-group">
                     <label>Offer Letter Timestamp</label>
                     <p>{formatDate(details.offerletter_timestamp)}</p>
-                  </div>
+                  </div> */}
                 </div>
                 <div className="details-row">
                   <div className="details-group">
@@ -672,6 +647,77 @@ const Details = ({ selectid, orgid, empid, handleback }) => {
                         View Offer Letter
                       </a>
                     </div>
+                  </div>
+                )}
+                {details.rounds && details.rounds.length > 0 && (
+                  <div>
+                    <h4>Rounds</h4>
+                    {details.rounds.map((round, index) => (
+                      <div key={`${round.Roundid}-${index}`} className="round-block">
+                        <h5>Round {round.RoundNo || index + 1}</h5>
+                        <div className="details-row">
+                          <div className="details-group">
+                            <label>Start Date</label>
+                            <p>{formatDate(round.start_date)}</p>
+                          </div>
+                          <div className="details-group">
+                            <label>Start Time</label>
+                            <p>{round.start_time && round.start_am_pm ? `${round.start_time} ${round.start_am_pm}` : '-'}</p>
+                          </div>
+                        </div>
+                        <div className="details-row">
+                          <div className="details-group">
+                            <label>End Date</label>
+                            <p>{formatDate(round.end_date)}</p>
+                          </div>
+                          <div className="details-group">
+                            <label>End Time</label>
+                            <p>{round.end_time && round.end_am_pm ? `${round.end_time} ${round.end_am_pm}` : '-'}</p>
+                          </div>
+                        </div>
+                        <div className="details-row">
+                          <div className="details-group">
+                            <label>Meeting Link</label>
+                            <p>{round.meeting_link || '-'}</p>
+                          </div>
+                        </div>
+                        <div className="details-row">
+                          <div className="details-group">
+                            <label>Marks</label>
+                            <p>{round.marks || '-'}</p>
+                          </div>
+                          <div className="details-group">
+                            <label>Comments</label>
+                            <p>{round.comments || '-'}</p>
+                          </div>
+                          <div className="details-group">
+                            <label>Status</label>
+                            <p>{round.status || '-'}</p>
+                          </div>
+                        </div>
+                        {round.panelMembers && round.panelMembers.length > 0 && (
+                          <div>
+                            <h6>Panel Members</h6>
+                            {round.panelMembers.map((member, memberIndex) => (
+                              <div key={`${round.Roundid}-member-${memberIndex}`} className="details-row">
+                                <div className="details-group">
+                                  <label>Employee ID</label>
+                                  <p>{member.empid ? getdisplayid(member.empid) : '-'}</p>
+                                </div>
+                                <div className="details-group">
+                                  <label>Email</label>
+                                  <p>{member.email || '-'}</p>
+                                </div>
+                                <div className="details-group">
+                                  <label>Is Employee</label>
+                                  <p>{member.is_he_employee === 1 ? 'Yes' : 'No'}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
                 <div className="details-buttons">
@@ -699,30 +745,6 @@ const Details = ({ selectid, orgid, empid, handleback }) => {
                 <p>{details.zipcode || '-'}</p>
               </div>
             </div>
-          </div>
-
-          <div className="details-block">
-            <h3>Interview Panel</h3>
-            {details.panel_members && details.panel_members.length > 0 ? (
-              details.panel_members.map((member, index) => (
-                <div className="details-row" key={index}>
-                  <div className="details-group">
-                    <label>Panel Member Employee Id</label>
-                    <p>{member?.is_he_employee ?`${getdisplayid(member?.empid)}` :'-'}</p>
-                  </div>
-                  <div className="details-group">
-                    <label>Panel Member Email</label>
-                    <p>{member.email || '-'}</p>
-                  </div>
-                  <div className="details-group">
-                    <label>Is Employee</label>
-                    <p>{member.is_he_employee ? 'Yes' : 'No'}</p>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p>No panel members found.</p>
-            )}
           </div>
         </div>
       )}

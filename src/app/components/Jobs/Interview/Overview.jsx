@@ -1,12 +1,13 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Remaining from './Remaining';
 import Confirm from './Confirm';
-import { fetchDetailsById, update } from '@/app/serverActions/Jobs/Interview/Overview';
+import { fetchDetailsById, update, fetchRoundsByInterviewId } from '@/app/serverActions/Jobs/Interview/Overview';
 import './interview.css';
 
-const Overview = ({ orgid, empid, interviewdetails, time, acceptingtime, interview_completed_details }) => {
+const Overview = ({ orgid, empid, interviewdetails, time, acceptingtime, editing }) => {
   const router = useRouter();
   const params = useSearchParams();
   const [confirm, setisconfirm] = useState(false);
@@ -15,7 +16,7 @@ const Overview = ({ orgid, empid, interviewdetails, time, acceptingtime, intervi
   const [selected, setSelected] = useState(false);
   const [iddetails, setIddetails] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({ status: '' });
+  const [rounds, setRounds] = useState([]);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -85,17 +86,29 @@ const Overview = ({ orgid, empid, interviewdetails, time, acceptingtime, intervi
     setError('');
     try {
       const acceptingTimeValue = Array.isArray(acceptingtime) && acceptingtime.length > 0 ? acceptingtime[0].Name : '48';
-      console.log("valiueeeeeeeeeeeeeeee", acceptingTimeValue);
       const result = await fetchDetailsById({ orgid, interview_id, acceptingtime: acceptingTimeValue, empid });
       if (result.success && result.interview) {
         setIddetails(result.interview);
-        setFormData({ status: result.interview.status || '' });
         setCanEdit(result.canEdit);
-        if (!result.canEdit) {
-          setError('Cannot edit the form as the time limit has exceeded');
-        }
         setSelectedid(interview_id);
         setSelected(true);
+        const roundsResult = await fetchRoundsByInterviewId({ orgid, interview_id, empid, editing });
+        if (roundsResult.success) {
+          // Ensure each round has start_date, start_time, etc., or use defaults
+          const updatedRounds = roundsResult.rounds.map(round => ({
+            ...round,
+            start_date: round.start_date || '',
+            start_time: round.start_time || '',
+            end_date: round.end_date || '',
+            end_time: round.end_time || '',
+            meeting_link: round.meeting_link || '',
+            start_am_pm: round.start_am_pm || 'AM',
+            end_am_pm: round.end_am_pm || 'AM',
+          }));
+          setRounds(updatedRounds);
+        } else {
+          setError(roundsResult.error || 'Failed to fetch rounds');
+        }
       } else {
         setError(result.error || 'No interview details found');
       }
@@ -107,22 +120,81 @@ const Overview = ({ orgid, empid, interviewdetails, time, acceptingtime, intervi
     }
   };
 
-  const handleEdit = () => {
-    console.log('handleEdit called');
+  const handleEdit = (roundIndex) => {
     if (!canEdit) {
       setError('Cannot edit: Time window for editing has expired');
       return;
     }
-    setTimeout(() => {
-      setIsEditing(true);
-      setError('');
-      setSuccess('');
-    }, 0);
+    setRounds(prevRounds => {
+      const updatedRounds = [...prevRounds];
+      updatedRounds[roundIndex] = { ...updatedRounds[roundIndex], isEditing: true };
+      return updatedRounds;
+    });
+    setError('');
+    setSuccess('');
   };
 
-  const handleStatusChange = (e) => {
-    setFormData({ status: e.target.value });
+  const handleRoundChange = (index, field, value) => {
+    setRounds(prevRounds => {
+      const updatedRounds = [...prevRounds];
+      updatedRounds[index] = { ...updatedRounds[index], [field]: value };
+      return updatedRounds;
+    });
+  };
+
+  const handleSaveRound = async (roundIndex) => {
+    setIsLoading(true);
+    try {
+      const updatedRounds = [...rounds];
+      const roundToSave = updatedRounds[roundIndex];
+      const result = await update({
+        orgid,
+        empid,
+        interview_id: selectedid,
+        status: iddetails.status,
+        acceptingtime: Array.isArray(acceptingtime) && acceptingtime.length > 0 ? acceptingtime[0].Name : '48',
+        rounds: [roundToSave], // Save only the edited round
+      });
+      if (result.success) {
+        setSuccess('Round updated successfully');
+        setRounds(prevRounds => {
+          const newRounds = [...prevRounds];
+          newRounds[roundIndex] = { ...newRounds[roundIndex], isEditing: false };
+          return newRounds;
+        });
+        setTimeout(() => setSuccess(''), 2000);
+        const roundsResult = await fetchRoundsByInterviewId({ orgid, interview_id: selectedid, empid, editing });
+        if (roundsResult.success) {
+          setRounds(roundsResult.rounds.map(round => ({
+            ...round,
+            start_date: round.start_date || '',
+            start_time: round.start_time || '',
+            end_date: round.end_date || '',
+            end_time: round.end_time || '',
+            meeting_link: round.meeting_link || '',
+            start_am_pm: round.start_am_pm || 'AM',
+            end_am_pm: round.end_am_pm || 'AM',
+          })));
+        }
+      } else {
+        setError(result.error || 'Failed to update round');
+      }
+    } catch (error) {
+      console.error('Error updating round:', error);
+      setError('Error updating round');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCancelRound = (roundIndex) => {
+    setRounds(prevRounds => {
+      const newRounds = [...prevRounds];
+      newRounds[roundIndex] = { ...newRounds[roundIndex], isEditing: false };
+      return newRounds;
+    });
     setError('');
+    setSuccess('');
   };
 
   const handleViewResume = () => {
@@ -133,43 +205,23 @@ const Overview = ({ orgid, empid, interviewdetails, time, acceptingtime, intervi
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    console.log('handleSubmit called', { isEditing, formData });
-    if (!isEditing) {
-      console.warn('Form submission ignored: Not in editing mode');
-      return;
-    }
-    if (!formData.status) {
-      setError('Please select a status');
-      return;
-    }
-    setIsLoading(true);
-    try {
-      const acceptingTimeValue = Array.isArray(acceptingtime) && acceptingtime.length > 0 ? acceptingtime[0].Name : '48';
-      const result = await update({
-        orgid,
-        empid,
-        interview_id: selectedid,
-        status: formData.status,
-        acceptingtime: acceptingTimeValue,
-      });
-      if (result.success) {
-        setSuccess('Interview status updated successfully');
-        setIsEditing(false);
-        setTimeout(() => {
-          setSuccess('');
-        }, 2000);
-      } else {
-        setError(result.error || 'Failed to update interview status');
-      }
-    } catch (error) {
-      console.error('Error updating status:', error);
-      setError('Error updating interview status');
-    } finally {
-      setIsLoading(false);
-    }
+  const getdisplayprojectid = (prjid) => {
+    return prjid.split('-')[1] || prjid;
   };
+
+  const canEditRound = (round) => {
+    return editing === 1 || (editing === 0 && round.panelMembers.some(member => member.empid === empid));
+  };
+
+  const uniqueInterviewDetails = useMemo(() => {
+    const seen = new Set();
+    return interviewdetails.filter(detail => {
+      const key = detail.interview_id;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [interviewdetails]);
 
   return (
     <div className="employee-details-container">
@@ -196,46 +248,38 @@ const Overview = ({ orgid, empid, interviewdetails, time, acceptingtime, intervi
         />
       )}
       {!remaining && !confirm && !selected && (
-        <>
-          <button  onClick={handleconfirm}>Confirm Interviews</button>
-          <button  onClick={handleremianing}>Remaining Interview</button>
-          <div>
-            <table className="employee-table">
-              <thead>
-                <tr>
-                  <th>Application ID</th>
-                  <th>Interview ID</th>
-                  <th>Applicant Name</th>
-                  <th>Job Title</th>
-                  <th>Status</th>
+        <div>
+          <h1>{editing ? 'All Interviews' : 'My Interviews'}</h1>
+          <table className="employee-table">
+            <thead>
+              <tr>
+                <th>Application ID</th>
+                <th>Interview ID</th>
+                <th>Applicant Name</th>
+                <th>JobID-Job Name</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {uniqueInterviewDetails.map((detail) => (
+                <tr key={detail.interview_id} onClick={() => fetchid(detail.interview_id)}>
+                  <td>{getdisplayprojectid(detail.applicationid)}</td>
+                  <td>{getdisplayprojectid(detail.interview_id)}</td>
+                  <td>{`${detail.first_name} ${detail.last_name}`}</td>
+                  <td>{`${getdisplayprojectid(detail.jobid)}-${detail.display_job_name}`}</td>
+                  <td>{detail.status}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {interview_completed_details.map((detail) => (
-                  <tr key={detail.interview_id} onClick={() => fetchid(detail.interview_id)}>
-                    <td>{detail.applicationid}</td>
-                    <td>{detail.interview_id}</td>
-                    <td>{`${detail.first_name} ${detail.last_name}`}</td>
-                    <td>{detail.job_title}</td>
-                    <td>{detail.status}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
       {!remaining && !confirm && selected && iddetails && (
         <div className="details-block">
-            <button onClick={handleback}>x</button>
+          <button onClick={handleback}>x</button>
           <h3>Interview Details (Interview ID: {iddetails.interview_id})</h3>
           <form
-            onSubmit={handleSubmit}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !isEditing) {
-                e.preventDefault();
-              }
-            }}
+            onSubmit={(e) => e.preventDefault()} // Disable global submit
           >
             <div className="form-row">
               <div className="form-group">
@@ -274,7 +318,7 @@ const Overview = ({ orgid, empid, interviewdetails, time, acceptingtime, intervi
                 <label>Job Title</label>
                 <input
                   type="text"
-                  value={iddetails.job_title || '-'}
+                  value={iddetails.display_job_name || '-'}
                   disabled
                   readOnly
                   className="bg-gray-100"
@@ -282,60 +326,6 @@ const Overview = ({ orgid, empid, interviewdetails, time, acceptingtime, intervi
               </div>
             </div>
             <div className="form-row">
-              <div className="form-group">
-                <label>Start Date</label>
-                <input
-                  type="text"
-                  value={formatDate(iddetails.start_date) || '-'}
-                  disabled
-                  readOnly
-                  className="bg-gray-100"
-                />
-              </div>
-              <div className="form-group">
-                <label>Start Time</label>
-                <input
-                  type="text"
-                  value={formatTime(iddetails.start_time, iddetails.start_am_pm, iddetails.start_date, iddetails.end_date, iddetails.start_am_pm) || '-'}
-                  disabled
-                  readOnly
-                  className="bg-gray-100"
-                />
-              </div>
-            </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label>End Date</label>
-                <input
-                  type="text"
-                  value={formatDate(iddetails.end_date) || '-'}
-                  disabled
-                  readOnly
-                  className="bg-gray-100"
-                />
-              </div>
-              <div className="form-group">
-                <label>End Time</label>
-                <input
-                  type="text"
-                  value={formatTime(iddetails.end_time, iddetails.end_am_pm, iddetails.start_date, iddetails.end_date, iddetails.start_am_pm) || '-'}
-                  disabled
-                  readOnly
-                  className="bg-gray-100"
-                />
-              </div>
-            </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label>Meeting Link</label>
-                <input
-                  type="text"
-                  value={formatMeetingLink(iddetails.meeting_link) || '-'}
-                  disabled
-                  readOnly
-                  className="bg-gray-100"
-                />
-              </div>
               <div className="form-group">
                 <label>Email</label>
                 <input
@@ -365,64 +355,144 @@ const Overview = ({ orgid, empid, interviewdetails, time, acceptingtime, intervi
                 )}
               </div>
               <div className="form-group">
-                <label>Status*</label>
-                {isEditing ? (
-                  <select
-                    name="status"
-                    value={formData.status}
-                    onChange={handleStatusChange}
-                    disabled={!canEdit || !isEditing}
-                    required
-                  >
-                    <option value="">Select Status</option>
-                    <option value="offerletter-processing">Offerletter Processing</option>
-                    <option value="interview-rejected">Interview Rejected</option>
-                    <option value="interview-hold">Interview Hold</option>
-                  </select>
-                ) : (
-                  <input
-                    type="text"
-                    value={iddetails.status || '-'}
-                    disabled
-                    readOnly
-                    className="bg-gray-100"
-                  />
-                )}
+                <label>Application Status</label>
+                <input
+                  type="text"
+                  value={iddetails.status || '-'}
+                  disabled
+                  readOnly
+                  className="bg-gray-100"
+                />
               </div>
             </div>
-            <div className="form-buttons">
-              {isEditing ? (
-                <>
-                  <button
-                    type="submit"
-                    className="save-button"
-                    disabled={isLoading || !canEdit || !isEditing}
-                  >
-                    {isLoading ? 'Saving...' : 'Save'}
-                  </button>
-                  <button
-                    type="button"
-                    className="cancel-button"
-                    onClick={() => setIsEditing(false)}
-                    disabled={isLoading || !isEditing}
-                  >
-                    Cancel
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    className="edit-button"
-                    onClick={handleEdit}
-                    disabled={!canEdit}
-                  >
-                    Edit
-                  </button>
-                  
-                </>
-              )}
-            </div>
+            {rounds.length > 0 && (
+              <div>
+                <h4>Rounds</h4>
+                {rounds.map((round, index) => (
+                  <div key={`${round.Roundid}-${index}`} className="round-block">
+                    <h5>Round {round.RoundNo || index + 1}</h5>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>Start Date</label>
+                        <input
+                          type="date"
+                          value={formatDate(round.start_date)}
+                          onChange={(e) => handleRoundChange(index, 'start_date', e.target.value)}
+                          disabled
+                          readOnly
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Start Time</label>
+                        <input
+                          type="text"
+                          value={formatTime(round.start_time, round.start_am_pm, round.start_date, round.end_date, round.start_am_pm) || ''}
+                          onChange={(e) => handleRoundChange(index, 'start_time', e.target.value.split(' ')[0])}
+                          disabled
+                          readOnly
+                        />
+                      </div>
+                    </div>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>End Date</label>
+                        <input
+                          type="date"
+                          value={formatDate(round.end_date)}
+                          onChange={(e) => handleRoundChange(index, 'end_date', e.target.value)}
+                          disabled
+                          readOnly
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>End Time</label>
+                        <input
+                          type="text"
+                          readOnly
+                          value={formatTime(round.end_time, round.end_am_pm, round.start_date, round.end_date, round.start_am_pm) || ''}
+                          onChange={(e) => handleRoundChange(index, 'end_time', e.target.value.split(' ')[0])}
+                          disabled
+                        />
+                      </div>
+                    </div>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>Meeting Link</label>
+                        <input
+                          type="text"
+                          value={formatMeetingLink(round.meeting_link) || "-"}
+                          onChange={(e) => handleRoundChange(index, 'meeting_link', e.target.value)}
+                          disabled={!round.isEditing || !canEditRound(round)}
+                        />
+                      </div>
+                    </div>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>Marks</label>
+                        <input
+                          type="number"
+                          value={round.marks || ''}
+                          onChange={(e) => handleRoundChange(index, 'marks', e.target.value)}
+                          disabled={!round.isEditing || !canEditRound(round)}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Comments</label>
+                        <input
+                          type="text"
+                          value={round.comments || ''}
+                          onChange={(e) => handleRoundChange(index, 'comments', e.target.value)}
+                          disabled={!round.isEditing || !canEditRound(round)}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Round Status</label>
+                        <select
+                          value={round.status || ''}
+                          onChange={(e) => handleRoundChange(index, 'status', e.target.value)}
+                          disabled={!round.isEditing || !canEditRound(round)}
+                        >
+                          <option value="">Select Status</option>
+                          <option value="Accepted">Accepted</option>
+                          <option value="Rejected">Rejected</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="form-buttons">
+                      {round.isEditing ? (
+                        <>
+                          <button
+                            type="button"
+                            className="save-button"
+                            onClick={() => handleSaveRound(index)}
+                            disabled={isLoading || !canEditRound(round)}
+                          >
+                            {isLoading ? 'Saving...' : 'Save'}
+                          </button>
+                          <button
+                            type="button"
+                            className="cancel-button"
+                            onClick={() => handleCancelRound(index)}
+                            disabled={isLoading}
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          className="edit-button"
+                          onClick={() => handleEdit(index)}
+                          disabled={!canEdit || !canEditRound(round)}
+                        >
+                          Edit
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </form>
         </div>
       )}
