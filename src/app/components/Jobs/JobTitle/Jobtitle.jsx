@@ -243,6 +243,7 @@ const Jobtitle = ({ orgid, empid, jobtitles }) => {
                     
                   </div>
                 )}
+                <label>Jobs Per Page</label>
                 <input
                       type="text"
                       value={jobsPerPageInput}

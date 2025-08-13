@@ -63,7 +63,7 @@ export async function fetchreqbyid() {
     );
     }else{
       [rows] = await pool.query(
-      'SELECT SR_NUM, SERVICE_NAME, STATUS_CD, CREATED_BY FROM C_SRV_REQ WHERE ASSIGNED_TO = ? AND ORG_ID = ?',
+      'SELECT SR_NUM, SERVICE_NAME, STATUS_CD, CREATED_BY,PRIORITY_CD  FROM C_SRV_REQ WHERE ASSIGNED_TO = ? AND ORG_ID = ?',
       [empid, orgid]
     );
 

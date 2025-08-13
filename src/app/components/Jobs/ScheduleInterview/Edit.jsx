@@ -268,6 +268,17 @@ const Edit = ({ id, orgid, empid, handleback, time, status }) => {
   };
 
   const handleDeleteRound = (roundIndex) => {
+    const round = rounds[roundIndex];
+   // const hasData = round.marks !== '' || round.comments !== '' || round.status !== 'scheduled';
+   const hasData=true;
+    if (hasData) {
+      const confirmDelete = window.confirm(
+        'This round contains marks, comments, or a non-scheduled status. Deleting it will permanently remove this data. Are you sure you want to proceed?'
+      );
+      if (!confirmDelete) {
+        return;
+      }
+    }
     setRounds((prev) => prev.filter((_, i) => i !== roundIndex));
     setPanelMemberForms(prev => {
       const newForms = { ...prev };

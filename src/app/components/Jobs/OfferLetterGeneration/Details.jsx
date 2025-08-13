@@ -172,13 +172,33 @@ const Details = ({ selectid, orgid, empid, handleback }) => {
     setOfferLetterData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const salarycopy=()=>{
+    if(parseInt(details.salary_expected)<parseInt(details.max_salary,10)){
+      return true;
+    }else{
+      return false
+    }
+  }
+
   const handleCopy = () => {
+    let salary;
+    if(!salarycopy()){
+           salary=details.max_salary;
+    }else{
+      salary=details.salary_expected;
+    }
     setOfferLetterData((prev) => ({
       ...prev,
       finalised_jobtitle: details.expected_job_title || '', // Use jobid (job_title_id)
-      // adress_lane_1: details.addresslane1 || '',
-      // adress_lane_2: details.addresslane2 || '',
-      // zipcode: details.zipcode || '',
+       adress_lane_1: details.a1 || '',
+       adress_lane_2: details.a2 || '',
+       zipcode: details.z1 || '',
+       stateid:details.s1||'',
+       countryid:details.c1||'',
+       custom_state_name:details.s2||'',
+       finalised_department:details.d1||'',
+       finalised_jobtype:details.job1||'',
+      finalised_salary:salary||','    
     }));
   };
 
@@ -196,11 +216,11 @@ const Details = ({ selectid, orgid, empid, handleback }) => {
     setError(null);
     setSuccess(null);
     try {
-      if (details?.offerletter?.offer_letter_sent === 1) {
-        setError('Cannot save: Offer letter has already been sent.');
-        setIsLoading(false);
-        return;
-      }
+      // if (details?.offerletter?.offer_letter_sent === 1) {
+      //   setError('Cannot save: Offer letter has already been sent.');
+      //   setIsLoading(false);
+      //   return;
+      // }
 
       if (formData.status === 'offerletter-generated') {
         const offerLetterResult = await saveOfferLetter(details.application_id, offerLetterData, orgid, details);
@@ -234,10 +254,10 @@ const Details = ({ selectid, orgid, empid, handleback }) => {
   };
 
   const handleEditStatus = () => {
-    if (details?.offerletter?.offer_letter_sent === 1) {
-      setError('Cannot edit: Offer letter has already been sent.');
-      return;
-    }
+    // if (details?.offerletter?.offer_letter_sent === 1) {
+    //   setError('Cannot edit: Offer letter has already been sent.');
+    //   return;
+    // }
     setEditingStatus(true);
     setError(null);
   };
@@ -316,7 +336,17 @@ const Details = ({ selectid, orgid, empid, handleback }) => {
                 <label>Gender</label>
                 <p>{details.gender || '-'}</p>
               </div>
+              
             </div>
+
+            <div className="details-row">
+              <div className="details-group">
+                <label>Job Name</label>
+                <p>{details.display_job_name || '-'}</p>
+              </div>
+              
+            </div>
+            
           </div>
 
           <div className="details-block">
@@ -380,6 +410,70 @@ const Details = ({ selectid, orgid, empid, handleback }) => {
                         <input
                           type="text"
                           value={details.level || ''}
+                          disabled
+                        />
+                      </div>
+                      <div className="form-group">
+                       <label>Expected Department</label>
+                        <input
+                          type="text"
+                          value={details.departmentname || ''}
+                          disabled
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Expected jobtype</label>
+                        <input
+                          type="text"
+                          value={details.jobtypename || ''}
+                          disabled
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Address Lane-1</label>
+                        <input
+                          type="text"
+                          value={details.a1 || ''}
+                          disabled
+                        />
+                      </div>
+                        <div className="form-group">
+                        <label>Address Lane-2</label>
+                        <input
+                          type="text"
+                          value={details.a2 || ''}
+                          disabled
+                        />
+                      </div>
+                        <div className="form-group">
+                        <label>Zipcode</label>
+                        <input
+                          type="text"
+                          value={details.z1 || ''}
+                          disabled
+                        />
+                      </div>
+                        <div className="form-group">
+                        <label>State</label>
+                        <input
+                          type="text"
+                          value={details.statename || ''}
+                          disabled
+                        />
+                      </div>
+                        <div className="form-group">
+                        <label>Custom State Name</label>
+                        <input
+                          type="text"
+                          value={details.s2 || ''}
+                          disabled
+                        />
+                      </div>
+                        <div className="form-group">
+                        <label>Country</label>
+                        <input
+                          type="text"
+                          value={details.countryname || ''}
                           disabled
                         />
                       </div>

@@ -78,7 +78,7 @@ async function generateOfferLetterPdf(offerLetterData, details, orgid, employeen
     `select VALUE from C_STATE where ID=?`,
     [offerLetterData.stateid]
   );
-  state = state[0].VALUE || offerLetterData.stateid;
+  state = state[0].VALUE || offerLetterData.custom_state_name;
 
   let [country] = await pool.query(
     `select VALUE from C_COUNTRY where ID=?`, [offerLetterData.countryid]
@@ -273,7 +273,7 @@ export async function fetchalldetails(interviewid) {
         a.orgid, a.interview_id, a.application_id, b.applieddate, b.jobid, b.status,
         b.resumepath, b.salary_expected, b.custom_salary_by_interviewer, b.offerletter_timestamp,
         c.first_name, c.last_name, c.email, c.mobilenumber, c.dateofbirth, c.addresslane1,
-        c.addresslane2, c.zipcode, c.gender, e.display_job_name,e.expected_job_title,z.job_title,z.max_salary,z.min_salary,z.level
+        c.addresslane2, c.zipcode, c.gender, e.display_job_name,e.expected_job_title,e.addresslane1 as a1,e.addresslane2 as a2,e.zipcode as z1,e.stateid as s1,e.custom_state_name as s2,e.countryid as c1,e.expected_role as role1,e.expected_department as d1,e.job_type as job1,z.job_title,z.max_salary,z.min_salary,z.level
       FROM interview_table AS a
       JOIN applications AS b ON a.application_id = b.applicationid
       JOIN candidate AS c ON b.candidate_id = c.cid
@@ -291,6 +291,31 @@ export async function fetchalldetails(interviewid) {
       `SELECT empid, email, is_he_employee FROM interview_panel WHERE interview_id = ?`,
       [interviewid]
     );
+    
+    const [department]=await pool.query(
+      `SELECT name FROM org_departments WHERE id = ?  AND isactive = 1`,
+      [mainRows[0].d1]
+    );
+    const departmentname=department[0].name;
+
+
+     const [jobtype] = await pool.query('select Name from generic_values where id=?', [parseInt(mainRows[0].job1)]);
+  const jobtypename = jobtype[0].Name;
+
+
+
+    let [state] = await pool.query(
+    `select VALUE from C_STATE where ID=?`,
+    [mainRows[0].s1]
+  );
+ let statename = state[0].VALUE ||'';
+
+  let [country] = await pool.query(
+    `select VALUE from C_COUNTRY where ID=?`, [mainRows[0].c1]
+  );
+let  countryname = country[0].VALUE||'';
+
+    
 
     const [offerRows] = await pool.query(
       `SELECT 
@@ -356,6 +381,9 @@ export async function fetchalldetails(interviewid) {
       success: true,
       data: {
         ...mainRows[0],
+        departmentname,
+        jobtypename,
+        statename,countryname,
         panel_members: panelRows || [],
         offerletter: offerRows[0] ? {
           ...offerRows[0],
@@ -536,7 +564,7 @@ export async function saveOfferLetter(applicationid, offerLetterData, orgid, det
 
       const requiredFields = [
         'finalised_salary', 'finalised_jobtitle', 'finalised_department',
-        'finalised_jobtype', 'finalised_pay_term', 'reportto_empid', 'zipcode', 'stateid',
+        'finalised_jobtype', 'finalised_pay_term', 'reportto_empid', 'zipcode',
         'countryid', 'expected_join_date'
       ];
       if (requiredFields.some(field => !offerLetterData[field] && offerLetterData[field] !== '')) {
@@ -586,7 +614,7 @@ export async function saveOfferLetter(applicationid, offerLetterData, orgid, det
           [
             offerletter_url, offerLetterData.expected_join_date,
             offerLetterData.adress_lane_1 || '', offerLetterData.adress_lane_2 || '',
-            offerLetterData.zipcode, offerLetterData.stateid, offerLetterData.countryid,
+            offerLetterData.zipcode, offerLetterData.stateid||'', offerLetterData.countryid,
             offerLetterData.custom_state_name || '', offerLetterData.finalised_salary,
             offerLetterData.finalised_jobtitle, offerLetterData.finalised_department,
             offerLetterData.finalised_jobtype, offerLetterData.finalised_pay_term,

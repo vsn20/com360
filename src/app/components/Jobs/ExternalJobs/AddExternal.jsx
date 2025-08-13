@@ -20,8 +20,8 @@ const AddExternal = ({ orgid, empid, expectedjobtitles, expectedepartment, expec
     addressLane2: '',
     zipcode: '',
     stateId: '',
-    countryId: '',
-    customStateName: 'N/A',
+    countryId: '185', // Default to USA, consistent with Overview.jsx
+    customStateName: '',
     lastDateForApplication: '',
     active: '1',
   });
@@ -50,8 +50,8 @@ const AddExternal = ({ orgid, empid, expectedjobtitles, expectedepartment, expec
         addressLane2: '',
         zipcode: '',
         stateId: '',
-        countryId: '',
-        customStateName: 'N/A',
+        countryId: '185', // Reset to USA
+        customStateName: '',
         lastDateForApplication: '',
         active: '1',
       });
@@ -155,7 +155,6 @@ const AddExternal = ({ orgid, empid, expectedjobtitles, expectedepartment, expec
                 value={formData.noOfVacancies}
                 onChange={handleChange}
                 required
-               
               />
             </div>
           </div>
@@ -229,6 +228,7 @@ const AddExternal = ({ orgid, empid, expectedjobtitles, expectedepartment, expec
                 name="stateId"
                 value={formData.stateId}
                 onChange={handleChange}
+                disabled={formData.countryId !== '185'}
               >
                 <option value="">Select State</option>
                 {states.map((state) => (
@@ -245,7 +245,7 @@ const AddExternal = ({ orgid, empid, expectedjobtitles, expectedepartment, expec
                 name="customStateName"
                 value={formData.customStateName}
                 onChange={handleChange}
-                required
+                disabled={formData.countryId === '185'}
               />
             </div>
           </div>

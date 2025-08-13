@@ -101,7 +101,7 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
     adress_lane_2: '',
     zipcode: '',
     stateid: '',
-    countryid: '',
+    countryid: '185',
     custom_state_name: '',
     expected_join_date: '',
     url: '',
@@ -222,12 +222,36 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
     setGenerate(true);
   };
 
-  const handleCopy = () => {
+  const salarycopy=()=>{
+    if(parseInt(details.salary_expected)<parseInt(details.max_salary,10)){
+      return true;
+    }else{
+      return false
+    }
+  }
+
+   const handleCopy = () => {
+    let salary;
+    if(!salarycopy()){
+           salary=details.max_salary;
+    }else{
+      salary=details.salary_expected;
+    }
     setOfferLetterData((prev) => ({
       ...prev,
-      finalised_jobtitle: details?.expected_job_title || '',
+      finalised_jobtitle: details.expected_job_title || '', // Use jobid (job_title_id)
+       adress_lane_1: details.a1 || '',
+       adress_lane_2: details.a2 || '',
+       zipcode: details.z1 || '',
+       stateid:details.s1||'',
+       countryid:details.c1||'',
+       custom_state_name:details.s2||'',
+       finalised_department:details.d1||'',
+       finalised_jobtype:details.job1||'',
+      finalised_salary:salary||','    
     }));
   };
+
 
   const handleEditStatus = () => {
     // if (details?.status === 'offerletter-processing' && details?.offerletter?.offer_letter_sent === 1) {
@@ -379,6 +403,13 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
                 <p>{details?.gender || '-'}</p>
               </div>
             </div>
+            <div className="details-row">
+              <div className="details-group">
+                <label>Job Name</label>
+                <p>{details.display_job_name || '-'}</p>
+              </div>
+              
+            </div>
           </div>
 
           <div className="details-block">
@@ -424,8 +455,72 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
                       <div className="form-group">
                         <label>Level</label>
                         <input type="text" value={details?.level || ''} disabled />
+                      </div>  
+                      <div className="form-group">
+                       <label>Expected Department</label>
+                        <input
+                          type="text"
+                          value={details.departmentname || ''}
+                          disabled
+                        />
                       </div>
-                    </div>
+                      <div className="form-group">
+                        <label>Expected jobtype</label>
+                        <input
+                          type="text"
+                          value={details.jobtypename || ''}
+                          disabled
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Address Lane-1</label>
+                        <input
+                          type="text"
+                          value={details.a1 || ''}
+                          disabled
+                        />
+                      </div>
+                        <div className="form-group">
+                        <label>Address Lane-2</label>
+                        <input
+                          type="text"
+                          value={details.a2 || ''}
+                          disabled
+                        />
+                      </div>
+                        <div className="form-group">
+                        <label>Zipcode</label>
+                        <input
+                          type="text"
+                          value={details.z1 || ''}
+                          disabled
+                        />
+                      </div>
+                        <div className="form-group">
+                        <label>State</label>
+                        <input
+                          type="text"
+                          value={details.statename || ''}
+                          disabled
+                        />
+                      </div>
+                        <div className="form-group">
+                        <label>Custom State Name</label>
+                        <input
+                          type="text"
+                          value={details.s2 || ''}
+                          disabled
+                        />
+                      </div>
+                        <div className="form-group">
+                        <label>Country</label>
+                        <input
+                          type="text"
+                          value={details.countryname || ''}
+                          disabled
+                        />
+                      </div>                    
+                    </div>                    
                     <div className="offer-letter-column">
                       <h4>Finalized Details</h4>
                       <div className="form-group">
@@ -563,7 +658,7 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
                           name="stateid"
                           value={offerLetterData.stateid}
                           onChange={handleOfferLetterChange}
-                          required
+                          disabled={offerLetterData.countryid !== '185'}
                         >
                           <option value="">Select State</option>
                           {dropdownData.states?.map((state) => (
@@ -596,6 +691,7 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
                           name="custom_state_name"
                           value={offerLetterData.custom_state_name}
                           onChange={handleOfferLetterChange}
+                          disabled={offerLetterData.countryid === '185'}
                         />
                       </div>
                       <div className="form-group">

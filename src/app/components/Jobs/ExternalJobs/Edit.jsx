@@ -19,7 +19,7 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
     addressLane2: '',
     zipcode: '',
     stateId: '',
-    countryId: '',
+    countryId: '185',
     customStateName: 'N/A',
     lastDateForApplication: '',
     active: '1',
@@ -55,7 +55,7 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
           addressLane2: '',
           zipcode: '',
           stateId: '',
-          countryId: '',
+          countryId: '185',
           customStateName: 'N/A',
           lastDateForApplication: '',
           active: '1',
@@ -482,6 +482,7 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
                       name="stateId"
                       value={formData.stateId}
                       onChange={handleChange}
+                       disabled={formData.countryId !== '185'}
                     >
                       <option value="">Select State</option>
                       {states.map((state) => (
@@ -498,7 +499,7 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
                       name="customStateName"
                       value={formData.customStateName}
                       onChange={handleChange}
-                      required
+                       disabled={formData.countryId === '185'}
                     />
                   </div>
                 </div>
