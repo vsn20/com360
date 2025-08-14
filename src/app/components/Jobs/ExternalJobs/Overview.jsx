@@ -15,6 +15,11 @@ const Overview = ({ orgid, empid, expectedjobtitles, expectedepartment, expected
   const [allJobs, setAllJobs] = useState(external);
   const [sortConfig, setSortConfig] = useState({ column: 'jobid', direction: 'asc' });
   const [error, setError] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageInputValue, setPageInputValue] = useState('1');
+  const [jobsPerPage, setJobsPerPage] = useState(10);
+  const [jobsPerPageInput, setJobsPerPageInput] = useState('10');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const formatDate = (date) => {
     if (!date) return '';
@@ -33,6 +38,7 @@ const Overview = ({ orgid, empid, expectedjobtitles, expectedepartment, expected
   const getdisplayprojectid = (prjid) => {
     return prjid.split('-')[1] || prjid;
   };
+
   useEffect(() => {
     setAllJobs(external);
   }, [external]);
@@ -42,11 +48,16 @@ const Overview = ({ orgid, empid, expectedjobtitles, expectedepartment, expected
     setAllJobs(sortedJobs);
   }, [sortConfig, external]);
 
+  useEffect(() => {
+    setPageInputValue(currentPage.toString());
+  }, [currentPage]);
+
   const handleBack = () => {
     router.refresh();
     setisadd(false);
     setSelectedJob(null);
     setError(null);
+    setSearchQuery('');
   };
 
   const handleAdd = () => {
@@ -88,12 +99,80 @@ const Overview = ({ orgid, empid, expectedjobtitles, expectedepartment, expected
     }));
   };
 
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage((prev) => prev + 1);
+      setPageInputValue((currentPage + 1).toString());
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage((prev) => prev - 1);
+      setPageInputValue((currentPage - 1).toString());
+    }
+  };
+
+  const handlePageInputChange = (e) => {
+    setPageInputValue(e.target.value);
+  };
+
+  const handlePageInputKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      const value = parseInt(pageInputValue, 10);
+      if (!isNaN(value) && value >= 1 && value <= totalPages) {
+        setCurrentPage(value);
+        setPageInputValue(value.toString());
+      } else {
+        setPageInputValue(currentPage.toString());
+      }
+    }
+  };
+
+  const handleJobsPerPageInputChange = (e) => {
+    setJobsPerPageInput(e.target.value);
+  };
+
+  const handleJobsPerPageInputKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      const value = parseInt(e.target.value, 10);
+      if (!isNaN(value) && value >= 1) {
+        setJobsPerPage(value);
+        setJobsPerPageInput(value.toString());
+        setCurrentPage(1);
+        setPageInputValue('1');
+      } else {
+        setJobsPerPageInput(jobsPerPage.toString());
+      }
+    }
+  };
+
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+    setCurrentPage(1);
+    setPageInputValue('1');
+  };
+
+  // Filter logic
+  const filteredJobs = allJobs.filter((job) =>
+    job.display_job_name?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredJobs.length / jobsPerPage);
+  const indexOfLastJob = currentPage * jobsPerPage;
+  const indexOfFirstJob = indexOfLastJob - jobsPerPage;
+  const currentJobs = filteredJobs.slice(indexOfFirstJob, indexOfLastJob);
+
   return (
     <div className="employee-overview-container">
       {error && <div className="error-message">{error}</div>}
-      {isadd && (
-        <div>
-          <button className="back-button" onClick={handleBack}>x</button>
+      {isadd ? (
+        <div className="employee-details-container">
+          <div className="header-section">
+            <h1 className="title">Add External Job</h1>
+            <button className="back-button" onClick={handleBack}></button>
+          </div>
           <AddExternal
             orgid={orgid}
             empid={empid}
@@ -105,42 +184,12 @@ const Overview = ({ orgid, empid, expectedjobtitles, expectedepartment, expected
             jobtype={jobtype}
           />
         </div>
-      )}
-      {!isadd && !selectedJob ? (
-        <div className="employee-list">
-          <button onClick={handleAdd} className="save-button">Post External Job</button>
-          {allJobs.length === 0 ? (
-            <p>No external jobs found.</p>
-          ) : (
-            <table className="employee-table">
-              <thead>
-                <tr>
-                  <th onClick={() => requestSort('jobid')}>
-                    External Job ID {sortConfig.column === 'jobid' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                  </th>
-                  <th onClick={() => requestSort('display_job_name')}>
-                    Job Name {sortConfig.column === 'display_job_name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                  </th>
-                  <th onClick={() => requestSort('no_of_vacancies')}>
-                    Vacancies {sortConfig.column === 'no_of_vacancies' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {allJobs.map((job) => (
-                  <tr key={job.jobid} onClick={() => handleRowClick(job)} className={selectedJob && selectedJob.jobid === job.jobid ? 'selected-row' : ''}>
-                    <td>{getdisplayprojectid(job.jobid)}</td>
-                    <td>{job.display_job_name || '-'}</td>
-                    <td>{job.no_of_vacancies || '-'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      ) : !isadd && selectedJob && (
-        <div>
-          <button className="back-button" onClick={handleBack}>x</button>
+      ) : selectedJob ? (
+        <div className="employee-details-container">
+          <div className="header-section">
+            <h1 className="title">Edit External Job</h1>
+            <button className="back-button" onClick={handleBack}></button>
+          </div>
           <Edit
             job={selectedJob}
             orgid={orgid}
@@ -151,6 +200,104 @@ const Overview = ({ orgid, empid, expectedjobtitles, expectedepartment, expected
             states={states}
             jobtype={jobtype}
           />
+        </div>
+      ) : (
+        <div className="employee-list">
+          <div className="header-section">
+            <h1 className="title">Existing External Jobs</h1>
+            <button onClick={handleAdd} className="button">Post External Job</button>
+          </div>
+          <div className="search-filter-container">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={handleSearchChange}
+              className="search-input"
+              placeholder="Search by job name..."
+            />
+          </div>
+          {filteredJobs.length === 0 ? (
+            <div className="empty-state">No external jobs found.</div>
+          ) : (
+            <>
+              <div className="table-wrapper">
+                <table className="three-column">
+                  <colgroup>
+                    <col />
+                    <col />
+                    <col />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th className={sortConfig.column === 'jobid' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('jobid')}>
+                        Job ID
+                      </th>
+                      <th className={sortConfig.column === 'display_job_name' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('display_job_name')}>
+                        Job Name
+                      </th>
+                      <th className={sortConfig.column === 'no_of_vacancies' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('no_of_vacancies')}>
+                        Vacancies
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentJobs.map((job) => (
+                      <tr key={job.jobid} onClick={() => handleRowClick(job)} className={selectedJob && selectedJob.jobid === job.jobid ? 'selected-row' : ''}>
+                        <td className="id-cell">
+                          <span className="role-indicator"></span>
+                          {getdisplayprojectid(job.jobid)}
+                        </td>
+                        <td>{job.display_job_name || '-'}</td>
+                        <td>{job.no_of_vacancies || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {filteredJobs.length > jobsPerPage && (
+                <div className="pagination-container">
+                  <button
+                    className="button"
+                    onClick={handlePrevPage}
+                    disabled={currentPage === 1}
+                  >
+                    ← Previous
+                  </button>
+                  <span className="pagination-text">
+                    Page{' '}
+                    <input
+                      type="text"
+                      value={pageInputValue}
+                      onChange={handlePageInputChange}
+                      onKeyPress={handlePageInputKeyPress}
+                      className="pagination-input"
+                    />{' '}
+                    of {totalPages}
+                  </span>
+                  <button
+                    className="button"
+                    onClick={handleNextPage}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
+              {filteredJobs.length > 0 && (
+                <div className="rows-per-page-container">
+                  <label className="rows-per-page-label">Rows/ Page</label>
+                  <input
+                    type="text"
+                    value={jobsPerPageInput}
+                    onChange={handleJobsPerPageInputChange}
+                    onKeyPress={handleJobsPerPageInputKeyPress}
+                    className="rows-per-page-input"
+                    aria-label="Number of rows per page"
+                  />
+                </div>
+              )}
+            </>
+          )}
         </div>
       )}
     </div>

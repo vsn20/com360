@@ -33,9 +33,18 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
 
-
   const getdisplayprojectid = (prjid) => {
     return prjid.split('-')[1] || prjid;
+  };
+
+  const getCountryName = (countryId) => {
+    const country = countries.find((c) => c.ID === countryId);
+    return country ? country.VALUE : '-';
+  };
+
+  const getStateName = (stateId) => {
+    const state = states.find((s) => s.ID === stateId);
+    return state ? state.VALUE : '-';
   };
 
   useEffect(() => {
@@ -189,36 +198,14 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
     try {
       const result = await updateExternalJob(formDataToSubmit);
       if (result?.success) {
-        const updatedJob = await fetchExternalJobById(formData.jobid);
-        setJobDetails(updatedJob);
-        setFormData({
-          jobid: updatedJob.jobid || '',
-          displayJobName: updatedJob.display_job_name || '',
-          expectedJobTitle: updatedJob.expected_job_title ? String(updatedJob.expected_job_title) : '',
-          expectedRole: updatedJob.expected_role ? String(updatedJob.expected_role) : '',
-          expectedDepartment: updatedJob.expected_department ? String(updatedJob.expected_department) : '',
-          jobType: updatedJob.job_type ? String(updatedJob.job_type) : '',
-          description: updatedJob.description || '',
-          noOfVacancies: updatedJob.no_of_vacancies ? String(updatedJob.no_of_vacancies) : '',
-          addressLane1: updatedJob.addresslane1 || '',
-          addressLane2: updatedJob.addresslane2 || '',
-          zipcode: updatedJob.zipcode || '',
-          stateId: updatedJob.stateid ? String(updatedJob.stateid) : '',
-          countryId: updatedJob.countryid ? String(updatedJob.countryid) : '',
-          customStateName: updatedJob.custom_state_name || 'N/A',
-          lastDateForApplication: updatedJob.lastdate_for_application ? new Date(updatedJob.lastdate_for_application).toISOString().split('T')[0] : '',
-          active: updatedJob.active ? '1' : '0',
-          createdBy: updatedJob.created_by || '',
-          lastUpdatedBy: updatedJob.last_updated_by || '',
-          postedDate: updatedJob.posteddate ? new Date(updatedJob.posteddate).toISOString().split('T')[0] : '',
-        });
+        setSuccessMessage(`Successfully updated ${section} details!`);
         if (section === 'basic') setEditingBasic(false);
         if (section === 'additional') setEditingAdditional(false);
-        setError(null);
-        setSuccessMessage('External job updated successfully!');
-        setTimeout(() => setSuccessMessage(null), 3000);
+        const updatedDetails = await fetchExternalJobById(job.jobid);
+        setJobDetails(updatedDetails);
+        setTimeout(() => setSuccessMessage(null), 4000);
       } else {
-        setError(result?.error || 'Failed to update external job.');
+        setError(result?.error || `Failed to update ${section} details.`);
       }
     } catch (error) {
       setError(error.message);
@@ -227,42 +214,54 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
     }
   };
 
-  const getDisplayValue = (value, options, key) => {
-    if (!value || !options) return '-';
-    const option = options.find((opt) => String(opt[key]) === String(value));
-    if (!option) return '-';
-    if (key === 'job_title_id') {
-      return `${option.job_title} (Level: ${option.level || 'N/A'}, Salary Range: $${option.min_salary || 'N/A'} - $${option.max_salary || 'N/A'})`;
+  const handleCancel = (section) => {
+    if (section === 'basic') {
+      setEditingBasic(false);
+    } else if (section === 'additional') {
+      setEditingAdditional(false);
     }
-    if (key === 'roleid') return option.rolename || '-';
-    if (key === 'id' && options === expectedepartment) return option.name || '-';
-    if (key === 'id' && options === jobtype) return option.Name || '-';
-    return '-';
-  };
-
-  const getCountryName = (countryId) => {
-    if (!countryId) return 'No Country';
-    const country = countries.find((c) => String(c.ID) === String(countryId));
-    return country ? country.VALUE : 'No Country';
-  };
-
-  const getStateName = (stateId) => {
-    if (!stateId) return 'No State';
-    const state = states.find((s) => String(s.ID) === String(stateId));
-    return state ? state.VALUE : 'No State';
+    setFormData({
+      jobid: jobDetails?.jobid || '',
+      displayJobName: jobDetails?.display_job_name || '',
+      expectedJobTitle: jobDetails?.expected_job_title ? String(jobDetails.expected_job_title) : '',
+      expectedRole: jobDetails?.expected_role ? String(jobDetails.expected_role) : '',
+      expectedDepartment: jobDetails?.expected_department ? String(jobDetails.expected_department) : '',
+      jobType: jobDetails?.job_type ? String(jobDetails.job_type) : '',
+      description: jobDetails?.description || '',
+      noOfVacancies: jobDetails?.no_of_vacancies ? String(jobDetails.no_of_vacancies) : '',
+      addressLane1: jobDetails?.addresslane1 || '',
+      addressLane2: jobDetails?.addresslane2 || '',
+      zipcode: jobDetails?.zipcode || '',
+      stateId: jobDetails?.stateid ? String(jobDetails.stateid) : '',
+      countryId: jobDetails?.countryid ? String(jobDetails.countryid) : '',
+      customStateName: jobDetails?.custom_state_name || 'N/A',
+      lastDateForApplication: jobDetails?.lastdate_for_application ? new Date(jobDetails.lastdate_for_application).toISOString().split('T')[0] : '',
+      active: jobDetails?.active ? '1' : '0',
+      createdBy: jobDetails?.created_by || '',
+      lastUpdatedBy: jobDetails?.last_updated_by || '',
+      postedDate: jobDetails?.posteddate ? new Date(jobDetails.posteddate).toISOString().split('T')[0] : '',
+    });
+    setError(null);
   };
 
   return (
     <div className="employee-details-container">
+      {isLoading && <div className="loading-message">Loading...</div>}
       {error && <div className="error-message">{error}</div>}
       {successMessage && <div className="success-message">{successMessage}</div>}
-      {isLoading && <div className="loading-message">Loading...</div>}
       {jobDetails && (
         <>
           <div className="details-block">
-            <h3>Basic Details</h3>
+            <div className="roledetails-header">
+              <div>Basic Details</div>
+              {!editingBasic && (
+                <button className="button" onClick={() => handleEdit('basic')}>
+                  Edit
+                </button>
+              )}
+            </div>
             {editingBasic ? (
-              <form onSubmit={(e) => { e.preventDefault(); handleSave('basic'); }} className="external-jobs-form">
+              <form onSubmit={(e) => { e.preventDefault(); handleSave('basic'); }}>
                 <div className="form-row">
                   <div className="form-group">
                     <label>Display Job Name*:</label>
@@ -350,7 +349,6 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
                       value={formData.noOfVacancies}
                       onChange={handleChange}
                       required
-                     
                     />
                   </div>
                 </div>
@@ -367,10 +365,10 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
                   </div>
                 </div>
                 <div className="form-buttons">
-                  <button type="submit" className="save-button" disabled={isLoading}>
+                  <button type="submit" className="save" disabled={isLoading}>
                     {isLoading ? 'Saving...' : 'Save'}
                   </button>
-                  <button type="button" className="cancel-button" onClick={() => setEditingBasic(false)} disabled={isLoading}>
+                  <button type="button" className="cancel" onClick={() => handleCancel('basic')} disabled={isLoading}>
                     Cancel
                   </button>
                 </div>
@@ -380,7 +378,7 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
                 <div className="details-row">
                   <div className="details-group">
                     <label>Job ID:</label>
-                    <p>{getdisplayprojectid(jobDetails.jobid) || '-'}</p>
+                    <p>{getdisplayprojectid(jobDetails.jobid)}</p>
                   </div>
                   <div className="details-group">
                     <label>Display Job Name:</label>
@@ -390,21 +388,21 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
                 <div className="details-row">
                   <div className="details-group">
                     <label>Expected Job Title:</label>
-                    <p>{getDisplayValue(jobDetails.expected_job_title, expectedjobtitles, 'job_title_id')}</p>
+                    <p>{expectedjobtitles.find((title) => title.job_title_id === jobDetails.expected_job_title)?.job_title || '-'}</p>
                   </div>
                   <div className="details-group">
                     <label>Expected Role:</label>
-                    <p>{getDisplayValue(jobDetails.expected_role, expectedrole, 'roleid')}</p>
+                    <p>{expectedrole.find((role) => role.roleid === jobDetails.expected_role)?.rolename || '-'}</p>
                   </div>
                 </div>
                 <div className="details-row">
                   <div className="details-group">
                     <label>Expected Department:</label>
-                    <p>{getDisplayValue(jobDetails.expected_department, expectedepartment, 'id')}</p>
+                    <p>{expectedepartment.find((dept) => dept.id === jobDetails.expected_department)?.name || '-'}</p>
                   </div>
                   <div className="details-group">
                     <label>Job Type:</label>
-                    <p>{getDisplayValue(jobDetails.job_type, jobtype, 'id')}</p>
+                    <p>{jobtype.find((type) => type.id === jobDetails.job_type)?.Name || '-'}</p>
                   </div>
                 </div>
                 <div className="details-row">
@@ -417,17 +415,20 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
                     <p>{jobDetails.description || '-'}</p>
                   </div>
                 </div>
-                <div className="details-buttons">
-                  <button className="edit-button" onClick={() => handleEdit('basic')}>Edit</button>
-                </div>
               </div>
             )}
           </div>
-
           <div className="details-block">
-            <h3>Additional Details</h3>
+            <div className="roledetails-header">
+              <div>Additional Details</div>
+              {!editingAdditional && (
+                <button className="button" onClick={() => handleEdit('additional')}>
+                  Edit
+                </button>
+              )}
+            </div>
             {editingAdditional ? (
-              <form onSubmit={(e) => { e.preventDefault(); handleSave('additional'); }} className="external-jobs-form">
+              <form onSubmit={(e) => { e.preventDefault(); handleSave('additional'); }}>
                 <div className="form-row">
                   <div className="form-group">
                     <label>Address Lane 1:</label>
@@ -482,7 +483,7 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
                       name="stateId"
                       value={formData.stateId}
                       onChange={handleChange}
-                       disabled={formData.countryId !== '185'}
+                      disabled={formData.countryId !== '185'}
                     >
                       <option value="">Select State</option>
                       {states.map((state) => (
@@ -499,7 +500,7 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
                       name="customStateName"
                       value={formData.customStateName}
                       onChange={handleChange}
-                       disabled={formData.countryId === '185'}
+                      disabled={formData.countryId === '185'}
                     />
                   </div>
                 </div>
@@ -560,10 +561,10 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
                   </div>
                 </div>
                 <div className="form-buttons">
-                  <button type="submit" className="save-button" disabled={isLoading}>
+                  <button type="submit" className="save" disabled={isLoading}>
                     {isLoading ? 'Saving...' : 'Save'}
                   </button>
-                  <button type="button" className="cancel-button" onClick={() => setEditingAdditional(false)} disabled={isLoading}>
+                  <button type="button" className="cancel" onClick={() => handleCancel('additional')} disabled={isLoading}>
                     Cancel
                   </button>
                 </div>
@@ -625,9 +626,6 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
                     <label>Last Updated By:</label>
                     <p>{jobDetails.last_updated_by || '-'}</p>
                   </div>
-                </div>
-                <div className="details-buttons">
-                  <button className="edit-button" onClick={() => handleEdit('additional')}>Edit</button>
                 </div>
               </div>
             )}
