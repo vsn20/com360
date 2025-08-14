@@ -66,6 +66,7 @@ const Overview = ({
     parRowId: '',
     emp1stname: '',
     emplastname: '',
+      accountname:'',
   });
   const [existingFiles, setExistingFiles] = useState([]);
   const [newFiles, setNewFiles] = useState([]);
@@ -149,6 +150,7 @@ const Overview = ({
             parRowId: serviceRequest.PAR_ROW_ID || '',
             emp1stname: employeeRequest.employees[0]?.EMP_FST_NAME || '',
             emplastname: employeeRequest.employees[0]?.EMP_LAST_NAME || '',
+            
           });
           setExistingFiles(
             serviceRequest.attachments.map((att) => ({

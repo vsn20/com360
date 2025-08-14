@@ -70,6 +70,10 @@ export async function fetchreqbyid() {
       );
     }
 
+    
+
+
+
     // Enrich rows with employee full names
     const enrichedRows = await Promise.all(
       rows.map(async (details) => {
@@ -132,6 +136,19 @@ export async function fetchServiceRequestById(SR_NUM, orgid, empid) {
        WHERE SR_NUM = ? AND ORG_ID = ?`,
       [SR_NUM, orgid]
     );
+      
+
+     let accountRows ;
+    let accountname='-';
+   if(requestRows[0].ACCOUNT_ID!=null){
+     [accountRows] = await pool.execute(
+          'SELECT ACCNT_ID, ALIAS_NAME FROM C_ACCOUNT WHERE ORGID = ? AND ACCNT_ID=? ',
+          [orgid,requestRows[0].ACCOUNT_ID]
+        );
+         accountname=accountRows[0].ALIAS_NAME
+      }
+
+
 
         const [empname] = await pool.query(
             'SELECT EMP_FST_NAME, EMP_LAST_NAME FROM C_EMP WHERE empid = ?',
@@ -157,7 +174,8 @@ export async function fetchServiceRequestById(SR_NUM, orgid, empid) {
     return {
       ...serviceRequest,
       attachments: attachmentRows || [],
-      CREATED_BY:employeename
+      CREATED_BY:employeename,
+      accountname:accountname
     };
   } catch (error) {
     console.error('Error fetching service request by ID:', error);

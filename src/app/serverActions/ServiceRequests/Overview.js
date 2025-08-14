@@ -24,8 +24,8 @@ export async function fetchServiceRequestById(srNum, orgid, empid) {
       'SELECT SR_NUM, ORG_ID, SERVICE_NAME, STATUS_CD, PRIORITY_CD, TYPE_CD, SUB_TYPE_CD, ASSIGNED_TO, DUE_DATE, ESCALATED_FLAG, ESCALATED_TO, ESCALATED_DATE, DESCRIPTION, COMMENTS, CONTACT_ID, ACCOUNT_ID, ASSET_ID, PAR_ROW_ID, CATEGORY_CD, CREATED, CREATED_BY, LAST_UPD, LAST_UPD_BY FROM C_SRV_REQ WHERE SR_NUM = ? AND ORG_ID = ? AND CREATED_BY = ?',
       [srNum, orgid, empid]
     );
-     let accountRows ;
-       let accountname='-';
+    let accountRows ;
+    let accountname='-';
    if(rows[0].ACCOUNT_ID!=null){
      [accountRows] = await pool.execute(
           'SELECT ACCNT_ID, ALIAS_NAME FROM C_ACCOUNT WHERE ORGID = ? AND ACCNT_ID=? ',

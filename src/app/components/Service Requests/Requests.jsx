@@ -36,6 +36,7 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
     accountId: '',
     assetId: '',
     parRowId: '',
+    accountname:'',
   });
 
   // Pagination and filtering state
@@ -126,6 +127,7 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
           accountId: '',
           assetId: '',
           parRowId: '',
+          accountname:'',
         });
         setExistingFiles([]);
         setResolverFiles([]);
@@ -160,6 +162,7 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
           accountId: serviceRequest.ACCOUNT_ID || '',
           assetId: serviceRequest.ASSET_ID || '',
           parRowId: serviceRequest.PAR_ROW_ID || '',
+          accountname:serviceRequest.accountname,
         });
         setExistingFiles(
           serviceRequest.attachments.map((att) => ({
@@ -597,6 +600,7 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
           accountId: updatedRequest.ACCOUNT_ID || '',
           assetId: updatedRequest.ASSET_ID || '',
           parRowId: updatedRequest.PAR_ROW_ID || '',
+          accountname:updatedRequest.accountname||'',
         });
         setExistingFiles(
           updatedRequest.attachments.map((att) => ({
@@ -662,6 +666,7 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
           accountId: updatedRequest.ACCOUNT_ID || '',
           assetId: updatedRequest.ASSET_ID || '',
           parRowId: updatedRequest.PAR_ROW_ID || '',
+           accountname:updatedRequest.accountname||'',
         });
         setExistingFiles(
           updatedRequest.attachments.map((att) => ({
@@ -1156,7 +1161,7 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
                   </div>
                   <div className="details-g">
                     <label>Account ID</label>
-                    <p>{serviceRequestDetails.ACCOUNT_ID || '-'}</p>
+                    <p>{serviceRequestDetails.accountname || '-'}</p>
                   </div>
                 </div>
                 <div className="details-row">
