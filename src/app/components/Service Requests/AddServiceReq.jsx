@@ -1,9 +1,9 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { addServiceRequest } from '@/app/serverActions/ServiceRequests/AddServicereq';
 import './overview.css';
 
-const AddServiceReq = ({ orgid, empid, employees, type, subtype, priority, previousServiceRequests, onBack }) => {
+const AddServiceReq = ({ orgid, empid, employees, type, subtype, priority, previousServiceRequests, onBack, accountRows, empname }) => {
   const [formData, setFormData] = useState({
     serviceName: '',
     statusCd: 'Open',
@@ -79,14 +79,6 @@ const AddServiceReq = ({ orgid, empid, employees, type, subtype, priority, previ
     });
   };
 
-  const handleFileStatusChange = (index, value) => {
-    setFiles((prev) => {
-      const updatedFiles = [...prev];
-      updatedFiles[index].attachmentStatus = value;
-      return updatedFiles;
-    });
-  };
-
   const handleRemoveFile = (index) => {
     setFiles((prev) => prev.filter((_, i) => i !== index));
   };
@@ -142,18 +134,12 @@ const AddServiceReq = ({ orgid, empid, employees, type, subtype, priority, previ
     try {
       const result = await addServiceRequest(formDataToSend);
       if (result && result.success) {
-        // Log attachment paths to console
-        if (result.attachmentPaths?.length) {
-          console.log('Uploaded attachment paths:', result.attachmentPaths);
-        } else {
-          console.log('No attachments uploaded');
-        }
-        // Set success message without attachment paths
+        console.log('Uploaded attachment paths:', result.attachmentPaths || 'No attachments uploaded');
         setSuccessMessage(`Service Request ${result.srNum} added successfully.`);
         setTimeout(() => {
           setSuccessMessage(null);
           resetForm();
-        }, 4000); // Clear message and form after 4 seconds
+        }, 4000);
       } else {
         setError(result.error || 'Failed to create service request');
       }
@@ -166,17 +152,19 @@ const AddServiceReq = ({ orgid, empid, employees, type, subtype, priority, previ
   };
 
   return (
-    <div className="employee-overview-container">
+    <div className="service-requests-overview-container">
       {error && <div className="error-message">{error}</div>}
       {successMessage && <div className="success-message">{successMessage}</div>}
       {isLoading && <div className="loading-message">Creating...</div>}
-      <h2>Create New Service Request</h2>
-      <button className="back-button" onClick={onBack} disabled={isLoading}>
-        
-      </button>
+      <div className="header-section">
+        <div className="title">Create New Service Request</div>
+        <button className="back-button" onClick={onBack} disabled={isLoading}></button>
+      </div>
       <form onSubmit={handleSubmit}>
         <div className="details-block">
-          <h3>Basic Details</h3>
+          <div className="section-header">
+            <div>Basic Details</div>
+          </div>
           <div className="form-row">
             <div className="form-group">
               <label>Organization ID</label>
@@ -184,7 +172,7 @@ const AddServiceReq = ({ orgid, empid, employees, type, subtype, priority, previ
             </div>
             <div className="form-group">
               <label>Created By</label>
-              <input type="text" value={empid || ''} readOnly className="bg-gray-100" />
+              <input type="text" value={empname || ''} readOnly className="bg-gray-100" />
             </div>
           </div>
           <div className="form-row">
@@ -261,7 +249,9 @@ const AddServiceReq = ({ orgid, empid, employees, type, subtype, priority, previ
         </div>
 
         <div className="details-block">
-          <h3>Additional Details</h3>
+          <div className="section-header">
+            <div>Additional Details</div>
+          </div>
           <div className="form-row">
             <div className="form-group">
               <label>Escalated</label>
@@ -312,19 +302,20 @@ const AddServiceReq = ({ orgid, empid, employees, type, subtype, priority, previ
                 type="text"
                 name="contactId"
                 value={formData.contactId}
-                onChange={handleFormChange} // Fixed typo from queFormChange
+                onChange={handleFormChange}
                 placeholder="Enter Contact ID"
               />
             </div>
             <div className="form-group">
               <label>Account ID</label>
-              <input
-                type="text"
-                name="accountId"
-                value={formData.accountId}
-                onChange={handleFormChange}
-                placeholder="Enter Account ID"
-              />
+              <select name="accountId" value={formData.accountId} onChange={handleFormChange}>
+                <option value="">Select Account</option>
+                {accountRows.map((details) => (
+                  <option key={details.ACCNT_ID} value={details.ACCNT_ID}>
+                    {details.ALIAS_NAME}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
           <div className="form-row">
@@ -342,7 +333,9 @@ const AddServiceReq = ({ orgid, empid, employees, type, subtype, priority, previ
         </div>
 
         <div className="details-block">
-          <h3>Description and Comments</h3>
+          <div className="section-header">
+            <div>Description and Comments</div>
+          </div>
           <div className="form-row">
             <div className="form-group">
               <label>Description</label>
@@ -370,7 +363,9 @@ const AddServiceReq = ({ orgid, empid, employees, type, subtype, priority, previ
         </div>
 
         <div className="details-block">
-          <h3>Attachments</h3>
+          <div className="section-header">
+            <div>Attachments</div>
+          </div>
           <div className="form-row">
             <div className="form-group">
               <label>Upload Files</label>
@@ -380,55 +375,48 @@ const AddServiceReq = ({ orgid, empid, employees, type, subtype, priority, previ
           {files.length > 0 && (
             <div className="form-row">
               <div className="form-group">
-                <h4>Attached Files</h4>
-                <table className="attachment-table">
-                  <thead>
-                    <tr>
-                      <th>File Name</th>
-                      <th>Comments</th>
-                      {/* <th>Status</th> */}
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {files.map((fileObj, index) => (
-                      <tr key={index}>
-                        <td>{fileObj.name}</td>
-                        <td>
-                          <input
-                            type="text"
-                            value={fileObj.comments}
-                            onChange={(e) => handleFileCommentChange(index, e.target.value)}
-                            placeholder="Add comments"
-                          />
-                        </td>
-                        {/* <td>
-                          <input
-                            type="text"
-                            value={fileObj.attachmentStatus}
-                            onChange={(e) => handleFileStatusChange(index, e.target.value)}
-                            placeholder="Enter status"
-                          />
-                        </td> */}
-                        <td>
-                          <button type="button" className="cancel-button" onClick={() => handleRemoveFile(index)}>
-                            Remove
-                          </button>
-                        </td>
+                <div>Attached Files</div>
+                <div className="table-wrapper">
+                  <table className="attachment-table">
+                    <thead>
+                      <tr>
+                        <th>File Name</th>
+                        <th>Comments</th>
+                        <th>Action</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {files.map((fileObj, index) => (
+                        <tr key={index}>
+                          <td>{fileObj.name}</td>
+                          <td>
+                            <input
+                              type="text"
+                              value={fileObj.comments}
+                              onChange={(e) => handleFileCommentChange(index, e.target.value)}
+                              placeholder="Add comments"
+                            />
+                          </td>
+                          <td>
+                            <button type="button" className="cancel" onClick={() => handleRemoveFile(index)}>
+                              Remove
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
         </div>
 
         <div className="form-buttons">
-          <button type="submit" className="save-button" disabled={isLoading}>
+          <button type="submit" className="save" disabled={isLoading}>
             {isLoading ? 'Creating...' : 'Create'}
           </button>
-          <button type="button" className="cancel-button" onClick={onBack} disabled={isLoading}>
+          <button type="button" className="cancel" onClick={onBack} disabled={isLoading}>
             Cancel
           </button>
         </div>

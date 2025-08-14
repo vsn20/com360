@@ -16,7 +16,9 @@ const Overview = ({
   priority,
   serviceRequests,
   previousServiceRequests,
-  noofrows,
+  accountRows,
+  empname,
+ 
 }) => {
   const searchparams = useSearchParams();
   const router = useRouter();
@@ -42,7 +44,8 @@ const Overview = ({
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const requestsPerPage = parseInt(noofrows?.Name, 10) || 10;
+  const [requestsPerPage, setRequestsPerPage] = useState(10);
+  const [requestsPerPageInput, setRequestsPerPageInput] = useState((10).toString());
 
   const [formData, setFormData] = useState({
     serviceName: '',
@@ -115,83 +118,88 @@ const Overview = ({
   }, [currentPage]);
 
   useEffect(() => {
-    const loadServiceRequestDetails = async () => {
-      if (!selectedSrNum) {
-        setServiceRequestDetails(null);
-        setFormData({
-          serviceName: '',
-          statusCd: 'Open',
-          priorityCd: '',
-          typeCd: '',
-          subTypeCd: '',
-          assignedTo: '',
-          dueDate: '',
-          escalatedFlag: false,
-          escalatedTo: '',
-          escalatedDate: '',
-          description: '',
-          comments: '',
-          contactId: '',
-          accountId: '',
-          assetId: '',
-          parRowId: '',
-          emp1stname: '',
-          emplastname: '',
-        });
-        setExistingFiles([]);
-        setNewFiles([]);
-        setParentServiceRequests([]);
-        return;
-      }
-      try {
-        setIsLoading(true);
-        const serviceRequest = await fetchServiceRequestById(selectedSrNum, orgid, empid);
-        const employeeRequest = await getemployeename(serviceRequest.ASSIGNED_TO);
-        const parentRequests = await getparentsr(selectedSrNum);
-        setServiceRequestDetails(serviceRequest);
-        setFormData({
-          serviceName: serviceRequest.SERVICE_NAME || '',
-          statusCd: serviceRequest.STATUS_CD || 'Open',
-          priorityCd: serviceRequest.PRIORITY_CD || '',
-          typeCd: serviceRequest.TYPE_CD || '',
-          subTypeCd: serviceRequest.SUB_TYPE_CD || '',
-          assignedTo: serviceRequest.ASSIGNED_TO || '',
-          dueDate: formatDate(serviceRequest.DUE_DATE),
-          escalatedFlag: !!serviceRequest.ESCALATED_FLAG,
-          escalatedTo: serviceRequest.ESCALATED_TO || '',
-          escalatedDate: formatDate(serviceRequest.ESCALATED_DATE),
-          description: serviceRequest.DESCRIPTION || '',
-          comments: serviceRequest.COMMENTS || '',
-          contactId: serviceRequest.CONTACT_ID || '',
-          accountId: serviceRequest.ACCOUNT_ID || '',
-          assetId: serviceRequest.ASSET_ID || '',
-          parRowId: serviceRequest.PAR_ROW_ID || '',
-          emp1stname: employeeRequest.employees[0]?.EMP_FST_NAME || '',
-          emplastname: employeeRequest.employees[0]?.EMP_LAST_NAME || '',
-        });
-        setExistingFiles(
-          serviceRequest.attachments.map((att) => ({
-            sr_att_id: att.SR_ATT_ID,
-            name: att.FILE_NAME,
-            file_path: att.FILE_PATH,
-            type: att.TYPE_CD || '',
-            comments: att.COMMENTS || '',
-            attachmentStatus: att.ATTACHMENT_STATUS || '',
-          })) || []
-        );
-        setNewFiles([]);
-        setParentServiceRequests(parentRequests.success ? parentRequests.serviceRequests : []);
-        setError(null);
-      } catch (err) {
-        console.error('Error loading service request details:', err);
-        setError(err.message || 'Failed to load service request details');
-        setServiceRequestDetails(null);
-        setParentServiceRequests([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    loadServiceRequestDetails();
+    setRequestsPerPageInput(requestsPerPage.toString());
+  }, [requestsPerPage]);
+
+  useEffect(() => {
+    if (selectedSrNum) {
+      const loadServiceRequestDetails = async () => {
+        try {
+          setIsLoading(true);
+          const serviceRequest = await fetchServiceRequestById(selectedSrNum, orgid, empid);
+          const employeeRequest = await getemployeename(serviceRequest.ASSIGNED_TO);
+          const parentRequests = await getparentsr(selectedSrNum);
+          setServiceRequestDetails(serviceRequest);
+          setFormData({
+            serviceName: serviceRequest.SERVICE_NAME || '',
+            statusCd: serviceRequest.STATUS_CD || 'Open',
+            priorityCd: serviceRequest.PRIORITY_CD || '',
+            typeCd: serviceRequest.TYPE_CD || '',
+            subTypeCd: serviceRequest.SUB_TYPE_CD || '',
+            assignedTo: serviceRequest.ASSIGNED_TO || '',
+            dueDate: formatDate(serviceRequest.DUE_DATE),
+            escalatedFlag: !!serviceRequest.ESCALATED_FLAG,
+            escalatedTo: serviceRequest.ESCALATED_TO || '',
+            escalatedDate: formatDate(serviceRequest.ESCALATED_DATE),
+            description: serviceRequest.DESCRIPTION || '',
+            comments: serviceRequest.COMMENTS || '',
+            contactId: serviceRequest.CONTACT_ID || '',
+            accountId: serviceRequest.ACCOUNT_ID || '',
+            assetId: serviceRequest.ASSET_ID || '',
+            parRowId: serviceRequest.PAR_ROW_ID || '',
+            emp1stname: employeeRequest.employees[0]?.EMP_FST_NAME || '',
+            emplastname: employeeRequest.employees[0]?.EMP_LAST_NAME || '',
+          });
+          setExistingFiles(
+            serviceRequest.attachments.map((att) => ({
+              sr_att_id: att.SR_ATT_ID,
+              name: att.FILE_NAME,
+              file_path: att.FILE_PATH,
+              type: att.TYPE_CD || '',
+              comments: att.COMMENTS || '',
+              attachmentStatus: att.ATTACHMENT_STATUS || '',
+            })) || []
+          );
+          setNewFiles([]);
+          setParentServiceRequests(parentRequests.success ? parentRequests.serviceRequests : []);
+          setError(null);
+        } catch (err) {
+          console.error('Error loading service request details:', err);
+          setError(err.message || 'Failed to load service request details');
+          setServiceRequestDetails(null);
+          setParentServiceRequests([]);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      loadServiceRequestDetails();
+    } else {
+      setServiceRequestDetails(null);
+      setFormData({
+        serviceName: '',
+        statusCd: 'Open',
+        priorityCd: '',
+        typeCd: '',
+        subTypeCd: '',
+        assignedTo: '',
+        dueDate: '',
+        escalatedFlag: false,
+        escalatedTo: '',
+        escalatedDate: '',
+        description: '',
+        comments: '',
+        contactId: '',
+        accountId: '',
+        assetId: '',
+        parRowId: '',
+        emp1stname: '',
+        emplastname: '',
+        accountname:'',
+      });
+      setExistingFiles([]);
+      setNewFiles([]);
+      setParentServiceRequests([]);
+    }
   }, [selectedSrNum, orgid, empid]);
 
   const handleRowClick = (srNum) => {
@@ -388,6 +396,7 @@ const Overview = ({
           parRowId: updatedRequest.PAR_ROW_ID || '',
           emp1stname: employeeRequest.employees[0]?.EMP_FST_NAME || '',
           emplastname: employeeRequest.employees[0]?.EMP_LAST_NAME || '',
+           accountname:updatedRequest.accountname||'',
         });
         setExistingFiles(
           updatedRequest.attachments.map((att) => ({
@@ -485,6 +494,26 @@ const Overview = ({
     setEndDate(e.target.value);
     setCurrentPage(1);
     setPageInputValue('1');
+  };
+
+  const handleRequestsPerPageInputChange = (e) => {
+    setRequestsPerPageInput(e.target.value);
+  };
+
+  const handleRequestsPerPageInputKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      const value = parseInt(e.target.value, 10);
+      if (!isNaN(value) && value >= 1) {
+        setRequestsPerPage(value);
+        setRequestsPerPageInput(value.toString());
+        setCurrentPage(1);
+        setPageInputValue('1');
+      } else {
+        setRequestsPerPageInput(requestsPerPage.toString());
+        setCurrentPage(1);
+        setPageInputValue('1');
+      }
+    }
   };
 
   const filteredServiceRequests = allServiceRequests.filter(request => {
@@ -592,6 +621,8 @@ const Overview = ({
           priority={priority}
           previousServiceRequests={previousServiceRequests}
           onBack={handleBack}
+          accountRows={accountRows}
+          empname={empname}
         />
       ) : !selectedSrNum ? (
         <div className="service-requests-list" style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
@@ -635,7 +666,7 @@ const Overview = ({
                 <option key={priority} value={priority}>{priority}</option>
               ))}
             </select>
-            <div className="date-filter-container">
+            {/* <div className="date-filter-container">
               <input
                 type="date"
                 value={startDate}
@@ -650,7 +681,7 @@ const Overview = ({
                 className="date-input"
                 placeholder="End Date"
               />
-            </div>
+            </div> */}
           </div>
 
           {filteredServiceRequests.length === 0 && !error ? (
@@ -694,7 +725,7 @@ const Overview = ({
                         </td>
                         <td className="name-cell">{request.SERVICE_NAME || '-'}</td>
                         <td className="status-cell">
-                          <span className={`status-badge ${request.STATUS_CD?.toLowerCase() === 'resolved' ? 'inactive' : 'active'}`}>
+                          <span className={`status-badge ${request.STATUS_CD?.toLowerCase() === 'resolved' ? 'active' : 'inactive'}`}>
                             {request.STATUS_CD || '-'}
                           </span>
                         </td>
@@ -734,6 +765,17 @@ const Overview = ({
                   </button>
                 </div>
               )}
+              <div className="requests-per-page-container">
+                <label>Service Requests Per Page</label>
+                <input
+                  type="text"
+                  value={requestsPerPageInput}
+                  onChange={handleRequestsPerPageInputChange}
+                  onKeyPress={handleRequestsPerPageInputKeyPress}
+                  className="requests-per-page-input"
+                  placeholder="Requests per page"
+                />
+              </div>
             </>
           )}
         </div>
@@ -922,7 +964,7 @@ const Overview = ({
                     </div>
                     <div className="details-g">
                       <label>Assigned To</label>
-                      <p>{getdisplayemployeeid(serviceRequestDetails.ASSIGNED_TO) || '-'}</p>
+                      <p>{`${serviceRequestDetails.employees.EMP_FST_NAME} ${serviceRequestDetails.employees.EMP_LAST_NAME}` || '-'}</p>
                     </div>
                   </div>
                   <div className="details-row">
@@ -1009,28 +1051,29 @@ const Overview = ({
                       />
                     </div>
                     <div className="form-group">
-                      <label>Account ID</label>
-                      <input
-                        type="text"
-                        name="accountId"
-                        value={formData.accountId}
-                        onChange={handleFormChange}
-                        placeholder="Enter Account ID"
-                      />
-                    </div>
+              <label>Account ID</label>
+              <select name="accountId" value={formData.accountId} onChange={handleFormChange}>
+                <option value="">Select Account</option>
+                {accountRows.map((details) => (
+                  <option key={details.ACCNT_ID} value={details.ACCNT_ID}>
+                    {details.ALIAS_NAME}
+                  </option>
+                ))}
+              </select>
+            </div>
                   </div>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Asset ID</label>
-                      <input
-                        type="text"
-                        name="assetId"
-                        value={formData.assetId}
-                        onChange={handleFormChange}
-                        placeholder="Enter Asset ID"
-                      />
-                    </div>
-                  </div>
+                 <div className="form-row">
+                 <div className="form-group">
+              <label>Asset ID</label>
+              <input
+                type="text"
+                name="assetId"
+                value={formData.assetId}
+                onChange={handleFormChange}
+                placeholder="Enter Asset ID"
+              />
+            </div>
+          </div>
                   <div className="form-buttons">
                     <button
                       type="submit"
@@ -1082,7 +1125,7 @@ const Overview = ({
                     </div>
                     <div className="details-g">
                       <label>Account ID</label>
-                      <p>{serviceRequestDetails.ACCOUNT_ID || '-'}</p>
+                      <p>{serviceRequestDetails.accountname || '-'}</p>
                     </div>
                   </div>
                   <div className="details-row">
@@ -1213,7 +1256,7 @@ const Overview = ({
                                 <tr key={`existing-${index}`}>
                                   <td>
                                     <a
-                                      href={`/Uploads/${fileObj.file_path}`}
+                                      href={`/uploads/${fileObj.file_path}`}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                     >
@@ -1342,7 +1385,7 @@ const Overview = ({
                                 <tr key={index}>
                                   <td>
                                     <a
-                                      href={`/Uploads/${fileObj.file_path}`}
+                                      href={`/uploads/${fileObj.file_path}`}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                     >

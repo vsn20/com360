@@ -40,48 +40,71 @@ export async function fetchreqbyid() {
     const pool = await DBconnection();
     console.log('Connection established');
 
-   // console.log('empiddddd',empid);
-    const [features]=await pool.query(
-      `select roleid from emp_role_assign where empid=? and orgid=?`,[empid,orgid]
-    );
-    const roleids=features.map(details=>details.roleid)
-    //console.log("roleeeeeeeeee",roleids);
-    let menuresults=[];
-    if(roleids.length>0){
-     [menuresults]=await pool.query( 
-        `select alldata from role_menu_permissions where roleid in (?) and menuid=11 and alldata=1`,[roleids]
-       );
-      }
-    let rows;
-    const allpermissions=menuresults.length>0;
-   //console.log("permissssssssssssssssssss",allpermissions);
-    if(allpermissions){
-          [rows] = await pool.query(
-      'SELECT SR_NUM, SERVICE_NAME, STATUS_CD, CREATED_BY,PRIORITY_CD FROM C_SRV_REQ WHERE ORG_ID = ?',
-      [orgid]
-      
-    );
-    }else{
-      [rows] = await pool.query(
-      'SELECT SR_NUM, SERVICE_NAME, STATUS_CD, CREATED_BY,PRIORITY_CD  FROM C_SRV_REQ WHERE ASSIGNED_TO = ? AND ORG_ID = ?',
+    const [features] = await pool.query(
+      `SELECT roleid FROM emp_role_assign WHERE empid = ? AND orgid = ?`,
       [empid, orgid]
     );
+    const roleids = features.map(details => details.roleid);
+    // console.log("roleeeeeeeeee", roleids);
 
+    let menuresults = [];
+    if (roleids.length > 0) {
+      [menuresults] = await pool.query(
+        `SELECT alldata FROM role_menu_permissions WHERE roleid IN (?) AND menuid = 11 AND alldata = 1`,
+        [roleids]
+      );
     }
 
-     
+    let rows;
+    const allpermissions = menuresults.length > 0;
+    // console.log("permissssssssssssssssssss", allpermissions);
+    if (allpermissions) {
+      [rows] = await pool.query(
+        'SELECT SR_NUM, SERVICE_NAME, STATUS_CD, CREATED_BY, PRIORITY_CD FROM C_SRV_REQ WHERE ORG_ID = ?',
+        [orgid]
+      );
+    } else {
+      [rows] = await pool.query(
+        'SELECT SR_NUM, SERVICE_NAME, STATUS_CD, CREATED_BY, PRIORITY_CD FROM C_SRV_REQ WHERE ASSIGNED_TO = ? AND ORG_ID = ?',
+        [empid, orgid]
+      );
+    }
 
-    if (rows.length === 0) {
+    // Enrich rows with employee full names
+    const enrichedRows = await Promise.all(
+      rows.map(async (details) => {
+        try {
+          const [empname] = await pool.query(
+            'SELECT EMP_FST_NAME, EMP_LAST_NAME FROM C_EMP WHERE empid = ?',
+            [details.CREATED_BY]
+          );
+
+          return {
+            ...details,
+            CREATED_BY: empname[0]
+              ? `${empname[0].EMP_FST_NAME} ${empname[0].EMP_LAST_NAME}`
+              : details.CREATED_BY || 'Unknown',
+          };
+        } catch (error) {
+          console.error(`Error fetching employee name for CREATED_BY ${details.CREATED_BY}:`, error);
+          return {
+            ...details,
+            CREATED_BY: details.CREATED_BY || 'Unknown',
+          };
+        }
+      })
+    );
+
+    if (enrichedRows.length === 0) {
       console.log('No service requests found for ASSIGNED_TO:', empid);
     }
 
-    return { rows };
+    return { rows: enrichedRows };
   } catch (error) {
     console.error('Error fetching service requests:', error);
     throw new Error(error.message || 'Failed to fetch service requests');
   }
 }
-
 export async function fetchServiceRequestById(SR_NUM, orgid, empid) {
   try {
     const cookieStore = await cookies();
@@ -110,6 +133,13 @@ export async function fetchServiceRequestById(SR_NUM, orgid, empid) {
       [SR_NUM, orgid]
     );
 
+        const [empname] = await pool.query(
+            'SELECT EMP_FST_NAME, EMP_LAST_NAME FROM C_EMP WHERE empid = ?',
+            [requestRows[0].CREATED_BY]
+          );
+
+          let employeename=`${empname[0].EMP_FST_NAME} ${empname[0].EMP_LAST_NAME}`
+
     if (requestRows.length === 0) {
       console.log('No service request found for SR_NUM:', SR_NUM, 'ORG_ID:', orgid);
       throw new Error('Service request not found');
@@ -127,6 +157,7 @@ export async function fetchServiceRequestById(SR_NUM, orgid, empid) {
     return {
       ...serviceRequest,
       attachments: attachmentRows || [],
+      CREATED_BY:employeename
     };
   } catch (error) {
     console.error('Error fetching service request by ID:', error);
@@ -160,7 +191,35 @@ export async function fetchActivitiesBySrId(SR_NUM, orgid, empid) {
       [SR_NUM]
     );
 
-    return activityRows || [];
+    const enrichedRows = await Promise.all(
+      activityRows.map(async (details) => {
+        try {
+          const [empname] = await pool.query(
+            'SELECT EMP_FST_NAME, EMP_LAST_NAME FROM C_EMP WHERE empid = ?',
+            [details.CREATED_BY]
+          );
+
+          return {
+            ...details,
+            CREATED_BY: empname[0]
+              ? `${empname[0].EMP_FST_NAME} ${empname[0].EMP_LAST_NAME}`
+              : details.CREATED_BY || 'Unknown',
+          };
+        } catch (error) {
+          console.error(`Error fetching employee name for CREATED_BY ${details.CREATED_BY}:`, error);
+          return {
+            ...details,
+            CREATED_BY: details.CREATED_BY || 'Unknown',
+          };
+        }
+      })
+    );
+
+    if (enrichedRows.length === 0) {
+      console.log('No service requests found for ASSIGNED_TO:', empid);
+    }
+
+    return {activityRows:enrichedRows};
   } catch (error) {
     console.error('Error fetching activities by SR_ID:', error);
     throw new Error(error.message || 'Failed to fetch activities');

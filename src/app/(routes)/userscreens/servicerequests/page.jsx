@@ -22,6 +22,9 @@ export default async function ServiceRequestsPage() {
   let type = [];
   let subtype = [];
   let priority = [];
+  let accountRows=[];
+  let employeename=[];
+  let empname;
 
   try {
     const pool = await DBconnection();
@@ -55,6 +58,17 @@ export default async function ServiceRequestsPage() {
           'SELECT SR_NUM, SERVICE_NAME, STATUS_CD,PRIORITY_CD FROM C_SRV_REQ WHERE CREATED_BY = ? AND ORG_ID = ?',
           [empid, orgid]
         );
+        [accountRows] = await pool.execute(
+          'SELECT ACCNT_ID, ALIAS_NAME FROM C_ACCOUNT WHERE ORGID = ? AND ACTIVE_FLAG = 1',
+          [orgid]
+        );
+
+         [employeename] = await pool.query(
+          'SELECT empid, EMP_FST_NAME, EMP_LAST_NAME FROM C_EMP WHERE orgid = ? and empid=?',
+          [orgid,empid]
+        );
+        empname=`${employeename[0].EMP_FST_NAME} ${employeename[0].EMP_LAST_NAME}`;
+
       } else {
         throw new Error('Invalid token: orgid or empid missing');
       }
@@ -76,6 +90,8 @@ export default async function ServiceRequestsPage() {
       priority={priority}
       serviceRequests={serviceRequests}
       previousServiceRequests={serviceRequests} // Used for parRowId dropdown
-    />
+      accountRows={accountRows}
+      empname={empname}
+      />
   );
 }

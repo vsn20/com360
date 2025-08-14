@@ -5,7 +5,7 @@ import { fetchreqbyid, fetchServiceRequestById, updateServiceRequestStatus, fetc
 import './overview.css';
 import { useRouter } from 'next/navigation';
 
-const Requests = ({ orgid, empid, type, subtype, priority, previousServiceRequests, onBack }) => {
+const Requests = ({ orgid, empid, type, subtype, priority, previousServiceRequests, onBack, noofrows }) => {
   const router = useRouter();
   const [requests, setRequests] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -18,7 +18,7 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
   const [newAttachments, setNewAttachments] = useState([]);
   const [existingFiles, setExistingFiles] = useState([]);
   const [resolverFiles, setResolverFiles] = useState([]);
-  const [readOnlyMode, setReadOnlyMode] = useState(false); // New state for read-only mode
+  const [readOnlyMode, setReadOnlyMode] = useState(false);
   const [formData, setFormData] = useState({
     serviceName: '',
     statusCd: 'Open',
@@ -37,6 +37,18 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
     assetId: '',
     parRowId: '',
   });
+
+  // Pagination and filtering state
+  const [sortConfig, setSortConfig] = useState({ column: 'SR_NUM', direction: 'asc' });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageInputValue, setPageInputValue] = useState('1');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [priorityFilter, setPriorityFilter] = useState('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [requestsPerPage, setRequestsPerPage] = useState(parseInt(noofrows?.Name, 10) || 10);
+  const [requestsPerPageInput, setRequestsPerPageInput] = useState((parseInt(noofrows?.Name, 10) || 10).toString());
 
   const statusOptions = [
     { id: '1', Name: 'Open' },
@@ -76,6 +88,22 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
 
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (requests.length > 0) {
+      setRequests([...requests].sort((a, b) => 
+        sortServiceRequests(a, b, sortConfig.column, sortConfig.direction)
+      ));
+    }
+  }, [sortConfig]);
+
+  useEffect(() => {
+    setPageInputValue(currentPage.toString());
+  }, [currentPage]);
+
+  useEffect(() => {
+    setRequestsPerPageInput(requestsPerPage.toString());
+  }, [requestsPerPage]);
 
   useEffect(() => {
     const loadServiceRequestDetails = async () => {
@@ -153,7 +181,7 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
             attachmentStatus: att.ATTACHMENT_STATUS || '',
           })) || []
         );
-        setActivities(activityRows);
+        setActivities(activityRows.activityRows);
         setNewActivities([]);
         setNewAttachments([]);
         setEditingActivity(null);
@@ -171,9 +199,94 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
     loadServiceRequestDetails();
   }, [selectedSrNum, orgid, empid]);
 
+  const sortServiceRequests = (a, b, column, direction) => {
+    let aValue, bValue;
+    switch (column) {
+      case 'SR_NUM':
+        aValue = parseInt(a.SR_NUM.split('-')[1] || a.SR_NUM);
+        bValue = parseInt(b.SR_NUM.split('-')[1] || b.SR_NUM);
+        return direction === 'asc' ? aValue - bValue : bValue - aValue;
+      case 'SERVICE_NAME':
+        aValue = a.SERVICE_NAME || '';
+        bValue = b.SERVICE_NAME || '';
+        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      case 'STATUS_CD':
+        aValue = a.STATUS_CD || '';
+        bValue = b.STATUS_CD || '';
+        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      case 'PRIORITY_CD':
+        aValue = a.PRIORITY_CD || '';
+        bValue = b.PRIORITY_CD || '';
+        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      case 'CREATED_BY':
+        aValue = a.CREATED_BY || '';
+        bValue = b.CREATED_BY || '';
+        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      default:
+        return 0;
+    }
+  };
+
+  const requestSort = (column) => {
+    setSortConfig(prev => ({
+      column,
+      direction: prev.column === column && prev.direction === 'asc' ? 'desc' : 'asc',
+    }));
+  };
+
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+    setCurrentPage(1);
+    setPageInputValue('1');
+  };
+
+  const handleStatusFilterChange = (e) => {
+    setStatusFilter(e.target.value);
+    setCurrentPage(1);
+    setPageInputValue('1');
+  };
+
+  const handlePriorityFilterChange = (e) => {
+    setPriorityFilter(e.target.value);
+    setCurrentPage(1);
+    setPageInputValue('1');
+  };
+
+  const handleStartDateChange = (e) => {
+    setStartDate(e.target.value);
+    setCurrentPage(1);
+    setPageInputValue('1');
+  };
+
+  const handleEndDateChange = (e) => {
+    setEndDate(e.target.value);
+    setCurrentPage(1);
+    setPageInputValue('1');
+  };
+
+  const handleRequestsPerPageInputChange = (e) => {
+    setRequestsPerPageInput(e.target.value);
+  };
+
+  const handleRequestsPerPageInputKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      const value = parseInt(e.target.value, 10);
+      if (!isNaN(value) && value >= 1) {
+        setRequestsPerPage(value);
+        setRequestsPerPageInput(value.toString());
+        setCurrentPage(1);
+        setPageInputValue('1');
+      } else {
+        setRequestsPerPageInput(requestsPerPage.toString());
+        setCurrentPage(1);
+        setPageInputValue('1');
+      }
+    }
+  };
+
   const handleRowClickInternal = (srNum, readOnly = false) => {
     setSelectedSrNum(srNum);
-    setReadOnlyMode(readOnly); // Set read-only mode based on parameter
+    setReadOnlyMode(readOnly);
     setError(null);
   };
 
@@ -187,9 +300,9 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
     setEditingActivity(null);
     setExistingFiles([]);
     setResolverFiles([]);
-    setReadOnlyMode(false); // Reset read-only mode
+    setReadOnlyMode(false);
     setError(null);
-    // onBack(); // Call the onBack prop to return to Overview
+   
   };
 
   const handleFormChange = (e) => {
@@ -591,102 +704,286 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
     return prjid ? prjid.split('-')[1] || prjid : '-';
   };
 
+  const filteredServiceRequests = requests.filter(request => {
+    const matchesSearch = request.SERVICE_NAME?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                         request.SR_NUM?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || request.STATUS_CD === statusFilter;
+    const matchesPriority = priorityFilter === 'all' || request.PRIORITY_CD === priorityFilter;
+    
+    let matchesDate = true;
+    if (request.CREATED && (startDate || endDate)) {
+      const createdDate = new Date(request.CREATED);
+      const start = startDate ? new Date(startDate) : null;
+      const end = endDate ? new Date(endDate) : null;
+      if (start && end && start > end) {
+        return false;
+      }
+      if (start) {
+        start.setHours(0, 0, 0, 0);
+        matchesDate = matchesDate && createdDate >= start;
+      }
+      if (end) {
+        end.setHours(23, 59, 59, 999);
+        matchesDate = matchesDate && createdDate <= end;
+      }
+    }
+    return matchesSearch && matchesStatus && matchesPriority && matchesDate;
+  });
+
+  const totalPages = Math.ceil(filteredServiceRequests.length / requestsPerPage);
+  const indexOfLastRequest = currentPage * requestsPerPage;
+  const indexOfFirstRequest = indexOfLastRequest - requestsPerPage;
+  const currentRequests = filteredServiceRequests.slice(indexOfFirstRequest, indexOfLastRequest);
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(prev => prev + 1);
+      setPageInputValue((currentPage + 1).toString());
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
+      setPageInputValue((currentPage - 1).toString());
+    }
+  };
+
+  const handlePageInputChange = (e) => {
+    setPageInputValue(e.target.value);
+  };
+
+  const handlePageInputKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      const value = parseInt(pageInputValue, 10);
+      if (!isNaN(value) && value >= 1 && value <= totalPages) {
+        setCurrentPage(value);
+        setPageInputValue(value.toString());
+      } else {
+        setPageInputValue(currentPage.toString());
+      }
+    }
+  };
+
+  const uniqueStatuses = [...new Set(requests.map(req => req.STATUS_CD).filter(Boolean))];
+  const uniquePriorities = [...new Set(requests.map(req => req.PRIORITY_CD).filter(Boolean))];
+
   const isResolved = formData.statusCd === 'Resolved';
 
   return (
-    <div className="employee-overview-container">
+    <div className="service-requests-overview-container">
       {error && <div className="error-message">{error}</div>}
       {isLoading && <div className="loading-message">Loading...</div>}
       {!selectedSrNum ? (
-        <div className="employee-list">
-          <button className="back-button" onClick={onBack} disabled={isLoading}>
-            
-          </button>
-          {!isLoading && !error && requests.length === 0 && (
-            <p>No service requests found.</p>
+        <div className="service-requests-list">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <div className="title">Service Requests</div>
+            <button className="back-button" onClick={onBack} disabled={isLoading}></button>
+          </div>
+
+          <div className="search-filter-container">
+            <input
+              type="text"
+              placeholder="Search by Service Name or SR ID"
+              value={searchQuery}
+              onChange={handleSearchChange}
+              className="search-input"
+            />
+            <select
+              value={statusFilter}
+              onChange={handleStatusFilterChange}
+              className="filter-select"
+            >
+              <option value="all">All Status</option>
+              {uniqueStatuses.map((status) => (
+                <option key={status} value={status}>{status}</option>
+              ))}
+            </select>
+            <select
+              value={priorityFilter}
+              onChange={handlePriorityFilterChange}
+              className="filter-select"
+            >
+              <option value="all">All Priority</option>
+              {uniquePriorities.map((priority) => (
+                <option key={priority} value={priority}>{priority}</option>
+              ))}
+            </select>
+            {/* <div className="date-filter-container">
+              <input
+                type="date"
+                value={startDate}
+                onChange={handleStartDateChange}
+                className="date-input"
+                placeholder="Start Date"
+              />
+              <input
+                type="date"
+                value={endDate}
+                onChange={handleEndDateChange}
+                className="date-input"
+                placeholder="End Date"
+              />
+            </div> */}
+          </div>
+
+          {!isLoading && !error && filteredServiceRequests.length === 0 && (
+            <p className="empty-state">No service requests found.</p>
           )}
-          {!isLoading && requests.length > 0 && (
-            <table className="employee-table">
-              <thead>
-                <tr>
-                  <th>Service Request ID</th>
-                  <th>Service Name</th>
-                  <th>Status</th>
-                  <th>Priority</th>
-                  <th>Created By</th>
-                </tr>
-              </thead>
-              <tbody>
-                {requests.map((req) => (
-                  <tr
-                    key={req.SR_NUM}
-                    onClick={() => handleRowClickInternal(req.SR_NUM, false)}
-                    className="employee-table-row-clickable"
+          {!isLoading && filteredServiceRequests.length > 0 && (
+            <>
+              <div className="table-wrapper">
+                <table className="service-requests-table five-column">
+                  <colgroup>
+                    <col />
+                    <col />
+                    <col />
+                    <col />
+                    <col />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th className={sortConfig.column === 'SR_NUM' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('SR_NUM')}>
+                        Service Request ID
+                      </th>
+                      <th className={sortConfig.column === 'SERVICE_NAME' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('SERVICE_NAME')}>
+                        Service Name
+                      </th>
+                      <th className={sortConfig.column === 'STATUS_CD' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('STATUS_CD')}>
+                        Status
+                      </th>
+                      <th className={sortConfig.column === 'PRIORITY_CD' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('PRIORITY_CD')}>
+                        Priority
+                      </th>
+                      <th>
+                        Created By
+                      </th>
+                      {/* className={sortConfig.column === 'CREATED_BY' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('CREATED_BY')} */}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentRequests.map((req) => (
+                      <tr
+                        key={req.SR_NUM}
+                        onClick={() => handleRowClickInternal(req.SR_NUM, false)}
+                        className={selectedSrNum === req.SR_NUM ? 'selected-row' : ''}
+                      >
+                        <td className="id-cell">
+                          <span className="role-indicator"></span>SR-{getdisplayprojectid(req.SR_NUM)}
+                        </td>
+                        <td className="name-cell">{req.SERVICE_NAME || '-'}</td>
+                        <td className="status-cell">
+                          <span className={`status-badge ${req.STATUS_CD?.toLowerCase() === 'resolved' ? 'active' : 'inactive'}`}>
+                            {req.STATUS_CD || '-'}
+                          </span>
+                        </td>
+                        <td className="priority-cell">{req.PRIORITY_CD || '-'}</td>
+                        <td>{req.CREATED_BY || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {filteredServiceRequests.length > requestsPerPage && (
+                <div className="pagination-container">
+                  <button
+                    className="button"
+                    onClick={handlePrevPage}
+                    disabled={currentPage === 1}
                   >
-                    <td>SR-{getdisplayprojectid(req.SR_NUM)}</td>
-                    <td>{req.SERVICE_NAME || '-'}</td>
-                    <td>{req.STATUS_CD || '-'}</td>
-                    <td>{req.PRIORITY_CD}</td>
-                    <td>{req.CREATED_BY || '-'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    ← Previous
+                  </button>
+                  <span className="pagination-text">
+                    Page{' '}
+                    <input
+                      type="text"
+                      value={pageInputValue}
+                      onChange={handlePageInputChange}
+                      onKeyPress={handlePageInputKeyPress}
+                      className="pagination-input"
+                    />{' '}
+                    of {totalPages}
+                  </span>
+                  <button
+                    className="button"
+                    onClick={handleNextPage}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
+              <div className="requests-per-page-container">
+                <label>Service Requests Per Page</label>
+                <input
+                  type="text"
+                  value={requestsPerPageInput}
+                  onChange={handleRequestsPerPageInputChange}
+                  onKeyPress={handleRequestsPerPageInputKeyPress}
+                  className="requests-per-page-input"
+                  placeholder="Requests per page"
+                />
+              </div>
+            </>
           )}
         </div>
       ) : (
         serviceRequestDetails && (
-          <div className="employee-details-container">
-            <button className="back-button" onClick={handleBack}>
-              
-            </button>
+          <div className="service-request-details-container">
+            <div className="header-section">
+              <div className="title">Service Request Details</div>
+              <button className="back-button" onClick={handleBack}></button>
+            </div>
 
             <div className="details-block">
-              <h3>Basic Details</h3>
+              <div className="section-header">
+                <div>Basic Details</div>
+              </div>
               {readOnlyMode ? (
-                <div>
+                <div className="view-details">
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Service Request ID</label>
                       <p>SR-{getdisplayprojectid(serviceRequestDetails.SR_NUM)}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Organization ID</label>
                       <p>{serviceRequestDetails.ORG_ID || '-'}</p>
                     </div>
                   </div>
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Service Name</label>
                       <p>{serviceRequestDetails.SERVICE_NAME || '-'}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Status</label>
                       <p>{serviceRequestDetails.STATUS_CD || '-'}</p>
                     </div>
                   </div>
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Priority</label>
                       <p>{serviceRequestDetails.PRIORITY_CD || '-'}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Type</label>
                       <p>{serviceRequestDetails.TYPE_CD || '-'}</p>
                     </div>
                   </div>
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Sub-Type</label>
                       <p>{serviceRequestDetails.SUB_TYPE_CD || '-'}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Created By</label>
                       <p>{serviceRequestDetails.CREATED_BY || '-'}</p>
                     </div>
                   </div>
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Due Date</label>
                       <p>{formatDate(serviceRequestDetails.DUE_DATE)}</p>
                     </div>
@@ -699,28 +996,42 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
                     handleSaveStatus();
                   }}
                 >
-                  <div className="details-row">
-                    <div className="details-group">
+                  <div className="form-row">
+                    <div className="form-group">
                       <label>Service Request ID</label>
-                      <p>SR-{getdisplayprojectid(serviceRequestDetails.SR_NUM)}</p>
+                      <input
+                        type="text"
+                        value={`SR-${getdisplayprojectid(serviceRequestDetails.SR_NUM)}`}
+                        readOnly
+                        className="bg-gray-100"
+                      />
                     </div>
-                    <div className="details-group">
+                    <div className="form-group">
                       <label>Organization ID</label>
-                      <p>{serviceRequestDetails.ORG_ID || '-'}</p>
+                      <input
+                        type="text"
+                        value={serviceRequestDetails.ORG_ID || '-'}
+                        readOnly
+                        className="bg-gray-100"
+                      />
                     </div>
                   </div>
-                  <div className="details-row">
-                    <div className="details-group">
+                  <div className="form-row">
+                    <div className="form-group">
                       <label>Service Name</label>
-                      <p>{serviceRequestDetails.SERVICE_NAME || '-'}</p>
+                      <input
+                        type="text"
+                        value={serviceRequestDetails.SERVICE_NAME || '-'}
+                        readOnly
+                        className="bg-gray-100"
+                      />
                     </div>
-                    <div className="details-group">
+                    <div className="form-group">
                       <label>Status</label>
                       <select
                         name="statusCd"
                         value={formData.statusCd}
                         onChange={handleFormChange}
-                        className="form-control"
                         disabled={isResolved}
                       >
                         {statusOptions.map((status) => (
@@ -731,43 +1042,68 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
                       </select>
                     </div>
                   </div>
-                  <div className="details-row">
-                    <div className="details-group">
+                  <div className="form-row">
+                    <div className="form-group">
                       <label>Priority</label>
-                      <p>{serviceRequestDetails.PRIORITY_CD || '-'}</p>
+                      <input
+                        type="text"
+                        value={serviceRequestDetails.PRIORITY_CD || '-'}
+                        readOnly
+                        className="bg-gray-100"
+                      />
                     </div>
-                    <div className="details-group">
+                    <div className="form-group">
                       <label>Type</label>
-                      <p>{serviceRequestDetails.TYPE_CD || '-'}</p>
+                      <input
+                        type="text"
+                        value={serviceRequestDetails.TYPE_CD || '-'}
+                        readOnly
+                        className="bg-gray-100"
+                      />
                     </div>
                   </div>
-                  <div className="details-row">
-                    <div className="details-group">
+                  <div className="form-row">
+                    <div className="form-group">
                       <label>Sub-Type</label>
-                      <p>{serviceRequestDetails.SUB_TYPE_CD || '-'}</p>
+                      <input
+                        type="text"
+                        value={serviceRequestDetails.SUB_TYPE_CD || '-'}
+                        readOnly
+                        className="bg-gray-100"
+                      />
                     </div>
-                    <div className="details-group">
+                    <div className="form-group">
                       <label>Created By</label>
-                      <p>{serviceRequestDetails.CREATED_BY || '-'}</p>
+                      <input
+                        type="text"
+                        value={serviceRequestDetails.CREATED_BY || '-'}
+                        readOnly
+                        className="bg-gray-100"
+                      />
                     </div>
                   </div>
-                  <div className="details-row">
-                    <div className="details-group">
+                  <div className="form-row">
+                    <div className="form-group">
                       <label>Due Date</label>
-                      <p>{formatDate(serviceRequestDetails.DUE_DATE)}</p>
+                      <input
+                        type="text"
+                        value={formatDate(serviceRequestDetails.DUE_DATE)}
+                        readOnly
+                        className="bg-gray-100"
+                      />
                     </div>
                   </div>
                   <div className="form-buttons">
                     <button
                       type="submit"
-                      className="save-button"
+                      className="save"
                       disabled={isLoading || isResolved}
                     >
-                      {isLoading ? 'Saving...' : 'Save Status'}
+                      {isLoading ? 'Save Status' : 'Save Status'}
                     </button>
                     <button
                       type="button"
-                      className="cancel-button"
+                      className="cancel"
                       onClick={() => setFormData({ ...formData, statusCd: serviceRequestDetails.STATUS_CD || 'Open' })}
                       disabled={isLoading || isResolved}
                     >
@@ -779,24 +1115,26 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
             </div>
 
             <div className="details-block">
-              <h3>Additional Details</h3>
-              <div>
+              <div className="section-header">
+                <div>Additional Details</div>
+              </div>
+              <div className="view-details">
                 <div className="details-row">
-                  <div className="details-group">
+                  <div className="details-g">
                     <label>Escalated</label>
                     <p>{serviceRequestDetails.ESCALATED_FLAG ? 'Yes' : 'No'}</p>
                   </div>
-                  <div className="details-group">
+                  <div className="details-g">
                     <label>Escalated To</label>
                     <p>{serviceRequestDetails.ESCALATED_TO || '-'}</p>
                   </div>
                 </div>
                 <div className="details-row">
-                  <div className="details-group">
+                  <div className="details-g">
                     <label>Escalated Date</label>
                     <p>{formatDate(serviceRequestDetails.ESCALATED_DATE)}</p>
                   </div>
-                  <div className="details-group">
+                  <div className="details-g">
                     <label>Parent SR ID</label>
                     {serviceRequestDetails.PAR_ROW_ID ? (
                       <button
@@ -811,17 +1149,17 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
                   </div>
                 </div>
                 <div className="details-row">
-                  <div className="details-group">
+                  <div className="details-g">
                     <label>Contact ID</label>
                     <p>{serviceRequestDetails.CONTACT_ID || '-'}</p>
                   </div>
-                  <div className="details-group">
+                  <div className="details-g">
                     <label>Account ID</label>
                     <p>{serviceRequestDetails.ACCOUNT_ID || '-'}</p>
                   </div>
                 </div>
                 <div className="details-row">
-                  <div className="details-group">
+                  <div className="details-g">
                     <label>Asset ID</label>
                     <p>{serviceRequestDetails.ASSET_ID || '-'}</p>
                   </div>
@@ -830,16 +1168,18 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
             </div>
 
             <div className="details-block">
-              <h3>Description and Comments</h3>
-              <div>
+              <div className="section-header">
+                <div>Description and Comments</div>
+              </div>
+              <div className="view-details">
                 <div className="details-row">
-                  <div className="details-group">
+                  <div className="details-g">
                     <label>Description</label>
                     <p>{serviceRequestDetails.DESCRIPTION || '-'}</p>
                   </div>
                 </div>
                 <div className="details-row">
-                  <div className="details-group">
+                  <div className="details-g">
                     <label>Comments</label>
                     <p>{serviceRequestDetails.COMMENTS || '-'}</p>
                   </div>
@@ -848,12 +1188,14 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
             </div>
 
             <div className="details-block">
-              <h3>Attachments</h3>
-              <div>
+              <div className="section-header">
+                <div>Attachments</div>
+              </div>
+              <div className="view-details">
                 <div className="details-row">
                   {existingFiles.length > 0 && (
-                    <div className="details-group">
-                      <h4>Assigned By Attachments</h4>
+                    <div className="details-g">
+                      <div>Assigned By Attachments</div>
                       <table className="attachment-table">
                         <thead>
                           <tr>
@@ -866,7 +1208,7 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
                             <tr key={index}>
                               <td>
                                 <a
-                                  href={`/uploads/ServiceRequests/${fileObj.file_path}`}
+                                  href={`/uploads/${fileObj.file_path}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                 >
@@ -885,21 +1227,21 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
             </div>
 
             <div className="details-block">
-              <h3>Resolver Attachments</h3>
-              {!readOnlyMode && (
-                <div className="details-buttons">
+              <div className="section-header">
+                <div>Resolver Attachments</div>
+                {!readOnlyMode && (
                   <button
-                    className="save-button"
+                    className="button"
                     onClick={handleAddAttachmentForm}
                     disabled={isLoading || isResolved}
                   >
                     Add Attachment
                   </button>
-                </div>
-              )}
+                )}
+              </div>
               {resolverFiles.length > 0 && (
-                <div className="details-group">
-                  <h4>Other Attachments</h4>
+                <div className="details-g">
+                  <div>Other Attachments</div>
                   <table className="attachment-table">
                     <thead>
                       <tr>
@@ -924,7 +1266,7 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
                           {!readOnlyMode && (
                             <td>
                               <button
-                                className="delete-button"
+                                className="cancel"
                                 onClick={() => handleDeleteAttachment(fileObj.sr_att_id)}
                                 disabled={isLoading || isResolved}
                               >
@@ -974,14 +1316,14 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
                     <div className="form-buttons">
                       <button
                         type="submit"
-                        className="save-button"
+                        className="save"
                         disabled={isLoading || isResolved}
                       >
-                        {isLoading ? 'Saving...' : 'Save Attachment'}
+                        {isLoading ? 'Save Attachment' : 'Save Attachment'}
                       </button>
                       <button
                         type="button"
-                        className="cancel-button"
+                        className="cancel"
                         onClick={() => handleRemoveAttachmentForm(index)}
                         disabled={isLoading || isResolved}
                       >
@@ -993,21 +1335,21 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
             </div>
 
             <div className="details-block">
-              <h3>Activities</h3>
-              {!readOnlyMode && (
-                <div className="details-buttons">
+              <div className="section-header">
+                <div>Activities</div>
+                {!readOnlyMode && (
                   <button
-                    className="save-button"
+                    className="button"
                     onClick={handleAddActivityForm}
                     disabled={isLoading || isResolved}
                   >
                     Add Activity
                   </button>
-                </div>
-              )}
+                )}
+              </div>
               {activities.length > 0 && (
-                <div className="details-group">
-                  <h4>Existing Activities</h4>
+                <div className="details-g">
+                  <div>Existing Activities</div>
                   <table className="attachment-table">
                     <thead>
                       <tr>
@@ -1018,9 +1360,9 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
                         <th>Start Date</th>
                         <th>End Date</th>
                         <th>Created By</th>
-                        <th>Created</th>
+                        {/* <th>Created</th>
                         <th>Last Updated By</th>
-                        <th>Last Updated</th>
+                        <th>Last Updated</th> */}
                         {!readOnlyMode && <th>Actions</th>}
                       </tr>
                     </thead>
@@ -1034,13 +1376,13 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
                           <td>{formatDate(activity.START_DATE)}</td>
                           <td>{formatDate(activity.END_DATE)}</td>
                           <td>{activity.CREATED_BY || '-'}</td>
-                          <td>{formatDate(activity.CREATED)}</td>
+                          {/* <td>{formatDate(activity.CREATED)}</td>
                           <td>{activity.LAST_UPD_BY || '-'}</td>
-                          <td>{formatDate(activity.LAST_UPD)}</td>
+                          <td>{formatDate(activity.LAST_UPD)}</td> */}
                           {!readOnlyMode && (
                             <td>
                               <button
-                                className="edit-button"
+                                className="button"
                                 onClick={() => handleEditActivity(activity)}
                                 disabled={isLoading || isResolved}
                               >
@@ -1130,14 +1472,14 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
                   <div className="form-buttons">
                     <button
                       type="submit"
-                      className="save-button"
+                      className="save"
                       disabled={isLoading || isResolved}
                     >
-                      {isLoading ? 'Saving...' : 'Save Activity'}
+                      {isLoading ? 'Save Activity' : 'Save Activity'}
                     </button>
                     <button
                       type="button"
-                      className="cancel-button"
+                      className="cancel"
                       onClick={handleCancelEditActivity}
                       disabled={isLoading || isResolved}
                     >
@@ -1224,14 +1566,14 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
                     <div className="form-buttons">
                       <button
                         type="submit"
-                        className="save-button"
+                        className="save"
                         disabled={isLoading || isResolved}
                       >
                         {isLoading ? 'Saving...' : 'Save Activity'}
                       </button>
                       <button
                         type="button"
-                        className="cancel-button"
+                        className="cancel"
                         onClick={() => handleRemoveActivityForm(index)}
                         disabled={isLoading || isResolved}
                       >
@@ -1247,11 +1589,11 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
                 <div className="form-buttons">
                   <button
                     type="button"
-                    className="save-button"
+                    className="save"
                     onClick={handleServiceCompleted}
                     disabled={isLoading || isResolved}
                   >
-                    {isLoading ? 'Saving...' : 'Service Completed'}
+                    {isLoading ? 'Service Completed' : 'Service Completed'}
                   </button>
                 </div>
               </div>

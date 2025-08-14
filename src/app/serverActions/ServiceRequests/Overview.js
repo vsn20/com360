@@ -25,6 +25,15 @@ export async function fetchServiceRequestById(srNum, orgid, empid) {
       [srNum, orgid, empid]
     );
     
+
+    const [accountRows] = await pool.execute(
+          'SELECT ACCNT_ID, ALIAS_NAME FROM C_ACCOUNT WHERE ORGID = ? AND ACCNT_ID=? AND ACTIVE_FLAG = 1',
+          [orgid,rows[0].ACCOUNT_ID]
+        );
+
+    let accountname=accountRows[0].ALIAS_NAME;
+
+    
     const s=rows[0];
     const [employees] = await pool.query(
           'SELECT  EMP_FST_NAME, EMP_LAST_NAME FROM C_EMP WHERE empid = ?',
@@ -41,7 +50,7 @@ export async function fetchServiceRequestById(srNum, orgid, empid) {
     );
     console.log(`Fetched attachments for SR_ID=${srNum} at ${new Date().toISOString()}:`, attachments);
 
-    return { ...rows[0], attachments ,employees};
+    return { ...rows[0], attachments ,employees:employees[0],accountname:accountname};
   } catch (error) {
     console.error('Error fetching service request:', error);
     throw new Error(error.message || 'Failed to fetch service request');
