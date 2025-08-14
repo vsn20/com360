@@ -765,15 +765,17 @@ const Overview = ({
                   </button>
                 </div>
               )}
-              <div className="requests-per-page-container">
-                <label>Service Requests Per Page</label>
+              <div className="rows-per-page-container">
+                <label className="rows-per-page-label">Rows/ Page</label>
                 <input
                   type="text"
                   value={requestsPerPageInput}
                   onChange={handleRequestsPerPageInputChange}
                   onKeyPress={handleRequestsPerPageInputKeyPress}
-                  className="requests-per-page-input"
+      
                   placeholder="Requests per page"
+                  className="rows-per-page-input"
+                  aria-label="Number of rows per page"
                 />
               </div>
             </>
