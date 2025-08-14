@@ -59,7 +59,7 @@ export default async function ServiceRequestsPage() {
           [empid, orgid]
         );
         [accountRows] = await pool.execute(
-          'SELECT ACCNT_ID, ALIAS_NAME FROM C_ACCOUNT WHERE ORGID = ? AND ACTIVE_FLAG = 1',
+          'SELECT ACCNT_ID, ALIAS_NAME FROM C_ACCOUNT WHERE ORGID = ? ',
           [orgid]
         );
 
