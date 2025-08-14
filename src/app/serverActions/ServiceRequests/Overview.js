@@ -27,7 +27,7 @@ export async function fetchServiceRequestById(srNum, orgid, empid) {
     
 
     const [accountRows] = await pool.execute(
-          'SELECT ACCNT_ID, ALIAS_NAME FROM C_ACCOUNT WHERE ORGID = ? AND ACCNT_ID=? AND ACTIVE_FLAG = 1',
+          'SELECT ACCNT_ID, ALIAS_NAME FROM C_ACCOUNT WHERE ORGID = ? AND ACCNT_ID=? ',
           [orgid,rows[0].ACCOUNT_ID]
         );
 
