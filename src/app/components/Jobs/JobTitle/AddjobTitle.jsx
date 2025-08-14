@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { addjobtitle } from '@/app/serverActions/Jobs/AddJobs';
 import { useRouter } from 'next/navigation';
-import './jobtitles.css';
+import './st.css';
 
 const AddjobTitle = ({ orgid, empid }) => {
   const router = useRouter();

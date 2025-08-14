@@ -11,24 +11,30 @@ const Overview = ({ scheduledetails, applieddetails, orgid, empid, time }) => {
   const [applyinterview, setapplyinterview] = useState(false);
   const [selectedid, setselectedid] = useState(null);
   const [selectedstatus, setselectedstatus] = useState(null);
-  // State for sorted scheduledetails
   const [allScheduledDetails, setAllScheduledDetails] = useState(scheduledetails);
-  // State for sorting configuration
   const [sortConfig, setSortConfig] = useState({ column: 'applicationid', direction: 'asc' });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageInputValue, setPageInputValue] = useState('1');
+  const [requestsPerPage, setRequestsPerPage] = useState(10);
+  const [requestsPerPageInput, setRequestsPerPageInput] = useState('10');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
 
+  const getdisplayprojectid = (prjid) => {
+    return prjid.split('-')[1] || prjid;
+  };
 
-
-const getdisplayprojectid = (prjid) => {
-  return prjid.split('-')[1] || prjid;
-};
-
-
-
-
-  // Reset state when searchParams 'refresh' changes
   useEffect(() => {
     handleback();
   }, [searchParams.get('refresh')]);
+
+  useEffect(() => {
+    setPageInputValue(currentPage.toString());
+  }, [currentPage]);
+
+  useEffect(() => {
+    setRequestsPerPageInput(requestsPerPage.toString());
+  }, [requestsPerPage]);
 
   const handleSchedule = () => {
     setselectedid(null);
@@ -39,6 +45,10 @@ const getdisplayprojectid = (prjid) => {
     router.refresh();
     setapplyinterview(false);
     setselectedid(null);
+    setCurrentPage(1);
+    setPageInputValue('1');
+    setSearchQuery('');
+    setStatusFilter('all');
   };
 
   const handlerowclick = (id, status) => {
@@ -47,7 +57,6 @@ const getdisplayprojectid = (prjid) => {
     setselectedstatus(status);
   };
 
-  // Sorting function
   const sortScheduledDetails = (a, b, column, direction) => {
     let aValue, bValue;
     switch (column) {
@@ -64,7 +73,6 @@ const getdisplayprojectid = (prjid) => {
     }
   };
 
-  // Request sort handler
   const requestSort = (column) => {
     setSortConfig(prev => ({
       column,
@@ -77,57 +85,214 @@ const getdisplayprojectid = (prjid) => {
     setAllScheduledDetails(sortedDetails);
   }, [sortConfig, scheduledetails]);
 
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(prev => prev + 1);
+      setPageInputValue((currentPage + 1).toString());
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
+      setPageInputValue((currentPage - 1).toString());
+    }
+  };
+
+  const handlePageInputChange = (e) => {
+    setPageInputValue(e.target.value);
+  };
+
+  const handlePageInputKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      const value = parseInt(pageInputValue, 10);
+      if (!isNaN(value) && value >= 1 && value <= totalPages) {
+        setCurrentPage(value);
+        setPageInputValue(value.toString());
+      } else {
+        setPageInputValue(currentPage.toString());
+      }
+    }
+  };
+
+  const handleRequestsPerPageInputChange = (e) => {
+    setRequestsPerPageInput(e.target.value);
+  };
+
+  const handleRequestsPerPageInputKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      const value = parseInt(e.target.value, 10);
+      if (!isNaN(value) && value >= 1) {
+        setRequestsPerPage(value);
+        setRequestsPerPageInput(value.toString());
+        setCurrentPage(1);
+        setPageInputValue('1');
+      } else {
+        setRequestsPerPageInput(requestsPerPage.toString());
+        setCurrentPage(1);
+        setPageInputValue('1');
+      }
+    }
+  };
+
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+    setCurrentPage(1);
+    setPageInputValue('1');
+  };
+
+  const handleStatusFilterChange = (e) => {
+    setStatusFilter(e.target.value);
+    setCurrentPage(1);
+    setPageInputValue('1');
+  };
+
+  const filteredDetails = allScheduledDetails.filter(detail => {
+    const candidateName = `${detail.first_name} ${detail.last_name}`.toLowerCase();
+    const jobName = detail.display_job_name.toLowerCase();
+    const matchesSearch = candidateName.includes(searchQuery.toLowerCase()) || jobName.includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || detail.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const totalPages = Math.ceil(filteredDetails.length / requestsPerPage);
+  const indexOfLastRequest = currentPage * requestsPerPage;
+  const indexOfFirstRequest = indexOfLastRequest - requestsPerPage;
+  const currentDetails = filteredDetails.slice(indexOfFirstRequest, indexOfLastRequest);
+
+  const uniqueStatuses = [...new Set(scheduledetails.map(detail => detail.status))];
+
   return (
     <div className="employee-overview-container">
-      {applyinterview && (
-        <>
+      {applyinterview ? (
+        <div className="employee-details-container">
+          <div className="header-section">
+            <h1 className="title">Schedule Interview</h1>
+            <button className="back-button" onClick={handleback}></button>
+          </div>
           <SubmittingApplication
             applieddetails={applieddetails}
             orgid={orgid}
             empid={empid}
             handlesback={handleback}
           />
-        </>
-      )}
-      {!applyinterview && !selectedid ? (
-        <>
-          <div>
-            <button className="save-button" onClick={handleSchedule}>Schedule Interview</button>
-            <table className="employee-table">
-              <thead>
-                <tr>
-                  <th onClick={() => requestSort('applicationid')}>
-                    Application ID
-                  </th>
-                  <th>Candidate Name</th>
-                  <th>Job Name-Job ID</th>
-                  <th>Resume</th>
-                  <th onClick={() => requestSort('status')}>
-                    Status
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {allScheduledDetails.map((details) => (
-                  <tr key={details.applicationid} onClick={() => handlerowclick(details.applicationid, details.status)}>
-                    <td>{getdisplayprojectid(details.applicationid)}</td>
-                    <td>{`${details.first_name} ${details.last_name}`}</td>
-                    <td>{`${details.display_job_name} - ${getdisplayprojectid(details.jobid)}`}</td>
-                    <td>
-                      <a href={details.resumepath} target="_blank" rel="noopener noreferrer">
-                        View Resume
-                      </a>
-                    </td>
-                    <td>{details.status}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        </div>
+      ) : !selectedid ? (
+        <div className="employee-list">
+          <div className="header-section">
+            <h1 className="title">Scheduled Interviews</h1>
+            <button className="button" onClick={handleSchedule}>Schedule Interview</button>
           </div>
-        </>
-      ) : selectedid && (
-        <>
-          <button className="back-button" onClick={handleback}>x</button>
+          <div className="search-filter-container">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={handleSearchChange}
+              className="search-input"
+              placeholder="Search by Name or Job..."
+            />
+            <select value={statusFilter} onChange={handleStatusFilterChange} className="filter-select">
+              <option value="all">All Statuses</option>
+              {uniqueStatuses.map((status, index) => (
+                <option key={index} value={status}>{status}</option>
+              ))}
+            </select>
+          </div>
+          {currentDetails.length === 0 ? (
+            <div className="empty-state">No applications found.</div>
+          ) : (
+            <>
+              <div className="table-wrapper">
+                <table className="service-requests-table">
+                  <thead>
+                    <tr>
+                      <th className={sortConfig.column === 'applicationid' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('applicationid')}>
+                        Application ID
+                      </th>
+                      <th>Candidate Name</th>
+                      <th>Job Name-Job ID</th>
+                      <th>Resume</th>
+                      <th className={sortConfig.column === 'status' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('status')}>
+                        Status
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentDetails.map((details) => (
+                      <tr key={details.applicationid} onClick={() => handlerowclick(details.applicationid, details.status)}>
+                        <td className="id-cell">
+                          <span className="role-indicator"></span>
+                          {getdisplayprojectid(details.applicationid)}
+                        </td>
+                        <td>{`${details.first_name} ${details.last_name}`}</td>
+                        <td>{`${details.display_job_name} - ${getdisplayprojectid(details.jobid)}`}</td>
+                        <td>
+                          <a
+                            href={details.resumepath}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            View Resume
+                          </a>
+                        </td>
+                        <td className={details.status.toLowerCase() === 'scheduled' ? 'status-badge active' : 'status-badge inactive'}>
+                          {details.status}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {filteredDetails.length > requestsPerPage && (
+                <div className="pagination-container">
+                  <button
+                    className="button"
+                    onClick={handlePrevPage}
+                    disabled={currentPage === 1}
+                  >
+                    ← Previous
+                  </button>
+                  <span className="pagination-text">
+                    Page{' '}
+                    <input
+                      type="text"
+                      value={pageInputValue}
+                      onChange={handlePageInputChange}
+                      onKeyPress={handlePageInputKeyPress}
+                      className="pagination-input"
+                    />{' '}
+                    of {totalPages}
+                  </span>
+                  <button
+                    className="button"
+                    onClick={handleNextPage}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
+              <div className="rows-per-page-container">
+                <label className="rows-per-page-label">Rows/ Page</label>
+                <input
+                  type="text"
+                  value={requestsPerPageInput}
+                  onChange={handleRequestsPerPageInputChange}
+                  onKeyPress={handleRequestsPerPageInputKeyPress}
+                  className="rows-per-page-input"
+                  aria-label="Number of rows per page"
+                />
+              </div>
+            </>
+          )}
+        </div>
+      ) : (
+        <div className="employee-details-container">
+          <div className="header-section">
+            <h1 className="title">Edit Interview</h1>
+            <button className="back-button" onClick={handleback}></button>
+          </div>
           <Edit
             id={selectedid}
             orgid={orgid}
@@ -136,7 +301,7 @@ const getdisplayprojectid = (prjid) => {
             time={time}
             status={selectedstatus}
           />
-        </>
+        </div>
       )}
     </div>
   );

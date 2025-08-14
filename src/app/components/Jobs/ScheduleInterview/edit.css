@@ -1,0 +1,376 @@
+/* app/components/Jobs/ScheduleInterview/EditInterview/edit.css */
+
+/* Container - Consistent with interview.css, not in globals.css */
+.interview-overview-container {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Details Blocks - Card-like structure from interview.css, not in globals.css */
+.interview-details-block {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  margin-bottom: 30px;
+}
+
+/* Header for sections - Aligned with interview-details-header from interview.css, not in globals.css */
+.interview-details-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.interview-details-header div {
+  font-size: 18px;
+  font-weight: bold;
+  color: #0fd46c;
+}
+
+/* Form and Details Rows - Grid layout from interview.css, not in globals.css */
+.details-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 30px;
+  margin-bottom: 20px;
+}
+
+/* Form and Details Groups - Aligned with interview.css, not in globals.css */
+.form-group,
+.details-g {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label,
+.details-g label {
+  font-weight: bold;
+  margin-bottom: 8px;
+  color: #374151;
+}
+
+/* Form Inputs - Consistent with interview.css, not in globals.css */
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-sizing: border-box;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+}
+
+.form-group input.bg-gray-100 {
+  background-color: #f0f0f0;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(15, 212, 108, 0.25);
+}
+
+/* Time Input Specific Styles - Aligned with interview.css, not in globals.css */
+.time-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.time-inputs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.time-text-input {
+  width: 80px !important;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  text-align: center;
+}
+
+.time-select {
+  width: 60px !important;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  text-align: center;
+}
+
+.time-inputs span {
+  font-size: 16px;
+  font-weight: bold;
+  color: #374151;
+}
+
+/* View Details - Read-only display, from interview.css, not in globals.css */
+.view-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.details-g p {
+  margin: 0;
+  padding: 8px 0;
+  color: #666;
+  font-size: 14px;
+}
+
+/* Headings - Consistent with interview.css, not in globals.css */
+.interview-details-block h2,
+.interview-details-block h3,
+.interview-details-block h4,
+.interview-details-block h5 {
+  color: #0fd46c;
+  margin: 0 0 20px 0;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.interview-details-block h3 {
+  font-size: 18px;
+}
+
+.interview-details-block h4 {
+  font-size: 16px;
+  margin: 15px 0;
+}
+
+.interview-details-block h5 {
+  font-size: 14px;
+  margin: 10px 0;
+}
+
+/* Error and Success Messages - Aligned with interview.css, not in globals.css */
+.error-message {
+  color: #dc3545;
+  margin-bottom: 15px;
+  padding: 10px;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+.success-message {
+  color: #155724;
+  margin-bottom: 15px;
+  padding: 10px;
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+/* Form Buttons - Aligned with interview.css, not in globals.css */
+.form-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+  justify-content: flex-start;
+}
+
+/* Nested Details Block for Panel Members - Aligned with interview.css, not in globals.css */
+.interview-details-block .interview-details-block {
+  margin-top: 15px;
+  margin-bottom: 15px;
+  padding: 15px;
+  background-color: #f8fafc;
+  border: 1px solid #e5e7eb;
+}
+
+/* Form Validation - Aligned with interview.css, not in globals.css */
+.form-group input:invalid,
+.form-group select:invalid,
+.form-group textarea:invalid {
+  border-color: #dc3545;
+}
+
+.form-group input:invalid:focus,
+.form-group select:invalid:focus,
+.form-group textarea:invalid:focus {
+  border-color: #dc3545;
+  box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.25);
+}
+
+/* Disabled States - Aligned with interview.css, not in globals.css */
+.form-group input:disabled,
+.form-group select:disabled,
+.form-group textarea:disabled {
+  background-color: #f0f0f0;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Special Styling for Required Fields - Aligned with interview.css, not in globals.css */
+.form-group label[data-required="true"]::after,
+.form-group label:has(+ input[required])::after,
+.form-group label:has(+ select[required])::after {
+  content: "*";
+  color: #dc3545;
+  margin-left: 4px;
+}
+
+/* Rounds Container - Aligned with interview.css, not in globals.css */
+.rounds-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Round Block - Aligned with interview.css, not in globals.css */
+.round-block {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Round Header - Aligned with interview.css, not in globals.css */
+.round-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.round-header > div:first-child {
+  font-size: 18px;
+  font-weight: bold;
+  color: #0fd46c;
+}
+
+/* Round Content - Aligned with interview.css, not in globals.css */
+.round-content {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Round Status Badge - Aligned with interview.css, not in globals.css */
+.round-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.round-status-badge.accepted {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.round-status-badge.rejected {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+/* Application Status - Plain text, no colors, from interview.css, not in globals.css */
+.application-status-text {
+  color: #666;
+  font-size: 14px;
+}
+
+/* Resume Link - Aligned with interview.css, not in globals.css */
+.view-resume-link {
+  color: #007bff;
+  text-decoration: none;
+  font-size: 14px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.view-resume-link:hover {
+  color: #0056b3;
+  text-decoration: underline;
+}
+
+/* No Resume Text - Aligned with interview.css, not in globals.css */
+.no-resume-text {
+  color: #6c757d;
+  font-size: 14px;
+  font-style: italic;
+}
+
+/* Loading Message - Aligned with interview.css, not in globals.css */
+.loading-message {
+  color: #007bff;
+  text-align: center;
+  padding: 20px;
+  font-size: 16px;
+}
+
+/* Responsive Design - Aligned with interview.css, not in globals.css */
+@media (max-width: 768px) {
+  .interview-overview-container {
+    padding: 10px;
+  }
+
+  .details-row {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .round-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .form-buttons {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    font-size: 13px;
+  }
+
+  .time-text-input,
+  .time-select {
+    width: 70px !important;
+  }
+}
+
+@media (max-width: 576px) {
+  .interview-details-block h2,
+  .interview-details-block h3 {
+    font-size: 16px;
+  }
+
+  .interview-details-block h4 {
+    font-size: 14px;
+  }
+
+  .interview-details-block h5 {
+    font-size: 13px;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    font-size: 12px;
+  }
+}
