@@ -16,6 +16,8 @@ const Jobtitle = ({ orgid, empid, jobtitles }) => {
   const [pageInputValue, setPageInputValue] = useState('1');
   const [jobsPerPage, setJobsPerPage] = useState(10);
   const [jobsPerPageInput, setJobsPerPageInput] = useState('10');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isActiveFilter, setIsActiveFilter] = useState('all');
 
   useEffect(() => {
     setAllJobTitles(jobtitles);
@@ -71,7 +73,6 @@ const Jobtitle = ({ orgid, empid, jobtitles }) => {
       column,
       direction: prev.column === column && prev.direction === 'asc' ? 'desc' : 'asc',
     }));
-    
   };
 
   const handleRowClick = (jobid) => {
@@ -82,14 +83,14 @@ const Jobtitle = ({ orgid, empid, jobtitles }) => {
   const handleAdd = () => {
     setSelectedjobid(null);
     setAdd(true);
-   
   };
 
   const handleBackClick = () => {
     router.refresh();
     setSelectedjobid(null);
     setAdd(false);
-   
+    setSearchQuery('');
+    setIsActiveFilter('all');
   };
 
   const handleNextPage = () => {
@@ -134,90 +135,128 @@ const Jobtitle = ({ orgid, empid, jobtitles }) => {
         setJobsPerPageInput(value.toString());
         setCurrentPage(1);
         setPageInputValue('1');
-        
       } else {
-        setJobsPerPageInput(jobsPerPage.toString()); // Revert to current jobsPerPage
-         setCurrentPage(1);
+        setJobsPerPageInput(jobsPerPage.toString());
+        setCurrentPage(1);
         setPageInputValue('1');
       }
     }
   };
 
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+    setCurrentPage(1);
+    setPageInputValue('1');
+  };
+
+  const handleStatusFilterChange = (e) => {
+    setIsActiveFilter(e.target.value);
+    setCurrentPage(1);
+    setPageInputValue('1');
+  };
+
+  // Filter logic
+  const filteredJobTitles = allJobTitles.filter((job) => {
+    const matchesSearch = job.job_title?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus =
+      isActiveFilter === 'all' ||
+      (isActiveFilter === 'active' && job.is_active) ||
+      (isActiveFilter === 'inactive' && !job.is_active);
+    return matchesSearch && matchesStatus;
+  });
+
   // Pagination logic
-  const totalPages = Math.ceil(allJobTitles.length / jobsPerPage);
+  const totalPages = Math.ceil(filteredJobTitles.length / jobsPerPage);
   const indexOfLastJob = currentPage * jobsPerPage;
   const indexOfFirstJob = indexOfLastJob - jobsPerPage;
-  const currentJobTitles = allJobTitles.slice(indexOfFirstJob, indexOfLastJob);
+  const currentJobTitles = filteredJobTitles.slice(indexOfFirstJob, indexOfLastJob);
 
   return (
     <div className="employee-overview-container">
       {add && (
         <div className="employee-details-container">
-          <button className="back-button" onClick={handleBackClick}>
-            x
-          </button>
+          <div className="header-section">
+            <h1 className="title">Add Job Title</h1>
+            <button className="back-button" onClick={handleBackClick}></button>
+          </div>
           <AddjobTitle orgid={orgid} empid={empid} />
         </div>
       )}
       {!add && selectedjobid ? (
         <div className="employee-details-container">
-          <button className="back-button" onClick={handleBackClick}>
-            x
-          </button>
+          <div className="header-section">
+            <h1 className="title">Edit Job Title</h1>
+            <button className="back-button" onClick={handleBackClick}></button>
+          </div>
           <EditJobTitle selectedjobid={selectedjobid} orgid={orgid} empid={empid} />
         </div>
       ) : (
         !add && (
           <div className="employee-list">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <div className="title">Existing Job Titles</div>
-              <button onClick={handleAdd} className="save-button">
-                Add Job Title
-              </button>
+              <h1 className="title">Existing Job Titles</h1>
+              <button onClick={handleAdd} className="button">Add Job Title</button>
             </div>
-            {allJobTitles.length === 0 ? (
-              <p>No job titles found.</p>
+            <div className="search-filter-container">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={handleSearchChange}
+                className="search-input"
+                placeholder="Search by job title..."
+              />
+              <select value={isActiveFilter} onChange={handleStatusFilterChange} className="filter-select">
+                <option value="all">All Statuses</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+            {filteredJobTitles.length === 0 ? (
+              <div className="empty-state">No job titles found.</div>
             ) : (
               <>
                 <div className="table-wrapper">
-                  <table className="employee-table">
+                  <table className="four-column">
+                    <colgroup>
+                      <col />
+                      <col />
+                      <col />
+                      <col />
+                    </colgroup>
                     <thead>
                       <tr>
-                        <th onClick={() => requestSort('job_title_id')}>
-                          Job ID {sortConfig.column === 'job_title_id' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                        <th className={sortConfig.column === 'job_title_id' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('job_title_id')}>
+                          Job ID
                         </th>
-                        <th onClick={() => requestSort('job_title')}>
-                          Job Title {sortConfig.column === 'job_title' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                        <th className={sortConfig.column === 'job_title' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('job_title')}>
+                          Job Title
                         </th>
-                        <th onClick={() => requestSort('level')}>
-                          Level {sortConfig.column === 'level' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                        <th className={sortConfig.column === 'level' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('level')}>
+                          Level
                         </th>
-                        <th onClick={() => requestSort('is_active')}>
-                          Status {sortConfig.column === 'is_active' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                        </th>
-                        <th onClick={() => requestSort('created_date')}>
-                          Created Date {sortConfig.column === 'created_date' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                        <th className={sortConfig.column === 'is_active' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('is_active')}>
+                          Status
                         </th>
                       </tr>
                     </thead>
                     <tbody>
                       {currentJobTitles.map((job) => (
-                        <tr
-                          key={job.job_title_id}
-                          onClick={() => handleRowClick(job.job_title_id)}
-                          className={selectedjobid === job.job_title_id ? 'selected-row' : ''}
-                        >
-                          <td>{job.job_title_id.split('-')[1] || job.job_title_id}</td>
+                        <tr key={job.job_title_id} onClick={() => handleRowClick(job.job_title_id)}>
+                          <td className="id-cell">
+                            <span className="role-indicator"></span>
+                            {job.job_title_id.split('-')[1] || job.job_title_id}
+                          </td>
                           <td>{job.job_title || '-'}</td>
                           <td>{job.level || '-'}</td>
-                          <td>{job.is_active ? 'Active' : 'Inactive'}</td>
-                          <td>{job.CreatedDate ? new Date(job.CreatedDate).toISOString().split('T')[0] : ''}</td>
+                          <td className={job.is_active ? 'status-badge active' : 'status-badge inactive'}>
+                            {job.is_active ? 'Active' : 'Inactive'}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
-                {allJobTitles.length > jobsPerPage && (
+                {filteredJobTitles.length > jobsPerPage && (
                   <div className="pagination-container">
                     <button
                       className="button"
@@ -244,18 +283,21 @@ const Jobtitle = ({ orgid, empid, jobtitles }) => {
                     >
                       Next →
                     </button>
-                    
                   </div>
                 )}
-                <label>Jobs Per Page</label>
-                <input
+                {filteredJobTitles.length > 0 && (
+                  <div className="rows-per-page-container">
+                    <label className="rows-per-page-label">Rows/ Page</label>
+                    <input
                       type="text"
                       value={jobsPerPageInput}
                       onChange={handleJobsPerPageInputChange}
                       onKeyPress={handleJobsPerPageInputKeyPress}
-                      className="jobs-per-page-input"
-                      placeholder="Jobs per page"
+                      className="rows-per-page-input"
+                      aria-label="Number of rows per page"
                     />
+                  </div>
+                )}
               </>
             )}
           </div>

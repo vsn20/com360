@@ -1,10 +1,11 @@
-// app/components/Jobs/JobTitle/EditJobTitle.jsx
 'use client';
 import React, { useEffect, useState } from 'react';
 import { getjobdetailsbyid, updatejobtitle } from '@/app/serverActions/Jobs/Overview';
 import './jobtitles.css';
+import { useRouter } from 'next/navigation';
 
 const EditJobTitle = ({ selectedjobid, orgid, empid }) => {
+  const router = useRouter();
   const [jobDetails, setJobDetails] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -24,11 +25,9 @@ const EditJobTitle = ({ selectedjobid, orgid, empid }) => {
     updateddate: '',
   });
 
-
   const getdisplayprojectid = (prjid) => {
     return prjid.split('-')[1] || prjid;
   };
-  
 
   useEffect(() => {
     const loadJobDetails = async () => {
@@ -132,7 +131,10 @@ const EditJobTitle = ({ selectedjobid, orgid, empid }) => {
           updatedby: updatedDetails.Updatedby || '',
           updateddate: updatedDetails.UpdatedDate ? new Date(updatedDetails.UpdatedDate).toISOString().split('T')[0] : '',
         });
-        setTimeout(() => setSuccess(null), 3000);
+        setTimeout(() => {
+          setSuccess(null);
+          router.refresh();
+        }, 3000);
       } else {
         setError(result?.error || 'Failed to update job title.');
       }
@@ -143,42 +145,55 @@ const EditJobTitle = ({ selectedjobid, orgid, empid }) => {
     }
   };
 
+  const handleCancel = () => {
+    setIsEditing(false);
+    setForm({
+      jobtitle: jobDetails?.job_title || '',
+      status: jobDetails?.is_active ? 'Active' : 'Inactive',
+      minsalary: jobDetails?.min_salary || '',
+      maxsalary: jobDetails?.max_salary || '',
+      level: jobDetails?.level || '',
+      jobid: jobDetails?.job_title_id || '',
+      org_id: jobDetails?.orgid || '',
+      createdby: jobDetails?.Createdby || '',
+      createddate: jobDetails?.CreatedDate ? new Date(jobDetails.CreatedDate).toISOString().split('T')[0] : '',
+      updatedby: jobDetails?.Updatedby || '',
+      updateddate: jobDetails?.UpdatedDate ? new Date(jobDetails.UpdatedDate).toISOString().split('T')[0] : '',
+    });
+    setError(null);
+  };
+
   const formatDate = (date) => {
     if (!date) return '';
     if (date instanceof Date) {
-      // Use local date components to preserve YYYY-MM-DD
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
       return `${year}-${month}-${day}`;
     }
     if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}(T.*)?$/)) {
-      // If it's already a date string (YYYY-MM-DD), return it as is
       return date.split('T')[0];
     }
-    return ''; // Fallback for invalid dates
+    return '';
   };
 
   return (
     <div className="employee-details-container">
+      {isLoading && <div className="loading-message">Loading...</div>}
       {error && <div className="error-message">{error}</div>}
       {success && <div className="success-message">{success}</div>}
-      {isLoading && <div className="loading-message">Loading...</div>}
       {jobDetails && (
         <div className="details-block">
-          <h3>Job Title Details</h3>
+          <div className="roledetails-header">
+            <div>Job Title Details</div>
+            {!isEditing && (
+              <button className="button" onClick={handleEdit}>
+                Edit
+              </button>
+            )}
+          </div>
           {isEditing ? (
             <form onSubmit={handleSave}>
-              <div className="form-row">
-                {/* <div className="form-group">
-                  <label>Job ID</label>
-                  <input type="text" value={form.jobid} readOnly className="bg-gray-100" />
-                </div>
-                <div className="form-group">
-                  <label>Organization ID</label>
-                  <input type="text" value={form.org_id} readOnly className="bg-gray-100" />
-                </div> */}
-              </div>
               <div className="form-row">
                 <div className="form-group">
                   <label>Job Title*</label>
@@ -193,8 +208,8 @@ const EditJobTitle = ({ selectedjobid, orgid, empid }) => {
                 <div className="form-group">
                   <label>Status</label>
                   <select name="status" value={form.status} onChange={handleFormChange}>
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
+                    <option value="Active">Yes</option>
+                    <option value="Inactive">No</option>
                   </select>
                 </div>
               </div>
@@ -229,26 +244,11 @@ const EditJobTitle = ({ selectedjobid, orgid, empid }) => {
                   />
                 </div>
               </div>
-              <div className="form-row">
-                {/* <div className="form-group">
-                  <label>Created By</label>
-                  <input type="text" value={form.createdby} readOnly className="bg-gray-100" />
-                </div>
-                <div className="form-group">
-                  <label>Created Date</label>
-                  <input type="text" value={formatDate(form.createddate)} readOnly className="bg-gray-100" />
-                </div> */}
-              </div>
               <div className="form-buttons">
-                <button type="submit" className="save-button" disabled={isLoading}>
+                <button type="submit" className="save" disabled={isLoading}>
                   {isLoading ? 'Saving...' : 'Save'}
                 </button>
-                <button
-                  type="button"
-                  className="cancel-button"
-                  onClick={() => setIsEditing(false)}
-                  disabled={isLoading}
-                >
+                <button type="button" className="cancel" onClick={handleCancel} disabled={isLoading}>
                   Cancel
                 </button>
               </div>
@@ -256,65 +256,54 @@ const EditJobTitle = ({ selectedjobid, orgid, empid }) => {
           ) : (
             <div className="view-details">
               <div className="details-row">
-                <div className="details-group">
+                <div className="details-g">
                   <label>Job ID</label>
-                  <p>{jobDetails.job_title_id.split('-')[1] || jobDetails.job_title_id}</p>
+                  <p>{getdisplayprojectid(form.jobid)}</p>
                 </div>
-                <div className="details-group">
-                  <label>Organization ID</label>
-                  <p>{jobDetails.orgid}</p>
-                </div>
-              </div>
-              <div className="details-row">
-                <div className="details-group">
+                <div className="details-g">
                   <label>Job Title</label>
-                  <p>{jobDetails.job_title || '-'}</p>
+                  <p>{form.jobtitle || '-'}</p>
                 </div>
-                <div className="details-group">
+              </div>
+              <div className="details-row">
+                <div className="details-g">
                   <label>Status</label>
-                  <p>{jobDetails.is_active ? 'Active' : 'Inactive'}</p>
+                  <p>{form.status}</p>
                 </div>
-              </div>
-              <div className="details-row">
-                <div className="details-group">
+                <div className="details-g">
                   <label>Minimum Salary</label>
-                  <p>{jobDetails.min_salary || '-'}</p>
+                  <p>{form.minsalary || '-'}</p>
                 </div>
-                <div className="details-group">
+              </div>
+              <div className="details-row">
+                <div className="details-g">
                   <label>Maximum Salary</label>
-                  <p>{jobDetails.max_salary || '-'}</p>
+                  <p>{form.maxsalary || '-'}</p>
                 </div>
-              </div>
-              <div className="details-row">
-                <div className="details-group">
+                <div className="details-g">
                   <label>Level</label>
-                  <p>{jobDetails.level || '-'}</p>
+                  <p>{form.level || '-'}</p>
                 </div>
               </div>
               <div className="details-row">
-                <div className="details-group">
+                <div className="details-g">
                   <label>Created By</label>
-                  <p>{jobDetails.Createdby || '-'}</p>
+                  <p>{form.createdby || '-'}</p>
                 </div>
-                <div className="details-group">
+                <div className="details-g">
                   <label>Created Date</label>
-                  <p>{formatDate(jobDetails.CreatedDate)}</p>
+                  <p>{formatDate(form.createddate) || '-'}</p>
                 </div>
               </div>
               <div className="details-row">
-                <div className="details-group">
+                <div className="details-g">
                   <label>Updated By</label>
-                  <p>{jobDetails.Updatedby || '-'}</p>
+                  <p>{form.updatedby || '-'}</p>
                 </div>
-                <div className="details-group">
+                <div className="details-g">
                   <label>Updated Date</label>
-                  <p>{formatDate(jobDetails.UpdatedDate)}</p>
+                  <p>{formatDate(form.updateddate) || '-'}</p>
                 </div>
-              </div>
-              <div className="details-buttons">
-                <button className="edit-button" onClick={handleEdit}>
-                  Edit
-                </button>
               </div>
             </div>
           )}

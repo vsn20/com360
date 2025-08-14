@@ -1,83 +1,97 @@
+/* External Jobs specific styles - removed redundant classes already in globals.css */
+
 .employee-overview-container {
   padding: 20px;
   max-width: 1200px;
   margin: 0 auto;
   font-family: Arial, sans-serif;
+  overflow-x: hidden; /* Prevent horizontal scroll on container */
 }
 
-.employee-overview-container h2 {
-  font-size: 24px;
+.header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 20px;
-  color: #333;
 }
 
 .employee-list {
   margin-bottom: 20px;
+  width: 100%; /* Ensure full width */
 }
 
 .employee-table {
-  width: 100%;
-  border-collapse: collapse;
-  background-color: #fff;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  table-layout: fixed; /* Use fixed layout for better control */
+}
+
+/* Override table-wrapper from globals to prevent horizontal scroll */
+.table-wrapper {
+  overflow: hidden; /* Override globals.css overflow-x: auto */
+}
+
+/* Three column layout for external jobs table */
+table.three-column col:nth-child(1) {
+  width: 20%; /* Job ID column */
+}
+
+table.three-column col:nth-child(2) {
+  width: 60%; /* Job Name column */
+}
+
+table.three-column col:nth-child(3) {
+  width: 20%; /* Vacancies column */
+}
+
+/* Ensure role indicator shows properly */
+.role-indicator {
+  display: inline-block !important;
+  width: 8px !important;
+  height: 8px !important;
+  background-color: #0fd46c !important;
+  border-radius: 50% !important;
+  margin-right: 8px !important;
+  vertical-align: middle !important;
+}
+
+.id-cell {
+  display: flex !important;
+  align-items: center !important;
 }
 
 .employee-table th,
 .employee-table td {
-  padding: 12px;
-  text-align: left;
-  border-bottom: 1px solid #ddd;
+  word-wrap: break-word; /* Allow text to wrap */
+}
+
+/* Set specific column widths for your 3-column table */
+.employee-table th:nth-child(1),
+.employee-table td:nth-child(1) {
+  width: 20%; /* Job ID column */
+}
+
+.employee-table th:nth-child(2),
+.employee-table td:nth-child(2) {
+  width: 60%; /* Job Name column */
+}
+
+.employee-table th:nth-child(3),
+.employee-table td:nth-child(3) {
+  width: 20%; /* Vacancies column */
 }
 
 .employee-table th {
-  background-color: #f4f4f4;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-.employee-table tr:hover {
-  background-color: #f5f5f5;
-  cursor: pointer;
+  white-space: nowrap; /* Prevent header text wrapping */
 }
 
 .employee-table tr.selected-row {
   background-color: #e9f0ff;
 }
 
-.back-button {
-  padding: 5px 10px;
-  background-color: white;
-  color: red;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  margin-bottom: 15px;
-  font-size: 14px;
-}
-
-.back-button:hover {
-  background-color: #5a6268;
-}
-
-.edit-button {
-  padding: 5px 10px;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.edit-button:hover {
-  background-color: #0056b3;
-}
-
 .employee-details-container {
   display: flex;
   flex-direction: column;
   gap: 30px;
+  width: 100%; /* Ensure full width */
 }
 
 .details-block {
@@ -95,9 +109,10 @@
 
 .form-row,
 .details-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 20px;
-  margin-bottom: 15px;
+  margin-bottom: 20px;
 }
 
 .form-group,
@@ -105,22 +120,32 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-width: 0; /* Prevent flex items from overflowing */
 }
 
 .form-group label,
 .details-group label {
   font-weight: bold;
-  margin-bottom: 5px;
+  margin-bottom: 8px;
 }
 
 .form-group input,
 .form-group select,
 .form-group textarea {
   width: 100%;
-  padding: 8px;
+  padding: 10px;
   border: 1px solid #ddd;
   border-radius: 4px;
   box-sizing: border-box;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #0fd46c;
+  box-shadow: 0 0 0 2px rgba(15, 212, 108, 0.25);
 }
 
 .form-group input.bg-gray-100 {
@@ -131,73 +156,95 @@
   margin: 0;
 }
 
-.form-buttons,
-.details-buttons {
+.form-buttons {
   display: flex;
   gap: 10px;
-  margin-top: 15px;
-}
-
-.save-button,
-.cancel-button {
-  padding: 8px 15px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.save-button {
-  background-color: #28a745;
-  color: white;
-}
-
-.save-button:hover {
-  background-color: #218838;
-}
-
-.cancel-button {
-  background-color: #dc3545;
-  color: white;
-}
-
-.cancel-button:hover {
-  background-color: #c82333;
+  margin-top: 20px;
+  justify-content: center;
 }
 
 .error-message {
   color: #dc3545;
   margin-bottom: 15px;
+  font-size: 16px;
+  text-align: center;
 }
 
 .success-message {
   color: #28a745;
   margin-bottom: 15px;
+  font-size: 16px;
+  text-align: center;
 }
 
 .loading-message {
   color: #007bff;
   margin-bottom: 15px;
+  font-size: 16px;
+  text-align: center;
+}
+
+.roledetails-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+/* Override search input from globals for better fit */
+.search-input {
+  max-width: 300px;
 }
 
 @media (max-width: 768px) {
   .employee-overview-container {
-    padding: 10px;
-  }
-
-  .employee-overview-container h2 {
-    font-size: 20px;
-  }
-
-  .employee-table th,
-  .employee-table td {
-    padding: 8px;
-    font-size: 14px;
+    padding: 15px;
   }
 
   .form-row,
   .details-row {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+
+  .search-input {
+    max-width: 100%;
+  }
+
+  /* Adjust three-column widths on mobile */
+  table.three-column col:nth-child(1) {
+    width: 25%;
+  }
+
+  table.three-column col:nth-child(2) {
+    width: 50%;
+  }
+
+  table.three-column col:nth-child(3) {
+    width: 25%;
+  }
+
+  /* Adjust column widths on mobile */
+  .employee-table th:nth-child(1),
+  .employee-table td:nth-child(1) {
+    width: 25%;
+  }
+
+  .employee-table th:nth-child(2),
+  .employee-table td:nth-child(2) {
+    width: 50%;
+  }
+
+  .employee-table th:nth-child(3),
+  .employee-table td:nth-child(3) {
+    width: 25%;
+  }
+}
+
+@media (max-width: 576px) {
+  .header-section {
     flex-direction: column;
     gap: 10px;
+    align-items: flex-start;
   }
 }

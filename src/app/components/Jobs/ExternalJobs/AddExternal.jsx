@@ -20,7 +20,7 @@ const AddExternal = ({ orgid, empid, expectedjobtitles, expectedepartment, expec
     addressLane2: '',
     zipcode: '',
     stateId: '',
-    countryId: '185', // Default to USA, consistent with Overview.jsx
+    countryId: '185',
     customStateName: '',
     lastDateForApplication: '',
     active: '1',
@@ -50,7 +50,7 @@ const AddExternal = ({ orgid, empid, expectedjobtitles, expectedepartment, expec
         addressLane2: '',
         zipcode: '',
         stateId: '',
-        countryId: '185', // Reset to USA
+        countryId: '185',
         customStateName: '',
         lastDateForApplication: '',
         active: '1',
@@ -61,13 +61,14 @@ const AddExternal = ({ orgid, empid, expectedjobtitles, expectedepartment, expec
   }, [state.success]);
 
   return (
-    <div className="employee-overview-container">
-      <h2>Add External Job</h2>
+    <div className="employee-details-container">
       {state.error && <div className="error-message">{state.error}</div>}
       {successMessage && <div className="success-message">{successMessage}</div>}
-      <form action={formAction} className="external-jobs-form">
-        <div className="details-block">
-          <h3>Basic Details</h3>
+      <div className="details-block">
+        <div className="roledetails-header">
+          <div>Add External Job</div>
+        </div>
+        <form action={formAction} className="external-jobs-form">
           <div className="form-row">
             <div className="form-group">
               <label>Display Job Name*:</label>
@@ -170,10 +171,6 @@ const AddExternal = ({ orgid, empid, expectedjobtitles, expectedepartment, expec
               />
             </div>
           </div>
-        </div>
-
-        <div className="details-block">
-          <h3>Additional Details</h3>
           <div className="form-row">
             <div className="form-group">
               <label>Address Lane 1:</label>
@@ -271,14 +268,13 @@ const AddExternal = ({ orgid, empid, expectedjobtitles, expectedepartment, expec
               </select>
             </div>
           </div>
-        </div>
-
-        <div className="form-buttons">
-          <button type="submit" className="save-button" disabled={!orgid}>
-            Add External Job
-          </button>
-        </div>
-      </form>
+          <div className="form-buttons">
+            <button type="submit" className="save" disabled={!orgid}>
+              Add External Job
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };
