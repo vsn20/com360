@@ -42,7 +42,7 @@ try {
           [orgid]
         );
         [offerlettergenerated]=await pool.query(
-       'select a.orgid,a.interview_id,a.application_id,b.status,b.candidate_id,c.first_name,c.last_name from interview_table as a join applications as b on a.application_id=b.applicationid join candidate as c on b.candidate_id=c.cid  where a.offer_letter_generated=1 and a.orgid=? and a.interview_completed=1 and a.confirm=1',
+       'select a.orgid,a.interview_id,a.application_id,b.status,b.candidate_id,c.first_name,c.last_name,z.offerletter_url from interview_table as a join applications as b on a.application_id=b.applicationid join candidate as c on b.candidate_id=c.cid join offerletters as z on z.applicationid=b.applicationid where a.offer_letter_generated=1 and a.orgid=? and a.interview_completed=1 and a.confirm=1',
        [orgid]
         );
         console.log("interviews details",interviewdetails);

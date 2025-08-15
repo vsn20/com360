@@ -1,0 +1,219 @@
+/* Styles specific to OfferGenerating component that are not in globals.css */
+
+.button2 {
+  background-color: #0FD46C;
+  color: white !important;
+  padding: 5px 10px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: Arial, sans-serif;
+  transition: background-color 0.3s ease, transform 0.1s ease, color 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  text-decoration: none !important;
+}
+
+.button2:hover {
+  background-color: #0CB25A;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  color: black !important;
+}
+
+.button2:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.button2:hover:not(:disabled) {
+  background-color: #0CB25A;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  color: black !important;
+}
+
+/* Enhanced Generalized Table Styles */
+.table-wrapper2 {
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+.employee-table2 {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #fff;
+  table-layout: fixed;
+}
+
+/* Column width classes */
+.employee-table2.four-column2 col:nth-child(1) {
+  width: 15%;
+}
+
+.employee-table2.four-column2 col:nth-child(2) {
+  width: 35%;
+}
+
+.employee-table2.four-column2 col:nth-child(3) {
+  width: 15%;
+}
+
+.employee-table2.four-column2 col:nth-child(4) {
+  width: 35%;
+}
+
+.employee-table2 th {
+  background-color: #f8fafc;
+  padding: 16px 20px;
+  text-align: left;
+  border-bottom: 2px solid #e5e7eb;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  position: relative;
+}
+
+.employee-table2 th:hover {
+  background-color: #f1f5f9;
+}
+
+.employee-table2 th.sortable2::after {
+  content: '';
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-bottom: 4px solid #9ca3af;
+  opacity: 0.5;
+}
+
+.employee-table2 th.sortable2.sort-asc2::after {
+  border-bottom: 4px solid #0fd46c;
+  border-top: none;
+  opacity: 1;
+}
+
+.employee-table2 th.sortable2.sort-desc2::after {
+  border-top: 4px solid #0fd46c;
+  border-bottom: none;
+  opacity: 1;
+}
+
+.employee-table2 td {
+  padding: 16px 20px;
+  text-align: left;
+  border-bottom: 1px solid #f3f4f6;
+  color: #374151;
+  vertical-align: middle;
+  transition: all 0.2s ease;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Enhanced row hover effects */
+.employee-table2 tbody tr {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  cursor: pointer;
+}
+
+.employee-table2 tbody tr:hover {
+  background: linear-gradient(135deg, #f8fafc, #f0f9ff);
+  transform: translateX(4px);
+  box-shadow: 4px 0 12px rgba(15, 212, 108, 0.1);
+}
+
+/* Role Indicator */
+.role-indicator2 {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background-color: #0fd46c;
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+/* Status badge styles */
+.status-badge2 {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  margin-left: 15px;
+}
+
+.status-badge2.active2 {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.status-badge2.inactive2 {
+  background-color: #fee2e2;
+  color: #dc2626;
+}
+
+/* Specific cell styling */
+.id-cell2 {
+  display: flex;
+  align-items: center;
+}
+
+/* Empty state */
+.empty-state2 {
+  text-align: center;
+  padding: 48px 20px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .employee-table2 th,
+  .employee-table2 td {
+    padding: 12px 15px;
+  }
+
+  .employee-table2.four-column2 col:nth-child(1) {
+    width: 20%;
+  }
+
+  .employee-table2.four-column2 col:nth-child(2) {
+    width: 30%;
+  }
+
+  .employee-table2.four-column2 col:nth-child(3) {
+    width: 20%;
+  }
+
+  .employee-table2.four-column2 col:nth-child(4) {
+    width: 30%;
+  }
+}
+
+@media (max-width: 576px) {
+  .employee-table2 th,
+  .employee-table2 td {
+    padding: 10px 12px;
+  }
+
+  .employee-table2.four-column2 col:nth-child(1) {
+    width: 25%;
+  }
+
+  .employee-table2.four-column2 col:nth-child(2) {
+    width: 25%;
+  }
+
+  .employee-table2.four-column2 col:nth-child(3) {
+    width: 25%;
+  }
+
+  .employee-table2.four-column2 col:nth-child(4) {
+    width: 25%;
+  }
+}

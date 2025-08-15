@@ -29,18 +29,18 @@ const MultiSelectDropdown = ({ options, selectedValues, onChange, name, required
   };
 
   return (
-    <div className="multi-select-container">
-      <div className="multi-select-input" onClick={handleToggle}>
+    <div className="multi-select-container1">
+      <div className="multi-select-input1" onClick={handleToggle}>
         {selectedValues.length > 0 ? (
-          <div className="selected-tags">
+          <div className="selected-tags1">
             {selectedValues.map((value) => {
               const option = options.find((opt) => opt.roleid === value);
               return (
-                <span key={value} className="selected-tag">
+                <span key={value} className="selected-tag1">
                   {option?.rolename || value}
                   <button
                     type="button"
-                    className="remove-tag"
+                    className="remove-tag1"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleSelect(value);
@@ -53,15 +53,15 @@ const MultiSelectDropdown = ({ options, selectedValues, onChange, name, required
             })}
           </div>
         ) : (
-          <span className="placeholder">Select Roles</span>
+          <span className="placeholder1">Select Roles</span>
         )}
-        <span className="dropdown-arrow">{isOpen ? '▲' : '▼'}</span>
+        <span className="dropdown-arrow1">{isOpen ? '▲' : '▼'}</span>
       </div>
       {isOpen && (
-        <div className="multi-select-options">
+        <div className="multi-select-options1">
           {options.length > 0 ? (
             options.map((option) => (
-              <label key={option.roleid} className="multi-select-option">
+              <label key={option.roleid} className="multi-select-option1">
                 <input
                   type="checkbox"
                   checked={selectedValues.includes(option.roleid)}
@@ -71,7 +71,7 @@ const MultiSelectDropdown = ({ options, selectedValues, onChange, name, required
               </label>
             ))
           ) : (
-            <div className="no-options">No roles available</div>
+            <div className="no-options1">No roles available</div>
           )}
         </div>
       )}
@@ -122,6 +122,15 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
   const [editingStatus, setEditingStatus] = useState(false);
   const [offerLetterUrls, setOfferLetterUrls] = useState({});
 
+  // Pagination and filtering state
+  const [sortConfig, setSortConfig] = useState({ column: 'interview_id', direction: 'asc' });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageInputValue, setPageInputValue] = useState('1');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [rowsPerPageInput, setRowsPerPageInput] = useState('10');
+
   const getdisplayprojectid = (prjid) => prjid.split('-')[1] || prjid;
   const getdisplayid = (prjid) => prjid.split('_')[1] || prjid;
 
@@ -151,6 +160,26 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
       fetchOfferLetterUrls();
     }
   }, [offerlettergenerated]);
+
+  // Sort offerlettergenerated when sortConfig changes
+  useEffect(() => {
+    setOfferLetterGeneratedSorted([...offerlettergenerated].sort((a, b) =>
+      sortOfferLetters(a, b, sortConfig.column, sortConfig.direction)
+    ));
+  }, [sortConfig, offerlettergenerated]);
+
+  // Update page input when currentPage changes
+  useEffect(() => {
+    setPageInputValue(currentPage.toString());
+  }, [currentPage]);
+
+  // Update rows per page input when rowsPerPage changes
+  useEffect(() => {
+    setRowsPerPageInput(rowsPerPage.toString());
+  }, [rowsPerPage]);
+
+  // State to hold sorted offerlettergenerated
+  const [offerLetterGeneratedSorted, setOfferLetterGeneratedSorted] = useState(offerlettergenerated);
 
   // Fetch details and dropdown data when selecting an interview
   const selectId = async (interviewId) => {
@@ -222,42 +251,37 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
     setGenerate(true);
   };
 
-  const salarycopy=()=>{
-    if(parseInt(details.salary_expected)<parseInt(details.max_salary,10)){
+  const salarycopy = () => {
+    if (parseInt(details.salary_expected) < parseInt(details.max_salary, 10)) {
       return true;
-    }else{
-      return false
+    } else {
+      return false;
     }
-  }
+  };
 
-   const handleCopy = () => {
+  const handleCopy = () => {
     let salary;
-    if(!salarycopy()){
-           salary=details.max_salary;
-    }else{
-      salary=details.salary_expected;
+    if (!salarycopy()) {
+      salary = details.max_salary;
+    } else {
+      salary = details.salary_expected;
     }
     setOfferLetterData((prev) => ({
       ...prev,
-      finalised_jobtitle: details.expected_job_title || '', // Use jobid (job_title_id)
-       adress_lane_1: details.a1 || '',
-       adress_lane_2: details.a2 || '',
-       zipcode: details.z1 || '',
-       stateid:details.s1||'',
-       countryid:details.c1||'',
-       custom_state_name:details.s2||'',
-       finalised_department:details.d1||'',
-       finalised_jobtype:details.job1||'',
-      finalised_salary:salary||','    
+      finalised_jobtitle: details.expected_job_title || '',
+      adress_lane_1: details.a1 || '',
+      adress_lane_2: details.a2 || '',
+      zipcode: details.z1 || '',
+      stateid: details.s1 || '',
+      countryid: details.c1 || '',
+      custom_state_name: details.s2 || '',
+      finalised_department: details.d1 || '',
+      finalised_jobtype: details.job1 || '',
+      finalised_salary: salary || '',
     }));
   };
 
-
   const handleEditStatus = () => {
-    // if (details?.status === 'offerletter-processing' && details?.offerletter?.offer_letter_sent === 1) {
-    //   setError('Cannot edit: Offer letter has already been sent.');
-    //   return;
-    // }
     setEditingStatus(true);
     setError(null);
   };
@@ -340,6 +364,8 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
     setDetails(null);
     setEditingStatus(false);
     setError(null);
+    setCurrentPage(1);
+    setPageInputValue('1');
   };
 
   const formatDate = (date) => {
@@ -353,13 +379,129 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
     return '-';
   };
 
+  // Sorting function
+  const sortOfferLetters = (a, b, column, direction) => {
+    let aValue, bValue;
+    switch (column) {
+      case 'interview_id':
+        aValue = parseInt(getdisplayprojectid(a.interview_id));
+        bValue = parseInt(getdisplayprojectid(b.interview_id));
+        return direction === 'asc' ? aValue - bValue : bValue - aValue;
+      case 'application_id':
+        aValue = parseInt(getdisplayprojectid(a.application_id));
+        bValue = parseInt(getdisplayprojectid(b.application_id));
+        return direction === 'asc' ? aValue - bValue : bValue - aValue;
+      case 'applicant_name':
+        aValue = `${a.first_name} ${a.last_name}`.toLowerCase();
+        bValue = `${b.first_name} ${b.last_name}`.toLowerCase();
+        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      case 'status':
+        aValue = a.status || '';
+        bValue = b.status || '';
+        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      default:
+        return 0;
+    }
+  };
+
+  const requestSort = (column) => {
+    setSortConfig((prev) => ({
+      column,
+      direction: prev.column === column && prev.direction === 'asc' ? 'desc' : 'asc',
+    }));
+  };
+
+  // Search and filter handlers
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+    setCurrentPage(1);
+    setPageInputValue('1');
+  };
+
+  const handleStatusFilterChange = (e) => {
+    setStatusFilter(e.target.value);
+    setCurrentPage(1);
+    setPageInputValue('1');
+  };
+
+  const handleRowsPerPageInputChange = (e) => {
+    setRowsPerPageInput(e.target.value);
+  };
+
+  const handleRowsPerPageInputKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      const value = parseInt(e.target.value, 10);
+      if (!isNaN(value) && value >= 1) {
+        setRowsPerPage(value);
+        setRowsPerPageInput(value.toString());
+        setCurrentPage(1);
+        setPageInputValue('1');
+      } else {
+        setRowsPerPageInput(rowsPerPage.toString());
+      }
+    }
+  };
+
+  // Filtering logic
+  const filteredOfferLetters = offerLetterGeneratedSorted.filter((details) => {
+    const applicantName = `${details.first_name} ${details.last_name}`.toLowerCase();
+    const interviewId = getdisplayprojectid(details.interview_id).toLowerCase();
+    const matchesSearch = applicantName.includes(searchQuery.toLowerCase()) || interviewId.includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || details.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredOfferLetters.length / rowsPerPage);
+  const indexOfLastRow = currentPage * rowsPerPage;
+  const indexOfFirstRow = indexOfLastRow - rowsPerPage;
+  const currentRows = filteredOfferLetters.slice(indexOfFirstRow, indexOfLastRow);
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage((prev) => prev + 1);
+      setPageInputValue((currentPage + 1).toString());
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage((prev) => prev - 1);
+      setPageInputValue((currentPage - 1).toString());
+    }
+  };
+
+  const handlePageInputChange = (e) => {
+    setPageInputValue(e.target.value);
+  };
+
+  const handlePageInputKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      const value = parseInt(pageInputValue, 10);
+      if (!isNaN(value) && value >= 1 && value <= totalPages) {
+        setCurrentPage(value);
+        setPageInputValue(value.toString());
+      } else {
+        setPageInputValue(currentPage.toString());
+      }
+    }
+  };
+
+  // Get unique statuses for filter
+  const uniqueStatuses = [...new Set(offerlettergenerated.map((req) => req.status).filter(Boolean))];
+
   return (
-    <div className="employee-details-container">
-      {isLoading && <div className="loading-message">Loading...</div>}
-      {error && <div className="error-message">{error}</div>}
-      {success && <div className="success-message">{success}</div>}
+    <div className="employee-overview-container1">
+      {isLoading && <div className="loading-message1">Loading...</div>}
+      {error && <div className="error-message1">{error}</div>}
+      {success && <div className="success-message1">{success}</div>}
+
       {generate ? (
-        <>
+        <div className="employee-details-container1">
+          <div className="header-section1">
+            <h1 className="title">Generate Offer Letters</h1>
+            <button className="back-button" onClick={handleBack}></button>
+          </div>
           <OfferGenerating
             empid={empid}
             orgid={orgid}
@@ -367,57 +509,124 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
             acceptingtime={acceptingtime}
             handlebAck={handleBack}
           />
-        </>
+        </div>
       ) : selectid && details ? (
-        <div>
-          <button onClick={handleBack}>x</button>
-          <div className="details-block">
+        <div className="employee-details-container1">
+          <div className="header-section1">
+            <h1 className="title">Interview Details</h1>
+            <button className="back-button" onClick={handleBack}></button>
+          </div>
+
+          <div className="details-block1">
             <h3>Basic Details</h3>
-            <div className="details-row">
-              <div className="details-group">
+            <div className="details-row1">
+              <div className="details-group1">
                 <label>First Name</label>
                 <p>{details?.first_name || '-'}</p>
               </div>
-              <div className="details-group">
+              <div className="details-group1">
                 <label>Last Name</label>
                 <p>{details?.last_name || '-'}</p>
               </div>
             </div>
-            <div className="details-row">
-              <div className="details-group">
+            <div className="details-row1">
+              <div className="details-group1">
                 <label>Email</label>
                 <p>{details?.email || '-'}</p>
               </div>
-              <div className="details-group">
+              <div className="details-group1">
                 <label>Mobile Number</label>
                 <p>{details?.mobilenumber || '-'}</p>
               </div>
             </div>
-            <div className="details-row">
-              <div className="details-group">
+            <div className="details-row1">
+              <div className="details-group1">
                 <label>Date of Birth</label>
                 <p>{formatDate(details?.dateofbirth)}</p>
               </div>
-              <div className="details-group">
+              <div className="details-group1">
                 <label>Gender</label>
                 <p>{details?.gender || '-'}</p>
               </div>
             </div>
-            <div className="details-row">
-              <div className="details-group">
+            <div className="details-row1">
+              <div className="details-group1">
                 <label>Job Name</label>
                 <p>{details.display_job_name || '-'}</p>
               </div>
-              
+              <div className="details-group1">
+                <label>Applied Date</label>
+                <p>{formatDate(details?.applieddate)}</p>
+              </div>
             </div>
           </div>
 
-          <div className="details-block">
-            <h3>Interview Details</h3>
+          <div className="details-block1">
+            <h3>Application Details</h3>
+            <div className="details-row1">
+              <div className="details-group1">
+                <label>Interview ID</label>
+                <p>{getdisplayprojectid(details?.interview_id) || '-'}</p>
+              </div>
+              <div className="details-group1">
+                <label>Application ID</label>
+                <p>{getdisplayprojectid(details?.application_id) || '-'}</p>
+              </div>
+            </div>
+            <div className="details-row1">
+              <div className="details-group1">
+                <label>Organization ID</label>
+                <p>{details?.orgid || '-'}</p>
+              </div>
+              <div className="details-group1">
+                <label>Job Title</label>
+                <p>
+                  {details?.job_title
+                    ? `${details.job_title} minsalary-${details?.min_salary || '-'} maxsalary-${details?.max_salary || '-'} level-${details?.level || '-'}`
+                    : '-'}
+                </p>
+              </div>
+            </div>
+            <div className="details-row1">
+              <div className="details-group1">
+                <label>Resume Path</label>
+                {details?.resumepath ? (
+                  <a href={details.resumepath} className="view-resume-link1" target="_blank" rel="noopener noreferrer">
+                    View Resume
+                  </a>
+                ) : (
+                  <span className="no-resume-text1">No Resume</span>
+                )}
+              </div>
+              <div className="details-group1">
+                <label>Salary Expected</label>
+                <p>{details?.salary_expected || '-'}</p>
+              </div>
+            </div>
+            <div className="details-row1">
+              <div className="details-group1">
+                <label>Status</label>
+                <p>{details?.status || '-'}</p>
+              </div>
+              <div className="details-group1">
+                <label>Offer Letter</label>
+                {details?.offerletter_url ? (
+                  <a href={details.offerletter_url} className="view-resume-link1" target="_blank" rel="noopener noreferrer">
+                    View Offer Letter
+                  </a>
+                ) : (
+                  <span className="no-resume-text1">-</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="details-block1">
+            <h3>Interview Status Management</h3>
             {editingStatus ? (
               <form onSubmit={handleSave}>
-                <div className="form-row">
-                  <div className="form-group">
+                <div className="form-row1">
+                  <div className="form-group1">
                     <label>Status</label>
                     <select
                       name="status"
@@ -432,98 +641,67 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
                     </select>
                   </div>
                 </div>
+
                 {formData.status === 'offerletter-generated' && (
-                  <div className="offer-letter-form">
-                    <div className="offer-letter-column">
+                  <div className="offer-letter-form1">
+                    <div className="offer-letter-column1">
                       <h4>Expected Details</h4>
-                      <div className="form-group">
+                      <div className="form-group1">
                         <label>Expected Job Title</label>
                         <input type="text" value={details?.job_title || ''} disabled />
                       </div>
-                      <div className="form-group">
+                      <div className="form-group1">
                         <label>Expected Salary</label>
                         <input type="text" value={details?.salary_expected || ''} disabled />
                       </div>
-                      <div className="form-group">
+                      <div className="form-group1">
                         <label>Min Salary</label>
                         <input type="text" value={details?.min_salary || ''} disabled />
                       </div>
-                      <div className="form-group">
+                      <div className="form-group1">
                         <label>Max Salary</label>
                         <input type="text" value={details?.max_salary || ''} disabled />
                       </div>
-                      <div className="form-group">
+                      <div className="form-group1">
                         <label>Level</label>
                         <input type="text" value={details?.level || ''} disabled />
-                      </div>  
-                      <div className="form-group">
-                       <label>Expected Department</label>
-                        <input
-                          type="text"
-                          value={details.departmentname || ''}
-                          disabled
-                        />
                       </div>
-                      <div className="form-group">
-                        <label>Expected jobtype</label>
-                        <input
-                          type="text"
-                          value={details.jobtypename || ''}
-                          disabled
-                        />
+                      <div className="form-group1">
+                        <label>Expected Department</label>
+                        <input type="text" value={details.departmentname || ''} disabled />
                       </div>
-                      <div className="form-group">
+                      <div className="form-group1">
+                        <label>Expected Job Type</label>
+                        <input type="text" value={details.jobtypename || ''} disabled />
+                      </div>
+                      <div className="form-group1">
                         <label>Address Lane-1</label>
-                        <input
-                          type="text"
-                          value={details.a1 || ''}
-                          disabled
-                        />
+                        <input type="text" value={details.a1 || ''} disabled />
                       </div>
-                        <div className="form-group">
+                      <div className="form-group1">
                         <label>Address Lane-2</label>
-                        <input
-                          type="text"
-                          value={details.a2 || ''}
-                          disabled
-                        />
+                        <input type="text" value={details.a2 || ''} disabled />
                       </div>
-                        <div className="form-group">
+                      <div className="form-group1">
                         <label>Zipcode</label>
-                        <input
-                          type="text"
-                          value={details.z1 || ''}
-                          disabled
-                        />
+                        <input type="text" value={details.z1 || ''} disabled />
                       </div>
-                        <div className="form-group">
+                      <div className="form-group1">
                         <label>State</label>
-                        <input
-                          type="text"
-                          value={details.statename || ''}
-                          disabled
-                        />
+                        <input type="text" value={details.statename || ''} disabled />
                       </div>
-                        <div className="form-group">
+                      <div className="form-group1">
                         <label>Custom State Name</label>
-                        <input
-                          type="text"
-                          value={details.s2 || ''}
-                          disabled
-                        />
+                        <input type="text" value={details.s2 || ''} disabled />
                       </div>
-                        <div className="form-group">
+                      <div className="form-group1">
                         <label>Country</label>
-                        <input
-                          type="text"
-                          value={details.countryname || ''}
-                          disabled
-                        />
-                      </div>                    
-                    </div>                    
-                    <div className="offer-letter-column">
+                        <input type="text" value={details.countryname || ''} disabled />
+                      </div>
+                    </div>
+                    <div className="offer-letter-column1">
                       <h4>Finalized Details</h4>
-                      <div className="form-group">
+                      <div className="form-group1">
                         <label>Finalized Job Title</label>
                         <select
                           name="finalised_jobtitle"
@@ -539,7 +717,7 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
                           ))}
                         </select>
                       </div>
-                      <div className="form-group">
+                      <div className="form-group1">
                         <label>Finalized Salary</label>
                         <input
                           type="text"
@@ -549,7 +727,7 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
                           required
                         />
                       </div>
-                      <div className="form-group">
+                      <div className="form-group1">
                         <label>Finalized Roles</label>
                         <MultiSelectDropdown
                           options={dropdownData.roles}
@@ -559,7 +737,7 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
                           required
                         />
                       </div>
-                      <div className="form-group">
+                      <div className="form-group1">
                         <label>Finalized Department</label>
                         <select
                           name="finalised_department"
@@ -575,7 +753,7 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
                           ))}
                         </select>
                       </div>
-                      <div className="form-group">
+                      <div className="form-group1">
                         <label>Finalized Job Type</label>
                         <select
                           name="finalised_jobtype"
@@ -591,7 +769,7 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
                           ))}
                         </select>
                       </div>
-                      <div className="form-group">
+                      <div className="form-group1">
                         <label>Pay Term</label>
                         <select
                           name="finalised_pay_term"
@@ -607,7 +785,7 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
                           ))}
                         </select>
                       </div>
-                      <div className="form-group">
+                      <div className="form-group1">
                         <label>Report To Employee ID</label>
                         <select
                           name="reportto_empid"
@@ -623,7 +801,7 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
                           ))}
                         </select>
                       </div>
-                      <div className="form-group">
+                      <div className="form-group1">
                         <label>Address Line 1</label>
                         <input
                           type="text"
@@ -633,7 +811,7 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
                           required
                         />
                       </div>
-                      <div className="form-group">
+                      <div className="form-group1">
                         <label>Address Line 2</label>
                         <input
                           type="text"
@@ -642,7 +820,7 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
                           onChange={handleOfferLetterChange}
                         />
                       </div>
-                      <div className="form-group">
+                      <div className="form-group1">
                         <label>Zip Code</label>
                         <input
                           type="text"
@@ -652,7 +830,7 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
                           required
                         />
                       </div>
-                      <div className="form-group">
+                      <div className="form-group1">
                         <label>State</label>
                         <select
                           name="stateid"
@@ -668,7 +846,7 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
                           ))}
                         </select>
                       </div>
-                      <div className="form-group">
+                      <div className="form-group1">
                         <label>Country</label>
                         <select
                           name="countryid"
@@ -684,7 +862,7 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
                           ))}
                         </select>
                       </div>
-                      <div className="form-group">
+                      <div className="form-group1">
                         <label>Custom State Name</label>
                         <input
                           type="text"
@@ -694,7 +872,7 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
                           disabled={offerLetterData.countryid === '185'}
                         />
                       </div>
-                      <div className="form-group">
+                      <div className="form-group1">
                         <label>Expected Join Date</label>
                         <input
                           type="date"
@@ -704,182 +882,91 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
                           required
                         />
                       </div>
-                      <div className="form-row">
-                        <button type="button" className="copy-button" onClick={handleCopy}>
+                      <div className="form-row1">
+                        <button type="button" className="button" onClick={handleCopy}>
                           Copy Expected Details
                         </button>
                       </div>
                     </div>
                   </div>
                 )}
-                <div className="form-buttons">
-                  <button type="submit" className="save-button" disabled={isLoading}>
+                <div className="form-buttons1">
+                  <button type="submit" className="save" disabled={isLoading}>
                     {isLoading ? 'Saving...' : 'Save Status'}
                   </button>
-                  <button type="button" className="cancel-button" onClick={handleCancel} disabled={isLoading}>
+                  <button type="button" className="cancel" onClick={handleCancel} disabled={isLoading}>
                     Cancel
                   </button>
                 </div>
               </form>
             ) : (
               <div className="view-details">
-                <div className="details-row">
-                  <div className="details-group">
-                    <label>Interview ID</label>
-                    <p>{getdisplayprojectid(details?.interview_id) || '-'}</p>
-                  </div>
-                  <div className="details-group">
-                    <label>Application ID</label>
-                    <p>{getdisplayprojectid(details?.application_id) || '-'}</p>
-                  </div>
-                </div>
-                <div className="details-row">
-                  <div className="details-group">
-                    <label>Organization ID</label>
-                    <p>{details?.orgid || '-'}</p>
-                  </div>
-                  <div className="details-group">
-                    <label>Job Title</label>
-                    <p>
-                      {details?.job_title
-                        ? `${details.job_title} minsalary-${details?.min_salary || '-'} maxsalary-${details?.max_salary || '-'} level-${details?.level || '-'}`
-                        : '-'}
-                    </p>
-                  </div>
-                </div>
-                <div className="details-row">
-                  {/* <div className="details-group">
-                    <label>Interview Start Date</label>
-                    <p>{formatDate(details?.start_date)}</p>
-                  </div>
-                  <div className="details-group">
-                    <label>Interview Start Time</label>
-                    <p>{details?.start_time && details?.start_am_pm ? `${details.start_time} ${details.start_am_pm}` : '-'}</p>
-                  </div>
-                </div>
-                <div className="details-row">
-                  <div className="details-group">
-                    <label>Interview End Date</label>
-                    <p>{formatDate(details?.end_date)}</p>
-                  </div>
-                  <div className="details-group">
-                    <label>Interview End Time</label>
-                    <p>{details?.end_time && details?.end_am_pm ? `${details.end_time} ${details.end_am_pm}` : '-'}</p>
-                  </div>
-                </div>
-                <div className="details-row">
-                  <div className="details-group">
-                    <label>Meeting Link</label>
-                    <p>{details?.meeting_link || '-'}</p>
-                  </div> */}
-                  <div className="details-group">
-                    <label>Applied Date</label>
-                    <p>{formatDate(details?.applieddate)}</p>
-                  </div>
-                </div>
-                <div className="details-row">
-                  <div className="details-group">
-                    <label>Resume Path</label>
-                    {details?.resumepath ? (
-                      <a href={details.resumepath} className="view-resume-link" target="_blank" rel="noopener noreferrer">
-                        View Resume
-                      </a>
-                    ) : (
-                      <span className="no-resume-text">No Resume</span>
-                    )}
-                  </div>
-                  {/* <div className="details-group">
-                    <label>Offer Letter Timestamp</label>
-                    <p>{formatDate(details?.offerletter_timestamp)}</p>
-                  </div> */}
-                </div>
-                <div className="details-row">
-                  <div className="details-group">
-                    <label>Salary Expected</label>
-                    <p>{details?.salary_expected || '-'}</p>
-                  </div>
-                  <div className="details-group">
-                    <label>Status</label>
-                    <p>{details?.status || '-'}</p>
-                  </div>
-                </div>
-                {details?.offerletter_url && (
-                  <div className="details-row">
-                    <div className="details-group">
-                      <label>Offer Letter</label>
-                      <a href={details.offerletter_url} className="view-resume-link" target="_blank" rel="noopener noreferrer">
-                        View Offer Letter
-                      </a>
-                    </div>
-                  </div>
-                )}
-                <div className="details-buttons">
-                  <button className="edit-button" onClick={handleEditStatus}>Edit Status</button>
+                <div className="details-buttons1">
+                  <button className="button" onClick={handleEditStatus}>Edit Status</button>
                 </div>
               </div>
             )}
           </div>
 
           {details?.rounds && details.rounds.length > 0 && (
-            <div className="details-block">
-              <h3>Rounds</h3>
+            <>
               {details.rounds.map((round, index) => (
-                <div key={`${round.Roundid}-${index}`} className="round-block">
-                  <h5>Round {round.RoundNo || index + 1}</h5>
-                  <div className="details-row">
-                    <div className="details-group">
+                <div key={`${round.Roundid}-${index}`} className="details-block1">
+                  <h3>Round {round.RoundNo || index + 1}</h3>
+                  <div className="details-row1">
+                    <div className="details-group1">
                       <label>Start Date</label>
                       <p>{formatDate(round.start_date)}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="details-group1">
                       <label>Start Time</label>
                       <p>{round.start_time && round.start_am_pm ? `${round.start_time} ${round.start_am_pm}` : '-'}</p>
                     </div>
                   </div>
-                  <div className="details-row">
-                    <div className="details-group">
+                  <div className="details-row1">
+                    <div className="details-group1">
                       <label>End Date</label>
                       <p>{formatDate(round.end_date)}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="details-group1">
                       <label>End Time</label>
                       <p>{round.end_time && round.end_am_pm ? `${round.end_time} ${round.end_am_pm}` : '-'}</p>
                     </div>
                   </div>
-                  <div className="details-row">
-                    <div className="details-group">
+                  <div className="details-row1">
+                    <div className="details-group1">
                       <label>Meeting Link</label>
                       <p>{round.meeting_link || '-'}</p>
                     </div>
-                  </div>
-                  <div className="details-row">
-                    <div className="details-group">
-                      <label>Marks</label>
-                      <p>{round.marks || '-'}</p>
-                    </div>
-                    <div className="details-group">
-                      <label>Comments</label>
-                      <p>{round.comments || '-'}</p>
-                    </div>
-                    <div className="details-group">
+                    <div className="details-group1">
                       <label>Status</label>
                       <p>{round.status || '-'}</p>
                     </div>
                   </div>
+                  <div className="details-row1">
+                    <div className="details-group1">
+                      <label>Marks</label>
+                      <p>{round.marks || '-'}</p>
+                    </div>
+                    <div className="details-group1">
+                      <label>Comments</label>
+                      <p>{round.comments || '-'}</p>
+                    </div>
+                  </div>
                   {round.panelMembers && round.panelMembers.length > 0 && (
-                    <div>
-                      <h6>Panel Members</h6>
+                    <div className="panel-members-section1">
+                      <h4>Panel Members</h4>
                       {round.panelMembers.map((member, memberIndex) => (
-                        <div key={`${round.Roundid}-member-${memberIndex}`} className="details-row">
-                          <div className="details-group">
+                        <div key={`${round.Roundid}-member-${memberIndex}`} className="details-row1">
+                          <div className="details-group1">
                             <label>Employee ID</label>
                             <p>{member.empid ? getdisplayid(member.empid) : '-'}</p>
                           </div>
-                          <div className="details-group">
+                          <div className="details-group1">
                             <label>Email</label>
                             <p>{member.email || '-'}</p>
                           </div>
-                          <div className="details-group">
+                          <div className="details-group1">
                             <label>Is Employee</label>
                             <p>{member.is_he_employee === 1 ? 'Yes' : 'No'}</p>
                           </div>
@@ -889,23 +976,23 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
                   )}
                 </div>
               ))}
-            </div>
+            </>
           )}
 
-          <div className="details-block">
+          <div className="details-block1">
             <h3>Address Details</h3>
-            <div className="details-row">
-              <div className="details-group">
+            <div className="details-row1">
+              <div className="details-group1">
                 <label>Address Line 1</label>
                 <p>{details?.addresslane1 || '-'}</p>
               </div>
-              <div className="details-group">
+              <div className="details-group1">
                 <label>Address Line 2</label>
                 <p>{details?.addresslane2 || '-'}</p>
               </div>
             </div>
-            <div className="details-row">
-              <div className="details-group">
+            <div className="details-row1">
+              <div className="details-group1">
                 <label>Zip Code</label>
                 <p>{details?.zipcode || '-'}</p>
               </div>
@@ -913,48 +1000,149 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
           </div>
         </div>
       ) : (
-        <>
-          <button onClick={handleButtonGenerate} className="save-button">Generate Offer Letters</button>
-          <table className="employee-table">
-            <thead>
-              <tr>
-                <th>Interview ID</th>
-                <th>Application ID</th>
-                <th>Applicant Name</th>
-                <th>Status</th>
-                <th>Offer Letter</th>
-              </tr>
-            </thead>
-            <tbody>
-              {offerlettergenerated.map((details) => (
-                <tr
-                  key={details.interview_id}
-                  onClick={() => selectId(details.interview_id)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <td>{getdisplayprojectid(details.interview_id)}</td>
-                  <td>{getdisplayprojectid(details.application_id)}</td>
-                  <td>{`${details.first_name} ${details.last_name}`}</td>
-                  <td>{details.status}</td>
-                  <td>
-                    {details.status === 'offerletter-generated' && offerLetterUrls[details.interview_id] ? (
-                      <a
-                        href={offerLetterUrls[details.interview_id]}
-                        className="view-resume-link"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        View Offer Letter
-                      </a>
-                    ) : (
-                      '-'
-                    )}
-                  </td>
-                </tr>
+        <div className="employee-list1">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h1 className="title">Offer Letter Generation</h1>
+            <button onClick={handleButtonGenerate} className="button">Generate Offer Letters</button>
+          </div>
+
+          <div className="search-filter-container">
+            <input
+              type="text"
+              placeholder="Search by Applicant Name or Interview ID"
+              value={searchQuery}
+              onChange={handleSearchChange}
+              className="search-input"
+            />
+            <select
+              value={statusFilter}
+              onChange={handleStatusFilterChange}
+              className="filter-select"
+            >
+              <option value="all">All Status</option>
+              {uniqueStatuses.map((status) => (
+                <option key={status} value={status}>{status}</option>
               ))}
-            </tbody>
-          </table>
-        </>
+            </select>
+          </div>
+
+          {filteredOfferLetters.length === 0 && !error ? (
+            <p className="empty-state">No offer letters found.</p>
+          ) : (
+            <>
+              <div className="table-wrapper1">
+                <table className="employee-table1">
+                  <thead>
+                    <tr>
+                      <th
+                        className={sortConfig.column === 'interview_id' ? `sortable sort-${sortConfig.direction}` : 'sortable'}
+                        onClick={() => requestSort('interview_id')}
+                      >
+                        Interview ID
+                      </th>
+                      <th
+                        className={sortConfig.column === 'application_id' ? `sortable sort-${sortConfig.direction}` : 'sortable'}
+                        onClick={() => requestSort('application_id')}
+                      >
+                        Application ID
+                      </th>
+                      <th
+                        className={sortConfig.column === 'applicant_name' ? `sortable sort-${sortConfig.direction}` : 'sortable'}
+                        onClick={() => requestSort('applicant_name')}
+                      >
+                        Applicant Name
+                      </th>
+                      <th
+                        className={sortConfig.column === 'status' ? `sortable sort-${sortConfig.direction}` : 'sortable'}
+                        onClick={() => requestSort('status')}
+                      >
+                        Status
+                      </th>
+                      <th>Offer Letter</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentRows.map((details) => (
+                      <tr
+                        key={details.interview_id}
+                        onClick={() => selectId(details.interview_id)}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <td className="id-cell1">
+                          <span className="role-indicator1"></span>
+                          {getdisplayprojectid(details.interview_id)}
+                        </td>
+                        <td>{getdisplayprojectid(details.application_id)}</td>
+                        <td>{`${details.first_name} ${details.last_name}`}</td>
+                        <td>
+                          <span className={details.status === 'offerletter-generated' ? 'status-badge1 active1' : 'status-badge1 inactive1'}>
+                            {details.status}
+                          </span>
+                        </td>
+                        <td onClick={(e) => e.stopPropagation()}>
+                          {details.status === 'offerletter-generated' ? (
+                            <a
+                              href={details.offerletter_url}
+                              className="view-resume-link1"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              View Offer Letter
+                            </a>
+                          ) : (
+                            '-'
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {filteredOfferLetters.length > rowsPerPage && (
+                <div className="pagination-container">
+                  <button
+                    className="button"
+                    onClick={handlePrevPage}
+                    disabled={currentPage === 1}
+                  >
+                    ← Previous
+                  </button>
+                  <span className="pagination-text">
+                    Page{' '}
+                    <input
+                      type="text"
+                      value={pageInputValue}
+                      onChange={handlePageInputChange}
+                      onKeyPress={handlePageInputKeyPress}
+                      className="pagination-input"
+                    />{' '}
+                    of {totalPages}
+                  </span>
+                  <button
+                    className="button"
+                    onClick={handleNextPage}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
+              <div className="rows-per-page-container">
+                <label className="rows-per-page-label">Rows/ Page</label>
+                <input
+                  type="text"
+                  value={rowsPerPageInput}
+                  onChange={handleRowsPerPageInputChange}
+                  onKeyPress={handleRowsPerPageInputKeyPress}
+                  placeholder="Rows per page"
+                  className="rows-per-page-input"
+                  aria-label="Number of rows per page"
+                />
+              </div>
+            </>
+          )}
+        </div>
       )}
     </div>
   );
