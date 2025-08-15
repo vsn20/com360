@@ -11,30 +11,27 @@ const Overview = ({ scheduledetails, applieddetails, orgid, empid, time }) => {
   const [applyinterview, setapplyinterview] = useState(false);
   const [selectedid, setselectedid] = useState(null);
   const [selectedstatus, setselectedstatus] = useState(null);
+  // State for sorted scheduledetails
   const [allScheduledDetails, setAllScheduledDetails] = useState(scheduledetails);
+  // State for sorting configuration
   const [sortConfig, setSortConfig] = useState({ column: 'applicationid', direction: 'asc' });
+  
+  // New states for pagination and filtering
   const [currentPage, setCurrentPage] = useState(1);
   const [pageInputValue, setPageInputValue] = useState('1');
-  const [requestsPerPage, setRequestsPerPage] = useState(10);
-  const [requestsPerPageInput, setRequestsPerPageInput] = useState('10');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [applicationsPerPage, setApplicationsPerPage] = useState(10);
+  const [duplicate, setDuplicate] = useState(10);
 
   const getdisplayprojectid = (prjid) => {
     return prjid.split('-')[1] || prjid;
   };
 
+  // Reset state when searchParams 'refresh' changes
   useEffect(() => {
     handleback();
   }, [searchParams.get('refresh')]);
-
-  useEffect(() => {
-    setPageInputValue(currentPage.toString());
-  }, [currentPage]);
-
-  useEffect(() => {
-    setRequestsPerPageInput(requestsPerPage.toString());
-  }, [requestsPerPage]);
 
   const handleSchedule = () => {
     setselectedid(null);
@@ -45,10 +42,6 @@ const Overview = ({ scheduledetails, applieddetails, orgid, empid, time }) => {
     router.refresh();
     setapplyinterview(false);
     setselectedid(null);
-    setCurrentPage(1);
-    setPageInputValue('1');
-    setSearchQuery('');
-    setStatusFilter('all');
   };
 
   const handlerowclick = (id, status) => {
@@ -57,6 +50,7 @@ const Overview = ({ scheduledetails, applieddetails, orgid, empid, time }) => {
     setselectedstatus(status);
   };
 
+  // Sorting function
   const sortScheduledDetails = (a, b, column, direction) => {
     let aValue, bValue;
     switch (column) {
@@ -68,11 +62,20 @@ const Overview = ({ scheduledetails, applieddetails, orgid, empid, time }) => {
         aValue = (a.status || '').toLowerCase();
         bValue = (b.status || '').toLowerCase();
         return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      case 'name':
+        aValue = `${a.first_name} ${a.last_name}`.toLowerCase();
+        bValue = `${b.first_name} ${b.last_name}`.toLowerCase();
+        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      case 'jobname':
+        aValue = (a.display_job_name || '').toLowerCase();
+        bValue = (b.display_job_name || '').toLowerCase();
+        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
       default:
         return 0;
     }
   };
 
+  // Request sort handler
   const requestSort = (column) => {
     setSortConfig(prev => ({
       column,
@@ -80,11 +83,38 @@ const Overview = ({ scheduledetails, applieddetails, orgid, empid, time }) => {
     }));
   };
 
-  useEffect(() => {
-    const sortedDetails = [...scheduledetails].sort((a, b) => sortScheduledDetails(a, b, sortConfig.column, sortConfig.direction));
-    setAllScheduledDetails(sortedDetails);
-  }, [sortConfig, scheduledetails]);
+  // Filter and search functionality
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+    setCurrentPage(1);
+    setPageInputValue('1');
+  };
 
+  const handleStatusFilterChange = (e) => {
+    setStatusFilter(e.target.value);
+    setCurrentPage(1);
+    setPageInputValue('1');
+  };
+
+  // Filtering logic
+  const filteredApplications = allScheduledDetails.filter(application => {
+    const matchesSearch = 
+      `${application.first_name} ${application.last_name}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      application.display_job_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      getdisplayprojectid(application.applicationid).toString().includes(searchQuery.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'all' || application.status.toLowerCase() === statusFilter.toLowerCase();
+    
+    return matchesSearch && matchesStatus;
+  });
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredApplications.length / applicationsPerPage);
+  const indexOfLastApplication = currentPage * applicationsPerPage;
+  const indexOfFirstApplication = indexOfLastApplication - applicationsPerPage;
+  const currentApplications = filteredApplications.slice(indexOfFirstApplication, indexOfLastApplication);
+
+  // Pagination handlers
   const handleNextPage = () => {
     if (currentPage < totalPages) {
       setCurrentPage(prev => prev + 1);
@@ -115,184 +145,187 @@ const Overview = ({ scheduledetails, applieddetails, orgid, empid, time }) => {
     }
   };
 
-  const handleRequestsPerPageInputChange = (e) => {
-    setRequestsPerPageInput(e.target.value);
-  };
-
-  const handleRequestsPerPageInputKeyPress = (e) => {
+  const handleApplicationsInputKeyPress = (e) => {
     if (e.key === 'Enter') {
-      const value = parseInt(e.target.value, 10);
+      const value = parseInt(duplicate, 10);
       if (!isNaN(value) && value >= 1) {
-        setRequestsPerPage(value);
-        setRequestsPerPageInput(value.toString());
+        setApplicationsPerPage(value);
+        setDuplicate(value);
         setCurrentPage(1);
         setPageInputValue('1');
       } else {
-        setRequestsPerPageInput(requestsPerPage.toString());
+        setDuplicate(10);
         setCurrentPage(1);
         setPageInputValue('1');
       }
     }
   };
 
-  const handleSearchChange = (e) => {
-    setSearchQuery(e.target.value);
-    setCurrentPage(1);
-    setPageInputValue('1');
+  const pageChanging = (e) => {
+    setDuplicate(e.target.value);
   };
 
-  const handleStatusFilterChange = (e) => {
-    setStatusFilter(e.target.value);
-    setCurrentPage(1);
-    setPageInputValue('1');
-  };
+  useEffect(() => {
+    const sortedDetails = [...filteredApplications].sort((a, b) => sortScheduledDetails(a, b, sortConfig.column, sortConfig.direction));
+    // We don't need to set state here as filteredApplications already handles this
+  }, [sortConfig]);
 
-  const filteredDetails = allScheduledDetails.filter(detail => {
-    const candidateName = `${detail.first_name} ${detail.last_name}`.toLowerCase();
-    const jobName = detail.display_job_name.toLowerCase();
-    const matchesSearch = candidateName.includes(searchQuery.toLowerCase()) || jobName.includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || detail.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  useEffect(() => {
+    setPageInputValue(currentPage.toString());
+  }, [currentPage]);
 
-  const totalPages = Math.ceil(filteredDetails.length / requestsPerPage);
-  const indexOfLastRequest = currentPage * requestsPerPage;
-  const indexOfFirstRequest = indexOfLastRequest - requestsPerPage;
-  const currentDetails = filteredDetails.slice(indexOfFirstRequest, indexOfLastRequest);
-
-  const uniqueStatuses = [...new Set(scheduledetails.map(detail => detail.status))];
+  // Get unique statuses for filter dropdown
+  const uniqueStatuses = [...new Set(scheduledetails.map(app => app.status))];
 
   return (
     <div className="employee-overview-container">
-      {applyinterview ? (
-        <div className="employee-details-container">
-          <div className="header-section">
-            <h1 className="title">Schedule Interview</h1>
-            <button className="back-button" onClick={handleback}></button>
-          </div>
+      {applyinterview && (
+        <>
           <SubmittingApplication
             applieddetails={applieddetails}
             orgid={orgid}
             empid={empid}
             handlesback={handleback}
           />
-        </div>
-      ) : !selectedid ? (
-        <div className="employee-list">
-          <div className="header-section">
-            <h1 className="title">Scheduled Interviews</h1>
-            <button className="button" onClick={handleSchedule}>Schedule Interview</button>
-          </div>
-          <div className="search-filter-container">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={handleSearchChange}
-              className="search-input"
-              placeholder="Search by Name or Job..."
-            />
-            <select value={statusFilter} onChange={handleStatusFilterChange} className="filter-select">
-              <option value="all">All Statuses</option>
-              {uniqueStatuses.map((status, index) => (
-                <option key={index} value={status}>{status}</option>
-              ))}
-            </select>
-          </div>
-          {currentDetails.length === 0 ? (
-            <div className="empty-state">No applications found.</div>
-          ) : (
-            <>
-              <div className="table-wrapper">
-                <table className="service-requests-table">
-                  <thead>
-                    <tr>
-                      <th className={sortConfig.column === 'applicationid' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('applicationid')}>
-                        Application ID
-                      </th>
-                      <th>Candidate Name</th>
-                      <th>Job Name-Job ID</th>
-                      <th>Resume</th>
-                      <th className={sortConfig.column === 'status' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('status')}>
-                        Status
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {currentDetails.map((details) => (
-                      <tr key={details.applicationid} onClick={() => handlerowclick(details.applicationid, details.status)}>
-                        <td className="id-cell">
-                          <span className="role-indicator"></span>
-                          {getdisplayprojectid(details.applicationid)}
-                        </td>
-                        <td>{`${details.first_name} ${details.last_name}`}</td>
-                        <td>{`${details.display_job_name} - ${getdisplayprojectid(details.jobid)}`}</td>
-                        <td>
-                          <a
-                            href={details.resumepath}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            View Resume
-                          </a>
-                        </td>
-                        <td className={details.status.toLowerCase() === 'scheduled' ? 'status-badge active' : 'status-badge inactive'}>
-                          {details.status}
-                        </td>
+        </>
+      )}
+      {!applyinterview && !selectedid ? (
+        <>
+          <div className="employee-list">
+            <div className="header-section">
+              <div className="title">Application Management</div>
+              <button className="button" onClick={handleSchedule}>Schedule Interview</button>
+            </div>
+            
+            {/* Search and Filter Section */}
+            <div className="search-filter-container">
+              <input
+                type="text"
+                placeholder="Search by Name, Job, or Application ID"
+                value={searchQuery}
+                onChange={handleSearchChange}
+                className="search-input"
+              />
+              <select
+                value={statusFilter}
+                onChange={handleStatusFilterChange}
+                className="filter-select"
+              >
+                <option value="all">All Status</option>
+                {uniqueStatuses.map(status => (
+                  <option key={status} value={status}>{status}</option>
+                ))}
+              </select>
+            </div>
+
+            {filteredApplications.length === 0 ? (
+              <p className="empty-state">No applications found.</p>
+            ) : (
+              <>
+                <div className="applications-table-wrapper">
+                  <table className="applications-table">
+                    <thead>
+                      <tr>
+                        <th 
+                          className={sortConfig.column === 'applicationid' ? `sortable sort-${sortConfig.direction}` : 'sortable'}
+                          onClick={() => requestSort('applicationid')}
+                        >
+                          Application ID
+                        </th>
+                        <th 
+                          className={sortConfig.column === 'name' ? `sortable sort-${sortConfig.direction}` : 'sortable'}
+                          onClick={() => requestSort('name')}
+                        >
+                          Candidate Name
+                        </th>
+                        <th 
+                          className={sortConfig.column === 'jobname' ? `sortable sort-${sortConfig.direction}` : 'sortable'}
+                          onClick={() => requestSort('jobname')}
+                        >
+                          Job Name-Job ID
+                        </th>
+                        <th>Resume</th>
+                        <th 
+                          className={sortConfig.column === 'status' ? `sortable sort-${sortConfig.direction}` : 'sortable'}
+                          onClick={() => requestSort('status')}
+                        >
+                          Status
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {filteredDetails.length > requestsPerPage && (
-                <div className="pagination-container">
-                  <button
-                    className="button"
-                    onClick={handlePrevPage}
-                    disabled={currentPage === 1}
-                  >
-                    ← Previous
-                  </button>
-                  <span className="pagination-text">
-                    Page{' '}
+                    </thead>
+                    <tbody>
+                      {currentApplications.map((details) => (
+                        <tr key={details.applicationid} onClick={() => handlerowclick(details.applicationid, details.status)}>
+                          <td className="id-cell">
+                            <span className="application-indicator"></span>
+                            {getdisplayprojectid(details.applicationid)}
+                          </td>
+                          <td>{`${details.first_name} ${details.last_name}`}</td>
+                          <td>{`${details.display_job_name} - ${getdisplayprojectid(details.jobid)}`}</td>
+                          <td>
+                            <a href={details.resumepath} target="_blank" rel="noopener noreferrer">
+                              View Resume
+                            </a>
+                          </td>
+                          <td>{details.status}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination */}
+                {filteredApplications.length > applicationsPerPage && (
+                  <div className="pagination-container">
+                    <button
+                      className="button"
+                      onClick={handlePrevPage}
+                      disabled={currentPage === 1}
+                    >
+                      ← Previous
+                    </button>
+                    <span className="pagination-text">
+                      Page{' '}
+                      <input
+                        type="text"
+                        value={pageInputValue}
+                        onChange={handlePageInputChange}
+                        onKeyPress={handlePageInputKeyPress}
+                        className="pagination-input"
+                      />{' '}
+                      of {totalPages}
+                    </span>
+                    <button
+                      className="button"
+                      onClick={handleNextPage}
+                      disabled={currentPage === totalPages}
+                    >
+                      Next →
+                    </button>
+                  </div>
+                )}
+
+                {/* Rows per Page */}
+                {filteredApplications.length > 0 && (
+                  <div className="rows-per-page-container">
+                    <label className="rows-per-page-label">Rows/ Page</label>
                     <input
                       type="text"
-                      value={pageInputValue}
-                      onChange={handlePageInputChange}
-                      onKeyPress={handlePageInputKeyPress}
-                      className="pagination-input"
-                    />{' '}
-                    of {totalPages}
-                  </span>
-                  <button
-                    className="button"
-                    onClick={handleNextPage}
-                    disabled={currentPage === totalPages}
-                  >
-                    Next →
-                  </button>
-                </div>
-              )}
-              <div className="rows-per-page-container">
-                <label className="rows-per-page-label">Rows/ Page</label>
-                <input
-                  type="text"
-                  value={requestsPerPageInput}
-                  onChange={handleRequestsPerPageInputChange}
-                  onKeyPress={handleRequestsPerPageInputKeyPress}
-                  className="rows-per-page-input"
-                  aria-label="Number of rows per page"
-                />
-              </div>
-            </>
-          )}
-        </div>
-      ) : (
-        <div className="employee-details-container">
-          <div className="header-section">
-            <h1 className="title">Edit Interview</h1>
-            <button className="back-button" onClick={handleback}></button>
+                      value={duplicate}
+                      onChange={pageChanging}
+                      onKeyPress={handleApplicationsInputKeyPress}
+                      className="rows-per-page-input"
+                      aria-label="Number of rows per page"
+                    />
+                  </div>
+                )}
+              </>
+            )}
           </div>
+        </>
+      ) : selectedid && (
+        <>
+          <button className="back-button" onClick={handleback}>×</button>
           <Edit
             id={selectedid}
             orgid={orgid}
@@ -301,7 +334,7 @@ const Overview = ({ scheduledetails, applieddetails, orgid, empid, time }) => {
             time={time}
             status={selectedstatus}
           />
-        </div>
+        </>
       )}
     </div>
   );

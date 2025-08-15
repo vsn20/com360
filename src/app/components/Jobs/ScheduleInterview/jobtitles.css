@@ -1,285 +1,500 @@
 /* app/components/Jobs/JobTitle/jobtitles.css */
-
-/* Container - Main wrapper for all components */
 .employee-overview-container {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  font-family: Arial, sans-serif;
+}
+
+.employee-overview-container h2 {
+  font-size: 24px;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.employee-list {
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.employee-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.employee-table th,
+.employee-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+.employee-table th {
+  background-color: #f4f4f4;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.employee-table tr:hover {
+  background-color: #f5f5f5;
+  cursor: pointer;
+}
+
+.employee-table tr.selected-row {
+  background-color: #e9f0ff;
+}
+
+.back-button {
+  padding: 5px 10px;
+  background-color: white;
+  color: red;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin-bottom: 15px;
+  font-size: 14px;
+}
+
+.back-button:hover {
+  background-color: #5a6268;
+}
+
+.edit-button {
+  padding: 5px 10px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.edit-button:hover {
+  background-color: #0056b3;
+}
+
+/* Interview Edit Container - Similar to interview.css */
+.employee-details-container {
   padding: 20px;
   max-width: 1200px;
   margin: 0 auto;
 }
 
-/* List section for tables */
-.employee-list {
-  margin-bottom: 20px;
-}
-
-/* Container for details or form sections */
-.employee-details-container {
+/* Interview Details Container */
+.interview-edit-container {
   display: flex;
   flex-direction: column;
   gap: 30px;
 }
 
-/* Container for add role form */
-.add-role-container {
-  padding: 40px;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-/* Header for sections */
-.header-section {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-/* Card-like structure for details or forms */
-.details-block {
+/* Interview Details Block - Similar to interview overview */
+.interview-edit-details-block {
   background-color: #fff;
   padding: 20px;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-/* Header for role details or rounds */
-.roledetails-header {
+.interview-edit-details-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
 }
 
-/* Form and details rows */
-.form-row {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 30px;
-  margin-bottom: 20px;
+.interview-edit-details-header h2 {
+  margin: 0;
 }
 
-/* Form and details groups */
-.form-group,
-.details-g {
+/* Edit Details */
+.edit-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.edit-details-row {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 15px;
+}
+
+.edit-details-g {
   flex: 1;
   display: flex;
   flex-direction: column;
 }
 
-/* Labels for forms and details */
-.form-group label,
-.details-g label {
+.edit-details-g label {
   font-weight: bold;
-  margin-bottom: 8px;
+  margin-bottom: 5px;
+  color: #333;
 }
 
-/* Form inputs */
-.form-group input,
-.form-group select,
-.form-group textarea {
+/* Form Inputs for Editing */
+.form-input-edit {
   width: 100%;
-  padding: 12px;
+  padding: 8px;
   border: 1px solid #ddd;
   border-radius: 4px;
   box-sizing: border-box;
-  font-family: Arial, sans-serif;
   font-size: 14px;
 }
 
-/* Disabled input background */
-.form-group input.bg-gray-100 {
-  background-color: #f0f0f0;
+.form-input-edit:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(15, 212, 108, 0.25);
 }
 
-/* Textarea specific styling */
-.form-group textarea {
+.form-textarea-edit {
   resize: vertical;
   min-height: 60px;
 }
 
-/* Input focus states */
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-  outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
-}
-
-/* Details paragraph */
-.details-g p {
-  margin: 0;
-}
-
-/* Time input group */
-.time-group {
-  display: flex;
-  flex-direction: column;
-}
-
-/* Time inputs container */
-.time-inputs {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-/* Time text input */
-.time-text-input {
-  width: 80px !important;
-  padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-  text-align: center;
-}
-
-/* Time select dropdown */
-.time-select {
-  width: 60px !important;
-  padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-  text-align: center;
-}
-
-/* Time input separator */
-.time-inputs span {
-  font-size: 16px;
-  font-weight: bold;
-  color: #374151;
-}
-
-/* Headings within details block */
-.details-block h2,
-.details-block h3,
-.details-block h4,
-.details-block h5 {
-  color: #0fd46c;
-  margin: 0 0 20px 0;
-  font-size: 18px;
-  font-weight: bold;
-}
-
-.details-block h3 {
-  font-size: 18px;
-}
-
-.details-block h4 {
-  font-size: 16px;
-  margin: 15px 0;
-}
-
-.details-block h5 {
-  font-size: 14px;
-  margin: 10px 0;
-}
-
-/* Form buttons container */
-.form-buttons {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  margin-top: 20px;
-}
-
-/* Details buttons container */
-.details-buttons {
-  display: flex;
-  gap: 10px;
-  margin-top: 20px;
-}
-
-/* Add role form styling */
-.add-role-form {
-  background-color: #fff;
-  padding: 40px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  width: 100%;
-}
-
-/* Form section */
-.form-section {
-  display: flex;
-  flex-direction: column;
-  gap: 30px;
-}
-
-/* Role name input */
-.role-name-input {
-  padding: 12px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  transition: border-color 0.2s;
-}
-
-.role-name-input:focus {
-  outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
-}
-
-/* Submit section */
-.submit-section {
-  display: flex;
-  justify-content: center;
-  margin-top: 40px;
-  padding-top: 20px;
-  border-top: 1px solid #e9ecef;
-}
-
-/* Nested details block for panel members */
-.details-block .details-block {
-  margin-top: 15px;
-  margin-bottom: 15px;
-  padding: 15px;
-  background-color: #f8fafc;
-  border: 1px solid #e5e7eb;
-}
-
-/* Form validation */
-.form-group input:invalid,
-.form-group select:invalid,
-.form-group textarea:invalid {
-  border-color: #dc3545;
-}
-
-.form-group input:invalid:focus,
-.form-group select:invalid:focus,
-.form-group textarea:invalid:focus {
-  border-color: #dc3545;
-  box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.25);
-}
-
-/* Disabled states */
-.form-group input:disabled,
-.form-group select:disabled,
-.form-group textarea:disabled {
-  background-color: #f0f0f0;
-  cursor: not-allowed;
-  opacity: 0.7;
-}
-
-/* Required field indicator */
-.form-group label[data-required="true"]::after,
-.form-group label:has(+ input[required])::after,
-.form-group label:has(+ select[required])::after {
-  content: "*";
-  color: #dc3545;
-  margin-left: 4px;
-}
-
-/* Rounds container */
-.rounds-container {
+/* Rounds Container */
+.rounds-edit-container {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-/* Search, filter, and rows-per-page container */
+/* Round Block */
+.round-edit-block {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.round-edit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.round-edit-header > div:first-child {
+  font-size: 18px;
+  font-weight: bold;
+  color: #0fd46c;
+}
+
+.round-edit-content {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Form Buttons */
+.form-buttons-edit {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+  justify-content: flex-start;
+}
+
+/* Panel Members Section */
+.panel-members-edit-section {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #e9ecef;
+}
+
+.panel-members-edit-section h4 {
+  font-size: 16px;
+  color: #0fd46c;
+  margin-bottom: 15px;
+}
+
+/* Panel Members Table */
+.panel-members-edit-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #fff;
+  margin-top: 15px;
+}
+
+.panel-members-edit-table th,
+.panel-members-edit-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+.panel-members-edit-table th {
+  background-color: #f8fafc;
+  font-weight: bold;
+}
+
+/* Add Round Section */
+.add-round-edit-section {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  text-align: center;
+}
+
+/* Main Form Actions */
+.main-form-edit-actions {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Time Container - Enhanced */
+.time-edit-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.time-edit-inputs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Style for text time input */
+.time-edit-text-input {
+  width: 80px;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+/* Style for hour and minute dropdowns */
+.time-edit-select {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  width: 80px;
+}
+
+/* Disabled state */
+.time-edit-text-input:disabled,
+.time-edit-select:disabled {
+  background-color: #f0f0f0;
+  cursor: not-allowed;
+}
+
+/* Colon separator */
+.time-edit-inputs span {
+  font-size: 14px;
+  color: #333;
+}
+
+/* View Details for read-only mode */
+.view-edit-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.view-edit-details .edit-details-row {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 15px;
+}
+
+.view-edit-details .edit-details-g {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.view-edit-details .edit-details-g label {
+  font-weight: bold;
+  margin-bottom: 5px;
+  color: #333;
+}
+
+.view-edit-details .edit-details-g p {
+  margin: 0;
+  padding: 8px 0;
+  color: #666;
+  display: flex;
+  align-items: center;
+}
+
+/* Loading and Message Styles */
+.loading-edit-message {
+  color: #007bff;
+  text-align: center;
+  padding: 20px;
+  font-size: 16px;
+}
+
+.error-edit-message {
+  color: #dc3545;
+  margin-bottom: 15px;
+  padding: 10px;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+}
+
+.success-edit-message {
+  color: #155724;
+  margin-bottom: 15px;
+  padding: 10px;
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  border-radius: 4px;
+}
+
+/* Header Section */
+.header-edit-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.save-button,
+.cancel-button {
+  padding: 8px 15px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.save-button {
+  background-color: #28a745;
+  color: white;
+}
+
+.save-button:hover {
+  background-color: #218838;
+}
+
+.cancel-button {
+  background-color: #dc3545;
+  color: white;
+}
+
+.cancel-button:hover {
+  background-color: #c82333;
+}
+
+/* Container for time inputs and dropdowns */
+.time-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.time-inputs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Style for text time input */
+.time-text-input {
+  width: 80px;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+/* Style for hour and minute dropdowns */
+.time-select {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  width: 80px;
+}
+
+/* Disabled state */
+.time-text-input:disabled,
+.time-select:disabled {
+  background-color: #f0f0f0;
+  cursor: not-allowed;
+}
+
+/* Colon separator */
+.time-inputs span {
+  font-size: 14px;
+  color: #333;
+}
+
+.form-row,
+.details-row {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 15px;
+}
+
+.form-group,
+.details-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label,
+.details-group label {
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.form-group input.bg-gray-100 {
+  background-color: #f0f0f0;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+.details-group p {
+  margin: 0;
+}
+
+.form-buttons,
+.details-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.error-message {
+  color: #dc3545;
+  margin-bottom: 15px;
+}
+
+.success-message {
+  color: #28a745;
+  margin-bottom: 15px;
+}
+
+.loading-message {
+  color: #007bff;
+  margin-bottom: 15px;
+}
+
+/* NEW STYLES - Copied from roles overview */
+
+/* Search and Filter Container */
 .search-filter-container {
   display: flex;
   flex-wrap: wrap;
@@ -288,110 +503,247 @@
   align-items: center;
 }
 
-/* Search input */
 .search-input {
   width: 200px;
   padding: 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
   font-size: 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .search-input:focus {
   outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+  border-color: #0fd46c;
+  box-shadow: 0 0 0 2px rgba(15, 212, 108, 0.25);
 }
 
-/* Filter select */
 .filter-select {
   padding: 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
   font-size: 14px;
+  transition: border-color 0.2s ease;
 }
 
 .filter-select:focus {
   outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+  border-color: #0fd46c;
 }
 
-/* Date filter container */
-.date-filter-container {
+/* Application ID with green dot indicator */
+.id-cell {
   display: flex;
-  gap: 10px;
   align-items: center;
 }
 
-/* Date input */
-.date-input {
+.application-indicator {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background-color: #0fd46c;
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+/* Pagination Container */
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 20px;
+  gap: 10px;
+}
+
+.pagination-input {
+  width: 40px;
+  text-align: center;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 4px;
+  font-size: 14px;
+}
+
+.pagination-text {
+  font-size: 14px;
+  color: #333;
+}
+
+/* Rows per Page Container */
+.rows-per-page-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.rows-per-page-label {
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+}
+
+.rows-per-page-input {
+  width: 60px;
   padding: 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
   font-size: 14px;
-}
-
-.date-input:focus {
-  outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
-}
-
-/* Error message */
-.error-message {
-  color: #dc3545;
-  margin-bottom: 15px;
-  font-size: 16px;
-}
-
-/* Success message */
-.success-message {
-  color: #28a745;
-  margin-bottom: 15px;
-  font-size: 16px;
-}
-
-/* Loading message */
-.loading-message {
-  color: #007bff;
   text-align: center;
-  padding: 20px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.rows-per-page-input:focus {
+  outline: none;
+  border-color: #0fd46c;
+  box-shadow: 0 0 0 2px rgba(15, 212, 108, 0.25);
+}
+
+.rows-per-page-input:disabled {
+  background-color: #f0f0f0;
+  cursor: not-allowed;
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 48px 20px;
+  color: #6c757d;
   font-size: 16px;
 }
 
-/* Responsive design */
+/* Header section for title and button alignment */
+.header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.header-section .title {
+  margin: 0;
+}
+
+/* Enhanced table wrapper */
+.applications-table-wrapper {
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+/* Enhanced table styles */
+.applications-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #fff;
+  table-layout: fixed;
+}
+
+/* Enhanced table header */
+.applications-table th {
+  background-color: #f8fafc;
+  padding: 16px 20px;
+  text-align: left;
+  border-bottom: 2px solid #e5e7eb;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  position: relative;
+  font-weight: 600;
+  color: #374151;
+}
+
+.applications-table th:hover {
+  background-color: #f1f5f9;
+}
+
+.applications-table th.sortable::after {
+  content: '';
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-bottom: 4px solid #9ca3af;
+  opacity: 0.5;
+}
+
+.applications-table th.sortable.sort-asc::after {
+  border-bottom: 4px solid #0fd46c;
+  border-top: none;
+  opacity: 1;
+}
+
+.applications-table th.sortable.sort-desc::after {
+  border-top: 4px solid #0fd46c;
+  border-bottom: none;
+  opacity: 1;
+}
+
+/* Enhanced table body */
+.applications-table td {
+  padding: 16px 20px;
+  text-align: left;
+  border-bottom: 1px solid #f3f4f6;
+  color: #374151;
+  vertical-align: middle;
+  transition: all 0.2s ease;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Enhanced row hover effects */
+.applications-table tbody tr {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  cursor: pointer;
+}
+
+.applications-table tbody tr:hover {
+  background: linear-gradient(135deg, #f8fafc, #f0f9ff);
+  transform: translateX(4px);
+  box-shadow: 4px 0 12px rgba(15, 212, 108, 0.1);
+}
+
+/* Resume link styling */
+.applications-table a {
+  color: #0fd46c;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.applications-table a:hover {
+  color: #0cb25a;
+  text-decoration: underline;
+}
+
 @media (max-width: 768px) {
   .employee-overview-container,
-  .add-role-container {
+  .employee-details-container {
     padding: 10px;
   }
 
-  .add-role-form {
-    padding: 20px;
+  .employee-overview-container h2 {
+    font-size: 20px;
   }
 
-  .form-row {
-    display: flex;
+  .applications-table th,
+  .applications-table td {
+    padding: 12px 15px;
+  }
+
+  .form-row,
+  .details-row,
+  .edit-details-row {
     flex-direction: column;
     gap: 10px;
-  }
-
-  .form-buttons,
-  .details-buttons {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .form-group input,
-  .form-group select,
-  .form-group textarea {
-    font-size: 13px;
-  }
-
-  .time-text-input,
-  .time-select {
-    width: 70px !important;
   }
 
   .search-filter-container {
@@ -399,35 +751,426 @@
     align-items: stretch;
   }
 
-  .search-input,
-  .filter-select,
-  .date-input {
+  .search-input {
     width: 100%;
   }
 
-  .date-filter-container {
+  .header-section,
+  .header-edit-section {
+    flex-direction: column;
+    gap: 15px;
+    align-items: stretch;
+  }
+
+  .round-edit-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .form-buttons-edit,
+  .main-form-edit-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .interview-edit-details-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 576px) {
+  .applications-table th,
+  .applications-table td {
+    padding: 10px 12px;
+  }
+
+  .pagination-container {
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .form-buttons,
+  .form-buttons-edit {
     flex-direction: column;
     align-items: stretch;
   }
 }
 
-@media (max-width: 576px) {
-  .details-block h2,
-  .details-block h3 {
-    font-size: 16px;
+/* app/components/Jobs/JobTitle/jobtitles.css */
+.employee-overview-container {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  font-family: Arial, sans-serif;
+}
+
+.employee-overview-container h2 {
+  font-size: 24px;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.employee-list {
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.employee-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.employee-table th,
+.employee-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+.employee-table th {
+  background-color: #f4f4f4;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.employee-table tr:hover {
+  background-color: #f5f5f5;
+  cursor: pointer;
+}
+
+.employee-table tr.selected-row {
+  background-color: #e9f0ff;
+}
+
+.edit-button {
+  padding: 5px 10px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.edit-button:hover {
+  background-color: #0056b3;
+}
+
+/* Base Container for Scheduling and Edit pages */
+.employee-details-container,
+.interview-edit-container {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Header Section */
+.header-edit-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+/* Details Block (shared for application status, main info) */
+.interview-edit-details-block {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.interview-edit-details-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  font-size: 18px;
+  font-weight: bold;
+  color: #333;
+}
+
+/* Form Element Layout */
+.edit-details-row {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 15px;
+  align-items: flex-end;
+}
+
+.edit-details-g {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.edit-details-g label {
+  font-weight: bold;
+  margin-bottom: 8px;
+  color: #333;
+  font-size: 14px;
+}
+
+/* Form Inputs Styling */
+.form-input-edit {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-sizing: border-box;
+  font-size: 14px;
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+.form-input-edit:focus {
+  outline: none;
+  border-color: #0fd46c;
+  box-shadow: 0 0 0 2px rgba(15, 212, 108, 0.25);
+}
+
+.form-input-edit.bg-gray-100 {
+  background-color: #f3f4f6;
+  cursor: not-allowed;
+}
+
+.form-textarea-edit {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* Rounds Container */
+.rounds-edit-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Individual Round Block */
+.round-edit-block {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.round-edit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.round-edit-header > div:first-child {
+  font-size: 18px;
+  font-weight: bold;
+  color: #0fd46c;
+}
+
+.round-edit-content {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Time Input Styling */
+.time-edit-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.time-edit-inputs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.time-edit-text-input,
+.time-edit-select {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.time-edit-text-input {
+  width: 80px;
+}
+.time-edit-select {
+  width: 70px;
+}
+
+.time-edit-inputs span {
+  font-size: 14px;
+  color: #333;
+}
+
+/* Panel Members Section */
+.panel-members-edit-section {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #e9ecef;
+}
+
+.panel-members-edit-section h4 {
+  font-size: 16px;
+  color: #0fd46c;
+  margin-bottom: 15px;
+}
+.panel-members-edit-section h5 {
+  font-size: 14px;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+/* Panel Members Table */
+.panel-members-edit-table-wrapper {
+  margin-top: 20px;
+}
+.panel-members-edit-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #fff;
+  margin-top: 15px;
+}
+
+.panel-members-edit-table th,
+.panel-members-edit-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+  font-size: 14px;
+}
+
+.panel-members-edit-table th {
+  background-color: #f8fafc;
+  font-weight: bold;
+}
+
+/* Add Round Section */
+.add-round-edit-section {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Main Form Actions Container */
+.main-form-edit-actions {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.form-buttons-edit {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+/* Buttons */
+.save-button,
+.cancel-button {
+  padding: 10px 18px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s, box-shadow 0.2s;
+  color: white;
+}
+
+.save-button {
+  background-color: #28a745;
+}
+
+.save-button:hover {
+  background-color: #218838;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.cancel-button {
+  background-color: #dc3545;
+}
+
+.cancel-button:hover {
+  background-color: #c82333;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+/* Messages */
+.loading-edit-message,
+.error-edit-message,
+.success-edit-message {
+  margin-bottom: 15px;
+  padding: 12px;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.loading-edit-message {
+  color: #004085;
+  background-color: #cce5ff;
+  border: 1px solid #b8daff;
+}
+
+.error-edit-message {
+  color: #721c24;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+}
+
+.success-edit-message {
+  color: #155724;
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+}
+
+/* View Mode (Read-only) Styles */
+.view-edit-details .edit-details-g p {
+  margin: 0;
+  padding: 10px 0;
+  color: #555;
+  font-size: 14px;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .interview-edit-container {
+    padding: 10px;
   }
 
-  .details-block h4 {
-    font-size: 14px;
+  .header-edit-section {
+    flex-direction: column;
+    gap: 15px;
+    align-items: stretch;
   }
 
-  .details-block h5 {
-    font-size: 13px;
+  .edit-details-row {
+    flex-direction: column;
+    gap: 15px;
+    align-items: stretch;
   }
 
-  .form-group input,
-  .form-group select,
-  .form-group textarea {
-    font-size: 12px;
+  .time-edit-inputs {
+    flex-wrap: wrap;
   }
 }

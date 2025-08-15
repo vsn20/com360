@@ -1,7 +1,7 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import { getjobdetailsbyid, updatejobtitle } from '@/app/serverActions/Jobs/Overview';
-import './st.css';
+import './jobtitles.css';
 import { useRouter } from 'next/navigation';
 
 const EditJobTitle = ({ selectedjobid, orgid, empid }) => {

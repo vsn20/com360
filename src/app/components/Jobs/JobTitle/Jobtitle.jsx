@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import AddjobTitle from './AddjobTitle';
 import EditJobTitle from './EditJobTitle';
 import { useRouter, useSearchParams } from 'next/navigation';
-import './st.css';
+import './jobtitles.css';
 
 const Jobtitle = ({ orgid, empid, jobtitles }) => {
   const router = useRouter();
