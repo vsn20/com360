@@ -425,8 +425,18 @@ const Overview = ({ orgid, empid, interviewdetails, time, acceptingtime, editing
                         <td>Interview-{getdisplayprojectid(detail.interview_id)}</td>
                         <td>{`${detail.first_name} ${detail.last_name}`}</td>
                         <td>{`${getdisplayprojectid(detail.jobid)}-${detail.display_job_name}`}</td>
-                        <td className="application-status-text">
-                          {detail.status}
+                        <td >
+                          <span
+                             className={
+                              detail.status === 'offerletter-generated'
+                              ? 'status-badge actives'
+                              : detail.status === 'scheduled'
+                              ? 'status-badge active'
+                              : 'status-badge inactive'
+                            }
+                           >
+                            {detail.status}
+                            </span>
                         </td>
                       </tr>
                     ))}

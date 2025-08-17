@@ -412,65 +412,114 @@ const Overview = () => {
   if (!isClient) return null;
 
   return (
-    <div className="timesheet-container">
+    <div className="className99timesheet-container">
       {ispending ? (
         <div>
-          <button onClick={resetToInitialState} className="back-button">Back</button>
+          <button onClick={resetToInitialState} className="className99nav-button">Back</button>
           <ApprovalPending />
         </div>
       ) : (
         <>
-          <div className="header-section">
-            <h3 className="week-title">Week Starting: {formatDate(getWeekStartDate(selectedDate))}</h3>
-            <div className="date-navigation">
-              <button className="nav-button" onClick={handlePrevWeek}>
+          <div className="className99header-section">
+            <h3 className="className99week-title">Week Starting: {formatDate(getWeekStartDate(selectedDate))}</h3>
+            <div className="className99date-navigation">
+              <button className="className99nav-button" onClick={handlePrevWeek}>
                 Prev
               </button>
-              <label className="date-label">Select Date: </label>
-              <input type="date" value={selectedDate} onChange={handleDateChange} className="date-input" />
-              <button className="nav-button" onClick={handleNextWeek}>
+              <label className="className99date-label">Select Date: </label>
+              <input type="date" value={selectedDate} onChange={handleDateChange} className="className99date-input" />
+              <button className="className99nav-button" onClick={handleNextWeek}>
                 Next
               </button>
             </div>
             {isSuperior && (
-              <button type="button" className="pending-approve-button" onClick={handlePendingApproveSheet}>
+              <button type="button" className="className99pending-approve-button" onClick={handlePendingApproveSheet}>
                 Pending Approve TimeSheet
               </button>
             )}
           </div>
+
           {selectedDate && (
-            <div className="timesheet-content">
-              <div className="employee-selection">
-                <label>Select Employee: </label>
-                <select
-                  value={selectedEmployee}
-                  onChange={(e) => {
-                    setSelectedEmployee(e.target.value);
-                    setError(null);
-                    setSuccess(false);
-                    setSelectedComment({ timesheetId: null, day: null });
-                    setNoAttachmentFlag(Object.values(attachments).every((atts) => !atts.length));
-                  }}
-                  className="employee-dropdown"
-                >
-                  <option value="">Your TimeSheets</option>
-                  {employees.map((emp) => (
-                    <option key={emp.empid} value={emp.empid}>
-                      {`${emp.EMP_FST_NAME} ${emp.EMP_LAST_NAME || ""}`}
-                    </option>
-                  ))}
-                </select>
+            <div className="className99timesheet-content">
+              {/* Controls Section - Only Employee Selection */}
+              <div className="className99controls-section">
+                <div className="className99employee-selection">
+                  <label>Select Employee: </label>
+                  <select
+                    value={selectedEmployee}
+                    onChange={(e) => {
+                      setSelectedEmployee(e.target.value);
+                      setError(null);
+                      setSuccess(false);
+                      setSelectedComment({ timesheetId: null, day: null });
+                      setNoAttachmentFlag(Object.values(attachments).every((atts) => !atts.length));
+                    }}
+                    className="className99employee-dropdown"
+                  >
+                    <option value="">Your TimeSheets</option>
+                    {employees.map((emp) => (
+                      <option key={emp.empid} value={emp.empid}>
+                        {`${emp.EMP_FST_NAME} ${emp.EMP_LAST_NAME || ""}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
+
+              {/* Approval Message */}
               {!selectedEmployee && !isSuperior && timesheets.some((ts) => ts.is_approved === 1) && superiorName && (
-                <p className="approval-message">Approved by {superiorName}</p>
+                <p className="className99approval-message">Approved by {superiorName}</p>
               )}
+
+              {/* Above Table Actions - Approve All and Submit */}
+              {((!selectedEmployee && timesheets.length > 0) || (selectedEmployee && employeeTimesheets.filter((t) => t.employee_id === selectedEmployee).length > 0)) && (
+                <div className="className99above-table-actions">
+                  {/* Approve Section for Employee Selection */}
+                  {selectedEmployee && employeeTimesheets.filter((t) => t.employee_id === selectedEmployee).length > 0 && (
+                    <div className="className99approve-section">
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={employeeTimesheets.filter((t) => t.employee_id === selectedEmployee).every((ts) => ts.is_approved)}
+                          onChange={(e) => handleApprovedChange(e, selectedEmployee)}
+                          disabled={isSaving}
+                          style={{ cursor: isSaving ? "not-allowed" : "pointer" }}
+                        />
+                        Approve All
+                      </label>
+                    </div>
+                  )}
+
+                  {/* Submit Button for Own Timesheets */}
+                  {!selectedEmployee && (
+                    <div className="className99button-group">
+                      <button
+                        type="button"
+                        className="className99submit-button"
+                        onClick={() => handleSave(true)}
+                        disabled={isSaving || timesheets.some((ts) => ts.is_submitted === 1 || ts.is_approved === 1)}
+                        style={{
+                          cursor:
+                            isSaving || timesheets.some((ts) => ts.is_submitted === 1 || ts.is_approved === 1)
+                              ? "not-allowed"
+                              : "pointer",
+                        }}
+                      >
+                        {isSaving ? 'Submitting...' : 'Submit All'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Timesheet Table */}
               {((!selectedEmployee && timesheets.length > 0) || (selectedEmployee && employeeTimesheets.filter((t) => t.employee_id === selectedEmployee).length > 0)) && (
                 <div>
                   <form onSubmit={(e) => {
                     e.preventDefault();
                     handleSave();
                   }}>
-                    <table className="timesheet-table">
+                    <table className="className99timesheet-table">
                       <thead>
                         <tr>
                           <th>Project Name</th>
@@ -491,27 +540,66 @@ const Overview = () => {
                               <td>{project?.PRJ_NAME || "Unnamed Project"}</td>
                               {["sun", "mon", "tue", "wed", "thu", "fri", "sat"].map((day) => (
                                 <td key={`${ts.timesheet_id || ts.temp_key}_${day}`}>
-                                  <input
-                                    type="number"
-                                    name={`${day}_hours`}
-                                    value={ts[`${day}_hours`] ?? ""}
-                                    onChange={(e) => handleInputChange(e, ts.timesheet_id || ts.temp_key, selectedEmployee ? ts.employee_id : null)}
-                                    step="0.25"
-                                    min="0"
-                                    max="24"
-                                    className="hours-input"
-                                    disabled={isLocked}
-                                    style={{ cursor: isLocked ? "not-allowed" : "text" }}
-                                  />
-                                  <textarea
-                                    name={`${day}_comment`}
-                                    value={ts[`${day}_comment`] ?? ""}
-                                    onChange={(e) => handleInputChange(e, ts.timesheet_id || ts.temp_key, selectedEmployee ? ts.employee_id : null, day)}
-                                    onFocus={() => handleCommentFocus(ts.timesheet_id || ts.temp_key, day)}
-                                    className="comment-textarea"
-                                    disabled={isLocked}
-                                    style={{ cursor: isLocked ? "not-allowed" : "text" }}
-                                  />
+                                  <div style={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '8px',
+                                    width: '100%',
+                                    minHeight: '120px',
+                                    padding: '8px 4px'
+                                  }}>
+                                    <input
+                                      type="number"
+                                      name={`${day}_hours`}
+                                      value={ts[`${day}_hours`] ?? ""}
+                                      onChange={(e) => handleInputChange(e, ts.timesheet_id || ts.temp_key, selectedEmployee ? ts.employee_id : null)}
+                                      step="0.25"
+                                      min="0"
+                                      max="24"
+                                      className="className99hours-input"
+                                      disabled={isLocked}
+                                      style={{ 
+                                        cursor: isLocked ? "not-allowed" : "text",
+                                        display: 'block',
+                                        width: '90px',
+                                        height: '36px',
+                                        padding: '6px 8px',
+                                        border: '2px solid #d1d5db',
+                                        borderRadius: '6px',
+                                        fontSize: '14px',
+                                        textAlign: 'center',
+                                        backgroundColor: isLocked ? '#f3f4f6' : '#fff',
+                                        color: isLocked ? '#9ca3af' : '#374151'
+                                      }}
+                                      placeholder="Hours"
+                                    />
+                                    <textarea
+                                      name={`${day}_comment`}
+                                      value={ts[`${day}_comment`] ?? ""}
+                                      onChange={(e) => handleInputChange(e, ts.timesheet_id || ts.temp_key, selectedEmployee ? ts.employee_id : null, day)}
+                                      onFocus={() => handleCommentFocus(ts.timesheet_id || ts.temp_key, day)}
+                                      className="className99comment-textarea"
+                                      disabled={isLocked}
+                                      style={{ 
+                                        cursor: isLocked ? "not-allowed" : "text",
+                                        display: 'block',
+                                        width: '110px',
+                                        height: '60px',
+                                        padding: '6px 8px',
+                                        border: '2px solid #d1d5db',
+                                        borderRadius: '6px',
+                                        fontSize: '12px',
+                                        resize: 'none',
+                                        fontFamily: 'Arial, sans-serif',
+                                        backgroundColor: isLocked ? '#f3f4f6' : '#fff',
+                                        color: isLocked ? '#9ca3af' : '#374151',
+                                        lineHeight: '1.4'
+                                      }}
+                                      placeholder="Comment"
+                                    />
+                                  </div>
                                 </td>
                               ))}
                             </tr>
@@ -519,7 +607,8 @@ const Overview = () => {
                         })}
                       </tbody>
                     </table>
-                    <div className="selected-comment-section">
+
+                    <div className="className99timesheet-comment-section">
                       <label>Selected Comment:</label>
                       <textarea
                         value={
@@ -550,7 +639,7 @@ const Overview = () => {
                           }
                         }}
                         onFocus={() => selectedComment.timesheetId && selectedComment.day && handleCommentFocus(selectedComment.timesheetId, selectedComment.day)}
-                        className="comment-display-textarea"
+                        className="className99comment-display-textarea"
                         placeholder="Select a comment in the table to edit it here..."
                         disabled={
                           !selectedComment.timesheetId ||
@@ -571,12 +660,13 @@ const Overview = () => {
                         }}
                       />
                     </div>
-                    <div className="attachment-field">
+
+                    <div className="className99attachment-field">
                       <label>Attachments for the Week:</label>
                       <input
                         type="file"
                         ref={fileInputRef}
-                        className="file-input"
+                        className="className99file-input"
                         multiple
                         disabled={isAnySubmittedOrApproved(selectedEmployee ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee) : timesheets)}
                         style={{
@@ -586,7 +676,7 @@ const Overview = () => {
                         }}
                         onChange={() => setNoAttachmentFlag(false)}
                       />
-                      <label className="no-attachment-label">
+                      <label className="className99no-attachment-label">
                         <input
                           type="checkbox"
                           checked={noAttachmentFlag}
@@ -601,7 +691,7 @@ const Overview = () => {
                         No Attachment
                       </label>
                       {Object.values(attachments).some((atts) => atts.length > 0) && (
-                        <div className="attached-files">
+                        <div className="className99attached-files">
                           <h5>Attached Files:</h5>
                           <ul>
                             {[...new Set(Object.values(attachments).flat().map((a) => a.attachment_id))].map((attachmentId) => {
@@ -615,14 +705,14 @@ const Overview = () => {
                                     href={attachment.file_path}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="attachment-link"
+                                    className="className99attachment-link"
                                     style={{ cursor: ts?.is_submitted === 1 || ts?.is_approved === 1 ? "not-allowed" : "pointer" }}
                                   >
                                     {attachment.file_name}
                                   </a>
                                   <button
                                     type="button"
-                                    className="remove-button"
+                                    className="className99remove-button"
                                     onClick={() => handleRemoveAttachment(attachment.attachment_id, attachment.timesheet_id)}
                                     disabled={isAnySubmittedOrApproved(selectedEmployee ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee) : timesheets)}
                                     style={{
@@ -640,12 +730,13 @@ const Overview = () => {
                         </div>
                       )}
                     </div>
-                    {error && <p className="error-message">{error}</p>}
-                    {success && <p className="success-message">Action successful!</p>}
-                    <div className="button-group">
+
+                    {/* Save Button Section - At the Bottom */}
+                    <div className="className99save-section">
                       <button
-                        type="submit"
-                        className="save-button"
+                        type="button"
+                        className="className99save-button"
+                        onClick={() => handleSave()}
                         disabled={isSaving || (selectedEmployee ? employeeTimesheets.some((t) => t.employee_id === selectedEmployee && (t.is_submitted === 1 || t.is_approved === 1)) : timesheets.some((ts) => ts.is_submitted === 1 || ts.is_approved === 1))}
                         style={{
                           cursor:
@@ -657,43 +748,13 @@ const Overview = () => {
                               : "pointer",
                         }}
                       >
-                        Save
+                        {isSaving ? 'Saving...' : 'Save'}
                       </button>
-                      {!selectedEmployee && (
-                        <button
-                          type="button"
-                          className="submit-button"
-                          onClick={() => handleSave(true)}
-                          disabled={isSaving || (selectedEmployee ? employeeTimesheets.some((t) => t.employee_id === selectedEmployee && (t.is_submitted === 1 || t.is_approved === 1)) : timesheets.some((ts) => ts.is_submitted === 1 || ts.is_approved === 1))}
-                          style={{
-                            cursor:
-                              isSaving ||
-                              (selectedEmployee
-                                ? employeeTimesheets.some((t) => t.employee_id === selectedEmployee && (t.is_submitted === 1 || t.is_approved === 1))
-                                : timesheets.some((ts) => ts.is_submitted === 1 || ts.is_approved === 1))
-                                ? "not-allowed"
-                                : "pointer",
-                          }}
-                        >
-                          Submit
-                        </button>
-                      )}
                     </div>
+
+                    {error && <p className="className99error-message">{error}</p>}
+                    {success && <p className="className99success-message">Action successful!</p>}
                   </form>
-                  {selectedEmployee && employeeTimesheets.filter((t) => t.employee_id === selectedEmployee).length > 0 && (
-                    <div className="approve-section">
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={employeeTimesheets.filter((t) => t.employee_id === selectedEmployee).every((ts) => ts.is_approved)}
-                          onChange={(e) => handleApprovedChange(e, selectedEmployee)}
-                          disabled={isSaving}
-                          style={{ cursor: isSaving ? "not-allowed" : "pointer" }}
-                        />
-                        Approve All
-                      </label>
-                    </div>
-                  )}
                 </div>
               )}
             </div>
