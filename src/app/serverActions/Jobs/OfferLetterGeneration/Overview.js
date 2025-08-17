@@ -61,8 +61,18 @@ async function generateOfferLetterPdf(offerLetterData, details, orgid, employeen
   const decoded = decodeJwt(token);
   const empid = decoded.empid;
 
-  let [state] = await pool.query(`SELECT VALUE FROM C_STATE WHERE ID = ?`, [offerLetterData.stateid]);
-  state = state[0]?.VALUE || offerLetterData.custom_state_name;
+   let state;
+  if(offerLetterData.stateid!=null){
+ [state] = await pool.query(
+    `select VALUE from C_STATE where ID=?`,
+    [offerLetterData.stateid]
+  );
+    state = state[0].VALUE
+}
+else{
+  state =  offerLetterData.custom_state_name;
+}
+  
 
   let [country] = await pool.query(`SELECT VALUE FROM C_COUNTRY WHERE ID = ?`, [offerLetterData.countryid]);
   country = country[0]?.VALUE || offerLetterData.countryid;
@@ -293,12 +303,20 @@ export async function fetchalldetails(interviewid) {
   const jobtypename = jobtype[0].Name;
 
 
+  let state;
+   let statename;
 
-    let [state] = await pool.query(
+
+  if(mainRows[0].s1!=null){
+    [state] = await pool.query(
     `select VALUE from C_STATE where ID=?`,
     [mainRows[0].s1]
   );
- let statename = state[0].VALUE ||'';
+ statename = state[0].VALUE;
+}
+  else{
+    statename='';
+  }
 
   let [country] = await pool.query(
     `select VALUE from C_COUNTRY where ID=?`, [mainRows[0].c1]

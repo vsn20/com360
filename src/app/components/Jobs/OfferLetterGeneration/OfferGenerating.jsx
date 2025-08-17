@@ -173,6 +173,12 @@ const OfferGenerating = ({ empid, orgid, interviewdetails, acceptingtime, handle
         </>
       ) : (
         <>
+            <div className="employee-details-container1">
+          <div className="header-section1">
+            <h1 className="title">Generate Offer Letters</h1>
+            <button className="back-button" onClick={handlebAck}></button>
+          </div>
+          </div>
           <div className="search-filter-container">
             <input
               type="text"

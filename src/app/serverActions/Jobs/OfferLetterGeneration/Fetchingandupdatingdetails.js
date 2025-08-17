@@ -74,11 +74,18 @@ async function generateOfferLetterPdf(offerLetterData, details, orgid, employeen
   const [jobtype] = await pool.query('select Name from generic_values where id=? and orgid=?', [parseInt(offerLetterData.finalised_jobtype), orgid]);
   const s = jobtype[0].Name;
 
-  let [state] = await pool.query(
+  let state;
+  if(offerLetterData.stateid!=null){
+ [state] = await pool.query(
     `select VALUE from C_STATE where ID=?`,
     [offerLetterData.stateid]
   );
-  state = state[0].VALUE || offerLetterData.custom_state_name;
+    state = state[0].VALUE
+}
+else{
+  state =  offerLetterData.custom_state_name;
+}
+  
 
   let [country] = await pool.query(
     `select VALUE from C_COUNTRY where ID=?`, [offerLetterData.countryid]
@@ -302,13 +309,20 @@ export async function fetchalldetails(interviewid) {
      const [jobtype] = await pool.query('select Name from generic_values where id=?', [parseInt(mainRows[0].job1)]);
   const jobtypename = jobtype[0].Name;
 
+  let state;
+   let statename;
 
-
-    let [state] = await pool.query(
+if(mainRows[0].s1!=null){
+    [state] = await pool.query(
     `select VALUE from C_STATE where ID=?`,
     [mainRows[0].s1]
   );
- let statename = state[0].VALUE ||'';
+ statename = state[0].VALUE;
+}
+  else{
+    statename='';
+  }
+
 
   let [country] = await pool.query(
     `select VALUE from C_COUNTRY where ID=?`, [mainRows[0].c1]

@@ -173,6 +173,12 @@ const SubmittingApplication = ({ applieddetails, orgid, empid, handlesback }) =>
     setDuplicate(e.target.value);
   };
 
+
+  const backingoption=()=>{
+     router.refresh();
+     handlesback();
+  };
+
   useEffect(() => {
     setPageInputValue(currentPage.toString());
   }, [currentPage]);
@@ -198,7 +204,7 @@ const SubmittingApplication = ({ applieddetails, orgid, empid, handlesback }) =>
           <div className="employee-list">
             <div className="header-section">
               <div className="title">Schedule Interview</div>
-              <button onClick={handlesback} className="back-button"></button>
+              <button onClick={backingoption} className="back-button"></button>
             </div>
             
             {/* Search and Filter Section */}
@@ -281,7 +287,13 @@ const SubmittingApplication = ({ applieddetails, orgid, empid, handlesback }) =>
                           <td>{`${detail.first_name} ${detail.last_name}`}</td>
                           <td>{`${detail.display_job_name} - ${detail.jobid}`}</td>
                           <td>{formatDate(detail.applieddate)}</td>
-                          <td>{detail.status}</td>
+                          <td>
+                             <span
+                             className='status-badge.applied'
+                           >
+                            {detail.status}
+                            </span>
+                          </td>
                           <td>
                             <a href={detail.resumepath} target="_blank" rel="noopener noreferrer">
                               View Resume

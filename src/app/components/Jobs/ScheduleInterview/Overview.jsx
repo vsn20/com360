@@ -11,12 +11,8 @@ const Overview = ({ scheduledetails, applieddetails, orgid, empid, time }) => {
   const [applyinterview, setapplyinterview] = useState(false);
   const [selectedid, setselectedid] = useState(null);
   const [selectedstatus, setselectedstatus] = useState(null);
-  // State for sorted scheduledetails
   const [allScheduledDetails, setAllScheduledDetails] = useState(scheduledetails);
-  // State for sorting configuration
   const [sortConfig, setSortConfig] = useState({ column: 'applicationid', direction: 'asc' });
-  
-  // New states for pagination and filtering
   const [currentPage, setCurrentPage] = useState(1);
   const [pageInputValue, setPageInputValue] = useState('1');
   const [searchQuery, setSearchQuery] = useState('');
@@ -28,10 +24,22 @@ const Overview = ({ scheduledetails, applieddetails, orgid, empid, time }) => {
     return prjid.split('-')[1] || prjid;
   };
 
+
+  useEffect(() => {
+      setAllScheduledDetails(scheduledetails);
+    }, [scheduledetails]);
+
   // Reset state when searchParams 'refresh' changes
   useEffect(() => {
     handleback();
   }, [searchParams.get('refresh')]);
+
+  // Apply sorting when sortConfig changes
+  useEffect(() => {
+    if (allScheduledDetails.length > 0) {
+      setAllScheduledDetails([...allScheduledDetails].sort((a, b) => sortScheduledDetails(a, b, sortConfig.column, sortConfig.direction)));
+    }
+  }, [sortConfig]);
 
   const handleSchedule = () => {
     setselectedid(null);
@@ -50,7 +58,6 @@ const Overview = ({ scheduledetails, applieddetails, orgid, empid, time }) => {
     setselectedstatus(status);
   };
 
-  // Sorting function
   const sortScheduledDetails = (a, b, column, direction) => {
     let aValue, bValue;
     switch (column) {
@@ -75,7 +82,6 @@ const Overview = ({ scheduledetails, applieddetails, orgid, empid, time }) => {
     }
   };
 
-  // Request sort handler
   const requestSort = (column) => {
     setSortConfig(prev => ({
       column,
@@ -83,7 +89,6 @@ const Overview = ({ scheduledetails, applieddetails, orgid, empid, time }) => {
     }));
   };
 
-  // Filter and search functionality
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);
     setCurrentPage(1);
@@ -96,9 +101,8 @@ const Overview = ({ scheduledetails, applieddetails, orgid, empid, time }) => {
     setPageInputValue('1');
   };
 
-  // Filtering logic
   const filteredApplications = allScheduledDetails.filter(application => {
-    const matchesSearch = 
+    const matchesSearch =
       `${application.first_name} ${application.last_name}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
       application.display_job_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       getdisplayprojectid(application.applicationid).toString().includes(searchQuery.toLowerCase());
@@ -108,13 +112,11 @@ const Overview = ({ scheduledetails, applieddetails, orgid, empid, time }) => {
     return matchesSearch && matchesStatus;
   });
 
-  // Pagination logic
   const totalPages = Math.ceil(filteredApplications.length / applicationsPerPage);
   const indexOfLastApplication = currentPage * applicationsPerPage;
   const indexOfFirstApplication = indexOfLastApplication - applicationsPerPage;
   const currentApplications = filteredApplications.slice(indexOfFirstApplication, indexOfLastApplication);
 
-  // Pagination handlers
   const handleNextPage = () => {
     if (currentPage < totalPages) {
       setCurrentPage(prev => prev + 1);
@@ -166,15 +168,9 @@ const Overview = ({ scheduledetails, applieddetails, orgid, empid, time }) => {
   };
 
   useEffect(() => {
-    const sortedDetails = [...filteredApplications].sort((a, b) => sortScheduledDetails(a, b, sortConfig.column, sortConfig.direction));
-    // We don't need to set state here as filteredApplications already handles this
-  }, [sortConfig]);
-
-  useEffect(() => {
     setPageInputValue(currentPage.toString());
   }, [currentPage]);
 
-  // Get unique statuses for filter dropdown
   const uniqueStatuses = [...new Set(scheduledetails.map(app => app.status))];
 
   return (
@@ -197,7 +193,6 @@ const Overview = ({ scheduledetails, applieddetails, orgid, empid, time }) => {
               <button className="button" onClick={handleSchedule}>Schedule Interview</button>
             </div>
             
-            {/* Search and Filter Section */}
             <div className="search-filter-container">
               <input
                 type="text"
@@ -267,14 +262,25 @@ const Overview = ({ scheduledetails, applieddetails, orgid, empid, time }) => {
                               View Resume
                             </a>
                           </td>
-                          <td>{details.status}</td>
+                          <td>
+                            <span
+                              className={
+                                details.status === 'offerletter-generated'
+                                  ? 'status-badge actives'
+                                  : details.status === 'scheduled'
+                                  ? 'status-badge active'
+                                  : 'status-badge inactive'
+                              }
+                            >
+                              {details.status}
+                            </span>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
 
-                {/* Pagination */}
                 {filteredApplications.length > applicationsPerPage && (
                   <div className="pagination-container">
                     <button
@@ -305,7 +311,6 @@ const Overview = ({ scheduledetails, applieddetails, orgid, empid, time }) => {
                   </div>
                 )}
 
-                {/* Rows per Page */}
                 {filteredApplications.length > 0 && (
                   <div className="rows-per-page-container">
                     <label className="rows-per-page-label">Rows/ Page</label>

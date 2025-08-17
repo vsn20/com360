@@ -140,7 +140,7 @@ const Details = ({ selectid, orgid, empid, handleback }) => {
             adress_lane_2: result.data?.offerletter?.adress_lane_2 || '',
             zipcode: result.data?.offerletter?.zipcode || result.data?.zipcode || '',
             stateid: result.data?.offerletter?.stateid || '',
-            countryid: result.data?.offerletter?.countryid || '',
+            countryid: result.data?.offerletter?.countryid || '185',
             custom_state_name: result.data?.offerletter?.custom_state_name || '',
             expected_join_date: result.data?.offerletter?.expected_join_date
               ? new Date(result.data.offerletter.expected_join_date).toISOString().split('T')[0]
@@ -194,27 +194,33 @@ const Details = ({ selectid, orgid, empid, handleback }) => {
     }
   };
 
-  const handleCopy = () => {
+ const handleCopy = () => {
     let salary;
     if (!salarycopy()) {
       salary = details.max_salary;
     } else {
       salary = details.salary_expected;
     }
+
+    // --- FIX: Convert country ID to a string to prevent type mismatch ---
+    const countryIdStr = String(details.c1 || '');
+
     setOfferLetterData((prev) => ({
       ...prev,
       finalised_jobtitle: details.expected_job_title || '',
       adress_lane_1: details.a1 || '',
       adress_lane_2: details.a2 || '',
       zipcode: details.z1 || '',
-      stateid: details.s1 || '',
-      countryid: details.c1 || '',
-      custom_state_name: details.s2 || '',
+      // --- Use the string version for all logic and state updates ---
+      stateid: countryIdStr === '185' ? details.s1 || '' : '',
+      countryid: countryIdStr,
+      custom_state_name: countryIdStr !== '185' ? details.s2 || '' : '',
       finalised_department: details.d1 || '',
       finalised_jobtype: details.job1 || '',
       finalised_salary: salary || '',
     }));
   };
+
 
   const handleEditStatus = () => {
     setEditingStatus(true);
@@ -235,7 +241,16 @@ const Details = ({ selectid, orgid, empid, handleback }) => {
       }
 
       if (formData.status === 'offerletter-generated') {
-        const offerLetterResult = await saveOfferLetter(details?.application_id, offerLetterData, orgid, details);
+        // --- FIX: Adjust data before saving to ensure correct null values are sent ---
+        const adjustedOfferLetterData = {
+          ...offerLetterData,
+          stateid: offerLetterData.countryid === '185' ? offerLetterData.stateid : null,
+          custom_state_name: offerLetterData.countryid !== '185' ? offerLetterData.custom_state_name : null,
+        };
+
+        const offerLetterResult = await saveOfferLetter(details?.application_id, adjustedOfferLetterData, orgid, details);
+        // --- END FIX ---
+        
         if (!offerLetterResult?.success) {
           setError(offerLetterResult?.error || 'Failed to save offer letter details.');
           setIsLoading(false);
@@ -261,6 +276,7 @@ const Details = ({ selectid, orgid, empid, handleback }) => {
       setIsLoading(false);
     }
   };
+
 
   const handleCancel = () => {
     setEditingStatus(false);
