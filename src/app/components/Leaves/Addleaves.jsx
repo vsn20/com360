@@ -35,12 +35,12 @@ export default function Addleaves() {
 
   const handleSubmit = async (formData) => {
     try {
-      if (!empId) {
-        alert('Employee ID is missing.');
-        window.location.reload();
-        return;
-      }
-      formData.append('empid', empId);
+      // if (!empId) {
+      //   alert('Employee ID is missing.');
+      //   window.location.reload();
+      //   return;
+      // }
+      // formData.append('empid', empId);
       const result = await addEmployeeLeave(formData);
       if (result?.error) {
         alert(result.error);

@@ -39,15 +39,15 @@ export default async function ServiceRequestsPage() {
         empid = decoded.empid;
 
         [type] = await pool.query(
-          'SELECT id, Name FROM generic_values WHERE g_id = 12 AND orgid = ? AND isactive = 1',
+          'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 12 AND orgid = ? AND isactive = 1',
           [orgid]
         );
         [subtype] = await pool.query(
-          'SELECT id, Name FROM generic_values WHERE g_id = 13 AND orgid = ? AND isactive = 1',
+          'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 13 AND orgid = ? AND isactive = 1',
           [orgid]
         );
         [priority] = await pool.query(
-          'SELECT id, Name FROM generic_values WHERE g_id = 11 AND orgid = ? AND isactive = 1',
+          'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 11 AND orgid = ? AND isactive = 1',
           [orgid]
         );
         [employees] = await pool.query(

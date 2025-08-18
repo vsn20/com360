@@ -41,7 +41,7 @@ export async function fetchreqbyid() {
     console.log('Connection established');
 
     const [features] = await pool.query(
-      `SELECT roleid FROM emp_role_assign WHERE empid = ? AND orgid = ?`,
+      `SELECT roleid FROM C_EMP_ROLE_ASSIGN WHERE empid = ? AND orgid = ?`,
       [empid, orgid]
     );
     const roleids = features.map(details => details.roleid);
@@ -50,7 +50,7 @@ export async function fetchreqbyid() {
     let menuresults = [];
     if (roleids.length > 0) {
       [menuresults] = await pool.query(
-        `SELECT alldata FROM role_menu_permissions WHERE roleid IN (?) AND menuid = 11 AND alldata = 1`,
+        `SELECT alldata FROM C_ROLE_MENU_PERMISSIONS WHERE roleid IN (?) AND menuid = 11 AND alldata = 1`,
         [roleids]
       );
     }

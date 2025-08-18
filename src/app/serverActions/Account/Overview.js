@@ -226,7 +226,7 @@ export async function updateAccount(formData) {
 
       if (acctTypeCd) {
         const [typeCheck] = await pool.execute(
-          'SELECT id FROM generic_values WHERE g_id = 5 AND Name = ? AND orgid = ? AND isactive = 1',
+          'SELECT id FROM C_GENERIC_VALUES WHERE g_id = 5 AND Name = ? AND orgid = ? AND isactive = 1',
           [acctTypeCd, orgId]
         );
         if (typeCheck.length === 0) {
@@ -237,7 +237,7 @@ export async function updateAccount(formData) {
 
       if (branchType) {
         const [branchCheck] = await pool.execute(
-          'SELECT id FROM generic_values WHERE g_id = 6 AND Name = ? AND orgid = ? AND isactive = 1',
+          'SELECT id FROM C_GENERIC_VALUES WHERE g_id = 6 AND Name = ? AND orgid = ? AND isactive = 1',
           [branchType, orgId]
         );
         if (branchCheck.length === 0) {
@@ -463,7 +463,7 @@ export async function addAccount(formData) {
 
     if (acctTypeCd) {
       const [typeCheck] = await pool.execute(
-        'SELECT id FROM generic_values WHERE g_id = 5 AND Name = ? AND orgid = ? AND isactive = 1',
+        'SELECT id FROM C_GENERIC_VALUES WHERE g_id = 5 AND Name = ? AND orgid = ? AND isactive = 1',
         [acctTypeCd, orgId]
       );
       if (typeCheck.length === 0) {
@@ -474,7 +474,7 @@ export async function addAccount(formData) {
 
     if (branchType) {
       const [branchCheck] = await pool.execute(
-        'SELECT id FROM generic_values WHERE g_id = 6 AND Name = ? AND orgid = ? AND isactive = 1',
+        'SELECT id FROM C_GENERIC_VALUES WHERE g_id = 6 AND Name = ? AND orgid = ? AND isactive = 1',
         [branchType, orgId]
       );
       if (branchCheck.length === 0) {

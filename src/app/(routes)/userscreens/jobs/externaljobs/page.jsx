@@ -42,7 +42,7 @@ const decodeJwt = (token) => {
                 empid=decoded.empid;
                 
                 [expectedjobtitles]=await pool.query(
-                'SELECT job_title_id,job_title, level, min_salary, max_salary FROM org_jobtitles WHERE orgid = ? and is_active=1',
+                'SELECT job_title_id,job_title, level, min_salary, max_salary FROM C_ORG_JOBTITLES WHERE orgid = ? and is_active=1',
                 [orgid]
                 );
                 [countries] = await pool.query(
@@ -58,16 +58,16 @@ const decodeJwt = (token) => {
                 expectedrole=fetchedRoles;
 
                 [expectedepartment] = await pool.query(
-                'SELECT id, name FROM org_departments WHERE orgid = ? AND isactive = 1',
+                'SELECT id, name FROM C_ORG_DEPARTMENTS WHERE orgid = ? AND isactive = 1',
                 [orgid]
                 );
 
                 [jobtype] = await pool.query(
-                'SELECT id, Name FROM generic_values WHERE g_id = 14 AND orgid = ? AND isactive = 1',
+                'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 14 AND orgid = ? AND isactive = 1',
                 [orgid]
                 );
                 [external]=await pool.query(
-                  'select jobid,display_job_name,	no_of_vacancies from externaljobs where orgid=?',
+                  'select jobid,display_job_name,	no_of_vacancies from C_EXTERNAL_JOBS where orgid=?',
                   [orgid]
                 )
             }

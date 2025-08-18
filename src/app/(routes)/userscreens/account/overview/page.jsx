@@ -44,12 +44,12 @@ export default async function OverviewPage({ searchParams }) {
         );
 
         [accountTypes] = await pool.query(
-          'SELECT id, Name FROM generic_values WHERE g_id = 5 AND orgid = ? AND isactive = 1',
+          'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 5 AND orgid = ? AND isactive = 1',
           [orgid]
         );
 
         [branchTypes] = await pool.query(
-          'SELECT id, Name FROM generic_values WHERE g_id = 6 AND orgid = ? AND isactive = 1',
+          'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 6 AND orgid = ? AND isactive = 1',
           [orgid]
         );
 

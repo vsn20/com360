@@ -151,10 +151,10 @@ export async function addProjectAssignment(prevState, formData) {
       return { error: `Assignment end date must be on or before project end date (${normalizedProjectEndDt}).`, success: false };
     }
 
-    // Validate billType, otBillType, and payTerm against generic_values
+    // Validate billType, otBillType, and payTerm against C_GENERIC_VALUES
     if (billType) {
       const [billTypeCheck] = await pool.execute(
-        'SELECT id FROM generic_values WHERE g_id = 7 AND Name = ? AND orgid = ? AND isactive = 1',
+        'SELECT id FROM C_GENERIC_VALUES WHERE g_id = 7 AND Name = ? AND orgid = ? AND isactive = 1',
         [billType, orgId]
       );
       if (billTypeCheck.length === 0) {
@@ -165,7 +165,7 @@ export async function addProjectAssignment(prevState, formData) {
 
     if (otBillType) {
       const [otBillTypeCheck] = await pool.execute(
-        'SELECT id FROM generic_values WHERE g_id = 8 AND Name = ? AND orgid = ? AND isactive = 1',
+        'SELECT id FROM C_GENERIC_VALUES WHERE g_id = 8 AND Name = ? AND orgid = ? AND isactive = 1',
         [otBillType, orgId]
       );
       if (otBillTypeCheck.length === 0) {
@@ -176,7 +176,7 @@ export async function addProjectAssignment(prevState, formData) {
 
     if (payTerm) {
       const [payTermCheck] = await pool.execute(
-        'SELECT id FROM generic_values WHERE g_id = 9 AND Name = ? AND orgid = ? AND isactive = 1',
+        'SELECT id FROM C_GENERIC_VALUES WHERE g_id = 9 AND Name = ? AND orgid = ? AND isactive = 1',
         [payTerm, orgId]
       );
       if (payTermCheck.length === 0) {

@@ -56,7 +56,7 @@ const getAllSubordinates = async (pool, superiorEmpId, visited = new Set()) => {
 
 const getDelegatedSubordinates = async (pool, userEmpId) => {
   const [delegateRows] = await pool.execute(
-    "SELECT senderempid FROM delegate WHERE receiverempid = ? AND menuid = (SELECT id FROM menu WHERE name = 'Leaves') AND isactive = 1 AND (submenuid IS NULL OR submenuid = 0)",
+    "SELECT senderempid FROM C_DELEGATE WHERE receiverempid = ? AND menuid = (SELECT id FROM C_MENU WHERE name = 'Leaves') AND isactive = 1 AND (submenuid IS NULL OR submenuid = 0)",
     [userEmpId]
   );
   const delegatedSuperiors = delegateRows.map(row => row.senderempid);
@@ -107,10 +107,12 @@ export async function addEmployeeLeave(formData) {
 
     const userId = decoded.userId;
     const orgid = decoded.orgid;
-    const empid = formData.get('empid');
+    const empid = decoded.empid;
+
+    console.log("empidddd",empid);
 
     if (!empid) {
-      console.log('Employee ID is missing');
+      console.log('Employee ID is missingddddddddddd');
       return { error: 'Employee ID is required.' };
     }
 
@@ -137,7 +139,7 @@ export async function addEmployeeLeave(formData) {
     }
 
     const [leaveTypeRows] = await pool.execute(
-      'SELECT id FROM generic_values WHERE g_id = ? AND orgid = ? AND id = ? AND isactive = 1',
+      'SELECT id FROM C_GENERIC_VALUES WHERE g_id = ? AND orgid = ? AND id = ? AND isactive = 1',
       [1, orgid, leaveid]
     );
     if (leaveTypeRows.length === 0) {
@@ -162,7 +164,7 @@ export async function addEmployeeLeave(formData) {
     const noofnoons = am_pm === 'both' ? daysDiff * 2 : daysDiff;
 
     const [assignRows] = await pool.execute(
-      'SELECT noofleaves FROM employee_leaves_assign WHERE empid = ? AND orgid = ? AND leaveid = ?',
+      'SELECT noofleaves FROM C_EMPLOYEE_LEAVES_ASSIGN WHERE empid = ? AND orgid = ? AND leaveid = ?',
       [empid, orgid, leaveid]
     );
     if (assignRows.length === 0 || assignRows[0].noofleaves < requestedDays) {
@@ -171,7 +173,7 @@ export async function addEmployeeLeave(formData) {
     }
 
     const [result] = await pool.execute(
-      `INSERT INTO employee_leaves (empid, orgid, g_id, leaveid, startdate, enddate, status, noofnoons, am_pm, description)
+      `INSERT INTO C_EMPLOYEE_LEAVES (empid, orgid, g_id, leaveid, startdate, enddate, status, noofnoons, am_pm, description)
        VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)`,
       [empid, orgid, 1, leaveid, startdate, enddate, noofnoons, am_pm, description]
     );
@@ -209,7 +211,7 @@ export async function fetchLeaveTypes() {
 
     const pool = await DBconnection();
     const [rows] = await pool.execute(
-      `SELECT id, Name FROM generic_values WHERE g_id = ? AND orgid = ? AND isactive = 1`,
+      `SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = ? AND orgid = ? AND isactive = 1`,
       [1, orgId]
     );
 
@@ -268,7 +270,7 @@ export async function approveEmployeeLeave(leaveId, action) {
     }
 
     const [leaveRows] = await pool.execute(
-      'SELECT empid, leaveid, noofnoons, am_pm, status FROM employee_leaves WHERE id = ? AND orgid = ?',
+      'SELECT empid, leaveid, noofnoons, am_pm, status FROM C_EMPLOYEE_LEAVES WHERE id = ? AND orgid = ?',
       [leaveId, orgid]
     );
     console.log('Fetched leave rows for approval:', leaveRows);
@@ -304,7 +306,7 @@ export async function approveEmployeeLeave(leaveId, action) {
     const newStatus = action === 'accept' ? 'accepted' : 'rejected';
 
     const [updateResult] = await pool.execute(
-      `UPDATE employee_leaves SET status = ?, approved_by = ?, approved_role = NULL WHERE id = ? AND orgid = ?`,
+      `UPDATE C_EMPLOYEE_LEAVES SET status = ?, approved_by = ?, approved_role = NULL WHERE id = ? AND orgid = ?`,
       [newStatus, superiorName, leaveId, orgid]
     );
 
@@ -315,12 +317,12 @@ export async function approveEmployeeLeave(leaveId, action) {
 
     if (newStatus === 'accepted') {
       const [assignRows] = await pool.execute(
-        'SELECT noofleaves FROM employee_leaves_assign WHERE empid = ? AND orgid = ? AND leaveid = ?',
+        'SELECT noofleaves FROM C_EMPLOYEE_LEAVES_ASSIGN WHERE empid = ? AND orgid = ? AND leaveid = ?',
         [leave.empid, orgid, leave.leaveid]
       );
       if (assignRows.length === 0 || assignRows[0].noofleaves < leaveDays) {
         await pool.execute(
-          `UPDATE employee_leaves SET status = 'pending', approved_by = NULL, approved_role = NULL WHERE id = ?`,
+          `UPDATE C_EMPLOYEE_LEAVES SET status = 'pending', approved_by = NULL, approved_role = NULL WHERE id = ?`,
           [leaveId]
         );
         console.log('Insufficient leaves for approval - empid:', leave.empid, 'leaveid:', leave.leaveid);
@@ -328,7 +330,7 @@ export async function approveEmployeeLeave(leaveId, action) {
       }
 
       const [updateBalanceResult] = await pool.execute(
-        'UPDATE employee_leaves_assign SET noofleaves = noofleaves - ? WHERE empid = ? AND orgid = ? AND leaveid = ?',
+        'UPDATE C_EMPLOYEE_LEAVES_ASSIGN SET noofleaves = noofleaves - ? WHERE empid = ? AND orgid = ? AND leaveid = ?',
         [leaveDays, leave.empid, orgid, leave.leaveid]
       );
       if (updateBalanceResult.affectedRows === 0) {
@@ -375,8 +377,8 @@ export async function fetchEmployeeLeaves(empId) {
 
     const [rows] = await pool.execute(
       `SELECT l.id, l.empid, l.orgid, l.g_id, gv.Name AS leave_name, l.startdate, l.enddate, l.status, l.noofnoons, l.am_pm, l.description, l.approved_by, l.approved_role 
-       FROM employee_leaves l
-       LEFT JOIN generic_values gv ON l.leaveid = gv.id AND gv.g_id = 1 AND gv.orgid = l.orgid AND gv.isactive = 1
+       FROM C_EMPLOYEE_LEAVES l
+       LEFT JOIN C_GENERIC_VALUES gv ON l.leaveid = gv.id AND gv.g_id = 1 AND gv.orgid = l.orgid AND gv.isactive = 1
        WHERE l.empid IN (${authorizedEmpIds.map(() => '?').join(',')}) AND l.orgid = ?`,
       [...authorizedEmpIds, orgId]
     );
@@ -430,8 +432,8 @@ export async function fetchPendingLeaves() {
   const [leaveRows] = await pool.execute(
     `SELECT l.id, l.empid, l.orgid, l.g_id, gv.Name AS leave_name, l.startdate, l.enddate, l.status, l.noofnoons, l.am_pm, l.description,
             e.EMP_FST_NAME, e.EMP_LAST_NAME
-     FROM employee_leaves l
-     LEFT JOIN generic_values gv ON l.leaveid = gv.id AND gv.g_id = 1 AND gv.orgid = l.orgid AND gv.isactive = 1
+     FROM C_EMPLOYEE_LEAVES l
+     LEFT JOIN C_GENERIC_VALUES gv ON l.leaveid = gv.id AND gv.g_id = 1 AND gv.orgid = l.orgid AND gv.isactive = 1
      LEFT JOIN C_EMP e ON l.empid = e.empid
      WHERE l.empid IN (${employeeIds.map(() => '?').join(',')}) AND l.status = 'pending'`,
     employeeIds
@@ -509,8 +511,8 @@ export async function fetchLeaveAssignments(empid) {
     const pool = await DBconnection();
     const [rows] = await pool.execute(
       `SELECT ela.leaveid, ela.noofleaves, gv.Name as name
-       FROM employee_leaves_assign ela
-       JOIN generic_values gv ON ela.leaveid = gv.id AND ela.orgid = gv.orgid
+       FROM C_EMPLOYEE_LEAVES_ASSIGN ela
+       JOIN C_GENERIC_VALUES gv ON ela.leaveid = gv.id AND ela.orgid = gv.orgid
        WHERE ela.empid = ? AND ela.orgid = ? AND ela.g_id = 1 AND gv.isactive = 1`,
       [empid, orgId]
     );

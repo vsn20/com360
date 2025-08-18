@@ -28,7 +28,7 @@ export async function GET(request) {
 
     // Fetch all role IDs for the employee
     const [roleRows] = await pool.query(
-      'SELECT roleid FROM emp_role_assign WHERE empid = ? AND orgid = ?',
+      'SELECT roleid FROM C_EMP_ROLE_ASSIGN WHERE empid = ? AND orgid = ?',
       [empid, orgid]
     );
     const roleids = roleRows.map(row => row.roleid);
@@ -41,16 +41,16 @@ export async function GET(request) {
     let isAdmin = false;
     try {
       const [adminRows] = await pool.query(
-        'SELECT isadmin FROM org_role_table WHERE roleid IN (?) AND orgid = ?',
+        'SELECT isadmin FROM C_ORG_ROLE_TABLE WHERE roleid IN (?) AND orgid = ?',
         [roleids, orgid]
       );
       isAdmin = adminRows.some(row => row.isadmin === 1);
     } catch (error) {
-      console.error('Error fetching isadmin from org_role_table:', error.message);
+      console.error('Error fetching isadmin from C_ORG_ROLE_TABLE:', error.message);
       isAdmin = false;
     }
 
-    // Fetch menu permissions for all roles
+    // Fetch C_MENU permissions for all roles
     const [rows] = await pool.query(
       `SELECT DISTINCT
         m.id AS menuid,
@@ -61,10 +61,10 @@ export async function GET(request) {
         sm.name AS submenuname,
         sm.url AS submenuurl,
         MIN(omp.priority) AS priority
-      FROM org_menu_priority omp
-      JOIN menu m ON m.id = omp.menuid AND m.is_active = 1
-      LEFT JOIN submenu sm ON sm.id = omp.submenuid AND sm.is_active = 1
-      JOIN role_menu_permissions rmp 
+      FROM C_ORG_MENU_PRIORITY omp
+      JOIN C_MENU m ON m.id = omp.menuid AND m.is_active = 1
+      LEFT JOIN C_SUBMENU sm ON sm.id = omp.submenuid AND sm.is_active = 1
+      JOIN C_ROLE_MENU_PERMISSIONS rmp 
           ON rmp.menuid = omp.menuid 
          AND (rmp.submenuid = omp.submenuid OR omp.submenuid IS NULL)
       WHERE rmp.roleid IN (?) AND omp.orgid = ?
@@ -73,7 +73,7 @@ export async function GET(request) {
       [roleids, orgid]
     );
 
-    // Build menu items
+    // Build C_MENU items
     const menuMap = new Map();
 
     for (const row of rows) {
@@ -91,24 +91,24 @@ export async function GET(request) {
         menuMap.set(menuid, {
           title: menuname,
           href: menuhref || null,
-          submenu: [],
+          C_SUBMENU: [],
         });
       }
 
-      const menu = menuMap.get(menuid);
+      const C_MENU = menuMap.get(menuid);
 
       if (hassubmenu === 'yes' && submenuid && submenuurl) {
-        if (!menu.submenu.some(sub => sub.href === submenuurl)) {
-          menu.submenu.push({
+        if (!C_MENU.C_SUBMENU.some(sub => sub.href === submenuurl)) {
+          C_MENU.C_SUBMENU.push({
             title: submenuname,
             href: submenuurl,
           });
         }
-        if (!menu.href) {
-          menu.href = submenuurl;
+        if (!C_MENU.href) {
+          C_MENU.href = submenuurl;
         }
-      } else if (menuhref && !menu.href) {
-        menu.href = menuhref;
+      } else if (menuhref && !C_MENU.href) {
+        C_MENU.href = menuhref;
       }
     }
 
@@ -120,7 +120,7 @@ export async function GET(request) {
       menuItems.push({
         title: 'Priority Setting',
         href: '/userscreens/prioritysetting',
-        submenu: [],
+        C_SUBMENU: [],
       });
     }
 

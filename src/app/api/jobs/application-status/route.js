@@ -28,13 +28,13 @@ export async function GET(request) {
       });
     }
 
-    const [applications] = await pool.query(
-      `SELECT jobid FROM applications WHERE candidate_id = ?`,
+    const [C_APPLICATIONS] = await pool.query(
+      `SELECT jobid FROM C_APPLICATIONS WHERE candidate_id = ?`,
       [candidate_id]
     );
 
-    console.log('Application Status Query Result:', applications); // Debug
-    const appliedJobIds = applications.map((app) => app.jobid).filter((id) => id !== undefined);
+    console.log('Application Status Query Result:', C_APPLICATIONS); // Debug
+    const appliedJobIds = C_APPLICATIONS.map((app) => app.jobid).filter((id) => id !== undefined);
     
     return new Response(JSON.stringify({ appliedJobIds }), {
       status: 200,

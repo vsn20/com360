@@ -26,7 +26,7 @@ export async function GET(request, { params }) {
     }
 
     const [existingApplication] = await pool.query(
-      `SELECT applicationid FROM applications WHERE jobid = ? AND candidate_id = ?`,
+      `SELECT applicationid FROM C_APPLICATIONS WHERE jobid = ? AND candidate_id = ?`,
       [jobid, candidate_id]
     );
     console.log('Existing application:', existingApplication);
@@ -37,11 +37,11 @@ export async function GET(request, { params }) {
              ej.countryid, ej.stateid, ej.custom_state_name,
              o.orgname, c.value AS country_value, s.value AS state_value,
              g.name AS job_type
-      FROM externaljobs ej
+      FROM C_EXTERNAL_JOBS ej
       JOIN C_ORG o ON ej.orgid = o.orgid
       LEFT JOIN C_COUNTRY c ON ej.countryid = c.ID
       LEFT JOIN C_STATE s ON ej.stateid = s.ID
-      LEFT JOIN generic_values g ON ej.job_type = g.id
+      LEFT JOIN C_GENERIC_VALUES g ON ej.job_type = g.id
       WHERE ej.jobid = ? AND ej.active = 1
     `, [jobid]);
 

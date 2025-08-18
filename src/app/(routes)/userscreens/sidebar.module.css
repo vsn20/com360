@@ -7,7 +7,7 @@
   background-color: rgb(44, 47, 51);
   padding: 5px;
   box-sizing: border-box;
-  z-index: 998; /* Below navbar and submenu */
+  z-index: 998; /* Below navbar and C_SUBMENU */
   font-size: 13px;
   font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
 }
@@ -91,7 +91,7 @@
   list-style: none;
   border: 1px solid #e5e7eb;
   min-width: 160px;
-  z-index: 1100; /* Highest z-index to appear above navbar and submenu */
+  z-index: 1100; /* Highest z-index to appear above navbar and C_SUBMENU */
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 

@@ -91,8 +91,8 @@ const EditRole = () => {
       return;
     }
 
-    const menu = availableMenus.find(m => m.menuid === menuid);
-    if (!menu) return;
+    const C_MENU = availableMenus.find(m => m.menuid === menuid);
+    if (!C_MENU) return;
 
     setPermissions((prev) => {
       const exists = prev.some(
@@ -100,7 +100,7 @@ const EditRole = () => {
       );
       let updatedPermissions;
       if (submenuid) {
-        // Handle submenu toggle
+        // Handle C_SUBMENU toggle
         if (exists) {
           updatedPermissions = prev.filter(
             (p) => !(p.menuid === menuid && p.submenuid === submenuid)
@@ -108,22 +108,22 @@ const EditRole = () => {
         } else {
           updatedPermissions = [...prev, { menuid, submenuid }];
         }
-        // If no submenus are selected for this menu, remove the menu permission
-        if (menu.hassubmenu === 'yes') {
+        // If no submenus are selected for this C_MENU, remove the C_MENU permission
+        if (C_MENU.hassubmenu === 'yes') {
           const remainingSubmenus = updatedPermissions.filter(p => p.menuid === menuid && p.submenuid);
           if (remainingSubmenus.length === 0) {
             updatedPermissions = updatedPermissions.filter(p => p.menuid !== menuid);
           }
         }
       } else {
-        // Handle menu toggle
+        // Handle C_MENU toggle
         if (exists) {
-          // Remove menu and all its submenus
+          // Remove C_MENU and all its submenus
           updatedPermissions = prev.filter(p => p.menuid !== menuid);
         } else {
-          // Add menu and all its submenus (if hassubmenu='yes')
+          // Add C_MENU and all its submenus (if hassubmenu='yes')
           updatedPermissions = [...prev, { menuid, submenuid: null }];
-          if (menu.hassubmenu === 'yes') {
+          if (C_MENU.hassubmenu === 'yes') {
             const submenus = availableSubmenus
               .filter(sm => sm.menuid === menuid)
               .map(sm => ({ menuid, submenuid: sm.submenuid }));
@@ -265,29 +265,29 @@ const EditRole = () => {
         <div>
           <label>Permissions:</label>
           <div className="permissions-container">
-            {availableMenus.map((menu, index) => (
+            {availableMenus.map((C_MENU, index) => (
               <div key={`menu-${index}`} className="permission-item">
                 <label>
                   <input
                     type="checkbox"
-                    checked={permissions.some((p) => p.menuid === menu.menuid && !p.submenuid)}
-                    onChange={() => handlePermissionToggle(menu.menuid)}
+                    checked={permissions.some((p) => p.menuid === C_MENU.menuid && !p.submenuid)}
+                    onChange={() => handlePermissionToggle(C_MENU.menuid)}
                   />
-                  {menu.menuname} ({menu.menuurl})
+                  {C_MENU.menuname} ({C_MENU.menuurl})
                 </label>
-                {menu.hassubmenu === 'yes' && availableSubmenus
-                  .filter((sm) => sm.menuid === menu.menuid)
-                  .map((submenu) => (
-                    <div key={submenu.submenuid} className="permission-subitem">
+                {C_MENU.hassubmenu === 'yes' && availableSubmenus
+                  .filter((sm) => sm.menuid === C_MENU.menuid)
+                  .map((C_SUBMENU) => (
+                    <div key={C_SUBMENU.submenuid} className="permission-subitem">
                       <label>
                         <input
                           type="checkbox"
                           checked={permissions.some(
-                            (p) => p.menuid === menu.menuid && p.submenuid === submenu.submenuid
+                            (p) => p.menuid === C_MENU.menuid && p.submenuid === C_SUBMENU.submenuid
                           )}
-                          onChange={() => handlePermissionToggle(menu.menuid, submenu.submenuid)}
+                          onChange={() => handlePermissionToggle(C_MENU.menuid, C_SUBMENU.submenuid)}
                         />
-                        {submenu.submenuname} 
+                        {C_SUBMENU.submenuname} 
                       </label>
                     </div>
                   ))}

@@ -61,7 +61,7 @@ const getAllSubordinates = async (pool, superiorEmpId, visited = new Set()) => {
 
 const getDelegatedSubordinates = async (pool, userEmpId) => {
   const [delegateRows] = await pool.execute(
-    "SELECT senderempid FROM delegate WHERE receiverempid = ? AND menuid = (SELECT id FROM menu WHERE name = 'TimeSheets') AND isactive = 1 AND (submenuid IS NULL OR submenuid = 0)",
+    "SELECT senderempid FROM C_DELEGATE WHERE receiverempid = ? AND menuid = (SELECT id FROM C_MENU WHERE name = 'TimeSheets') AND isactive = 1 AND (submenuid IS NULL OR submenuid = 0)",
     [userEmpId]
   );
   const delegatedSuperiors = delegateRows.map((row) => row.senderempid);
@@ -149,11 +149,11 @@ export async function fetchTimesheetAndProjects(selectedDate) {
     [employeeId, weekEnd, weekStart]
   );
 
-  const timesheets = [];
+  const C_TIMESHEETS = [];
   const attachments = {};
   for (const project of projRows) {
     const [timesheetRows] = await pool.execute(
-      "SELECT * FROM timesheets WHERE employee_id = ? AND week_start_date = ? AND project_id = ?",
+      "SELECT * FROM C_TIMESHEETS WHERE employee_id = ? AND week_start_date = ? AND project_id = ?",
       [employeeId, weekStart, project.PRJ_ID]
     );
     const timesheet = timesheetRows[0] || {
@@ -181,16 +181,16 @@ export async function fetchTimesheetAndProjects(selectedDate) {
       invoice_generated_at: null,
       temp_key: `temp-${Date.now()}-${project.PRJ_ID}`,
     };
-    timesheets.push(timesheet);
+    C_TIMESHEETS.push(timesheet);
 
     const [attachmentRows] = await pool.execute(
-      "SELECT DISTINCT attachment_id, employee_id, week_start_date, year, timesheet_id, file_path, file_name, uploaded_at FROM timesheet_attachments WHERE employee_id = ? AND week_start_date = ?",
+      "SELECT DISTINCT attachment_id, employee_id, week_start_date, year, timesheet_id, file_path, file_name, uploaded_at FROM C_TIMESHEETS_ATTACHMENTS WHERE employee_id = ? AND week_start_date = ?",
       [employeeId, weekStart]
     );
     attachments[timesheet.timesheet_id || timesheet.temp_key] = attachmentRows;
   }
 
-  return { timesheets, projects: projRows, attachments, serverWeekStart: weekStart, currentUserEmpId: employeeId };
+  return { C_TIMESHEETS, projects: projRows, attachments, serverWeekStart: weekStart, currentUserEmpId: employeeId };
 }
 
 export async function fetchTimesheetsForSuperior(selectedDate) {
@@ -215,7 +215,7 @@ export async function fetchTimesheetsForSuperior(selectedDate) {
     (sub, index, self) => index === self.findIndex((s) => s.empid === sub.empid) && sub.empid !== superiorEmpId
   );
 
-  const timesheets = [];
+  const C_TIMESHEETS = [];
   const projects = {};
   const attachments = {};
   for (const employee of allSubordinates) {
@@ -232,7 +232,7 @@ export async function fetchTimesheetsForSuperior(selectedDate) {
 
     for (const project of projRows) {
       const [timesheetRows] = await pool.execute(
-        "SELECT * FROM timesheets WHERE employee_id = ? AND week_start_date = ? AND project_id = ?",
+        "SELECT * FROM C_TIMESHEETS WHERE employee_id = ? AND week_start_date = ? AND project_id = ?",
         [employee.empid, weekStart, project.PRJ_ID]
       );
       const ts = timesheetRows[0] || {
@@ -261,17 +261,17 @@ export async function fetchTimesheetsForSuperior(selectedDate) {
         temp_key: `temp-${Date.now()}-${project.PRJ_ID}`,
         employeeName: `${employee.EMP_FST_NAME} ${employee.EMP_LAST_NAME || ""}${employee.isDelegated ? " [del]" : ""}`.trim(),
       };
-      timesheets.push(ts);
+      C_TIMESHEETS.push(ts);
 
       const [attachmentRows] = await pool.execute(
-        "SELECT DISTINCT attachment_id, employee_id, week_start_date, year, timesheet_id, file_path, file_name, uploaded_at FROM timesheet_attachments WHERE employee_id = ? AND week_start_date = ?",
+        "SELECT DISTINCT attachment_id, employee_id, week_start_date, year, timesheet_id, file_path, file_name, uploaded_at FROM C_TIMESHEETS_ATTACHMENTS WHERE employee_id = ? AND week_start_date = ?",
         [employee.empid, weekStart]
       );
       attachments[ts.timesheet_id || ts.temp_key] = attachmentRows;
     }
   }
 
-  return { timesheets, employees: allSubordinates, projects, attachments, serverWeekStart: weekStart, currentUserEmpId: superiorEmpId };
+  return { C_TIMESHEETS, employees: allSubordinates, projects, attachments, serverWeekStart: weekStart, currentUserEmpId: superiorEmpId };
 }
 
 export async function saveTimesheet(formData) {
@@ -293,27 +293,27 @@ export async function saveTimesheet(formData) {
 
   const timesheetIndices = [];
   for (let key of formData.keys()) {
-    const match = key.match(/^timesheets\[(\d+)\]/);
+    const match = key.match(/^C_TIMESHEETS\[(\d+)\]/);
     if (match && !timesheetIndices.includes(match[1])) {
       timesheetIndices.push(match[1]);
     }
   }
 
   for (const index of timesheetIndices) {
-    const timesheetId = formData.get(`timesheets[${index}][timesheet_id]`) || null;
-    const employeeId = formData.get(`timesheets[${index}][employee_id]`);
-    const projectId = formData.get(`timesheets[${index}][project_id]`);
-    const weekStartDate = formData.get(`timesheets[${index}][week_start_date]`);
-    const year = formData.get(`timesheets[${index}][year]`);
+    const timesheetId = formData.get(`C_TIMESHEETS[${index}][timesheet_id]`) || null;
+    const employeeId = formData.get(`C_TIMESHEETS[${index}][employee_id]`);
+    const projectId = formData.get(`C_TIMESHEETS[${index}][project_id]`);
+    const weekStartDate = formData.get(`C_TIMESHEETS[${index}][week_start_date]`);
+    const year = formData.get(`C_TIMESHEETS[${index}][year]`);
     if (!projectId || !weekStartDate) continue;
 
     let existingTimesheet = null;
     if (timesheetId) {
-      const [rows] = await pool.execute("SELECT * FROM timesheets WHERE timesheet_id = ? AND employee_id = ?", [timesheetId, employeeId]);
+      const [rows] = await pool.execute("SELECT * FROM C_TIMESHEETS WHERE timesheet_id = ? AND employee_id = ?", [timesheetId, employeeId]);
       existingTimesheet = rows[0];
     } else {
       const [rows] = await pool.execute(
-        "SELECT * FROM timesheets WHERE employee_id = ? AND week_start_date = ? AND project_id = ?",
+        "SELECT * FROM C_TIMESHEETS WHERE employee_id = ? AND week_start_date = ? AND project_id = ?",
         [employeeId, weekStartDate, projectId]
       );
       existingTimesheet = rows[0];
@@ -328,17 +328,17 @@ export async function saveTimesheet(formData) {
 
     const fields = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
     const hours = fields.map((day) => ({
-      hours: formData.get(`timesheets[${index}][${day}_hours]`) !== null ? parseFloat(formData.get(`timesheets[${index}][${day}_hours]`)) || null : existingTimesheet?.[`${day}_hours`] || null,
-      comment: formData.get(`timesheets[${index}][${day}_comment]`) !== null ? formData.get(`timesheets[${index}][${day}_comment]`) || "" : existingTimesheet?.[`${day}_comment`] || "",
+      hours: formData.get(`C_TIMESHEETS[${index}][${day}_hours]`) !== null ? parseFloat(formData.get(`C_TIMESHEETS[${index}][${day}_hours]`)) || null : existingTimesheet?.[`${day}_hours`] || null,
+      comment: formData.get(`C_TIMESHEETS[${index}][${day}_comment]`) !== null ? formData.get(`C_TIMESHEETS[${index}][${day}_comment]`) || "" : existingTimesheet?.[`${day}_comment`] || "",
     }));
-    const isSubmitted = formData.get(`timesheets[${index}][is_submitted]`) !== null ? parseInt(formData.get(`timesheets[${index}][is_submitted]`) || "0") : existingTimesheet?.is_submitted || 0;
-    const isApproved = formData.get(`timesheets[${index}][is_approved]`) !== null ? parseInt(formData.get(`timesheets[${index}][is_approved]`) || "0") : existingTimesheet?.is_approved || 0;
+    const isSubmitted = formData.get(`C_TIMESHEETS[${index}][is_submitted]`) !== null ? parseInt(formData.get(`C_TIMESHEETS[${index}][is_submitted]`) || "0") : existingTimesheet?.is_submitted || 0;
+    const isApproved = formData.get(`C_TIMESHEETS[${index}][is_approved]`) !== null ? parseInt(formData.get(`C_TIMESHEETS[${index}][is_approved]`) || "0") : existingTimesheet?.is_approved || 0;
 
     let finalTimesheetId = timesheetId || existingTimesheet?.timesheet_id;
 
     if (finalTimesheetId) {
       await pool.execute(
-        `UPDATE timesheets SET 
+        `UPDATE C_TIMESHEETS SET 
           sun_hours = ?, mon_hours = ?, tue_hours = ?, wed_hours = ?, thu_hours = ?, fri_hours = ?, sat_hours = ?, 
           sun_comment = ?, mon_comment = ?, tue_comment = ?, wed_comment = ?, thu_comment = ?, fri_comment = ?, sat_comment = ?, 
           is_submitted = ?, is_approved = ?, approved_by = ?, updated_at = CURRENT_TIMESTAMP 
@@ -355,7 +355,7 @@ export async function saveTimesheet(formData) {
       );
     } else {
       const [result] = await pool.execute(
-        `INSERT INTO timesheets (
+        `INSERT INTO C_TIMESHEETS (
           employee_id, project_id, week_start_date, year, 
           sun_hours, mon_hours, tue_hours, wed_hours, thu_hours, fri_hours, sat_hours, 
           sun_comment, mon_comment, tue_comment, wed_comment, thu_comment, fri_comment, sat_comment, 
@@ -400,7 +400,7 @@ export async function saveTimesheet(formData) {
 
         await fs.writeFile(filePath, Buffer.from(await attachmentFile.arrayBuffer()));
         const [insertResult] = await pool.execute(
-          "INSERT INTO timesheet_attachments (employee_id, week_start_date, year, timesheet_id, file_path, file_name, uploaded_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
+          "INSERT INTO C_TIMESHEETS_ATTACHMENTS (employee_id, week_start_date, year, timesheet_id, file_path, file_name, uploaded_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
           [
             employeeId,
             timesheetsData[0].weekStartDate,
@@ -426,9 +426,9 @@ export async function saveTimesheet(formData) {
     } catch (error) {
       return { error: `Failed to save attachment: ${error.message}` };
     }
-  } else if (timesheetsData.length > 0 && formData.get("timesheets[0][is_submitted]") === "1" && !attachmentFiles.length) {
+  } else if (timesheetsData.length > 0 && formData.get("C_TIMESHEETS[0][is_submitted]") === "1" && !attachmentFiles.length) {
     const [existingAttachments] = await pool.execute(
-      "SELECT COUNT(*) as count FROM timesheet_attachments WHERE employee_id = ? AND week_start_date = ?",
+      "SELECT COUNT(*) as count FROM C_TIMESHEETS_ATTACHMENTS WHERE employee_id = ? AND week_start_date = ?",
       [employeeId || currentUserEmpId, timesheetsData[0].weekStartDate]
     );
     if (existingAttachments[0].count === 0) {
@@ -438,7 +438,7 @@ export async function saveTimesheet(formData) {
 
   const attachmentRows = timesheetsData.length > 0
     ? await pool.execute(
-        "SELECT DISTINCT attachment_id, employee_id, week_start_date, year, timesheet_id, file_path, file_name, uploaded_at FROM timesheet_attachments WHERE employee_id = ? AND week_start_date = ?",
+        "SELECT DISTINCT attachment_id, employee_id, week_start_date, year, timesheet_id, file_path, file_name, uploaded_at FROM C_TIMESHEETS_ATTACHMENTS WHERE employee_id = ? AND week_start_date = ?",
         [employeeId || currentUserEmpId, timesheetsData[0].weekStartDate]
       )[0]
     : [];
@@ -464,14 +464,14 @@ export async function removeAttachment(attachmentId, timesheetId) {
   const currentUserEmpId = userRows[0].empid;
   try {
     const [attachmentRows] = await pool.execute(
-      "SELECT employee_id, file_path, timesheet_id FROM timesheet_attachments WHERE attachment_id = ? AND timesheet_id = ?",
+      "SELECT employee_id, file_path, timesheet_id FROM C_TIMESHEETS_ATTACHMENTS WHERE attachment_id = ? AND timesheet_id = ?",
       [attachmentId, timesheetId]
     );
     if (!attachmentRows.length) return { error: "Attachment not found." };
 
     const { employee_id: employeeId, file_path: filePath, timesheet_id } = attachmentRows[0];
     const [timesheetRows] = await pool.execute(
-      "SELECT is_submitted, is_approved FROM timesheets WHERE timesheet_id = ? AND employee_id = ?",
+      "SELECT is_submitted, is_approved FROM C_TIMESHEETS WHERE timesheet_id = ? AND employee_id = ?",
       [timesheetId, employeeId]
     );
     if (!timesheetRows.length) return { error: "Timesheet not found." };
@@ -482,7 +482,7 @@ export async function removeAttachment(attachmentId, timesheetId) {
     if (is_submitted === 1 && currentUserEmpId === employeeId && !isSuperiorUser) return { error: "You cannot remove attachments from your own submitted timesheet." };
     if (is_submitted === 1 && !isSuperiorUser && currentUserEmpId !== employeeId) return { error: "Only a superior can remove attachments from a submitted timesheet." };
 
-    await pool.execute("DELETE FROM timesheet_attachments WHERE attachment_id = ? AND timesheet_id = ?", [attachmentId, timesheetId]);
+    await pool.execute("DELETE FROM C_TIMESHEETS_ATTACHMENTS WHERE attachment_id = ? AND timesheet_id = ?", [attachmentId, timesheetId]);
     const absolutePath = path.join(process.cwd(), "public", filePath);
     try {
       await fs.unlink(absolutePath);
@@ -514,19 +514,19 @@ export async function fetchPendingTimesheets() {
     (sub, index, self) => index === self.findIndex((s) => s.empid === sub.empid) && sub.empid !== userEmpId
   );
 
-  if (!allSubordinates.length) return { error: "You are not authorized to view pending timesheets." };
+  if (!allSubordinates.length) return { error: "You are not authorized to view pending C_TIMESHEETS." };
 
   const employeeIds = allSubordinates.map((emp) => emp.empid);
   const [timesheetRows] = await pool.execute(
     `SELECT t.*, COALESCE(p.PRJ_NAME, 'Unnamed Project') AS project_name, e.EMP_FST_NAME, e.EMP_LAST_NAME
-     FROM timesheets t
+     FROM C_TIMESHEETS t
      LEFT JOIN C_PROJECT p ON t.project_id = p.PRJ_ID
      LEFT JOIN C_EMP e ON t.employee_id = e.empid
      WHERE t.employee_id IN (${employeeIds.map(() => "?").join(",")}) AND t.is_submitted = 1 AND t.is_approved = 0`,
     employeeIds
   );
 
-  const timesheets = timesheetRows.map((ts) => {
+  const C_TIMESHEETS = timesheetRows.map((ts) => {
     const employee = allSubordinates.find((emp) => emp.empid === ts.employee_id);
     return {
       ...ts,
@@ -538,7 +538,7 @@ export async function fetchPendingTimesheets() {
     };
   });
 
-  return { timesheets, employees: allSubordinates };
+  return { C_TIMESHEETS, employees: allSubordinates };
 }
 
 export async function approveTimesheet(timesheetId, employeeId, isApproved) {
@@ -554,7 +554,7 @@ export async function approveTimesheet(timesheetId, employeeId, isApproved) {
 
   const currentUserEmpId = userRows[0].empid;
   const [timesheetRows] = await pool.execute(
-    "SELECT * FROM timesheets WHERE timesheet_id = ? AND employee_id = ?",
+    "SELECT * FROM C_TIMESHEETS WHERE timesheet_id = ? AND employee_id = ?",
     [timesheetId, employeeId]
   );
   if (!timesheetRows.length) return { error: "Timesheet not found." };
@@ -564,13 +564,13 @@ export async function approveTimesheet(timesheetId, employeeId, isApproved) {
   if (currentUserEmpId === employeeId) return { error: "You cannot approve or unapprove your own timesheet." };
 
   await pool.execute(
-    `UPDATE timesheets SET is_approved = ?, approved_by = ?, updated_at = CURRENT_TIMESTAMP WHERE timesheet_id = ? AND employee_id = ?`,
+    `UPDATE C_TIMESHEETS SET is_approved = ?, approved_by = ?, updated_at = CURRENT_TIMESTAMP WHERE timesheet_id = ? AND employee_id = ?`,
     [isApproved ? 1 : 0, isApproved ? currentUserEmpId : null, timesheetId, employeeId]
   );
 
   // Verify the update
   const [updatedRows] = await pool.execute(
-    "SELECT is_approved, approved_by FROM timesheets WHERE timesheet_id = ? AND employee_id = ?",
+    "SELECT is_approved, approved_by FROM C_TIMESHEETS WHERE timesheet_id = ? AND employee_id = ?",
     [timesheetId, employeeId]
   );
   if (updatedRows.length && updatedRows[0].is_approved !== isApproved) {

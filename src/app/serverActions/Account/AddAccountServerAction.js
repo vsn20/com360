@@ -153,7 +153,7 @@ export async function addAccount(formData) {
 
       // Validate account type
       const [validAcctType] = await pool.query(
-        'SELECT id FROM generic_values WHERE g_id = ? AND Name = ? AND orgid = ? AND isactive = 1',
+        'SELECT id FROM C_GENERIC_VALUES WHERE g_id = ? AND Name = ? AND orgid = ? AND isactive = 1',
         [5, acctTypeCd, orgId]
       );
       if (validAcctType.length === 0) {
@@ -163,7 +163,7 @@ export async function addAccount(formData) {
 
       // Validate branch type
       const [validBranchType] = await pool.query(
-        'SELECT id FROM generic_values WHERE g_id = ? AND Name = ? AND orgid = ? AND isactive = 1',
+        'SELECT id FROM C_GENERIC_VALUES WHERE g_id = ? AND Name = ? AND orgid = ? AND isactive = 1',
         [6, branchType, orgId]
       );
       if (validBranchType.length === 0) {

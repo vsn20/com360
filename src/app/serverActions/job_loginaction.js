@@ -24,7 +24,7 @@ export async function job_loginaction(logindetails) {
         c.email, 
         c.first_name, 
         c.password 
-       FROM candidate c 
+       FROM C_CANDIDATE c 
        WHERE c.email = ?`,
       [username]
     );

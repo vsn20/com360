@@ -10,8 +10,8 @@ function Sidebar({ isAdmin }) {
   const router = useRouter();
   const [menuItems, setMenuItems] = useState([]);
   const [isFetched, setIsFetched] = useState(false);
-  const [openSubmenuIndex, setOpenSubmenuIndex] = useState(null); // Track open submenu
-  const [isSubmenuLocked, setIsSubmenuLocked] = useState(false); // Lock submenu after click
+  const [openSubmenuIndex, setOpenSubmenuIndex] = useState(null); // Track open C_SUBMENU
+  const [isSubmenuLocked, setIsSubmenuLocked] = useState(false); // Lock C_SUBMENU after click
 
   useEffect(() => {
     if (!isFetched) {
@@ -24,7 +24,7 @@ function Sidebar({ isAdmin }) {
           setMenuItems(safeData);
           setIsFetched(true);
         } catch (error) {
-          console.error('Error fetching menu items:', error.message);
+          console.error('Error fetching C_MENU items:', error.message);
           setMenuItems([]);
           setIsFetched(true);
         }
@@ -35,28 +35,28 @@ function Sidebar({ isAdmin }) {
 
   const finalMenuItems = [...menuItems];
 
-  // Handle hover to open submenu, but only if not locked
+  // Handle hover to open C_SUBMENU, but only if not locked
   const handleMouseEnter = (index) => {
     if (!isSubmenuLocked) {
       setOpenSubmenuIndex(index);
     }
   };
 
-  // Handle mouse leave to close submenu and unlock
+  // Handle mouse leave to close C_SUBMENU and unlock
   const handleMouseLeave = () => {
     setOpenSubmenuIndex(null);
     setIsSubmenuLocked(false); // Unlock to allow hover again
   };
 
-  // Handle menu/submenu click to close submenu after 2 seconds, lock it, and navigate
+  // Handle C_MENU/C_SUBMENU click to close C_SUBMENU after 2 seconds, lock it, and navigate
   const handleMenuClick = (e, href, index) => {
     e.preventDefault(); // Prevent default Link navigation
     const timestamp = new Date().getTime();
     router.push(`${href}?refresh=${timestamp}`); // Navigate immediately
-    // Delay hiding submenu and locking for 2 seconds
+    // Delay hiding C_SUBMENU and locking for 2 seconds
     setTimeout(() => {
-      setOpenSubmenuIndex(null); // Close submenu after 2 seconds
-      setIsSubmenuLocked(true); // Lock submenu to prevent hover
+      setOpenSubmenuIndex(null); // Close C_SUBMENU after 2 seconds
+      setIsSubmenuLocked(true); // Lock C_SUBMENU to prevent hover
     }, 3500);
   };
 
@@ -65,7 +65,7 @@ function Sidebar({ isAdmin }) {
       <ul className={styles.sidebarMenu}>
         <li className={styles.com360_logo}>COM@360</li>
         {finalMenuItems.map((item, index) => {
-          const safeSubmenu = Array.isArray(item.submenu) ? item.submenu : [];
+          const safeSubmenu = Array.isArray(item.C_SUBMENU) ? item.C_SUBMENU : [];
           const isActive = pathname === item.href || (safeSubmenu.length > 0 && safeSubmenu.some(sub => pathname === sub.href || pathname.startsWith(sub.href + '?')));
           return (
             <li

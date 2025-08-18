@@ -12,12 +12,12 @@ export async function GET() {
     if (token) {
       try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        // Get all applied jobs for this candidate
-        const [applications] = await pool.query(
-          `SELECT jobid FROM applications WHERE candidate_id = ?`,
+        // Get all applied jobs for this C_CANDIDATE
+        const [C_APPLICATIONS] = await pool.query(
+          `SELECT jobid FROM C_APPLICATIONS WHERE candidate_id = ?`,
           [decoded.cid]
         );
-        appliedJobs = applications.map((app) => app.jobid);
+        appliedJobs = C_APPLICATIONS.map((app) => app.jobid);
       } catch (jwtError) {
         console.warn('JWT verification failed:', jwtError.message);
       }
@@ -31,11 +31,11 @@ export async function GET() {
              ej.countryid, ej.stateid, ej.custom_state_name,
              o.orgname, c.value AS country_value, s.value AS state_value,
              g.name AS job_type
-      FROM externaljobs ej
+      FROM C_EXTERNAL_JOBS ej
       JOIN C_ORG o ON ej.orgid = o.orgid
       LEFT JOIN C_COUNTRY c ON ej.countryid = c.ID
       LEFT JOIN C_STATE s ON ej.stateid = s.ID
-      LEFT JOIN generic_values g ON ej.job_type = g.id
+      LEFT JOIN C_GENERIC_VALUES g ON ej.job_type = g.id
       WHERE ej.active = 1
     `);
 

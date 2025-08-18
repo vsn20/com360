@@ -30,21 +30,21 @@ export default async function PrioritySetting() {
 
   const items = [];
   features.forEach(feature => {
-    if (feature.submenu && feature.submenu.length > 0) {
-      feature.submenu.forEach(submenu => {
+    if (feature.C_SUBMENU && feature.C_SUBMENU.length > 0) {
+      feature.C_SUBMENU.forEach(C_SUBMENU => {
         items.push({
-          id: submenu.id,
-          type: 'submenu',
+          id: C_SUBMENU.id,
+          type: 'C_SUBMENU',
           parentId: feature.id,
           parentName: feature.name,
-          name: submenu.name,
-          uniqueKey: `submenu-${feature.id}-${submenu.id}`,
+          name: C_SUBMENU.name,
+          uniqueKey: `submenu-${feature.id}-${C_SUBMENU.id}`,
         });
       });
     } else {
       items.push({
         id: feature.id,
-        type: 'menu',
+        type: 'C_MENU',
         name: feature.name,
         uniqueKey: `menu-${feature.id}`,
       });
@@ -55,9 +55,9 @@ export default async function PrioritySetting() {
   if (orgid && features) {
     features.forEach(feature => {
       initialPriorities[feature.id] = 1;
-      if (feature.submenu) {
-        feature.submenu.forEach(submenu => {
-          initialPriorities[submenu.id] = 1;
+      if (feature.C_SUBMENU) {
+        feature.C_SUBMENU.forEach(C_SUBMENU => {
+          initialPriorities[C_SUBMENU.id] = 1;
         });
       }
     });
@@ -78,7 +78,7 @@ export default async function PrioritySetting() {
             {items.map(item => (
               <tr key={item.uniqueKey}>
                 <td style={{ border: '1px solid #ddd', padding: '8px' }}>
-                  {item.type === 'submenu' ? `${item.parentName} > ${item.name}` : item.name}
+                  {item.type === 'C_SUBMENU' ? `${item.parentName} > ${item.name}` : item.name}
                   <input type="hidden" name={`${item.id}_type`} value={item.type} />
                 </td>
                 <td style={{ border: '1px solid #ddd', padding: '8px' }}>

@@ -80,12 +80,12 @@ else{
   const [jobtitleforempid] = await pool.query(`SELECT JOB_TITLE FROM C_EMP WHERE empid = ?`, [empid]);
   let jobstitle = jobtitleforempid[0]?.JOB_TITLE;
   const [realtitle] = await pool.query(
-    `SELECT job_title FROM org_jobtitles WHERE job_title_id = ? AND orgid = ?`,
+    `SELECT job_title FROM C_ORG_JOBTITLES WHERE job_title_id = ? AND orgid = ?`,
     [jobstitle, orgid]
   );
   jobstitle = realtitle[0]?.job_title;
 
-  const [jobtype] = await pool.query('SELECT Name FROM generic_values WHERE id = ? AND orgid = ?', [parseInt(offerLetterData.finalised_jobtype), orgid]);
+  const [jobtype] = await pool.query('SELECT Name FROM C_GENERIC_VALUES WHERE id = ? AND orgid = ?', [parseInt(offerLetterData.finalised_jobtype), orgid]);
   const s = jobtype[0]?.Name;
 
   const [reportToRows] = await pool.query(
@@ -95,7 +95,7 @@ else{
   let titlejob = 'Manager';
   if (reportToRows.length > 0 && reportToRows[0].JOB_TITLE) {
     const [titlejobRows] = await pool.query(
-      `SELECT job_title FROM org_jobtitles WHERE job_title_id = ? AND orgid = ?`,
+      `SELECT job_title FROM C_ORG_JOBTITLES WHERE job_title_id = ? AND orgid = ?`,
       [reportToRows[0].JOB_TITLE, orgid]
     );
     titlejob = titlejobRows.length > 0 ? titlejobRows[0].job_title : 'Manager';
@@ -106,7 +106,7 @@ else{
   let finalisedJobTitleName = offerLetterData.finalised_jobtitle;
   if (offerLetterData.finalised_jobtitle) {
     const [jobTitleRows] = await pool.query(
-      `SELECT job_title FROM org_jobtitles WHERE job_title_id = ? AND orgid = ? AND is_active = 1`,
+      `SELECT job_title FROM C_ORG_JOBTITLES WHERE job_title_id = ? AND orgid = ? AND is_active = 1`,
       [offerLetterData.finalised_jobtitle, orgid]
     );
     finalisedJobTitleName = jobTitleRows.length > 0 ? jobTitleRows[0].job_title : 'Not specified';
@@ -115,7 +115,7 @@ else{
   let finalisedDepartmentName = offerLetterData.finalised_department;
   if (offerLetterData.finalised_department) {
     const [deptRows] = await pool.query(
-      `SELECT name FROM org_departments WHERE id = ? AND orgid = ? AND isactive = 1`,
+      `SELECT name FROM C_ORG_DEPARTMENTS WHERE id = ? AND orgid = ? AND isactive = 1`,
       [offerLetterData.finalised_department, orgid]
     );
     finalisedDepartmentName = deptRows.length > 0 ? deptRows[0].name : 'Not specified';
@@ -126,7 +126,7 @@ else{
   if (roleids.length > 0) {
     const placeholders = roleids.map(() => '?').join(',');
     const [roleRows] = await pool.query(
-      `SELECT rolename FROM org_role_table WHERE roleid IN (${placeholders}) AND orgid = ? AND is_active = 1`,
+      `SELECT rolename FROM C_ORG_ROLE_TABLE WHERE roleid IN (${placeholders}) AND orgid = ? AND is_active = 1`,
       [...roleids, orgid]
     );
     roleNames = roleRows.map(row => row.rolename);
@@ -274,11 +274,11 @@ export async function fetchalldetails(interviewid) {
         b.resumepath, b.salary_expected, b.custom_salary_by_interviewer, b.offerletter_timestamp,
         c.first_name, c.last_name, c.email, c.mobilenumber, c.dateofbirth, c.addresslane1,
         c.addresslane2, c.zipcode, c.gender, e.display_job_name,e.expected_job_title,e.addresslane1 as a1,e.addresslane2 as a2,e.zipcode as z1,e.stateid as s1,e.custom_state_name as s2,e.countryid as c1,e.expected_role as role1,e.expected_department as d1,e.job_type as job1,z.job_title,z.max_salary,z.min_salary,z.level
-      FROM interview_table AS a
-      JOIN applications AS b ON a.application_id = b.applicationid
-      JOIN candidate AS c ON b.candidate_id = c.cid
-      JOIN externaljobs AS e ON b.jobid = e.jobid
-      JOIN org_jobtitles as z on z.job_title_id=e.expected_job_title
+      FROM C_INTERVIEW_TABLES AS a
+      JOIN C_APPLICATIONS AS b ON a.application_id = b.applicationid
+      JOIN C_CANDIDATE AS c ON b.candidate_id = c.cid
+      JOIN C_EXTERNAL_JOBS AS e ON b.jobid = e.jobid
+      JOIN C_ORG_JOBTITLES as z on z.job_title_id=e.expected_job_title
       WHERE a.interview_id = ?`,
       [interviewid]
     );
@@ -288,18 +288,18 @@ export async function fetchalldetails(interviewid) {
     }
 
     const [panelRows] = await pool.query(
-      `SELECT empid, email, is_he_employee FROM interview_panel WHERE interview_id = ?`,
+      `SELECT empid, email, is_he_employee FROM C_INTERVIEW_PANELS WHERE interview_id = ?`,
       [interviewid]
     );
     
     const [department]=await pool.query(
-      `SELECT name FROM org_departments WHERE id = ?  AND isactive = 1`,
+      `SELECT name FROM C_ORG_DEPARTMENTS WHERE id = ?  AND isactive = 1`,
       [mainRows[0].d1]
     );
     const departmentname=department[0].name;
 
 
-     const [jobtype] = await pool.query('select Name from generic_values where id=?', [parseInt(mainRows[0].job1)]);
+     const [jobtype] = await pool.query('select Name from C_GENERIC_VALUES where id=?', [parseInt(mainRows[0].job1)]);
   const jobtypename = jobtype[0].Name;
 
 
@@ -331,14 +331,14 @@ let  countryname = country[0].VALUE||'';
         finalised_jobtype, finalised_pay_term, expected_join_date, reportto_empid,
         adress_lane_1, adress_lane_2, zipcode, stateid, countryid, custom_state_name, 
         offerletter_url, offer_letter_sent
-      FROM offerletters
+      FROM C_OFFER_LETTERS
       WHERE applicationid = ?`,
       [mainRows[0]?.application_id]
     );
 
-    // Fetch roleids from application_role_assign
+    // Fetch roleids from C_APPLICATIONS_ROLE_ASSIGN
     const [roleRows] = await pool.query(
-      `SELECT roleid FROM application_role_assign WHERE applicationid = ? AND orgid = ?`,
+      `SELECT roleid FROM C_APPLICATIONS_ROLE_ASSIGN WHERE applicationid = ? AND orgid = ?`,
       [mainRows[0]?.application_id, mainRows[0]?.orgid]
     );
 
@@ -346,7 +346,7 @@ let  countryname = country[0].VALUE||'';
     const [roundsRows] = await pool.query(
       `SELECT r.*, ip.empid AS panel_empid, ip.email, ip.is_he_employee
        FROM C_INTERVIEW_ROUNDS r
-       LEFT JOIN interview_panel ip ON r.Roundid = ip.Roundid AND r.orgid = ip.orgid AND r.interview_id = ip.interview_id
+       LEFT JOIN C_INTERVIEW_PANELS ip ON r.Roundid = ip.Roundid AND r.orgid = ip.orgid AND r.interview_id = ip.interview_id
        WHERE r.interview_id = ? AND r.orgid = ?`,
       [interviewid, mainRows[0].orgid]
     );
@@ -409,14 +409,14 @@ let  countryname = country[0].VALUE||'';
 export async function fetchDropdownData(orgid) {
   try {
     const pool = await DBconnection();
-    const [departments] = await pool.query('SELECT id, name FROM org_departments WHERE orgid = ? AND isactive = 1', [orgid]);
-    const [payFrequencies] = await pool.query('SELECT id, Name FROM generic_values WHERE g_id = 4 AND orgid = ? AND isactive = 1', [orgid]);
-    const [jobTitles] = await pool.query('SELECT job_title_id, job_title, level, min_salary, max_salary FROM org_jobtitles WHERE orgid = ? AND is_active = 1', [orgid]);
+    const [departments] = await pool.query('SELECT id, name FROM C_ORG_DEPARTMENTS WHERE orgid = ? AND isactive = 1', [orgid]);
+    const [payFrequencies] = await pool.query('SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 4 AND orgid = ? AND isactive = 1', [orgid]);
+    const [jobTitles] = await pool.query('SELECT job_title_id, job_title, level, min_salary, max_salary FROM C_ORG_JOBTITLES WHERE orgid = ? AND is_active = 1', [orgid]);
     const [countries] = await pool.query('SELECT ID, VALUE FROM C_COUNTRY WHERE ACTIVE = 1');
     const [states] = await pool.query('SELECT ID, VALUE FROM C_STATE WHERE ACTIVE = 1');
     const [employeeRows] = await pool.query('SELECT e.empid, e.EMP_FST_NAME, e.EMP_LAST_NAME FROM C_EMP e WHERE e.orgid = ?', [orgid]);
-    const [jobtype] = await pool.query('SELECT id, g_id, Name FROM generic_values WHERE g_id = 14 AND isactive = 1 AND orgid = ?', [orgid]);
-    const [roles] = await pool.query('SELECT roleid, rolename FROM org_role_table WHERE orgid = ? AND is_active = 1', [orgid]);
+    const [jobtype] = await pool.query('SELECT id, g_id, Name FROM C_GENERIC_VALUES WHERE g_id = 14 AND isactive = 1 AND orgid = ?', [orgid]);
+    const [roles] = await pool.query('SELECT roleid, rolename FROM C_ORG_ROLE_TABLE WHERE orgid = ? AND is_active = 1', [orgid]);
 
     const employees = employeeRows.map(emp => ({
       empid: emp.empid,
@@ -450,18 +450,18 @@ export async function updateStatus(applicationid, status, interview_id) {
 
     try {
       const [result] = await connection.query(
-        'UPDATE applications SET status = ? WHERE applicationid = ?',
+        'UPDATE C_APPLICATIONS SET status = ? WHERE applicationid = ?',
         [status, applicationid]
       );
 
       if (status !== 'offerletter-generated') {
         await connection.query(
-          'UPDATE offerletters SET confirmed = 0 WHERE applicationid = ?',
+          'UPDATE C_OFFER_LETTERS SET confirmed = 0 WHERE applicationid = ?',
           [applicationid]
         );
       } else {
         await connection.query(
-          'UPDATE interview_table SET offer_letter_generated = 1 WHERE interview_id = ?',
+          'UPDATE C_INTERVIEW_TABLES SET offer_letter_generated = 1 WHERE interview_id = ?',
           [interview_id]
         );
       }
@@ -502,7 +502,7 @@ export async function saveOfferLetter(applicationid, offerLetterData, orgid, det
       const normalizedApplicationId = applicationid;
 
       const [existingOffer] = await connection.query(
-        'SELECT offer_letter_sent FROM offerletters WHERE applicationid = ?',
+        'SELECT offer_letter_sent FROM C_OFFER_LETTERS WHERE applicationid = ?',
         [normalizedApplicationId]
       );
 
@@ -519,7 +519,7 @@ export async function saveOfferLetter(applicationid, offerLetterData, orgid, det
 
       for (const roleid of roleids) {
         const [role] = await connection.execute(
-          'SELECT roleid FROM org_role_table WHERE roleid = ? AND orgid = ? AND is_active = 1',
+          'SELECT roleid FROM C_ORG_ROLE_TABLE WHERE roleid = ? AND orgid = ? AND is_active = 1',
           [roleid, orgid]
         );
         if (role.length === 0) {
@@ -530,7 +530,7 @@ export async function saveOfferLetter(applicationid, offerLetterData, orgid, det
 
       if (offerLetterData.finalised_jobtitle) {
         const [jobTitle] = await connection.execute(
-          'SELECT job_title_id FROM org_jobtitles WHERE job_title_id = ? AND orgid = ? AND is_active = 1',
+          'SELECT job_title_id FROM C_ORG_JOBTITLES WHERE job_title_id = ? AND orgid = ? AND is_active = 1',
           [offerLetterData.finalised_jobtitle, orgid]
         );
         if (jobTitle.length === 0) {
@@ -541,7 +541,7 @@ export async function saveOfferLetter(applicationid, offerLetterData, orgid, det
 
       if (offerLetterData.finalised_department) {
         const [dept] = await connection.execute(
-          'SELECT id FROM org_departments WHERE id = ? AND orgid = ? AND isactive = 1',
+          'SELECT id FROM C_ORG_DEPARTMENTS WHERE id = ? AND orgid = ? AND isactive = 1',
           [offerLetterData.finalised_department, orgid]
         );
         if (dept.length === 0) {
@@ -588,13 +588,13 @@ export async function saveOfferLetter(applicationid, offerLetterData, orgid, det
       fs.writeFileSync(offerletterPath, pdfBytes);
 
       const [existingRows] = await connection.query(
-        'SELECT applicationid FROM offerletters WHERE applicationid = ?',
+        'SELECT applicationid FROM C_OFFER_LETTERS WHERE applicationid = ?',
         [normalizedApplicationId]
       );
 
       if (existingRows.length > 0) {
         const [result] = await connection.query(
-          `UPDATE offerletters SET
+          `UPDATE C_OFFER_LETTERS SET
             offerletter_url = ?,
             offerletter_generated_timestamp = NOW(),
             expected_join_date = ?,
@@ -630,7 +630,7 @@ export async function saveOfferLetter(applicationid, offerLetterData, orgid, det
         }
       } else {
         const [result] = await connection.query(
-          `INSERT INTO offerletters (
+          `INSERT INTO C_OFFER_LETTERS (
             applicationid, offerletter_url, offerletter_generated_timestamp, expected_join_date,
             adress_lane_1, adress_lane_2, zipcode, stateid, countryid, custom_state_name,
             finalised_salary, finalised_jobtitle, finalised_department,
@@ -654,13 +654,13 @@ export async function saveOfferLetter(applicationid, offerLetterData, orgid, det
       }
 
       const [deleteResult] = await connection.query(
-        'DELETE FROM application_role_assign WHERE applicationid = ? AND orgid = ?',
+        'DELETE FROM C_APPLICATIONS_ROLE_ASSIGN WHERE applicationid = ? AND orgid = ?',
         [normalizedApplicationId, orgid]
       );
 
       for (const roleid of roleids) {
         const [roleAssignResult] = await connection.query(
-          `INSERT INTO application_role_assign (applicationid, orgid, roleid) 
+          `INSERT INTO C_APPLICATIONS_ROLE_ASSIGN (applicationid, orgid, roleid) 
            VALUES (?, ?, ?) 
            ON DUPLICATE KEY UPDATE roleid = roleid`,
           [normalizedApplicationId, orgid, roleid]
@@ -668,7 +668,7 @@ export async function saveOfferLetter(applicationid, offerLetterData, orgid, det
       }
 
       const [salaryResult] = await connection.query(
-        `UPDATE applications SET custom_salary_by_interviewer = ? WHERE applicationid = ?`,
+        `UPDATE C_APPLICATIONS SET custom_salary_by_interviewer = ? WHERE applicationid = ?`,
         [offerLetterData.finalised_salary, normalizedApplicationId]
       );
 

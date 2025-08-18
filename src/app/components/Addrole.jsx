@@ -35,17 +35,17 @@ export default function AddRole({ currentRole, orgid, error }) {
     formData.append('orgid', orgid || '');
     formData.append('permissions', JSON.stringify(addform_permissions));
 
-    // Client-side validation: Ensure at least one submenu is selected for menus with hassubmenu='yes'
+    // Client-side validation: Ensure at least one C_SUBMENU is selected for menus with hassubmenu='yes'
     const addform_invalidSelections = addform_permissions
       .filter(p => !p.submenuid)
       .map(p => addform_availableMenus.find(m => m.menuid === p.menuid))
-      .filter(menu => menu && menu.hassubmenu === 'yes')
-      .filter(menu => {
-        const selectedSubmenus = addform_permissions.filter(p => p.menuid === menu.menuid && p.submenuid);
+      .filter(C_MENU => C_MENU && C_MENU.hassubmenu === 'yes')
+      .filter(C_MENU => {
+        const selectedSubmenus = addform_permissions.filter(p => p.menuid === C_MENU.menuid && p.submenuid);
         return selectedSubmenus.length === 0;
       });
     if (addform_invalidSelections.length > 0) {
-      addform_setFormError('Please select at least one submenu for each feature with submenus.');
+      addform_setFormError('Please select at least one C_SUBMENU for each feature with submenus.');
       return;
     }
 
@@ -62,8 +62,8 @@ export default function AddRole({ currentRole, orgid, error }) {
   };
 
   const addform_handlePermissionToggle = (menuid, submenuid = null) => {
-    const menu = addform_availableMenus.find(m => m.menuid === menuid);
-    if (!menu) return;
+    const C_MENU = addform_availableMenus.find(m => m.menuid === menuid);
+    if (!C_MENU) return;
 
     addform_setPermissions(prev => {
       const permissionSet = new Set(prev.map(p => `${p.menuid}:${p.submenuid || 'null'}`));
@@ -80,7 +80,7 @@ export default function AddRole({ currentRole, orgid, error }) {
         } else {
           updatedPermissions.push({ menuid, submenuid });
         }
-        if (menu.hassubmenu === 'yes') {
+        if (C_MENU.hassubmenu === 'yes') {
           const remainingSubmenus = updatedPermissions.filter(p => p.menuid === menuid && p.submenuid);
           if (remainingSubmenus.length === 0) {
             updatedPermissions = updatedPermissions.filter(p => p.menuid !== menuid);
@@ -91,7 +91,7 @@ export default function AddRole({ currentRole, orgid, error }) {
           updatedPermissions = updatedPermissions.filter(p => p.menuid !== menuid);
         } else {
           updatedPermissions.push({ menuid, submenuid: null });
-          if (menu.hassubmenu === 'yes') {
+          if (C_MENU.hassubmenu === 'yes') {
             const submenus = addform_availableSubmenus
               .filter(sm => sm.menuid === menuid)
               .map(sm => ({ menuid, submenuid: sm.submenuid }))
@@ -161,31 +161,31 @@ export default function AddRole({ currentRole, orgid, error }) {
           {addform_availableMenus.length === 0 ? (
             <p>No features available.</p>
           ) : (
-            addform_availableMenus.map((menu) => (
-              <div key={`menu-${menu.menuid}`} style={{ margin: "10px 0" }}>
+            addform_availableMenus.map((C_MENU) => (
+              <div key={`menu-${C_MENU.menuid}`} style={{ margin: "10px 0" }}>
                 <label style={{ display: "flex", alignItems: "center" }}>
                   <input
                     type="checkbox"
-                    checked={addform_permissions.some((p) => p.menuid === menu.menuid && !p.submenuid)}
-                    onChange={() => addform_handlePermissionToggle(menu.menuid)}
+                    checked={addform_permissions.some((p) => p.menuid === C_MENU.menuid && !p.submenuid)}
+                    onChange={() => addform_handlePermissionToggle(C_MENU.menuid)}
                     style={{ marginRight: "10px" }}
                   />
-                  {menu.menuname} ({menu.menuurl})
+                  {C_MENU.menuname} ({C_MENU.menuurl})
                 </label>
-                {menu.hassubmenu === 'yes' && addform_availableSubmenus
-                  .filter((sm) => sm.menuid === menu.menuid)
-                  .map((submenu) => (
-                    <div key={`submenu-${submenu.submenuid}`} style={{ margin: "5px 0", marginLeft: "20px" }}>
+                {C_MENU.hassubmenu === 'yes' && addform_availableSubmenus
+                  .filter((sm) => sm.menuid === C_MENU.menuid)
+                  .map((C_SUBMENU) => (
+                    <div key={`submenu-${C_SUBMENU.submenuid}`} style={{ margin: "5px 0", marginLeft: "20px" }}>
                       <label style={{ display: "flex", alignItems: "center" }}>
                         <input
                           type="checkbox"
                           checked={addform_permissions.some(
-                            (p) => p.menuid === menu.menuid && p.submenuid === submenu.submenuid
+                            (p) => p.menuid === C_MENU.menuid && p.submenuid === C_SUBMENU.submenuid
                           )}
-                          onChange={() => addform_handlePermissionToggle(menu.menuid, submenu.submenuid)}
+                          onChange={() => addform_handlePermissionToggle(C_MENU.menuid, C_SUBMENU.submenuid)}
                           style={{ marginRight: "10px" }}
                         />
-                        {submenu.submenuname}
+                        {C_SUBMENU.submenuname}
                       </label>
                     </div>
                   ))}

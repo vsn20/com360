@@ -33,7 +33,7 @@ export default async function jobtitles() {
 
 
                 [jobtitles]=await pool.query(
-                'SELECT job_title_id,job_title, level, min_salary, max_salary,is_active,CreatedDate FROM org_jobtitles WHERE orgid = ?',
+                'SELECT job_title_id,job_title, level, min_salary, max_salary,is_active,CreatedDate FROM C_ORG_JOBTITLES WHERE orgid = ?',
                 [orgid]
                 );
 

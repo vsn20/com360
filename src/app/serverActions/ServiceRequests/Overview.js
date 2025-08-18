@@ -167,7 +167,7 @@ export async function updateServiceRequest(formData) {
 
       if (priorityCd) {
         const [validPriority] = await pool.query(
-          'SELECT id FROM generic_values WHERE g_id = ? AND Name = ? AND orgid = ? AND isactive = 1',
+          'SELECT id FROM C_GENERIC_VALUES WHERE g_id = ? AND Name = ? AND orgid = ? AND isactive = 1',
           [11, priorityCd, orgid]
         );
         if (validPriority.length === 0) {
@@ -178,7 +178,7 @@ export async function updateServiceRequest(formData) {
 
       if (typeCd) {
         const [validType] = await pool.query(
-          'SELECT id FROM generic_values WHERE g_id = ? AND Name = ? AND orgid = ? AND isactive = 1',
+          'SELECT id FROM C_GENERIC_VALUES WHERE g_id = ? AND Name = ? AND orgid = ? AND isactive = 1',
           [12, typeCd, orgid]
         );
         if (validType.length === 0) {
@@ -189,7 +189,7 @@ export async function updateServiceRequest(formData) {
 
       if (subTypeCd) {
         const [validSubType] = await pool.query(
-          'SELECT id FROM generic_values WHERE g_id = ? AND Name = ? AND orgid = ? AND isactive = 1',
+          'SELECT id FROM C_GENERIC_VALUES WHERE g_id = ? AND Name = ? AND orgid = ? AND isactive = 1',
           [13, subTypeCd, orgid]
         );
         if (validSubType.length === 0) {

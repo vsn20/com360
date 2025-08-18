@@ -193,7 +193,7 @@ export async function middleware(request) {
         console.log("Invalid jwt_token for resume path, redirecting to login");
         return NextResponse.redirect(new URL('/login', request.url));
       } else if (jobToken || headerToken) {
-        // Use job_jwt_token for candidate access
+        // Use job_jwt_token for C_CANDIDATE access
         const tokenToUse = jobToken || headerToken;
         console.log(`Verifying job_jwt_token for resume path with applicationId: ${applicationId}`);
         const verifyResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/jobs/verify-resume-access`, {
@@ -225,13 +225,13 @@ export async function middleware(request) {
     }
   }
 
-  // Special handling for job candidate paths
+  // Special handling for job C_CANDIDATE paths
   const isJobCandidatePath = pathname.startsWith('/jobs/jobapplications') || pathname.startsWith('/jobs/apply/');
   if (isJobCandidatePath) {
     const jobToken = request.cookies.get('job_jwt_token')?.value;
 
     if (!jobToken) {
-      console.log("No job_jwt_token found for job candidate path, redirecting to jobs login");
+      console.log("No job_jwt_token found for job C_CANDIDATE path, redirecting to jobs login");
       return NextResponse.redirect(new URL('/jobs/jobslogin', request.url));
     }
 

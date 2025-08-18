@@ -44,8 +44,8 @@ export async function fetchConfigData() {
     console.log("MySQL connection pool acquired");
     const [rows] = await pool.execute(
       `SELECT gn.g_id, gn.Name AS category, gv.id, gv.Name AS value, gv.isactive
-       FROM generic_names gn
-       LEFT JOIN generic_values gv ON gn.g_id = gv.g_id AND gv.orgid = ?
+       FROM C_GENERIC_NAMES gn
+       LEFT JOIN C_GENERIC_VALUES gv ON gn.g_id = gv.g_id AND gv.orgid = ?
        ORDER BY gn.Name, gv.Name`,
       [orgId]
     );
@@ -93,7 +93,7 @@ export async function addConfigValue(prevState, formData) {
 
     // Check if category exists
     const [category] = await pool.execute(
-      'SELECT g_id FROM generic_names WHERE g_id = ?',
+      'SELECT g_id FROM C_GENERIC_NAMES WHERE g_id = ?',
       [g_id]
     );
     if (category.length === 0) {
@@ -103,7 +103,7 @@ export async function addConfigValue(prevState, formData) {
 
     // Check for duplicate value
     const [existing] = await pool.execute(
-      'SELECT id FROM generic_values WHERE g_id = ? AND Name = ? AND orgid = ?',
+      'SELECT id FROM C_GENERIC_VALUES WHERE g_id = ? AND Name = ? AND orgid = ?',
       [g_id, valueName, orgId]
     );
     if (existing.length > 0) {
@@ -113,7 +113,7 @@ export async function addConfigValue(prevState, formData) {
 
     // Insert new value
     await pool.query(
-      `INSERT INTO generic_values (g_id, Name, isactive, orgid, cutting)
+      `INSERT INTO C_GENERIC_VALUES (g_id, Name, isactive, orgid, cutting)
        VALUES (?, ?, ?, ?, NULL)`,
       [g_id, valueName, isactive, orgId]
     );
@@ -163,7 +163,7 @@ export async function updateConfigValue(prevState, formData) {
 
     // Check if category exists
     const [category] = await pool.execute(
-      'SELECT g_id FROM generic_names WHERE g_id = ?',
+      'SELECT g_id FROM C_GENERIC_NAMES WHERE g_id = ?',
       [g_id]
     );
     if (category.length === 0) {
@@ -173,7 +173,7 @@ export async function updateConfigValue(prevState, formData) {
 
     // Check if value exists
     const [existingValue] = await pool.execute(
-      'SELECT id FROM generic_values WHERE id = ? AND g_id = ? AND orgid = ?',
+      'SELECT id FROM C_GENERIC_VALUES WHERE id = ? AND g_id = ? AND orgid = ?',
       [id, g_id, orgId]
     );
     if (existingValue.length === 0) {
@@ -183,7 +183,7 @@ export async function updateConfigValue(prevState, formData) {
 
     // Check for duplicate value (excluding current id)
     const [duplicate] = await pool.execute(
-      'SELECT id FROM generic_values WHERE g_id = ? AND Name = ? AND orgid = ? AND id != ?',
+      'SELECT id FROM C_GENERIC_VALUES WHERE g_id = ? AND Name = ? AND orgid = ? AND id != ?',
       [g_id, valueName, orgId, id]
     );
     if (duplicate.length > 0) {
@@ -193,7 +193,7 @@ export async function updateConfigValue(prevState, formData) {
 
     // Update value
     await pool.query(
-      `UPDATE generic_values SET Name = ?, isactive = ? WHERE id = ? AND g_id = ? AND orgid = ?`,
+      `UPDATE C_GENERIC_VALUES SET Name = ?, isactive = ? WHERE id = ? AND g_id = ? AND orgid = ?`,
       [valueName, isactive, id, g_id, orgId]
     );
     console.log(`Config value updated: id ${id}, g_id ${g_id}, value ${valueName}`);

@@ -35,21 +35,21 @@ const page = async () => {
 
         // Fetch billTypes (g_id = 7)
         const [billTypeRows] = await pool.query(
-          'SELECT id, Name FROM generic_values WHERE g_id = ? AND orgid = ? AND isactive = 1',
+          'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = ? AND orgid = ? AND isactive = 1',
           [7, orgId]
         );
         billTypes = billTypeRows;
 
         // Fetch otBillTypes (g_id = 8)
         const [otBillTypeRows] = await pool.query(
-          'SELECT id, Name FROM generic_values WHERE g_id = ? AND orgid = ? AND isactive = 1',
+          'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = ? AND orgid = ? AND isactive = 1',
           [8, orgId]
         );
         otBillTypes = otBillTypeRows;
 
         // Fetch payTerms (g_id = 9)
         const [payTermRows] = await pool.query(
-          'SELECT id, Name FROM generic_values WHERE g_id = ? AND orgid = ? AND isactive = 1',
+          'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = ? AND orgid = ? AND isactive = 1',
           [9, orgId]
         );
         payTerms = payTermRows;

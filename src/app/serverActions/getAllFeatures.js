@@ -44,7 +44,7 @@ export async function getAllFeatures() {
     // Find the admin role for the organization
     const [adminRoleRows] = await pool.execute(
       `SELECT roleid 
-       FROM org_role_table 
+       FROM C_ORG_ROLE_TABLE 
        WHERE orgid = ? AND isadmin = 1 AND is_active = 1`,
       [orgId]
     );
@@ -59,24 +59,24 @@ export async function getAllFeatures() {
     // Fetch menus assigned to the admin role
     const [menuRows] = await pool.execute(
       `SELECT DISTINCT m.id, m.name, m.hassubmenu
-       FROM menu m 
-       JOIN role_menu_permissions rmp ON m.id = rmp.menuid 
+       FROM C_MENU m 
+       JOIN C_ROLE_MENU_PERMISSIONS rmp ON m.id = rmp.menuid 
        WHERE rmp.roleid = ? AND m.is_active = 1`,
       [adminRoleId]
     );
 
-    const features = await Promise.all(menuRows.map(async (menu) => {
-      if (menu.hassubmenu === 'yes') {
+    const features = await Promise.all(menuRows.map(async (C_MENU) => {
+      if (C_MENU.hassubmenu === 'yes') {
         const [submenuRows] = await pool.query(
-          `SELECT submenu.id, submenu.name, submenu.url
-           FROM submenu
-           JOIN role_menu_permissions rmp ON submenu.id = rmp.submenuid
-           WHERE rmp.roleid = ? AND submenu.menuid = ? AND submenu.is_active = 1`,
-          [adminRoleId, menu.id]
+          `SELECT C_SUBMENU.id, C_SUBMENU.name, C_SUBMENU.url
+           FROM C_SUBMENU
+           JOIN C_ROLE_MENU_PERMISSIONS rmp ON C_SUBMENU.id = rmp.submenuid
+           WHERE rmp.roleid = ? AND C_SUBMENU.menuid = ? AND C_SUBMENU.is_active = 1`,
+          [adminRoleId, C_MENU.id]
         );
-        return { ...menu, submenu: submenuRows };
+        return { ...C_MENU, C_SUBMENU: submenuRows };
       }
-      return { ...menu, submenu: [] };
+      return { ...C_MENU, C_SUBMENU: [] };
     }));
 
     console.log('Fetched admin role features:', features);

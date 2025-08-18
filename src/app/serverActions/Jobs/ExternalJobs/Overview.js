@@ -78,7 +78,7 @@ export async function fetchExternalJobsByOrgId() {
               zipcode, stateid, custom_state_name, countryid, active, expected_job_title,
               expected_role, expected_department, display_job_name, job_type, description,
               no_of_vacancies, created_by, last_updated_by
-       FROM externaljobs WHERE orgid = ?`,
+       FROM C_EXTERNAL_JOBS WHERE orgid = ?`,
       [orgId]
     );
     console.log('Fetched external jobs:', rows);
@@ -124,7 +124,7 @@ export async function fetchExternalJobById(jobid) {
               zipcode, stateid, custom_state_name, countryid, active, expected_job_title,
               expected_role, expected_department, display_job_name, job_type, description,
               no_of_vacancies, created_by, last_updated_by
-       FROM externaljobs WHERE jobid = ? AND orgid = ?`,
+       FROM C_EXTERNAL_JOBS WHERE jobid = ? AND orgid = ?`,
       [jobid, orgId]
     );
 
@@ -183,7 +183,7 @@ export async function updateExternalJob(formData) {
       pool = await DBconnection();
 
       const [existing] = await pool.execute(
-        'SELECT jobid FROM externaljobs WHERE jobid = ? AND orgid = ?',
+        'SELECT jobid FROM C_EXTERNAL_JOBS WHERE jobid = ? AND orgid = ?',
         [jobid, orgId]
       );
       if (existing.length === 0) {
@@ -223,31 +223,31 @@ export async function updateExternalJob(formData) {
         //if (!noOfVacancies || isNaN(noOfVacancies)) return { error: 'Number of Vacancies is required and must be a valid number.' };
 
         const [jobTitleCheck] = await pool.execute(
-          'SELECT job_title_id FROM org_jobtitles WHERE job_title_id = ? AND orgid = ? AND is_active = 1',
+          'SELECT job_title_id FROM C_ORG_JOBTITLES WHERE job_title_id = ? AND orgid = ? AND is_active = 1',
           [expectedJobTitle, orgId]
         );
         if (jobTitleCheck.length === 0) return { error: 'Invalid or inactive job title.' };
 
         const [roleCheck] = await pool.execute(
-          'SELECT roleid FROM org_role_table WHERE roleid = ? AND orgid = ?',
+          'SELECT roleid FROM C_ORG_ROLE_TABLE WHERE roleid = ? AND orgid = ?',
           [expectedRole, orgId]
         );
         if (roleCheck.length === 0) return { error: 'Invalid or inactive role.' };
 
         const [deptCheck] = await pool.execute(
-          'SELECT id FROM org_departments WHERE id = ? AND orgid = ? AND isactive = 1',
+          'SELECT id FROM C_ORG_DEPARTMENTS WHERE id = ? AND orgid = ? AND isactive = 1',
           [expectedDepartment, orgId]
         );
         if (deptCheck.length === 0) return { error: 'Invalid or inactive department.' };
 
         const [jobTypeCheck] = await pool.execute(
-          'SELECT id FROM generic_values WHERE id = ? AND g_id = 14 AND orgid = ? AND isactive = 1',
+          'SELECT id FROM C_GENERIC_VALUES WHERE id = ? AND g_id = 14 AND orgid = ? AND isactive = 1',
           [jobType, orgId]
         );
         if (jobTypeCheck.length === 0) return { error: 'Invalid or inactive job type.' };
 
         const [result] = await pool.query(
-          `UPDATE externaljobs 
+          `UPDATE C_EXTERNAL_JOBS 
            SET display_job_name = ?, expected_job_title = ?, expected_role = ?, 
                expected_department = ?, job_type = ?, description = ?, no_of_vacancies = ?,
                last_updated_by = ?
@@ -307,7 +307,7 @@ export async function updateExternalJob(formData) {
         }
 
         const [result] = await pool.query(
-          `UPDATE externaljobs 
+          `UPDATE C_EXTERNAL_JOBS 
            SET addresslane1 = ?, addresslane2 = ?, zipcode = ?, stateid = ?, 
                custom_state_name = ?, countryid = ?, lastdate_for_application = ?, 
                active = ?, last_updated_by = ?

@@ -95,7 +95,7 @@ export async function addjobtitle(formData) {
 
       pool = await DBconnection();
 
-      const [counts] = await pool.query('SELECT COUNT(*) as count FROM org_jobtitles WHERE orgid = ?', [orgId]);
+      const [counts] = await pool.query('SELECT COUNT(*) as count FROM C_ORG_JOBTITLES WHERE orgid = ?', [orgId]);
       const updatedCount = counts[0].count;
       const jobid = `${orgId}-${updatedCount + 1}`;
 
@@ -103,7 +103,7 @@ export async function addjobtitle(formData) {
       const createdBy = await getCurrentUserEmpIdName(pool, userId, orgId);
 
       await pool.query(
-        `INSERT INTO org_jobtitles (job_title_id, job_title, min_salary, max_salary, level, orgid, is_active, Createdby, CreatedDate)
+        `INSERT INTO C_ORG_JOBTITLES (job_title_id, job_title, min_salary, max_salary, level, orgid, is_active, Createdby, CreatedDate)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?,?)`,
         [jobid, jobtitle, minsalary, maxsalary, level, orgId, isActive, createdBy,new Date()]
       );

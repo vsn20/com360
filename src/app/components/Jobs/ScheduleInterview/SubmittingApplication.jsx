@@ -52,7 +52,7 @@ const SubmittingApplication = ({ applieddetails, orgid, empid, handlesback }) =>
         aValue = parseInt(getdisplayprojectid(a.applicationid));
         bValue = parseInt(getdisplayprojectid(b.applicationid));
         return direction === 'asc' ? aValue - bValue : bValue - aValue;
-      case 'candidateid':
+      case 'C_CANDIDATEid':
         aValue = parseInt(a.candidate_id);
         bValue = parseInt(b.candidate_id);
         return direction === 'asc' ? aValue - bValue : bValue - aValue;
@@ -111,7 +111,7 @@ const SubmittingApplication = ({ applieddetails, orgid, empid, handlesback }) =>
     return matchesSearch && matchesStatus;
   });
 
-  // Sort the filtered applications
+  // Sort the filtered C_APPLICATIONS
   const sortedApplications = [...filteredApplications].sort((a, b) => 
     sortApplications(a, b, sortConfig.column, sortConfig.direction)
   );
@@ -229,11 +229,11 @@ const SubmittingApplication = ({ applieddetails, orgid, empid, handlesback }) =>
             </div>
 
             {filteredApplications.length === 0 ? (
-              <p className="empty-state">No applications found.</p>
+              <p className="empty-state">No C_APPLICATIONS found.</p>
             ) : (
               <>
-                <div className="applications-table-wrapper">
-                  <table className="applications-table">
+                <div className="C_APPLICATIONS-table-wrapper">
+                  <table className="C_APPLICATIONS-table">
                     <thead>
                       <tr>
                         <th 
@@ -243,8 +243,8 @@ const SubmittingApplication = ({ applieddetails, orgid, empid, handlesback }) =>
                           Application ID
                         </th>
                         <th 
-                          className={sortConfig.column === 'candidateid' ? `sortable sort-${sortConfig.direction}` : 'sortable'}
-                          onClick={() => requestSort('candidateid')}
+                          className={sortConfig.column === 'C_CANDIDATEid' ? `sortable sort-${sortConfig.direction}` : 'sortable'}
+                          onClick={() => requestSort('C_CANDIDATEid')}
                         >
                           Candidate ID
                         </th>

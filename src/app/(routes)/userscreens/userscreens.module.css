@@ -9,7 +9,7 @@
   top: 0;
   left: 200px; /* Account for sidebar width */
   right: 0;
-  z-index: 1000; /* Above sidebar, below submenu */
+  z-index: 1000; /* Above sidebar, below C_SUBMENU */
   background-color: white;
 }
 
@@ -54,7 +54,7 @@
   padding: 10px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   min-width: 150px;
-  z-index: 1001; /* Above navbar, below submenu */
+  z-index: 1001; /* Above navbar, below C_SUBMENU */
 }
 
 .logoContainer:hover .dropdown {
@@ -81,14 +81,14 @@
   background-color: rgb(44, 47, 51);
   padding: 5px;
   box-sizing: border-box;
-  z-index: 998; /* Below navbar and submenu */
+  z-index: 998; /* Below navbar and C_SUBMENU */
   font-size: 13px;
   font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
 }
 
 .rightContent {
   margin-left: 200px; /* Account for sidebar width */
-  margin-top: 104px; /* Account for navbar (40px) + submenu bar (64px) */
+  margin-top: 104px; /* Account for navbar (40px) + C_SUBMENU bar (64px) */
 }
 
 .sidebarMenu {
@@ -227,7 +227,7 @@
   top: 40px; /* Below navbar */
   left: 200px; /* Account for sidebar width */
   right: 0;
-  z-index: 999; /* Below submenu, above sidebar */
+  z-index: 999; /* Below C_SUBMENU, above sidebar */
   background-color: white;
   border-bottom: 1px solid #e5e7eb;
   padding: 20px 20px;
@@ -273,7 +273,7 @@
 
 .main {
   padding: 20px;
-  min-height: calc(100vh ); /* Account for navbar + submenu height */
+  min-height: calc(100vh ); /* Account for navbar + C_SUBMENU height */
   background-color: #f9fafb;
   font-size: 12px;
   font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif !important;

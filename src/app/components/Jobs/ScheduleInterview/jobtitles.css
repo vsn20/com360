@@ -1015,7 +1015,7 @@ tbody tr:hover {
 }
 
 /* Enhanced table wrapper */
-.applications-table-wrapper {
+.C_APPLICATIONS-table-wrapper {
   background-color: #fff;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
@@ -1024,7 +1024,7 @@ tbody tr:hover {
 }
 
 /* Enhanced table styles */
-.applications-table {
+.C_APPLICATIONS-table {
   width: 100%;
   border-collapse: collapse;
   background-color: #fff;
@@ -1032,7 +1032,7 @@ tbody tr:hover {
 }
 
 /* Enhanced table header */
-.applications-table th {
+.C_APPLICATIONS-table th {
   background-color: #f8fafc;
   padding: 16px 20px;
   text-align: left;
@@ -1044,11 +1044,11 @@ tbody tr:hover {
   color: #374151;
 }
 
-.applications-table th:hover {
+.C_APPLICATIONS-table th:hover {
   background-color: #f1f5f9;
 }
 
-.applications-table th.sortable::after {
+.C_APPLICATIONS-table th.sortable::after {
   content: '';
   position: absolute;
   right: 10px;
@@ -1062,20 +1062,20 @@ tbody tr:hover {
   opacity: 0.5;
 }
 
-.applications-table th.sortable.sort-asc::after {
+.C_APPLICATIONS-table th.sortable.sort-asc::after {
   border-bottom: 4px solid #0fd46c;
   border-top: none;
   opacity: 1;
 }
 
-.applications-table th.sortable.sort-desc::after {
+.C_APPLICATIONS-table th.sortable.sort-desc::after {
   border-top: 4px solid #0fd46c;
   border-bottom: none;
   opacity: 1;
 }
 
 /* Enhanced table body */
-.applications-table td {
+.C_APPLICATIONS-table td {
   padding: 16px 20px;
   text-align: left;
   border-bottom: 1px solid #f3f4f6;
@@ -1088,27 +1088,27 @@ tbody tr:hover {
 }
 
 /* Enhanced row hover effects */
-.applications-table tbody tr {
+.C_APPLICATIONS-table tbody tr {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   cursor: pointer;
 }
 
-.applications-table tbody tr:hover {
+.C_APPLICATIONS-table tbody tr:hover {
   background: linear-gradient(135deg, #f8fafc, #f0f9ff);
   transform: translateX(4px);
   box-shadow: 4px 0 12px rgba(15, 212, 108, 0.1);
 }
 
 /* Resume link styling */
-.applications-table a {
+.C_APPLICATIONS-table a {
   color: #0fd46c;
   text-decoration: none;
   font-weight: 500;
   transition: color 0.2s ease;
 }
 
-.applications-table a:hover {
+.C_APPLICATIONS-table a:hover {
   color: #0cb25a;
   text-decoration: underline;
 }
@@ -1123,8 +1123,8 @@ tbody tr:hover {
     font-size: 20px;
   }
 
-  .applications-table th,
-  .applications-table td {
+  .C_APPLICATIONS-table th,
+  .C_APPLICATIONS-table td {
     padding: 12px 15px;
   }
 
@@ -1171,8 +1171,8 @@ tbody tr:hover {
 }
 
 @media (max-width: 576px) {
-  .applications-table th,
-  .applications-table td {
+  .C_APPLICATIONS-table th,
+  .C_APPLICATIONS-table td {
     padding: 10px 12px;
   }
 

@@ -57,9 +57,9 @@ export async function getEmployees(orgid) {
     const [rows] = await pool.query(
       `SELECT e.empid, e.EMP_FST_NAME, e.EMP_LAST_NAME, e.email
        FROM C_EMP e
-       JOIN emp_role_assign era ON e.empid = era.empid AND e.orgid = era.orgid
-       JOIN role_menu_permissions rmp ON era.roleid = rmp.roleid
-       JOIN submenu sm ON rmp.submenuid = sm.id
+       JOIN C_EMP_ROLE_ASSIGN era ON e.empid = era.empid AND e.orgid = era.orgid
+       JOIN C_ROLE_MENU_PERMISSIONS rmp ON era.roleid = rmp.roleid
+       JOIN C_SUBMENU sm ON rmp.submenuid = sm.id
        WHERE e.orgid = ? AND e.STATUS = 'ACTIVE' AND sm.url = '/userscreens/jobs/interview'`,
       [orgid]
     );
@@ -75,8 +75,8 @@ export async function fetchInterviewData(orgid, application_id) {
     const pool = await DBconnection();
     const [interviewRows] = await pool.query(
       `SELECT i.start_date, i.start_am_pm, i.end_date, i.end_am_pm, i.start_time, i.end_time, i.meeting_link, i.interview_id, a.status
-       FROM interview_table i
-       JOIN applications a ON i.application_id = a.applicationid AND i.orgid = a.orgid
+       FROM C_INTERVIEW_TABLES i
+       JOIN C_APPLICATIONS a ON i.application_id = a.applicationid AND i.orgid = a.orgid
        WHERE i.orgid = ? AND i.application_id = ?`,
       [orgid, application_id]
     );
@@ -94,7 +94,7 @@ export async function fetchInterviewData(orgid, application_id) {
 
     const rounds = await Promise.all(roundRows.map(async (round) => {
       const [panelMembers] = await pool.query(
-        'SELECT empid, email, is_he_employee FROM interview_panel WHERE orgid = ? AND interview_id = ? AND Roundid = ?',
+        'SELECT empid, email, is_he_employee FROM C_INTERVIEW_PANELS WHERE orgid = ? AND interview_id = ? AND Roundid = ?',
         [orgid, interview_id, round.Roundid]
       );
       return {
@@ -152,7 +152,7 @@ export async function updateInterview(formData) {
     let interview_id;
     let isNewRecord = false;
     const [interviewRows] = await pool.query(
-      'SELECT interview_id FROM interview_table WHERE orgid = ? AND application_id = ?',
+      'SELECT interview_id FROM C_INTERVIEW_TABLES WHERE orgid = ? AND application_id = ?',
       [orgid, application_id]
     );
 
@@ -164,7 +164,7 @@ export async function updateInterview(formData) {
         }
         const description = `Interview updated to ${status} by ${employeename} on ${new Date().toISOString()}`;
         await pool.query(
-          `UPDATE applications SET status = ? WHERE orgid = ? AND applicationid = ?`,
+          `UPDATE C_APPLICATIONS SET status = ? WHERE orgid = ? AND applicationid = ?`,
           [status, orgid, application_id]
         );
         await pool.query(
@@ -174,7 +174,7 @@ export async function updateInterview(formData) {
         return { success: true };
       }
       const [s] = await pool.query(
-        'SELECT COUNT(*) AS count FROM interview_table WHERE orgid = ?',
+        'SELECT COUNT(*) AS count FROM C_INTERVIEW_TABLES WHERE orgid = ?',
         [orgid]
       );
       const m = s[0].count;
@@ -186,19 +186,19 @@ export async function updateInterview(formData) {
 
     if (isNewRecord) {
       await pool.query(
-        `INSERT INTO interview_table (orgid, application_id, interview_id, confirm)
+        `INSERT INTO C_INTERVIEW_TABLES (orgid, application_id, interview_id, confirm)
          VALUES (?, ?, ?, '1')`,
         [orgid, application_id, interview_id]
       );
     } else {
       await pool.query(
-        `UPDATE interview_table SET confirm = ? WHERE orgid = ? AND interview_id = ?`,
+        `UPDATE C_INTERVIEW_TABLES SET confirm = ? WHERE orgid = ? AND interview_id = ?`,
         ['1', orgid, interview_id]
       );
     }
 
     await pool.query(
-      'DELETE FROM interview_panel WHERE orgid = ? AND interview_id = ?',
+      'DELETE FROM C_INTERVIEW_PANELS WHERE orgid = ? AND interview_id = ?',
       [orgid, interview_id]
     );
     await pool.query(
@@ -286,7 +286,7 @@ export async function updateInterview(formData) {
         }
 
         await pool.query(
-          `INSERT INTO interview_panel (orgid, interview_id, empid, email, is_he_employee, Roundid)
+          `INSERT INTO C_INTERVIEW_PANELS (orgid, interview_id, empid, email, is_he_employee, Roundid)
            VALUES (?, ?, ?, ?, ?, ?)`,
           [orgid, interview_id, member.empid || null, emailToInsert, member.is_he_employee, roundId]
         );
@@ -299,7 +299,7 @@ export async function updateInterview(formData) {
     }
     const description = `Interview updated to ${status} by ${employeename} on ${new Date().toISOString()}`;
     await pool.query(
-      `UPDATE applications SET status = ? WHERE orgid = ? AND applicationid = ?`,
+      `UPDATE C_APPLICATIONS SET status = ? WHERE orgid = ? AND applicationid = ?`,
       [status, orgid, application_id]
     );
     await pool.query(

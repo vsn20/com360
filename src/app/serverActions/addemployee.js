@@ -111,7 +111,7 @@ export async function addemployee(formData) {
     // Validate roles
     for (const roleid of roleids) {
       const [existingRole] = await pool.query(
-        'SELECT roleid FROM org_role_table WHERE roleid = ? AND orgid = ?',
+        'SELECT roleid FROM C_ORG_ROLE_TABLE WHERE roleid = ? AND orgid = ?',
         [roleid, orgid]
       );
       if (existingRole.length === 0) {
@@ -123,7 +123,7 @@ export async function addemployee(formData) {
     let deptName = null;
     if (deptId) {
       const [deptResult] = await pool.query(
-        'SELECT name FROM org_departments WHERE id = ? AND orgid = ? AND isactive = 1',
+        'SELECT name FROM C_ORG_DEPARTMENTS WHERE id = ? AND orgid = ? AND isactive = 1',
         [deptId, orgid]
       );
       if (deptResult.length > 0) {
@@ -184,10 +184,10 @@ export async function addemployee(formData) {
 
     console.log(`Employee ${empid} inserted successfully`);
 
-    // Insert roles into emp_role_assign with ON DUPLICATE KEY UPDATE
+    // Insert roles into C_EMP_ROLE_ASSIGN with ON DUPLICATE KEY UPDATE
     for (const roleid of roleids) {
       await pool.query(
-        `INSERT INTO emp_role_assign (empid, orgid, roleid) 
+        `INSERT INTO C_EMP_ROLE_ASSIGN (empid, orgid, roleid) 
          VALUES (?, ?, ?) 
          ON DUPLICATE KEY UPDATE roleid = roleid`,
         [empid, orgid, roleid]
@@ -205,7 +205,7 @@ export async function addemployee(formData) {
     }
 
     const [validLeaveTypes] = await pool.execute(
-      'SELECT id FROM generic_values WHERE g_id = ? AND orgid = ? AND isactive = 1',
+      'SELECT id FROM C_GENERIC_VALUES WHERE g_id = ? AND orgid = ? AND isactive = 1',
       [1, orgid]
     );
     const validLeaveIds = validLeaveTypes.map(leave => leave.id.toString());

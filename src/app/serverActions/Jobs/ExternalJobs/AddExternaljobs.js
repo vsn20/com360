@@ -120,25 +120,25 @@ export async function addExternalJob(prevState, formData) {
 
       // Validate job title, role, department, job type, state, and country
       const [jobTitleCheck] = await pool.execute(
-        'SELECT job_title_id FROM org_jobtitles WHERE job_title_id = ? AND orgid = ? AND is_active = 1',
+        'SELECT job_title_id FROM C_ORG_JOBTITLES WHERE job_title_id = ? AND orgid = ? AND is_active = 1',
         [expectedJobTitle, orgId]
       );
       if (jobTitleCheck.length === 0) return { error: 'Invalid or inactive job title.' };
 
       const [roleCheck] = await pool.execute(
-        'SELECT roleid FROM org_role_table WHERE roleid = ? AND orgid = ?',
+        'SELECT roleid FROM C_ORG_ROLE_TABLE WHERE roleid = ? AND orgid = ?',
         [expectedRole, orgId]
       );
       if (roleCheck.length === 0) return { error: 'Invalid or inactive role.' };
 
       const [deptCheck] = await pool.execute(
-        'SELECT id FROM org_departments WHERE id = ? AND orgid = ? AND isactive = 1',
+        'SELECT id FROM C_ORG_DEPARTMENTS WHERE id = ? AND orgid = ? AND isactive = 1',
         [expectedDepartment, orgId]
       );
       if (deptCheck.length === 0) return { error: 'Invalid or inactive department.' };
 
       const [jobTypeCheck] = await pool.execute(
-        'SELECT id FROM generic_values WHERE id = ? AND g_id = 14 AND orgid = ? AND isactive = 1',
+        'SELECT id FROM C_GENERIC_VALUES WHERE id = ? AND g_id = 14 AND orgid = ? AND isactive = 1',
         [jobType, orgId]
       );
       if (jobTypeCheck.length === 0) return { error: 'Invalid or inactive job type.' };
@@ -160,7 +160,7 @@ export async function addExternalJob(prevState, formData) {
       }
 
       // Generate jobid
-      const [countResult] = await pool.query('SELECT COUNT(*) AS count FROM externaljobs WHERE orgid = ?', [orgId]);
+      const [countResult] = await pool.query('SELECT COUNT(*) AS count FROM C_EXTERNAL_JOBS WHERE orgid = ?', [orgId]);
       const jobCount = countResult[0].count;
       const jobid = `${orgId}-${jobCount + 1}`;
       const s=new Date();
@@ -207,7 +207,7 @@ if (lastDateForApplication) {
       ];
 
       const placeholders = values.map(() => '?').join(', ');
-      const query = `INSERT INTO externaljobs (${insertColumns.join(', ')}) VALUES (${placeholders})`;
+      const query = `INSERT INTO C_EXTERNAL_JOBS (${insertColumns.join(', ')}) VALUES (${placeholders})`;
 
       await pool.query(query, values);
       console.log(`External job added with jobid: ${jobid}`);

@@ -41,9 +41,9 @@ export async function POST(request) {
       return Response.json({ error: 'Invalid salary_expected value' }, { status: 400 });
     }
 
-    // Check if the candidate has already applied for this job
+    // Check if the C_CANDIDATE has already applied for this job
     const [existingApplication] = await pool.query(
-      `SELECT applicationid FROM applications WHERE jobid = ? AND candidate_id = ?`,
+      `SELECT applicationid FROM C_APPLICATIONS WHERE jobid = ? AND candidate_id = ?`,
       [jobid, candidate_id]
     );
     console.log('Existing application:', existingApplication); // Debug log
@@ -54,7 +54,7 @@ export async function POST(request) {
 
     // Fetch job details to get orgid
     const [jobDetails] = await pool.query(
-      `SELECT orgid FROM externaljobs WHERE jobid = ? AND active = 1`,
+      `SELECT orgid FROM C_EXTERNAL_JOBS WHERE jobid = ? AND active = 1`,
       [jobid]
     );
     console.log('Job details:', jobDetails); // Debug log
@@ -65,10 +65,10 @@ export async function POST(request) {
 
     const { orgid } = jobDetails[0];
 
-    // Generate applicationid as (orgid-no of applications+1)
+    // Generate applicationid as (orgid-no of C_APPLICATIONS+1)
     const [applicationCount] = await pool.query(
-      `SELECT COUNT(*) as count FROM applications WHERE jobid IN (
-        SELECT jobid FROM externaljobs WHERE orgid = ?
+      `SELECT COUNT(*) as count FROM C_APPLICATIONS WHERE jobid IN (
+        SELECT jobid FROM C_EXTERNAL_JOBS WHERE orgid = ?
       )`,
       [orgid]
     );
@@ -76,18 +76,18 @@ export async function POST(request) {
     const applicationid = `${orgid}-${applicationNumber}`;
     console.log('Generated applicationid:', applicationid); // Debug log
 
-    // Fetch application status from generic_names and generic_values
+    // Fetch application status from C_GENERIC_NAMES and C_GENERIC_VALUES
     const [statusGid] = await pool.query(
-      `SELECT g_id FROM generic_names WHERE Name = 'application_status' AND active = 1`
+      `SELECT g_id FROM C_GENERIC_NAMES WHERE Name = 'application_status' AND active = 1`
     );
     console.log('Status g_id:', statusGid); // Debug log
 
     if (statusGid.length === 0) {
-      return Response.json({ error: 'Application status not found in generic_names' }, { status: 500 });
+      return Response.json({ error: 'Application status not found in C_GENERIC_NAMES' }, { status: 500 });
     }
 
     const [statusValue] = await pool.query(
-      `SELECT Name FROM generic_values WHERE g_id = ? AND orgid = ? AND isactive = 1 AND cutting = 1`,
+      `SELECT Name FROM C_GENERIC_VALUES WHERE g_id = ? AND orgid = ? AND isactive = 1 AND cutting = 1`,
       [statusGid[0].g_id, orgid]
     );
     console.log('Status value:', statusValue); // Debug log
@@ -124,7 +124,7 @@ export async function POST(request) {
 
     // Insert application into the database
     await pool.query(
-      `INSERT INTO applications (applicationid, orgid, jobid, applieddate, status, resumepath, candidate_id, salary_expected)
+      `INSERT INTO C_APPLICATIONS (applicationid, orgid, jobid, applieddate, status, resumepath, candidate_id, salary_expected)
        VALUES (?, ?, ?, CURDATE(), ?, ?, ?, ?)`,
       [applicationid, orgid, jobid, applicationStatus, resumePath, candidate_id, salary_expected]
     );

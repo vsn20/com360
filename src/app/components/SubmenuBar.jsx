@@ -21,7 +21,7 @@ function SubmenuBar() {
           setMenuItems(data);
           setIsFetched(true);
         } catch (error) {
-          console.error('Error fetching menu items:', error.message);
+          console.error('Error fetching C_MENU items:', error.message);
           setMenuItems([]);
           setIsFetched(true);
         }
@@ -31,7 +31,7 @@ function SubmenuBar() {
   }, [isFetched]);
 
   const activeMenu = menuItems.find(
-    item => item.href === pathname || item.submenu?.some(sub => pathname === sub.href || pathname.startsWith(sub.href + '?'))
+    item => item.href === pathname || item.C_SUBMENU?.some(sub => pathname === sub.href || pathname.startsWith(sub.href + '?'))
   );
 
   const handleSubmenuClick = (href) => {
@@ -45,9 +45,9 @@ function SubmenuBar() {
   return (
     <div className={styles.submenuBar}>
       <div className={styles.activeMenuTitle}>{activeMenu.title}</div>
-      {activeMenu.submenu && activeMenu.submenu.length > 0 && (
+      {activeMenu.C_SUBMENU && activeMenu.C_SUBMENU.length > 0 && (
         <div className={styles.submenuContainer}>
-          {activeMenu.submenu.map((sub) => (
+          {activeMenu.C_SUBMENU.map((sub) => (
             <Link
               key={sub.href}
               href={`${sub.href}?refresh=${new Date().getTime()}`}

@@ -24,19 +24,19 @@ const page = async () => {
      try {
      let pool=await DBconnection();
       const [billtyperows]=await pool.query(
-        'select id,Name from generic_values where g_id=? and orgid=? and isactive=1',
+        'select id,Name from C_GENERIC_VALUES where g_id=? and orgid=? and isactive=1',
         [7,orgId]
       );
       billTypes=billtyperows;
       
       const [otBillTypes]=await pool.query(
-        'select id,Name from generic_values where g_id=? and orgid=? and isactive=1',
+        'select id,Name from C_GENERIC_VALUES where g_id=? and orgid=? and isactive=1',
         [8,orgId]
       );
       otBillType=otBillTypes;
 
       const [payTermRows]=await pool.query(
-        'select id,Name FROM generic_values where g_id=? and orgid=? and isactive=1',
+        'select id,Name FROM C_GENERIC_VALUES where g_id=? and orgid=? and isactive=1',
         [9,orgId]
       )
     payTerms=payTermRows;

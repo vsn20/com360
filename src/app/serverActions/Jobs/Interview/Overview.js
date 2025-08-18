@@ -67,11 +67,11 @@ export async function fetchAllInterviewsForEmployee({ orgid, empid, editing }) {
     let query = `
       SELECT DISTINCT c.applicationid, b.interview_id, d.first_name, d.last_name, e.display_job_name, c.status,
               d.email, c.resumepath, c.offerletter_timestamp, e.jobid
-       FROM interview_panel AS a
-       JOIN interview_table AS b ON a.interview_id = b.interview_id AND a.orgid = b.orgid
-       JOIN applications AS c ON c.applicationid = b.application_id
-       JOIN candidate AS d ON d.cid = c.candidate_id
-       JOIN externaljobs AS e ON e.jobid = c.jobid
+       FROM C_INTERVIEW_PANELS AS a
+       JOIN C_INTERVIEW_TABLES AS b ON a.interview_id = b.interview_id AND a.orgid = b.orgid
+       JOIN C_APPLICATIONS AS c ON c.applicationid = b.application_id
+       JOIN C_CANDIDATE AS d ON d.cid = c.candidate_id
+       JOIN C_EXTERNAL_JOBS AS e ON e.jobid = c.jobid
        WHERE a.orgid = ?
     `;
     let params = [orgid];
@@ -116,11 +116,11 @@ export async function fetchDetailsById({ orgid, interview_id, acceptingtime, emp
     const [rows] = await pool.query(
       `SELECT DISTINCT c.applicationid, b.interview_id, d.first_name, d.last_name, e.display_job_name, c.status,
               d.email, c.resumepath, c.offerletter_timestamp, e.jobid
-       FROM interview_panel AS a
-       JOIN interview_table AS b ON a.interview_id = b.interview_id AND a.orgid = b.orgid
-       JOIN applications AS c ON c.applicationid = b.application_id
-       JOIN candidate AS d ON d.cid = c.candidate_id
-       JOIN externaljobs AS e ON e.jobid = c.jobid
+       FROM C_INTERVIEW_PANELS AS a
+       JOIN C_INTERVIEW_TABLES AS b ON a.interview_id = b.interview_id AND a.orgid = b.orgid
+       JOIN C_APPLICATIONS AS c ON c.applicationid = b.application_id
+       JOIN C_CANDIDATE AS d ON d.cid = c.candidate_id
+       JOIN C_EXTERNAL_JOBS AS e ON e.jobid = c.jobid
        WHERE b.interview_id = ? AND a.orgid = ?`,
       [interview_id, orgid]
     );
@@ -166,7 +166,7 @@ export async function fetchRoundsByInterviewId({ orgid, interview_id, empid, edi
     let query = `
       SELECT r.*, ip.empid AS panel_empid, ip.email, ip.is_he_employee
       FROM C_INTERVIEW_ROUNDS r
-      LEFT JOIN interview_panel ip ON r.Roundid = ip.Roundid AND r.orgid = ip.orgid AND r.interview_id = ip.interview_id
+      LEFT JOIN C_INTERVIEW_PANELS ip ON r.Roundid = ip.Roundid AND r.orgid = ip.orgid AND r.interview_id = ip.interview_id
       WHERE r.orgid = ? AND r.interview_id = ?
     `;
     let params = [orgid, interview_id];
@@ -281,7 +281,7 @@ export async function update({ orgid, empid, interview_id, status, acceptingtime
 
     if(changes){
        await pool.query(
-        `update interview_table set interview_completed=1 where interview_id=?`,[interview_id]
+        `update C_INTERVIEW_TABLES set interview_completed=1 where interview_id=?`,[interview_id]
       );
     }
 
@@ -290,7 +290,7 @@ export async function update({ orgid, empid, interview_id, status, acceptingtime
     // await pool.query(
     //   `INSERT INTO applications_activity (orgid, application_id, activity_description) 
     //    VALUES (?, ?, ?)`,
-    //   [orgid, (await pool.query(`SELECT application_id FROM interview_table WHERE interview_id = ? AND orgid = ?`, [interview_id, orgid]))[0][0].applicationid, description]
+    //   [orgid, (await pool.query(`SELECT application_id FROM C_INTERVIEW_TABLES WHERE interview_id = ? AND orgid = ?`, [interview_id, orgid]))[0][0].applicationid, description]
     // );
 
     return {

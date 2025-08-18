@@ -7,26 +7,26 @@ import './ApprovalPending.css';
 
 const ApprovalPending = () => {
   const router = useRouter();
-  const [timesheets, setTimesheets] = useState([]);
+  const [C_TIMESHEETS, setTimesheets] = useState([]);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
-      console.log("Fetching pending timesheets");
+      console.log("Fetching pending C_TIMESHEETS");
       setError(null);
       setSuccess(false);
       const result = await fetchPendingTimesheets();
-      console.log("Pending timesheets result:", result);
+      console.log("Pending C_TIMESHEETS result:", result);
       if (result.error) {
         setError(result.error);
         setTimesheets([]);
-        if (result.error.includes('You are not authorized to view pending timesheets')) {
-          router.push('/userscreens/timesheets');
+        if (result.error.includes('You are not authorized to view pending C_TIMESHEETS')) {
+          router.push('/userscreens/C_TIMESHEETS');
         }
       } else {
         const groupedTimesheets = {};
-        result.timesheets.forEach(ts => {
+        result.C_TIMESHEETS.forEach(ts => {
           const key = `${ts.employee_id}_${ts.week_start_date}`;
           if (!groupedTimesheets[key]) {
             groupedTimesheets[key] = {
@@ -49,7 +49,7 @@ const ApprovalPending = () => {
   }, [router]);
 
   const handleApproveChange = async (employeeId, weekStartDate, timesheetIds) => {
-    console.log("Approving timesheets:", { employeeId, weekStartDate, timesheetIds });
+    console.log("Approving C_TIMESHEETS:", { employeeId, weekStartDate, timesheetIds });
     setError(null);
     setSuccess(false);
     for (const timesheetId of timesheetIds) {
@@ -58,7 +58,7 @@ const ApprovalPending = () => {
       if (result.error) {
         setError(result.error);
         if (result.error.includes('You are not authorized to approve this timesheet')) {
-          router.push('/userscreens/timesheets');
+          router.push('/userscreens/C_TIMESHEETS');
         }
         return;
       }
@@ -81,7 +81,7 @@ const ApprovalPending = () => {
         <h2 className="timesheet-title">Pending TimeSheets Approvals</h2>
         {error && <p className="error-message">{error}</p>}
         {success && <p className="success-message">TimeSheet approved successfully!</p>}
-        {timesheets.length === 0 ? (
+        {C_TIMESHEETS.length === 0 ? (
           <p className="no-timesheets-message">No pending TimeSheets for approval.</p>
         ) : (
           <div className="table-wrapper">
@@ -96,7 +96,7 @@ const ApprovalPending = () => {
                 </tr>
               </thead>
               <tbody>
-                {timesheets.map((ts) => (
+                {C_TIMESHEETS.map((ts) => (
                   <tr key={`${ts.employee_id}_${ts.week_start_date}_${ts.timesheet_ids[0] || 'default'}`}>
                     <td>{ts.employee_name}</td>
                     <td>{formatDate(ts.week_start_date)}</td>

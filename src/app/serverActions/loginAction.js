@@ -56,11 +56,11 @@ export async function loginaction(logindetails) {
       return { success: false, error: "Invalid username or password" };
     }
 
-    // Fetch all roles for the employee from emp_role_assign
+    // Fetch all roles for the employee from C_EMP_ROLE_ASSIGN
     const [roleRows] = await pool.query(
       `SELECT r.roleid, r.rolename
-       FROM emp_role_assign era
-       JOIN org_role_table r ON era.roleid = r.roleid AND era.orgid = r.orgid
+       FROM C_EMP_ROLE_ASSIGN era
+       JOIN C_ORG_ROLE_TABLE r ON era.roleid = r.roleid AND era.orgid = r.orgid
        WHERE era.empid = ? AND era.orgid = ?`,
       [user.empid, user.orgid]
     );
@@ -92,7 +92,7 @@ export async function loginaction(logindetails) {
     });
     console.log("Cookie set:", { name: "jwt_token", value: token });
 
-    // Fetch menu items from /api/menu
+    // Fetch C_MENU items from /api/menu
     const url = new URL('/api/menu', process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000');
     const menuResponse = await fetch(url.toString(), {
       method: 'GET',
@@ -108,7 +108,7 @@ export async function loginaction(logindetails) {
     }
 
     const menuData = await menuResponse.json();
-    const features = menuData.map(item => item.href || item.submenu.map(sub => sub.href)).flat();
+    const features = menuData.map(item => item.href || item.C_SUBMENU.map(sub => sub.href)).flat();
    // console.log("Features fetched from /api/menu:", features);
 
     // Update last login timestamp

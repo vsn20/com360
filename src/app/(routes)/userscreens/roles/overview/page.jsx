@@ -41,8 +41,8 @@ export default async function AddRolePage({ searchParams }) {
     try {
       const [roleRows] = await pool.query(
         `SELECT r.rolename, r.roleid 
-         FROM emp_role_assign era 
-         JOIN org_role_table r ON era.roleid = r.roleid 
+         FROM C_EMP_ROLE_ASSIGN era 
+         JOIN C_ORG_ROLE_TABLE r ON era.roleid = r.roleid 
          WHERE era.empid = ? AND r.orgid = ?`,
         [decoded.empid, orgid]
       );
@@ -54,7 +54,7 @@ export default async function AddRolePage({ searchParams }) {
       }
 
       const[noofrowsintable]=await pool.query(
-        `select id,Name from generic_values where g_id=17 and orgid=? and isactive=1 LIMIT 1`,
+        `select id,Name from C_GENERIC_VALUES where g_id=17 and orgid=? and isactive=1 LIMIT 1`,
         [orgid]
       );
       noofrows=noofrowsintable[0];

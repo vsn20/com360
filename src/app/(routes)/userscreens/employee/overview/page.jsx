@@ -68,7 +68,7 @@ export default async function OverviewPage({ searchParams }) {
     orgid = decoded.orgid;
     empid = decoded.empid;
 
-    // Fetch all employees for the given orgid with their roles from emp_role_assign
+    // Fetch all employees for the given orgid with their roles from C_EMP_ROLE_ASSIGN
     const [employeeRows] = await pool.query(
       `SELECT 
          e.empid, 
@@ -80,7 +80,7 @@ export default async function OverviewPage({ searchParams }) {
          e.GENDER,
          GROUP_CONCAT(era.roleid) AS roleids
        FROM C_EMP e
-       LEFT JOIN emp_role_assign era ON e.empid = era.empid AND e.orgid = era.orgid
+       LEFT JOIN C_EMP_ROLE_ASSIGN era ON e.empid = era.empid AND e.orgid = era.orgid
        WHERE e.orgid = ?
        GROUP BY e.empid`,
       [orgid]
@@ -94,25 +94,25 @@ export default async function OverviewPage({ searchParams }) {
 
     // Fetch active departments for the organization
     [departments] = await pool.query(
-      'SELECT id, name FROM org_departments WHERE orgid = ? AND isactive = 1',
+      'SELECT id, name FROM C_ORG_DEPARTMENTS WHERE orgid = ? AND isactive = 1',
       [orgid]
     );
 
     // Fetch active pay frequencies for the organization
     [payFrequencies] = await pool.query(
-      'SELECT id, Name FROM generic_values WHERE g_id = 4 AND orgid = ? AND isactive = 1',
+      'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 4 AND orgid = ? AND isactive = 1',
       [orgid]
     );
 
     // Fetch active job titles for the organization
     [jobTitles] = await pool.query(
-      'SELECT job_title_id,job_title, level, min_salary, max_salary FROM org_jobtitles WHERE orgid = ? AND is_active = 1',
+      'SELECT job_title_id,job_title, level, min_salary, max_salary FROM C_ORG_JOBTITLES WHERE orgid = ? AND is_active = 1',
       [orgid]
     );
 
     // Fetch active statuses for the organization
     [statuses] = await pool.query(
-      'SELECT id, Name FROM generic_values WHERE g_id = 3  AND orgid = ? AND isactive = 1',
+      'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 3  AND orgid = ? AND isactive = 1',
       [orgid]
     );
 
@@ -128,7 +128,7 @@ export default async function OverviewPage({ searchParams }) {
 
     // Fetch worker compensation classes
     [workerCompClasses] = await pool.query(
-      'SELECT class_code, phraseology FROM worker_comp'
+      'SELECT class_code, phraseology FROM C_WORK_COMPENSATION_CLASS'
     );
 
     // Fetch all roles for the role dropdown

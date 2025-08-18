@@ -47,12 +47,12 @@ export default async function AddRolePage({ searchParams }) {
 
     orgid = decoded.orgid;
 
-    // Fetch the current role from emp_role_assign using empid
+    // Fetch the current role from C_EMP_ROLE_ASSIGN using empid
     const pool = await DBconnection();
     const [roleRows] = await pool.query(
       `SELECT r.rolename, r.roleid 
-       FROM emp_role_assign era 
-       JOIN org_role_table r ON era.roleid = r.roleid 
+       FROM C_EMP_ROLE_ASSIGN era 
+       JOIN C_ORG_ROLE_TABLE r ON era.roleid = r.roleid 
        WHERE era.empid = ? AND r.orgid = ? AND r.is_active = 1 
        LIMIT 1`,
       [decoded.empid, orgid]

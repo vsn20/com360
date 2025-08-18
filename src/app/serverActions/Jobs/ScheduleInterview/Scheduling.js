@@ -53,9 +53,9 @@ export async function getEmployees(orgid) {
     const [rows] = await pool.query(
       `SELECT e.empid, e.EMP_FST_NAME, e.EMP_LAST_NAME, e.email
        FROM C_EMP e
-       JOIN emp_role_assign era ON e.empid = era.empid AND e.orgid = era.orgid
-       JOIN role_menu_permissions rmp ON era.roleid = rmp.roleid
-       JOIN submenu sm ON rmp.submenuid = sm.id
+       JOIN C_EMP_ROLE_ASSIGN era ON e.empid = era.empid AND e.orgid = era.orgid
+       JOIN C_ROLE_MENU_PERMISSIONS rmp ON era.roleid = rmp.roleid
+       JOIN C_SUBMENU sm ON rmp.submenuid = sm.id
        WHERE e.orgid = ? AND e.STATUS = 'ACTIVE' AND sm.url = '/userscreens/jobs/interview'`,
       [orgid]
     );
@@ -70,7 +70,7 @@ export async function deleteInterviewRound(orgid, roundId) {
   try {
     const pool = await DBconnection();
     await pool.query(
-      `DELETE FROM interview_panel WHERE orgid = ? AND Roundid = ?`,
+      `DELETE FROM C_INTERVIEW_PANELS WHERE orgid = ? AND Roundid = ?`,
       [orgid, roundId]
     );
     await pool.query(
@@ -109,9 +109,9 @@ export async function scheduleInterview(formData) {
     const applicationStatus = formData.get('applicationStatus');
     const rounds = JSON.parse(formData.get('rounds'));
 
-    // Update applications table with status
+    // Update C_APPLICATIONS table with status
     await pool.query(
-      `UPDATE applications SET status = ? WHERE applicationid = ? AND orgid = ?`,
+      `UPDATE C_APPLICATIONS SET status = ? WHERE applicationid = ? AND orgid = ?`,
       [applicationStatus, application_id, orgid]
     );
 
@@ -135,28 +135,28 @@ export async function scheduleInterview(formData) {
     // Generate or verify interview_id
     let interview_id;
     const [existingInterview] = await pool.query(
-      'SELECT interview_id FROM interview_table WHERE orgid = ? AND application_id = ?',
+      'SELECT interview_id FROM C_INTERVIEW_TABLES WHERE orgid = ? AND application_id = ?',
       [orgid, application_id]
     );
 
     if (existingInterview.length === 0) {
       const [s] = await pool.query(
-        'SELECT COUNT(*) AS count FROM interview_table WHERE orgid = ?',
+        'SELECT COUNT(*) AS count FROM C_INTERVIEW_TABLES WHERE orgid = ?',
         [orgid]
       );
       const m = s[0].count;
       interview_id = `${orgid}-${m + 1}`;
 
-      // Insert into interview_table
+      // Insert into C_INTERVIEW_TABLES
       if (applicationStatus === 'scheduled') {
         await pool.query(
-          `INSERT INTO interview_table (orgid, interview_id, application_id, confirm)
+          `INSERT INTO C_INTERVIEW_TABLES (orgid, interview_id, application_id, confirm)
            VALUES (?, ?, ?, 1)`,
           [orgid, interview_id, application_id]
         );
       } else {
         await pool.query(
-          `INSERT INTO interview_table (orgid, interview_id, application_id, confirm)
+          `INSERT INTO C_INTERVIEW_TABLES (orgid, interview_id, application_id, confirm)
            VALUES (?, ?, ?, 0)`,
           [orgid, interview_id, application_id]
         );
@@ -247,7 +247,7 @@ export async function scheduleInterview(formData) {
         }
 
         await pool.query(
-          `INSERT INTO interview_panel (orgid, interview_id, empid, email, is_he_employee, Roundid)
+          `INSERT INTO C_INTERVIEW_PANELS (orgid, interview_id, empid, email, is_he_employee, Roundid)
            VALUES (?, ?, ?, ?, ?, ?)`,
           [
             orgid,

@@ -77,7 +77,7 @@ export async function getjobdetailsbyid(jobid) {
 
     const pool = await DBconnection();
     const [rows] = await pool.query(
-      'SELECT job_title_id, job_title, level, min_salary, max_salary, Createdby, orgid, is_active, CreatedDate, Updatedby, UpdatedDate FROM org_jobtitles WHERE job_title_id = ? AND orgid = ?',
+      'SELECT job_title_id, job_title, level, min_salary, max_salary, Createdby, orgid, is_active, CreatedDate, Updatedby, UpdatedDate FROM C_ORG_JOBTITLES WHERE job_title_id = ? AND orgid = ?',
       [jobid, orgId]
     );
 
@@ -170,7 +170,7 @@ export async function updatejobtitle(formData) {
 
     const pool = await DBconnection();
     const [existing] = await pool.execute(
-      'SELECT job_title_id FROM org_jobtitles WHERE job_title_id = ? AND orgid = ?',
+      'SELECT job_title_id FROM C_ORG_JOBTITLES WHERE job_title_id = ? AND orgid = ?',
       [jobid, orgId]
     );
 
@@ -193,7 +193,7 @@ export async function updatejobtitle(formData) {
     const updatedBy = await getCurrentUserEmpIdName(pool, decoded.userId, orgId);
     
     const [result] = await pool.query(
-      `UPDATE org_jobtitles 
+      `UPDATE C_ORG_JOBTITLES 
        SET job_title = ?, min_salary = ?, max_salary = ?, level = ?, is_active = ?, Updatedby = ?, UpdatedDate =?
        WHERE job_title_id = ? AND orgid = ?`,
       [jobtitle, minsalary, maxsalary, level, isActive, updatedBy,new Date() ,jobid, orgId]

@@ -51,14 +51,14 @@ export default async function userscreenLayout({ children }) {
 
         // Fetch isAdmin from database based on employee's roles
         const [roleRows] = await pool.query(
-          'SELECT roleid FROM emp_role_assign WHERE empid = ? AND orgid = ?',
+          'SELECT roleid FROM C_EMP_ROLE_ASSIGN WHERE empid = ? AND orgid = ?',
           [decoded.empid, decoded.orgid]
         );
         const roleids = roleRows.map(row => row.roleid);
 
         if (roleids.length > 0) {
           const [adminRows] = await pool.query(
-            'SELECT isadmin FROM org_role_table WHERE roleid IN (?) AND orgid = ?',
+            'SELECT isadmin FROM C_ORG_ROLE_TABLE WHERE roleid IN (?) AND orgid = ?',
             [roleids, decoded.orgid]
           );
           userData.isAdmin = adminRows.some(row => row.isadmin === 1);

@@ -28,8 +28,8 @@ export async function GET(request) {
       });
     }
 
-    // Fetch applications with organization and job details
-    const [applications] = await pool.query(`
+    // Fetch C_APPLICATIONS with organization and job details
+    const [C_APPLICATIONS] = await pool.query(`
       SELECT 
         a.applicationid,
         a.orgid,
@@ -41,21 +41,21 @@ export async function GET(request) {
         a.salary_expected,
         o.orgname,
         ej.display_job_name
-      FROM applications a
+      FROM C_APPLICATIONS a
       JOIN C_ORG o ON a.orgid = o.orgid
-      JOIN externaljobs ej ON a.jobid = ej.jobid
+      JOIN C_EXTERNAL_JOBS ej ON a.jobid = ej.jobid
       WHERE a.candidate_id = ?
     `, [candidate_id]);
 
-    console.log('Applications Query Result:', applications); // Debug: Log query result
+    console.log('Applications Query Result:', C_APPLICATIONS); // Debug: Log query result
 
-    return new Response(JSON.stringify({ applications }), {
+    return new Response(JSON.stringify({ C_APPLICATIONS }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Error fetching applications:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch applications' }), {
+    console.error('Error fetching C_APPLICATIONS:', error);
+    return new Response(JSON.stringify({ error: 'Failed to fetch C_APPLICATIONS' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });

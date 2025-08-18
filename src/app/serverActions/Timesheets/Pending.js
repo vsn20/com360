@@ -39,7 +39,7 @@ const getAllSubordinates = async (pool, superiorEmpId, visited = new Set()) => {
 
 const getDelegatedSubordinates = async (pool, userEmpId) => {
   const [delegateRows] = await pool.execute(
-    "SELECT senderempid FROM delegate WHERE receiverempid = ? AND menuid = (SELECT id FROM menu WHERE name = 'TimeSheets') AND isactive = 1 AND (submenuid IS NULL OR submenuid = 0)",
+    "SELECT senderempid FROM C_DELEGATE WHERE receiverempid = ? AND menuid = (SELECT id FROM C_MENU WHERE name = 'TimeSheets') AND isactive = 1 AND (submenuid IS NULL OR submenuid = 0)",
     [userEmpId]
   );
   const delegatedSuperiors = delegateRows.map(row => row.senderempid);
@@ -89,7 +89,7 @@ export async function fetchPendingTimesheets() {
     return { error: "User not found in C_USER table." };
   }
   const userEmpId = userRows[0].empid;
-  console.log("Fetching pending timesheets for user empid:", userEmpId);
+  console.log("Fetching pending C_TIMESHEETS for user empid:", userEmpId);
 
   const directSubordinates = await getAllSubordinates(pool, userEmpId);
   const delegatedSubordinates = await getDelegatedSubordinates(pool, userEmpId);
@@ -100,7 +100,7 @@ export async function fetchPendingTimesheets() {
 
   if (!allSubordinates.length) {
     console.log("No subordinates found for user empid:", userEmpId);
-    return { error: "You are not authorized to view pending timesheets." };
+    return { error: "You are not authorized to view pending C_TIMESHEETS." };
   }
 
   const employeeIds = allSubordinates.map(emp => emp.empid);
@@ -108,7 +108,7 @@ export async function fetchPendingTimesheets() {
     `SELECT t.*, 
             COALESCE(p.PRJ_NAME, 'Unnamed Project') AS project_name,
             e.EMP_FST_NAME, e.EMP_LAST_NAME
-     FROM timesheets t
+     FROM C_TIMESHEETS t
      LEFT JOIN C_PROJECT p ON t.project_id = p.PRJ_ID
      LEFT JOIN C_EMP e ON t.employee_id = e.empid
      WHERE t.employee_id IN (${employeeIds.map(() => '?').join(',')})
@@ -117,14 +117,14 @@ export async function fetchPendingTimesheets() {
   );
   console.log("Pending timesheet rows:", timesheetRows);
 
-  const timesheets = timesheetRows.map(ts => ({
+  const C_TIMESHEETS = timesheetRows.map(ts => ({
     ...ts,
     employee_name: `${ts.EMP_FST_NAME} ${ts.EMP_LAST_NAME || ''}`.trim(),
     total_hours: ['sun_hours', 'mon_hours', 'tue_hours', 'wed_hours', 'thu_hours', 'fri_hours', 'sat_hours']
       .reduce((sum, day) => sum + (parseFloat(ts[day]) || 0), 0),
   }));
 
-  return { timesheets, employees: allSubordinates };
+  return { C_TIMESHEETS, employees: allSubordinates };
 }
 
 export async function approveTimesheet(timesheetId, employeeId) {
@@ -150,7 +150,7 @@ export async function approveTimesheet(timesheetId, employeeId) {
   console.log("Approving timesheet for user empid:", currentUserEmpId, "timesheetId:", timesheetId, "employeeId:", employeeId);
 
   const [timesheetRows] = await pool.execute(
-    "SELECT * FROM timesheets WHERE timesheet_id = ? AND employee_id = ?",
+    "SELECT * FROM C_TIMESHEETS WHERE timesheet_id = ? AND employee_id = ?",
     [timesheetId, employeeId]
   );
   if (!timesheetRows.length) {
@@ -162,12 +162,12 @@ export async function approveTimesheet(timesheetId, employeeId) {
   const isDelegatedSuperior = (await getDelegatedSubordinates(pool, currentUserEmpId)).some(sub => sub.empid === employeeId);
   console.log("Superior checks:", { isDirectSuperior, isDelegatedSuperior });
 
-  if (!isDirectSuperior && !isDelegatedSuperior) return { error: "You are not authorized to approve this timesheet. Redirecting to timesheets." };
+  if (!isDirectSuperior && !isDelegatedSuperior) return { error: "You are not authorized to approve this timesheet. Redirecting to C_TIMESHEETS." };
 
   if (currentUserEmpId === employeeId) return { error: "You cannot approve your own timesheet." };
 
   const [result] = await pool.execute(
-    `UPDATE timesheets SET is_approved = 1, updated_at = CURRENT_TIMESTAMP 
+    `UPDATE C_TIMESHEETS SET is_approved = 1, updated_at = CURRENT_TIMESTAMP 
      WHERE timesheet_id = ? AND employee_id = ?`,
     [timesheetId, employeeId]
   );

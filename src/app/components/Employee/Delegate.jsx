@@ -90,7 +90,7 @@ const Delegate = () => {
     }
     setLoading(true);
     try {
-      const result = await delegateAction('delegate', { receiverEmpId: selectedEmployeeTimeSheets, isActive: isActiveTimeSheets, menuName: 'TimeSheets' });
+      const result = await delegateAction('C_DELEGATE', { receiverEmpId: selectedEmployeeTimeSheets, isActive: isActiveTimeSheets, menuName: 'TimeSheets' });
       console.log('Delegate action result for TimeSheets:', result);
       if (result.error) {
         setError(result.error);
@@ -131,7 +131,7 @@ const Delegate = () => {
     }
     setLoading(true);
     try {
-      const result = await delegateAction('delegate', { receiverEmpId: selectedEmployeeLeaves, isActive: isActiveLeaves, menuName: 'Leaves' });
+      const result = await delegateAction('C_DELEGATE', { receiverEmpId: selectedEmployeeLeaves, isActive: isActiveLeaves, menuName: 'Leaves' });
       console.log('Delegate action result for Leaves:', result);
       if (result.error) {
         setError(result.error);
@@ -265,7 +265,7 @@ const Delegate = () => {
   }
 
   if (!hasPermission.TimeSheets && !hasPermission.Leaves) {
-    return <div>You do not have permission to delegate TimeSheets or Leaves.</div>;
+    return <div>You do not have permission to C_DELEGATE TimeSheets or Leaves.</div>;
   }
 
   return (

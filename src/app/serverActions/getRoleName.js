@@ -6,7 +6,7 @@ export async function getRoleName(roleid) {
   try {
     const pool = await DBconnection();
     const [rows] = await pool.query(
-      "SELECT rolename FROM org_role_table WHERE roleid = ?",
+      "SELECT rolename FROM C_ORG_ROLE_TABLE WHERE roleid = ?",
       [roleid]
     );
 

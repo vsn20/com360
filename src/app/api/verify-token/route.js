@@ -50,7 +50,7 @@ export async function POST(request) {
 
     // Fetch all role IDs for the employee
     const [roleRows] = await pool.query(
-      'SELECT roleid FROM emp_role_assign WHERE empid = ? AND orgid = ?',
+      'SELECT roleid FROM C_EMP_ROLE_ASSIGN WHERE empid = ? AND orgid = ?',
       [empid, orgid]
     );
     const roleids = roleRows.map(row => row.roleid);
@@ -63,16 +63,16 @@ export async function POST(request) {
     let isAdmin = false;
     try {
       const [adminRows] = await pool.query(
-        'SELECT isadmin FROM org_role_table WHERE roleid IN (?) AND orgid = ?',
+        'SELECT isadmin FROM C_ORG_ROLE_TABLE WHERE roleid IN (?) AND orgid = ?',
         [roleids, orgid]
       );
       isAdmin = adminRows.some(row => row.isadmin === 1);
     } catch (error) {
-      console.error('Error fetching isadmin from org_role_table:', error.message);
+      console.error('Error fetching isadmin from C_ORG_ROLE_TABLE:', error.message);
       isAdmin = false;
     }
 
-    // Fetch menu permissions for all roles
+    // Fetch C_MENU permissions for all roles
     const [rows] = await pool.query(
       `SELECT DISTINCT
         m.id AS menuid,
@@ -83,10 +83,10 @@ export async function POST(request) {
         sm.name AS submenuname,
         sm.url AS submenuurl,
         MIN(omp.priority) AS priority
-      FROM org_menu_priority omp
-      JOIN menu m ON m.id = omp.menuid AND m.is_active = 1
-      LEFT JOIN submenu sm ON sm.id = omp.submenuid AND sm.is_active = 1
-      JOIN role_menu_permissions rmp 
+      FROM C_ORG_MENU_PRIORITY omp
+      JOIN C_MENU m ON m.id = omp.menuid AND m.is_active = 1
+      LEFT JOIN C_SUBMENU sm ON sm.id = omp.submenuid AND sm.is_active = 1
+      JOIN C_ROLE_MENU_PERMISSIONS rmp 
           ON rmp.menuid = omp.menuid 
          AND (rmp.submenuid = omp.submenuid OR omp.submenuid IS NULL)
       WHERE rmp.roleid IN (?) AND omp.orgid = ?
@@ -122,24 +122,24 @@ export async function POST(request) {
         menuMap.set(menuid, {
           title: menuname,
           href: menuhref || null,
-          submenu: [],
+          C_SUBMENU: [],
           priority: priority || 0,
         });
       }
 
-      const menu = menuMap.get(menuid);
-      if (menuhref === '/userscreens/timesheets') {
+      const C_MENU = menuMap.get(menuid);
+      if (menuhref === '/userscreens/C_TIMESHEETS') {
         hastimesheet = true;
       }
       if (menuhref === '/userscreens/leaves') {
         hasleaves = true;
       }
       if (hassubmenu === 'yes' && submenuid && submenuurl) {
-        if (!menu.submenu.some(sub => sub.href === submenuurl)) {
-          menu.submenu.push({
+        if (!C_MENU.C_SUBMENU.some(sub => sub.href === submenuurl)) {
+          C_MENU.C_SUBMENU.push({
             title: submenuname,
             href: submenuurl,
-            priority: priority || menu.submenu.length + 1,
+            priority: priority || C_MENU.C_SUBMENU.length + 1,
           });
         }
         if (submenuurl === '/userscreens/employee/addemployee') {
@@ -157,20 +157,20 @@ export async function POST(request) {
         if (submenuurl === '/userscreens/Project_Assign/add_project_assign') {
           hasEditProjectAssignment = true;
         }
-      } else if (menuhref && !menu.href) {
-        menu.href = menuhref;
+      } else if (menuhref && !C_MENU.href) {
+        C_MENU.href = menuhref;
       }
     }
 
-    menuMap.forEach(menu => {
-      if (menu.href) {
+    menuMap.forEach(C_MENU => {
+      if (C_MENU.href) {
         accessibleItems.push({
-          href: menu.href,
+          href: C_MENU.href,
           isMenu: true,
-          priority: menu.priority,
+          priority: C_MENU.priority,
         });
       }
-      menu.submenu.forEach((sub) => {
+      C_MENU.C_SUBMENU.forEach((sub) => {
         accessibleItems.push({
           href: sub.href,
           isMenu: false,
@@ -229,7 +229,7 @@ export async function POST(request) {
 
     if (hastimesheet) {
       accessibleItems.push({
-        href: '/userscreens/timesheets/pendingapproval',
+        href: '/userscreens/C_TIMESHEETS/pendingapproval',
         isMenu: true,
         priority: 10000,
       });
@@ -266,7 +266,7 @@ export async function POST(request) {
     const isEditAccountPath = pathname.match(/^\/userscreens\/account\/edit\/[^/]+$/);
     const isEditProjectPath = pathname.match(/^\/userscreens\/project\/edit\/[^/]+$/);
     const isEditProjectAssignmentPath = pathname.match(/^\/userscreens\/Project_Assign\/edit\/[^/]+$/);
-    const ispendingapproval = pathname.match(/^\/userscreens\/timesheets\/pendingapproval$/);
+    const ispendingapproval = pathname.match(/^\/userscreens\/C_TIMESHEETS\/pendingapproval$/);
     const isaddleave = pathname.match(/^\/userscreens\/leaves\/addleave$/);
     const ispendingleaves = pathname.match(/^\/userscreens\/leaves\/pending$/);
     isUploadPath = pathname.match(/^\/Uploads\/[^/]+\/[^/]+\/[^/]+$/);
@@ -283,7 +283,7 @@ export async function POST(request) {
       console.log(`Access granted to ${pathname} for empid ${empid} (dynamic pending leaves route)`);
       return NextResponse.json({ success: true, accessibleItems });
     }
-    if (ispendingapproval && accessiblePaths.includes('/userscreens/timesheets/pendingapproval')) {
+    if (ispendingapproval && accessiblePaths.includes('/userscreens/C_TIMESHEETS/pendingapproval')) {
       console.log(`Access granted to ${pathname} for empid ${empid} (dynamic pending approval route)`);
       return NextResponse.json({ success: true, accessibleItems });
     }

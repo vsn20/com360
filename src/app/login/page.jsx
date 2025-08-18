@@ -32,9 +32,9 @@ export default function LoginPage() {
             credentials: 'include',
           });
 
-          if (!roleMenuResponse.ok) throw new Error(`Failed to fetch role menu: ${roleMenuResponse.statusText}`);
+          if (!roleMenuResponse.ok) throw new Error(`Failed to fetch role C_MENU: ${roleMenuResponse.statusText}`);
           const roleMenuItems = await roleMenuResponse.json();
-          console.log('Role menu items fetched:', JSON.stringify(roleMenuItems, null, 2));
+          console.log('Role C_MENU items fetched:', JSON.stringify(roleMenuItems, null, 2));
 
           // Fetch all features for the organization
           const orgMenuResponse = await fetch(`/api/menu?orgid=${orgid}`, {
@@ -42,17 +42,17 @@ export default function LoginPage() {
             credentials: 'include',
           });
 
-          if (!orgMenuResponse.ok) throw new Error(`Failed to fetch org menu: ${orgMenuResponse.statusText}`);
+          if (!orgMenuResponse.ok) throw new Error(`Failed to fetch org C_MENU: ${orgMenuResponse.statusText}`);
           const orgMenuItems = await orgMenuResponse.json();
-          console.log('Org menu items fetched:', JSON.stringify(orgMenuItems, null, 2));
+          console.log('Org C_MENU items fetched:', JSON.stringify(orgMenuItems, null, 2));
 
           // Flatten and map accessible features including submenus
           const accessibleItems = [];
           orgMenuItems.forEach(orgItem => {
             const roleItem = roleMenuItems.find(r => r.title === orgItem.title);
             if (roleItem) {
-              accessibleItems.push({ href: orgItem.href, isMenu: true, priority: 0 }); // Placeholder priority for menu
-              orgItem.submenu.forEach((sub, index) => {
+              accessibleItems.push({ href: orgItem.href, isMenu: true, priority: 0 }); // Placeholder priority for C_MENU
+              orgItem.C_SUBMENU.forEach((sub, index) => {
                 accessibleItems.push({ href: sub.href, isMenu: false, priority: index + 1 }); // Sequential priority for submenus
               });
             }
@@ -60,7 +60,7 @@ export default function LoginPage() {
 
           console.log('Accessible items:', JSON.stringify(accessibleItems, null, 2));
 
-          // Sort by priority (menu first, then submenus by order)
+          // Sort by priority (C_MENU first, then submenus by order)
           accessibleItems.sort((a, b) => a.priority - b.priority);
 
           // Redirect to the least priority item or fallback

@@ -64,9 +64,9 @@ export async function addRole(formData) {
     connection = await pool.getConnection();
     console.log('Acquired connection for queries:', connection);
 
-    // Validate that each selected feature with hassubmenu='yes' has at least one submenu
+    // Validate that each selected feature with hassubmenu='yes' has at least one C_SUBMENU
     const [menuRows] = await connection.query(
-      'SELECT id, hassubmenu FROM menu WHERE id IN (?)',
+      'SELECT id, hassubmenu FROM C_MENU WHERE id IN (?)',
       [selectedFeatures]
     );
     const featureMap = menuRows.reduce((map, row) => {
@@ -84,12 +84,12 @@ export async function addRole(formData) {
       .filter(id => featureMap[id] === 'yes' && !submenuMap[id]);
     if (invalidSelections.length > 0) {
       console.log('Invalid selections:', invalidSelections);
-      return { error: 'Please select at least one submenu for each feature with submenus.' };
+      return { error: 'Please select at least one C_SUBMENU for each feature with submenus.' };
     }
 
     // Check if role name already exists for this orgid
     const [existingRole] = await connection.query(
-      'SELECT roleid FROM org_role_table WHERE orgid = ? AND rolename = ?',
+      'SELECT roleid FROM C_ORG_ROLE_TABLE WHERE orgid = ? AND rolename = ?',
       [effectiveOrgid, roleName]
     );
     if (existingRole.length > 0) {
@@ -97,9 +97,9 @@ export async function addRole(formData) {
       return { error: 'Role name already exists.' };
     }
 
-    // Insert into org_role_table
+    // Insert into C_ORG_ROLE_TABLE
     const [roleResult] = await connection.query(
-      'INSERT INTO org_role_table (orgid, rolename, isadmin) VALUES (?, ?, ?)',
+      'INSERT INTO C_ORG_ROLE_TABLE (orgid, rolename, isadmin) VALUES (?, ?, ?)',
       [effectiveOrgid, roleName, isadmin]
     );
     const newRoleId = roleResult.insertId;
@@ -114,10 +114,10 @@ export async function addRole(formData) {
       permissionValues.push([newRoleId, Number(featureId), submenuId]);
     });
 
-    // Insert permissions into role_menu_permissions
+    // Insert permissions into C_ROLE_MENU_PERMISSIONS
     if (permissionValues.length > 0) {
       await connection.query(
-        'INSERT INTO role_menu_permissions (roleid, menuid, submenuid) VALUES ?',
+        'INSERT INTO C_ROLE_MENU_PERMISSIONS (roleid, menuid, submenuid) VALUES ?',
         [permissionValues]
       );
       console.log('Permissions added successfully for roleId:', newRoleId);

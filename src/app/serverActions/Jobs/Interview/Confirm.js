@@ -183,13 +183,13 @@ export async function updateInterviewStatus({ orgid, empid, interview_id, status
   try {
     const pool = await DBconnection();
     const [result] = await pool.query(
-      `UPDATE interview_table 
+      `UPDATE C_INTERVIEW_TABLES 
        SET interview_completed = 1
        WHERE orgid = ? AND interview_id = ?`,
       [orgid, interview_id]
     );
    const [applicationid]=await pool.query(
-    `select a.applicationid from applications as a join interview_table as b on a.applicationid=b.application_id where b.interview_id=?`
+    `select a.applicationid from C_APPLICATIONS as a join C_INTERVIEW_TABLES as b on a.applicationid=b.application_id where b.interview_id=?`
     ,[interview_id]
    );
    const appid=applicationid[0].applicationid
@@ -198,12 +198,12 @@ export async function updateInterviewStatus({ orgid, empid, interview_id, status
     if(status=='offerletter-processing')
     {
         const[m]=await pool.query(
-        `update applications set offerletter_timestamp=?,status=? where orgid=? and applicationid=?`,
+        `update C_APPLICATIONS set offerletter_timestamp=?,status=? where orgid=? and applicationid=?`,
         [new Date,status,orgid,appid]
     );
     }else{
         const[s]=await pool.query(
-        `update applications set status=?,offerletter_timestamp=? where orgid=? and applicationid=?`,
+        `update C_APPLICATIONS set status=?,offerletter_timestamp=? where orgid=? and applicationid=?`,
         [status,null,orgid,appid]
     );
     }

@@ -70,7 +70,7 @@ export async function addServiceRequest(formData) {
 
       // Validate priority
       const [validPriority] = await pool.query(
-        'SELECT id FROM generic_values WHERE g_id = ? AND Name = ? AND orgid = ? AND isactive = 1',
+        'SELECT id FROM C_GENERIC_VALUES WHERE g_id = ? AND Name = ? AND orgid = ? AND isactive = 1',
         [11, formData.get('priorityCd'), orgid]
       );
       if (validPriority.length === 0) {
@@ -80,7 +80,7 @@ export async function addServiceRequest(formData) {
 
       // Validate type
       const [validType] = await pool.query(
-        'SELECT id FROM generic_values WHERE g_id = ? AND Name = ? AND orgid = ? AND isactive = 1',
+        'SELECT id FROM C_GENERIC_VALUES WHERE g_id = ? AND Name = ? AND orgid = ? AND isactive = 1',
         [12, formData.get('typeCd'), orgid]
       );
       if (validType.length === 0) {
@@ -91,7 +91,7 @@ export async function addServiceRequest(formData) {
       // Validate sub-type if provided
       if (formData.get('subTypeCd')) {
         const [validSubType] = await pool.query(
-          'SELECT id FROM generic_values WHERE g_id = ? AND Name = ? AND orgid = ? AND isactive = 1',
+          'SELECT id FROM C_GENERIC_VALUES WHERE g_id = ? AND Name = ? AND orgid = ? AND isactive = 1',
           [13, formData.get('subTypeCd'), orgid]
         );
         if (validSubType.length === 0) {

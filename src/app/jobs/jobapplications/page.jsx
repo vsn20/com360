@@ -4,24 +4,24 @@ import Link from 'next/link';
 import './Applications.css';
 
 export default function Applications() {
-  const [applications, setApplications] = useState([]);
+  const [C_APPLICATIONS, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchApplications = async () => {
       try {
-        const response = await fetch('/api/applications', {
+        const response = await fetch('/api/C_APPLICATIONS', {
           credentials: 'include', // Ensure cookies are sent
         });
         const data = await response.json();
         if (response.ok) {
-          setApplications(data.applications);
+          setApplications(data.C_APPLICATIONS);
         } else {
-          setError(data.error || 'Failed to fetch applications');
+          setError(data.error || 'Failed to fetch C_APPLICATIONS');
         }
       } catch (err) {
-        setError('Error fetching applications');
+        setError('Error fetching C_APPLICATIONS');
       } finally {
         setLoading(false);
       }
@@ -31,7 +31,7 @@ export default function Applications() {
   }, []);
 
   if (loading) {
-    return <div className="loading">Loading applications...</div>;
+    return <div className="loading">Loading C_APPLICATIONS...</div>;
   }
 
   if (error) {
@@ -39,13 +39,13 @@ export default function Applications() {
   }
 
   return (
-    <div className="applications-container">
-      <h1 className="applications-title">My Applications</h1>
-      {applications.length === 0 ? (
-        <p className="no-applications">No applications found.</p>
+    <div className="C_APPLICATIONS-container">
+      <h1 className="C_APPLICATIONS-title">My Applications</h1>
+      {C_APPLICATIONS.length === 0 ? (
+        <p className="no-C_APPLICATIONS">No C_APPLICATIONS found.</p>
       ) : (
-        <div className="applications-table-container">
-          <table className="applications-table">
+        <div className="C_APPLICATIONS-table-container">
+          <table className="C_APPLICATIONS-table">
             <thead>
               <tr>
                 <th>Application ID</th>
@@ -58,7 +58,7 @@ export default function Applications() {
               </tr>
             </thead>
             <tbody>
-              {applications.map((app) => (
+              {C_APPLICATIONS.map((app) => (
                 <tr key={app.applicationid}>
                   <td>{app.applicationid}</td>
                   <td>{app.orgname}</td>

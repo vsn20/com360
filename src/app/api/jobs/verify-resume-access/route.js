@@ -22,7 +22,7 @@ export async function POST(request) {
     // Check database
     const pool = await DBconnection();
     const [application] = await pool.query(
-      `SELECT candidate_id, applicationid FROM applications WHERE applicationid = ?`,
+      `SELECT candidate_id, applicationid FROM C_APPLICATIONS WHERE applicationid = ?`,
       [applicationId]
     );
 

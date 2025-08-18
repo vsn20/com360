@@ -58,7 +58,7 @@ const getAllSubordinates = async (pool, superiorEmpId, visited = new Set()) => {
 
 const getDelegatedSubordinates = async (pool, userEmpId) => {
   const [delegateRows] = await pool.execute(
-    "SELECT senderempid FROM delegate WHERE receiverempid = ? AND menuid = (SELECT id FROM menu WHERE name = 'Leaves') AND isactive = 1 AND (submenuid IS NULL OR submenuid = 0)",
+    "SELECT senderempid FROM C_DELEGATE WHERE receiverempid = ? AND menuid = (SELECT id FROM C_MENU WHERE name = 'Leaves') AND isactive = 1 AND (submenuid IS NULL OR submenuid = 0)",
     [userEmpId]
   );
   const delegatedSuperiors = delegateRows.map(row => row.senderempid);
@@ -121,8 +121,8 @@ export async function fetchEmployeeLeaves(empId) {
 
     const [rows] = await pool.execute(
       `SELECT l.id, l.empid, l.orgid, l.g_id, gv.Name AS leave_name, l.startdate, l.enddate, l.status, l.noofnoons, l.am_pm, l.description, l.approved_by, l.approved_role 
-       FROM employee_leaves l
-       LEFT JOIN generic_values gv ON l.leaveid = gv.id AND gv.g_id = 1 AND gv.orgid = l.orgid AND gv.isactive = 1
+       FROM C_EMPLOYEE_LEAVES l
+       LEFT JOIN C_GENERIC_VALUES gv ON l.leaveid = gv.id AND gv.g_id = 1 AND gv.orgid = l.orgid AND gv.isactive = 1
        WHERE l.empid IN (${authorizedEmpIds.map(() => '?').join(',')}) AND l.orgid = ?`,
       [...authorizedEmpIds, orgId]
     );
@@ -176,8 +176,8 @@ export async function fetchPendingLeaves() {
   const [leaveRows] = await pool.execute(
     `SELECT l.id, l.empid, l.orgid, l.g_id, gv.Name AS leave_name, l.startdate, l.enddate, l.status, l.noofnoons, l.am_pm, l.description,
             e.EMP_FST_NAME, e.EMP_LAST_NAME
-     FROM employee_leaves l
-     LEFT JOIN generic_values gv ON l.leaveid = gv.id AND gv.g_id = 1 AND gv.orgid = l.orgid AND gv.isactive = 1
+     FROM C_EMPLOYEE_LEAVES l
+     LEFT JOIN C_GENERIC_VALUES gv ON l.leaveid = gv.id AND gv.g_id = 1 AND gv.orgid = l.orgid AND gv.isactive = 1
      LEFT JOIN C_EMP e ON l.empid = e.empid
      WHERE l.empid IN (${employeeIds.map(() => '?').join(',')}) AND l.status = 'pending'`,
     employeeIds
@@ -255,8 +255,8 @@ export async function fetchLeaveAssignments(empid) {
     const pool = await DBconnection();
     const [rows] = await pool.execute(
       `SELECT ela.leaveid, ela.noofleaves, gv.Name as name
-       FROM employee_leaves_assign ela
-       JOIN generic_values gv ON ela.leaveid = gv.id AND ela.orgid = gv.orgid
+       FROM C_EMPLOYEE_LEAVES_ASSIGN ela
+       JOIN C_GENERIC_VALUES gv ON ela.leaveid = gv.id AND ela.orgid = gv.orgid
        WHERE ela.empid = ? AND ela.orgid = ? AND ela.g_id = 1 AND gv.isactive = 1`,
       [empid, orgId]
     );

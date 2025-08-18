@@ -44,7 +44,7 @@ export async function fetchRolesByOrgId() {
     console.log("MySQL connection pool acquired");
     const [rows] = await pool.execute(
       `SELECT DISTINCT roleid, orgid, rolename, is_active, CREATED_DATE 
-       FROM org_role_table 
+       FROM C_ORG_ROLE_TABLE 
        WHERE orgid = ?`,
       [orgId]
     );
@@ -91,7 +91,7 @@ export async function fetchRoleById(roleid) {
     const [roleRows] = await pool.execute(
       `SELECT roleid, orgid, rolename, isadmin, is_active, CREATED_DATE, 
               salaryrange, type, description, vacantposts, jobtitle, keyresponsibilities 
-       FROM org_role_table 
+       FROM C_ORG_ROLE_TABLE 
        WHERE roleid = ? AND orgid = ?`,
       [roleid, orgId]
     );
@@ -103,7 +103,7 @@ export async function fetchRoleById(roleid) {
 
     const [permissionRows] = await pool.execute(
       `SELECT menuid, submenuid, alldata 
-       FROM role_menu_permissions 
+       FROM C_ROLE_MENU_PERMISSIONS 
        WHERE roleid = ?`,
       [roleid]
     );
@@ -145,7 +145,7 @@ export async function fetchMenusAndSubmenus() {
 
     const [adminRoleRows] = await pool.execute(
       `SELECT roleid 
-       FROM org_role_table 
+       FROM C_ORG_ROLE_TABLE 
        WHERE orgid = ? AND isadmin = 1`,
       [orgId]
     );
@@ -159,16 +159,16 @@ export async function fetchMenusAndSubmenus() {
 
     const [menuRows] = await pool.execute(
       `SELECT DISTINCT m.id AS menuid, m.name AS menuname, m.url AS menuurl, m.hassubmenu 
-       FROM menu m 
-       JOIN role_menu_permissions rmp ON m.id = rmp.menuid 
+       FROM C_MENU m 
+       JOIN C_ROLE_MENU_PERMISSIONS rmp ON m.id = rmp.menuid 
        WHERE rmp.roleid = ?`,
       [adminRoleId]
     );
 
     const [submenuRows] = await pool.execute(
       `SELECT DISTINCT sm.id AS submenuid, sm.name AS submenuname, sm.url AS submenuurl, sm.menuid 
-       FROM submenu sm 
-       JOIN role_menu_permissions rmp ON sm.id = rmp.submenuid 
+       FROM C_SUBMENU sm 
+       JOIN C_ROLE_MENU_PERMISSIONS rmp ON sm.id = rmp.submenuid 
        WHERE rmp.roleid = ?`,
       [adminRoleId]
     );
@@ -218,7 +218,7 @@ export async function updateRole(prevState, formData) {
     console.log("MySQL connection pool acquired");
 
     const [existing] = await pool.execute(
-      'SELECT roleid, isadmin FROM org_role_table WHERE roleid = ? AND orgid = ?',
+      'SELECT roleid, isadmin FROM C_ORG_ROLE_TABLE WHERE roleid = ? AND orgid = ?',
       [roleid, orgId]
     );
     if (existing.length === 0) {
@@ -234,7 +234,7 @@ export async function updateRole(prevState, formData) {
       if (!rolename) return { error: 'Role name is required.' };
 
       const [duplicateRole] = await pool.execute(
-        'SELECT roleid FROM org_role_table WHERE rolename = ? AND orgid = ? AND roleid != ?',
+        'SELECT roleid FROM C_ORG_ROLE_TABLE WHERE rolename = ? AND orgid = ? AND roleid != ?',
         [rolename, orgId, roleid]
       );
       if (duplicateRole.length > 0) {
@@ -243,7 +243,7 @@ export async function updateRole(prevState, formData) {
       }
 
       await pool.query(
-        `UPDATE org_role_table 
+        `UPDATE C_ORG_ROLE_TABLE 
          SET rolename = ?, is_active = ?
          WHERE roleid = ? AND orgid = ?`,
         [rolename, is_active, roleid, orgId]
@@ -253,7 +253,7 @@ export async function updateRole(prevState, formData) {
     if (permissions.length >= 0) {
       const [existingPermissions] = await pool.execute(
         `SELECT menuid, submenuid, alldata 
-         FROM role_menu_permissions 
+         FROM C_ROLE_MENU_PERMISSIONS 
          WHERE roleid = ?`,
         [roleid]
       );
@@ -270,7 +270,7 @@ export async function updateRole(prevState, formData) {
       );
       for (const perm of permissionsToDelete) {
         await pool.query(
-          `DELETE FROM role_menu_permissions 
+          `DELETE FROM C_ROLE_MENU_PERMISSIONS 
            WHERE roleid = ? AND menuid = ? AND (submenuid = ? OR (submenuid IS NULL AND ? IS NULL))`,
           [roleid, perm.menuid, perm.submenuid, perm.submenuid]
         );
@@ -282,7 +282,7 @@ export async function updateRole(prevState, formData) {
       for (const perm of newPermissions) {
         if (perm.menuid) {
           await pool.query(
-            `INSERT INTO role_menu_permissions (roleid, menuid, submenuid, alldata, CREATED_DATE) 
+            `INSERT INTO C_ROLE_MENU_PERMISSIONS (roleid, menuid, submenuid, alldata, CREATED_DATE) 
              VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`,
             [roleid, perm.menuid, perm.submenuid || null, perm.alldata || 0]
           );
@@ -298,7 +298,7 @@ export async function updateRole(prevState, formData) {
       );
       for (const perm of permissionsToUpdate) {
         await pool.query(
-          `UPDATE role_menu_permissions 
+          `UPDATE C_ROLE_MENU_PERMISSIONS 
            SET alldata = ? 
            WHERE roleid = ? AND menuid = ? AND (submenuid = ? OR (submenuid IS NULL AND ? IS NULL))`,
           [perm.alldata || 0, roleid, perm.menuid, perm.submenuid, perm.submenuid]
@@ -366,7 +366,7 @@ export async function addRole(formData) {
 
     const menuIds = [...new Set(permissions.map(p => p.menuid))];
     const [menuRows] = await connection.query(
-      'SELECT id, hassubmenu FROM menu WHERE id IN (?)',
+      'SELECT id, hassubmenu FROM C_MENU WHERE id IN (?)',
       [menuIds]
     );
     const featureMap = menuRows.reduce((map, row) => {
@@ -379,11 +379,11 @@ export async function addRole(formData) {
       .filter(id => permissions.filter(p => p.menuid === id && p.submenuid).length === 0);
     if (invalidSelections.length > 0) {
       console.log('Invalid selections:', invalidSelections);
-      return { error: 'Please select at least one submenu for each feature with submenus.' };
+      return { error: 'Please select at least one C_SUBMENU for each feature with submenus.' };
     }
 
     const [existingRole] = await connection.query(
-      'SELECT roleid FROM org_role_table WHERE orgid = ? AND rolename = ?',
+      'SELECT roleid FROM C_ORG_ROLE_TABLE WHERE orgid = ? AND rolename = ?',
       [effectiveOrgid, roleName]
     );
     if (existingRole.length > 0) {
@@ -392,14 +392,14 @@ export async function addRole(formData) {
     }
 
     const [roleCountRows] = await connection.query(
-      'SELECT COUNT(*) AS count FROM org_role_table WHERE orgid = ?',
+      'SELECT COUNT(*) AS count FROM C_ORG_ROLE_TABLE WHERE orgid = ?',
       [effectiveOrgid]
     );
     const roleCount = roleCountRows[0].count;
     const newRoleId = `${effectiveOrgid}-${roleCount + 1}`;
 
     const [roleResult] = await connection.query(
-      'INSERT INTO org_role_table (roleid, orgid, rolename, isadmin) VALUES (?, ?, ?, ?)',
+      'INSERT INTO C_ORG_ROLE_TABLE (roleid, orgid, rolename, isadmin) VALUES (?, ?, ?, ?)',
       [newRoleId, effectiveOrgid, roleName, isadmin]
     );
     console.log('Role added successfully, newRoleId:', newRoleId);
@@ -407,7 +407,7 @@ export async function addRole(formData) {
     const permissionValues = permissions.map(p => [newRoleId, p.menuid, p.submenuid || null, p.alldata || 0]);
     if (permissionValues.length > 0) {
       await connection.query(
-        'INSERT INTO role_menu_permissions (roleid, menuid, submenuid, alldata) VALUES ?',
+        'INSERT INTO C_ROLE_MENU_PERMISSIONS (roleid, menuid, submenuid, alldata) VALUES ?',
         [permissionValues]
       );
       console.log('Permissions added successfully for roleId:', newRoleId);

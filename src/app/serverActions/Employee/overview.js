@@ -186,7 +186,7 @@ export async function updateEmployee(prevState, formData) {
       // Validate roles
       for (const roleid of roleids) {
         const [role] = await pool.execute(
-          'SELECT roleid FROM org_role_table WHERE roleid = ? AND orgid = ? AND is_active = 1',
+          'SELECT roleid FROM C_ORG_ROLE_TABLE WHERE roleid = ? AND orgid = ? AND is_active = 1',
           [roleid, orgid]
         );
         if (role.length === 0) {
@@ -214,7 +214,7 @@ export async function updateEmployee(prevState, formData) {
       // Validate status
       if (status) {
         const [statusCheck] = await pool.execute(
-          'SELECT id FROM generic_values WHERE g_id = 3 AND Name = ? AND orgid = ? AND isactive = 1',
+          'SELECT id FROM C_GENERIC_VALUES WHERE g_id = 3 AND Name = ? AND orgid = ? AND isactive = 1',
           [status, orgid]
         );
         if (statusCheck.length === 0) {
@@ -226,7 +226,7 @@ export async function updateEmployee(prevState, formData) {
       // Validate job title
       if (jobTitle) {
         const [jobTitleCheck] = await pool.execute(
-          'SELECT job_title FROM org_jobtitles WHERE job_title_id = ? AND orgid = ? AND is_active = 1',
+          'SELECT job_title FROM C_ORG_JOBTITLES WHERE job_title_id = ? AND orgid = ? AND is_active = 1',
           [jobTitle, orgid]
         );
         if (jobTitleCheck.length === 0) {
@@ -238,7 +238,7 @@ export async function updateEmployee(prevState, formData) {
       // Validate pay frequency
       if (payFrequency) {
         const [payFrequencyCheck] = await pool.execute(
-          'SELECT id FROM generic_values WHERE g_id = 4 AND Name = ? AND orgid = ? AND isactive = 1',
+          'SELECT id FROM C_GENERIC_VALUES WHERE g_id = 4 AND Name = ? AND orgid = ? AND isactive = 1',
           [payFrequency, orgid]
         );
         if (payFrequencyCheck.length === 0) {
@@ -251,14 +251,14 @@ export async function updateEmployee(prevState, formData) {
       let finalDeptName = deptName;
       if (deptId) {
         const [deptCheck] = await pool.execute(
-          'SELECT id, name FROM org_departments WHERE id = ? AND orgid = ? AND isactive = 1',
+          'SELECT id, name FROM C_ORG_DEPARTMENTS WHERE id = ? AND orgid = ? AND isactive = 1',
           [deptId, orgid]
         );
         if (deptCheck.length === 0) {
           console.log('Invalid department selected:', deptId);
           return { error: 'Selected department is invalid or inactive.' };
         }
-        finalDeptName = deptCheck[0].name; // Override with name from org_departments
+        finalDeptName = deptCheck[0].name; // Override with name from C_ORG_DEPARTMENTS
       } else {
         finalDeptName = null; // Clear DEPT_NAME if deptId is not provided
       }
@@ -293,10 +293,10 @@ export async function updateEmployee(prevState, formData) {
       affectedRows += result.affectedRows;
       console.log(`Employment details update result: ${result.affectedRows} rows affected for empid ${empid}, deptId: ${deptId}, deptName: ${finalDeptName}`);
 
-      // Update role assignments in emp_role_assign
+      // Update role assignments in C_EMP_ROLE_ASSIGN
       // First, remove existing role assignments
       const [deleteResult] = await pool.query(
-        'DELETE FROM emp_role_assign WHERE empid = ? AND orgid = ?',
+        'DELETE FROM C_EMP_ROLE_ASSIGN WHERE empid = ? AND orgid = ?',
         [empid, orgid]
       );
       console.log(`Removed ${deleteResult.affectedRows} existing role assignments for empid ${empid}`);
@@ -304,7 +304,7 @@ export async function updateEmployee(prevState, formData) {
       // Insert new role assignments
       for (const roleid of roleids) {
         const [roleAssignResult] = await pool.query(
-          `INSERT INTO emp_role_assign (empid, orgid, roleid) 
+          `INSERT INTO C_EMP_ROLE_ASSIGN (empid, orgid, roleid) 
            VALUES (?, ?, ?) 
            ON DUPLICATE KEY UPDATE roleid = roleid`,
           [empid, orgid, roleid]
@@ -329,7 +329,7 @@ export async function updateEmployee(prevState, formData) {
       }
 
       const [validLeaveTypes] = await pool.execute(
-        'SELECT id FROM generic_values WHERE g_id = 1 AND orgid = ? AND isactive = 1',
+        'SELECT id FROM C_GENERIC_VALUES WHERE g_id = 1 AND orgid = ? AND isactive = 1',
         [orgid]
       );
       const validLeaveIds = validLeaveTypes.map(leave => String(leave.id));
@@ -600,7 +600,7 @@ export async function assignLeaves(empid, leaveid, noofleaves, orgid) {
     console.log('MySQL connection pool acquired');
 
     const [leaveCheck] = await pool.execute(
-      'SELECT id FROM generic_values WHERE id = ? AND g_id = 1 AND orgid = ? AND isactive = 1',
+      'SELECT id FROM C_GENERIC_VALUES WHERE id = ? AND g_id = 1 AND orgid = ? AND isactive = 1',
       [leaveid, orgid]
     );
     if (leaveCheck.length === 0) {
@@ -609,18 +609,18 @@ export async function assignLeaves(empid, leaveid, noofleaves, orgid) {
     }
 
     const [existing] = await pool.execute(
-      'SELECT id FROM employee_leaves_assign WHERE empid = ? AND leaveid = ? AND orgid = ? AND g_id = 1',
+      'SELECT id FROM C_EMPLOYEE_LEAVES_ASSIGN WHERE empid = ? AND leaveid = ? AND orgid = ? AND g_id = 1',
       [empid, leaveid, orgid]
     );
     let result;
     if (existing.length > 0) {
       [result] = await pool.query(
-        'UPDATE employee_leaves_assign SET noofleaves = ? WHERE empid = ? AND leaveid = ? AND orgid = ? AND g_id = 1',
+        'UPDATE C_EMPLOYEE_LEAVES_ASSIGN SET noofleaves = ? WHERE empid = ? AND leaveid = ? AND orgid = ? AND g_id = 1',
         [noofleaves, empid, leaveid, orgid]
       );
     } else {
       [result] = await pool.query(
-        'INSERT INTO employee_leaves_assign (empid, orgid, g_id, leaveid, noofleaves) VALUES (?, ?, ?, ?, ?)',
+        'INSERT INTO C_EMPLOYEE_LEAVES_ASSIGN (empid, orgid, g_id, leaveid, noofleaves) VALUES (?, ?, ?, ?, ?)',
         [empid, orgid, 1, leaveid, noofleaves]
       );
     }
@@ -666,11 +666,11 @@ export async function fetchEmployeesByOrgId() {
       [orgId]
     );
 
-    // Fetch roleids for each employee from emp_role_assign
+    // Fetch roleids for each employee from C_EMP_ROLE_ASSIGN
     const employees = await Promise.all(
       rows.map(async (employee) => {
         const [roleRows] = await pool.execute(
-          'SELECT roleid FROM emp_role_assign WHERE empid = ? AND orgid = ?',
+          'SELECT roleid FROM C_EMP_ROLE_ASSIGN WHERE empid = ? AND orgid = ?',
           [employee.empid, orgId]
         );
         return {
@@ -741,9 +741,9 @@ export async function fetchEmployeeById(empid) {
       throw new Error('Employee not found.');
     }
 
-    // Fetch roleids from emp_role_assign
+    // Fetch roleids from C_EMP_ROLE_ASSIGN
     const [roleRows] = await pool.execute(
-      'SELECT roleid FROM emp_role_assign WHERE empid = ? AND orgid = ?',
+      'SELECT roleid FROM C_EMP_ROLE_ASSIGN WHERE empid = ? AND orgid = ?',
       [empid, orgId]
     );
 
@@ -788,7 +788,7 @@ export async function fetchRolesByOrgId() {
     console.log('MySQL connection pool acquired');
     const [rows] = await pool.execute(
       `SELECT roleid, rolename 
-       FROM org_role_table 
+       FROM C_ORG_ROLE_TABLE 
        WHERE orgid = ? AND is_active = 1`,
       [orgId]
     );
@@ -827,7 +827,7 @@ export async function fetchLeaveTypes() {
     const pool = await DBconnection();
     console.log('MySQL connection pool acquired');
     const [rows] = await pool.execute(
-      `SELECT id, Name FROM generic_values WHERE g_id = 1 AND orgid = ? AND isactive = 1`,
+      `SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 1 AND orgid = ? AND isactive = 1`,
       [orgId]
     );
     console.log('Fetched leave types:', rows);
@@ -871,8 +871,8 @@ export async function fetchLeaveAssignments(empid) {
     console.log('MySQL connection pool acquired');
     const [rows] = await pool.execute(
       `SELECT ela.leaveid, ela.noofleaves 
-       FROM employee_leaves_assign ela
-       JOIN generic_values gv ON ela.leaveid = gv.id AND ela.orgid = gv.orgid
+       FROM C_EMPLOYEE_LEAVES_ASSIGN ela
+       JOIN C_GENERIC_VALUES gv ON ela.leaveid = gv.id AND ela.orgid = gv.orgid
        WHERE ela.empid = ? AND ela.orgid = ? AND ela.g_id = 1 AND gv.isactive = 1`,
       [empid, orgId]
     );

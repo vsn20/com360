@@ -214,11 +214,11 @@ const Overview = ({ scheduledetails, applieddetails, orgid, empid, time }) => {
             </div>
 
             {filteredApplications.length === 0 ? (
-              <p className="empty-state">No applications found.</p>
+              <p className="empty-state">No C_APPLICATIONS found.</p>
             ) : (
               <>
-                <div className="applications-table-wrapper">
-                  <table className="applications-table">
+                <div className="C_APPLICATIONS-table-wrapper">
+                  <table className="C_APPLICATIONS-table">
                     <thead>
                       <tr>
                         <th 

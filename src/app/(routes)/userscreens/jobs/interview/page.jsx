@@ -35,14 +35,14 @@ const page = async () => {
         empid = decoded.empid;
 
         const [features] = await pool.query(
-          `SELECT roleid FROM emp_role_assign WHERE empid = ? AND orgid = ?`,
+          `SELECT roleid FROM C_EMP_ROLE_ASSIGN WHERE empid = ? AND orgid = ?`,
           [empid, orgid]
         );
         const roleids = features.map((details) => details.roleid);
         let menuresults = [];
         if (roleids.length > 0) {
           [menuresults] = await pool.query(
-            `SELECT alldata FROM role_menu_permissions WHERE roleid IN (?) AND menuid = 12 AND submenuid = 17 AND alldata = 1`,
+            `SELECT alldata FROM C_ROLE_MENU_PERMISSIONS WHERE roleid IN (?) AND menuid = 12 AND submenuid = 17 AND alldata = 1`,
             [roleids]
           );
         }
@@ -52,22 +52,22 @@ const page = async () => {
 
         if (allpermissions) {
           [interviewdetails] = await pool.query(
-            'SELECT i.interview_id, i.application_id, a.jobid, a.status, a.applicationid, c.first_name, c.last_name, e.display_job_name FROM interview_table AS i JOIN applications AS a ON i.application_id = a.applicationid JOIN candidate AS c ON c.cid = a.candidate_id JOIN externaljobs AS e ON e.jobid = a.jobid WHERE i.orgid = ? AND i.confirm = 1',
+            'SELECT i.interview_id, i.application_id, a.jobid, a.status, a.applicationid, c.first_name, c.last_name, e.display_job_name FROM C_INTERVIEW_TABLES AS i JOIN C_APPLICATIONS AS a ON i.application_id = a.applicationid JOIN C_CANDIDATE AS c ON c.cid = a.candidate_id JOIN C_EXTERNAL_JOBS AS e ON e.jobid = a.jobid WHERE i.orgid = ? AND i.confirm = 1',
             [orgid]
           );
         } else {
           [interviewdetails] = await pool.query(
-            'SELECT i.interview_id, i.application_id, a.jobid, a.status, a.applicationid, c.first_name, c.last_name, e.display_job_name FROM interview_table AS i JOIN applications AS a ON i.application_id = a.applicationid JOIN candidate AS c ON c.cid = a.candidate_id JOIN externaljobs AS e ON e.jobid = a.jobid JOIN interview_panel AS ip ON i.interview_id = ip.interview_id AND i.orgid = ip.orgid WHERE i.orgid = ? AND i.confirm = 1 AND ip.empid = ?',
+            'SELECT i.interview_id, i.application_id, a.jobid, a.status, a.applicationid, c.first_name, c.last_name, e.display_job_name FROM C_INTERVIEW_TABLES AS i JOIN C_APPLICATIONS AS a ON i.application_id = a.applicationid JOIN C_CANDIDATE AS c ON c.cid = a.candidate_id JOIN C_EXTERNAL_JOBS AS e ON e.jobid = a.jobid JOIN C_INTERVIEW_PANELS AS ip ON i.interview_id = ip.interview_id AND i.orgid = ip.orgid WHERE i.orgid = ? AND i.confirm = 1 AND ip.empid = ?',
             [orgid, empid]
           );
         }
 
         [time] = await pool.query(
-          'SELECT id, Name FROM generic_values WHERE g_id = 15 AND orgid = ? AND isactive = 1',
+          'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 15 AND orgid = ? AND isactive = 1',
           [orgid]
         );
         [acceptingtime] = await pool.query(
-          'SELECT id, Name FROM generic_values WHERE g_id = 16 AND orgid = ? AND isactive = 1',
+          'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 16 AND orgid = ? AND isactive = 1',
           [orgid]
         );
       }

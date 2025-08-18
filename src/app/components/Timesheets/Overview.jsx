@@ -17,7 +17,7 @@ const Overview = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
-  const [timesheets, setTimesheets] = useState([]);
+  const [C_TIMESHEETS, setTimesheets] = useState([]);
   const [projects, setProjects] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [employeeTimesheets, setEmployeeTimesheets] = useState([]);
@@ -71,7 +71,7 @@ const Overview = () => {
     if (individualResult.error) {
       setError(individualResult.error);
     } else {
-      setTimesheets(individualResult.timesheets || []);
+      setTimesheets(individualResult.C_TIMESHEETS || []);
       setProjects(individualResult.projects || []);
       setAttachments(individualResult.attachments || {});
       setNoAttachmentFlag(Object.values(individualResult.attachments || {}).every((atts) => !atts.length));
@@ -85,7 +85,7 @@ const Overview = () => {
       setEmployeeProjects({});
     } else {
       setEmployees(superiorResult.employees || []);
-      setEmployeeTimesheets(superiorResult.timesheets || []);
+      setEmployeeTimesheets(superiorResult.C_TIMESHEETS || []);
       setEmployeeProjects(superiorResult.projects || {});
       setAttachments((prev) => {
         const newAttachments = { ...prev, ...superiorResult.attachments };
@@ -120,12 +120,12 @@ const Overview = () => {
         setTimesheets([]);
         setProjects([]);
       } else {
-        setTimesheets(individualResult.timesheets || []);
+        setTimesheets(individualResult.C_TIMESHEETS || []);
         setProjects(individualResult.projects || []);
         setAttachments(individualResult.attachments || {});
         setNoAttachmentFlag(Object.values(individualResult.attachments || {}).every((atts) => !atts.length));
-        if (!selectedEmployee && individualResult.timesheets?.length > 0 && individualResult.timesheets.some((ts) => ts.is_approved === 1)) {
-          const employeeId = individualResult.timesheets[0].employee_id;
+        if (!selectedEmployee && individualResult.C_TIMESHEETS?.length > 0 && individualResult.C_TIMESHEETS.some((ts) => ts.is_approved === 1)) {
+          const employeeId = individualResult.C_TIMESHEETS[0].employee_id;
           const data = await fetchSuperiorName(employeeId);
           if (data.superiorName) setSuperiorName(data.superiorName);
         }
@@ -139,7 +139,7 @@ const Overview = () => {
         setEmployeeProjects({});
       } else {
         setEmployees(superiorResult.employees || []);
-        setEmployeeTimesheets(superiorResult.timesheets || []);
+        setEmployeeTimesheets(superiorResult.C_TIMESHEETS || []);
         setEmployeeProjects(superiorResult.projects || {});
         setAttachments((prev) => {
           const newAttachments = { ...prev, ...superiorResult.attachments };
@@ -147,7 +147,7 @@ const Overview = () => {
           return newAttachments;
         });
         setIsSuperior(superiorResult.employees.length > 0);
-        if (selectedEmployee && superiorResult.timesheets?.length > 0 && superiorResult.timesheets.some((ts) => ts.is_approved === 1)) {
+        if (selectedEmployee && superiorResult.C_TIMESHEETS?.length > 0 && superiorResult.C_TIMESHEETS.some((ts) => ts.is_approved === 1)) {
           const data = await fetchSuperiorName(selectedEmployee);
           if (data.superiorName) setSuperiorName(data.superiorName);
         }
@@ -208,7 +208,7 @@ const Overview = () => {
   const handleInputChange = (e, timesheetId, empId = null, day = null) => {
     const { name, value } = e.target;
     const isEmployee = !empId && !selectedEmployee;
-    const targetTimesheets = selectedEmployee ? employeeTimesheets : timesheets;
+    const targetTimesheets = selectedEmployee ? employeeTimesheets : C_TIMESHEETS;
     const ts = targetTimesheets.find((t) => t.timesheet_id === timesheetId || t.temp_key === timesheetId);
     if (ts) {
       const isOwner = currentUserEmpId === ts.employee_id;
@@ -266,7 +266,7 @@ const Overview = () => {
     const weekStart = getWeekStartDate(selectedDate);
     const targetTimesheets = selectedEmployee
       ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee)
-      : timesheets;
+      : C_TIMESHEETS;
 
     if (isSubmit) {
       if (!window.confirm("Once you submit, you cannot edit this timesheet. Are you sure?")) {
@@ -297,20 +297,20 @@ const Overview = () => {
       const formDataWithFiles = new FormData();
       targetTimesheets.forEach((ts, index) => {
         const formData = new FormData();
-        formData.append("timesheets[project_id]", ts.project_id);
-        formData.append("timesheets[week_start_date]", weekStart);
-        formData.append("timesheets[year]", ts.year);
-        formData.append("timesheets[timesheet_id]", ts.timesheet_id || "");
-        formData.append("timesheets[employee_id]", ts.employee_id);
-        formData.append("timesheets[is_approved]", ts.is_approved || 0);
+        formData.append("C_TIMESHEETS[project_id]", ts.project_id);
+        formData.append("C_TIMESHEETS[week_start_date]", weekStart);
+        formData.append("C_TIMESHEETS[year]", ts.year);
+        formData.append("C_TIMESHEETS[timesheet_id]", ts.timesheet_id || "");
+        formData.append("C_TIMESHEETS[employee_id]", ts.employee_id);
+        formData.append("C_TIMESHEETS[is_approved]", ts.is_approved || 0);
         ["sun", "mon", "tue", "wed", "thu", "fri", "sat"].forEach((day) => {
-          formData.append(`timesheets[${day}_hours]`, ts[`${day}_hours`] ?? "");
-          formData.append(`timesheets[${day}_comment]`, ts[`${day}_comment`] ?? "");
+          formData.append(`C_TIMESHEETS[${day}_hours]`, ts[`${day}_hours`] ?? "");
+          formData.append(`C_TIMESHEETS[${day}_comment]`, ts[`${day}_comment`] ?? "");
         });
-        formData.append("timesheets[is_submitted]", isSubmit ? 1 : ts.is_submitted || 0);
+        formData.append("C_TIMESHEETS[is_submitted]", isSubmit ? 1 : ts.is_submitted || 0);
 
         for (let [key, value] of formData.entries()) {
-          formDataWithFiles.append(`timesheets[${index}][${key.split("timesheets[")[1]}`, value);
+          formDataWithFiles.append(`C_TIMESHEETS[${index}][${key.split("C_TIMESHEETS[")[1]}`, value);
         }
       });
 
@@ -321,7 +321,7 @@ const Overview = () => {
 
       const result = await saveTimesheet(formDataWithFiles);
       if (result.error) {
-        setError(result.error || "Failed to save timesheets.");
+        setError(result.error || "Failed to save C_TIMESHEETS.");
       } else {
         setAttachments((prev) => {
           const newAttachments = { ...prev };
@@ -341,22 +341,22 @@ const Overview = () => {
           setError(updatedResult.error);
         } else {
           if (selectedEmployee) {
-            setEmployeeTimesheets(updatedResult.timesheets || []);
+            setEmployeeTimesheets(updatedResult.C_TIMESHEETS || []);
             setEmployeeProjects(updatedResult.projects || {});
             setAttachments(updatedResult.attachments || {});
             setNoAttachmentFlag(Object.values(updatedResult.attachments || {}).every((atts) => !atts.length));
-            if (updatedResult.timesheets?.some((ts) => ts.is_approved === 1)) {
+            if (updatedResult.C_TIMESHEETS?.some((ts) => ts.is_approved === 1)) {
               const data = await fetchSuperiorName(selectedEmployee);
               if (data.superiorName) setSuperiorName(data.superiorName);
             }
             setIsSuperior(updatedResult.employees.length > 0);
           } else {
-            setTimesheets(updatedResult.timesheets || []);
+            setTimesheets(updatedResult.C_TIMESHEETS || []);
             setProjects(updatedResult.projects || []);
             setAttachments(updatedResult.attachments || {});
             setNoAttachmentFlag(Object.values(updatedResult.attachments || {}).every((atts) => !atts.length));
-            if (!isSuperior && updatedResult.timesheets?.some((ts) => ts.is_approved === 1)) {
-              const employeeId = updatedResult.timesheets[0].employee_id;
+            if (!isSuperior && updatedResult.C_TIMESHEETS?.some((ts) => ts.is_approved === 1)) {
+              const employeeId = updatedResult.C_TIMESHEETS[0].employee_id;
               const data = await fetchSuperiorName(employeeId);
               if (data.superiorName) setSuperiorName(data.superiorName);
             }
@@ -365,7 +365,7 @@ const Overview = () => {
         }
       }
     } catch (error) {
-      setError(error.message || "Failed to process timesheets.");
+      setError(error.message || "Failed to process C_TIMESHEETS.");
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = "";
       setIsSaving(false);
@@ -407,7 +407,7 @@ const Overview = () => {
   const isAnySubmittedOrApproved = (targetTimesheets) => targetTimesheets.some((ts) => ts.is_submitted === 1 || ts.is_approved === 1);
 
   const getTimesheetById = (timesheetId) =>
-    (selectedEmployee ? employeeTimesheets : timesheets).find((t) => t.timesheet_id === timesheetId || t.temp_key === timesheetId);
+    (selectedEmployee ? employeeTimesheets : C_TIMESHEETS).find((t) => t.timesheet_id === timesheetId || t.temp_key === timesheetId);
 
   if (!isClient) return null;
 
@@ -467,12 +467,12 @@ const Overview = () => {
               </div>
 
               {/* Approval Message */}
-              {!selectedEmployee && !isSuperior && timesheets.some((ts) => ts.is_approved === 1) && superiorName && (
+              {!selectedEmployee && !isSuperior && C_TIMESHEETS.some((ts) => ts.is_approved === 1) && superiorName && (
                 <p className="className99approval-message">Approved by {superiorName}</p>
               )}
 
               {/* Above Table Actions - Approve All and Submit */}
-              {((!selectedEmployee && timesheets.length > 0) || (selectedEmployee && employeeTimesheets.filter((t) => t.employee_id === selectedEmployee).length > 0)) && (
+              {((!selectedEmployee && C_TIMESHEETS.length > 0) || (selectedEmployee && employeeTimesheets.filter((t) => t.employee_id === selectedEmployee).length > 0)) && (
                 <div className="className99above-table-actions">
                   {/* Approve Section for Employee Selection */}
                   {selectedEmployee && employeeTimesheets.filter((t) => t.employee_id === selectedEmployee).length > 0 && (
@@ -497,10 +497,10 @@ const Overview = () => {
                         type="button"
                         className="className99submit-button"
                         onClick={() => handleSave(true)}
-                        disabled={isSaving || timesheets.some((ts) => ts.is_submitted === 1 || ts.is_approved === 1)}
+                        disabled={isSaving || C_TIMESHEETS.some((ts) => ts.is_submitted === 1 || ts.is_approved === 1)}
                         style={{
                           cursor:
-                            isSaving || timesheets.some((ts) => ts.is_submitted === 1 || ts.is_approved === 1)
+                            isSaving || C_TIMESHEETS.some((ts) => ts.is_submitted === 1 || ts.is_approved === 1)
                               ? "not-allowed"
                               : "pointer",
                         }}
@@ -513,7 +513,7 @@ const Overview = () => {
               )}
 
               {/* Timesheet Table */}
-              {((!selectedEmployee && timesheets.length > 0) || (selectedEmployee && employeeTimesheets.filter((t) => t.employee_id === selectedEmployee).length > 0)) && (
+              {((!selectedEmployee && C_TIMESHEETS.length > 0) || (selectedEmployee && employeeTimesheets.filter((t) => t.employee_id === selectedEmployee).length > 0)) && (
                 <div>
                   <form onSubmit={(e) => {
                     e.preventDefault();
@@ -529,7 +529,7 @@ const Overview = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {(selectedEmployee ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee) : timesheets).map((ts) => {
+                        {(selectedEmployee ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee) : C_TIMESHEETS).map((ts) => {
                           const project = selectedEmployee
                             ? (employeeProjects[selectedEmployee] || []).find((p) => p.PRJ_ID === ts.project_id)
                             : projects.find((p) => p.PRJ_ID === ts.project_id);
@@ -615,14 +615,14 @@ const Overview = () => {
                           selectedComment.timesheetId && selectedComment.day
                             ? (selectedEmployee
                                 ? employeeTimesheets.find((t) => t.timesheet_id === selectedComment.timesheetId || t.temp_key === selectedComment.timesheetId)
-                                : timesheets.find((t) => t.timesheet_id === selectedComment.timesheetId || t.temp_key === selectedComment.timesheetId))?.[
+                                : C_TIMESHEETS.find((t) => t.timesheet_id === selectedComment.timesheetId || t.temp_key === selectedComment.timesheetId))?.[
                                 `${selectedComment.day}_comment`
                               ] ?? ""
                             : ""
                         }
                         onChange={(e) => {
                           const newValue = e.target.value;
-                          const targetTimesheets = selectedEmployee ? employeeTimesheets : timesheets;
+                          const targetTimesheets = selectedEmployee ? employeeTimesheets : C_TIMESHEETS;
                           const ts = targetTimesheets.find((t) => t.timesheet_id === selectedComment.timesheetId || t.temp_key === selectedComment.timesheetId);
                           if (ts) {
                             const isOwner = currentUserEmpId === ts.employee_id;
@@ -668,9 +668,9 @@ const Overview = () => {
                         ref={fileInputRef}
                         className="className99file-input"
                         multiple
-                        disabled={isAnySubmittedOrApproved(selectedEmployee ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee) : timesheets)}
+                        disabled={isAnySubmittedOrApproved(selectedEmployee ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee) : C_TIMESHEETS)}
                         style={{
-                          cursor: isAnySubmittedOrApproved(selectedEmployee ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee) : timesheets)
+                          cursor: isAnySubmittedOrApproved(selectedEmployee ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee) : C_TIMESHEETS)
                             ? "not-allowed"
                             : "pointer",
                         }}
@@ -681,9 +681,9 @@ const Overview = () => {
                           type="checkbox"
                           checked={noAttachmentFlag}
                           onChange={(e) => handleNoAttachmentChange(e.target.checked)}
-                          disabled={isAnySubmittedOrApproved(selectedEmployee ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee) : timesheets)}
+                          disabled={isAnySubmittedOrApproved(selectedEmployee ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee) : C_TIMESHEETS)}
                           style={{
-                            cursor: isAnySubmittedOrApproved(selectedEmployee ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee) : timesheets)
+                            cursor: isAnySubmittedOrApproved(selectedEmployee ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee) : C_TIMESHEETS)
                               ? "not-allowed"
                               : "pointer",
                           }}
@@ -714,9 +714,9 @@ const Overview = () => {
                                     type="button"
                                     className="className99remove-button"
                                     onClick={() => handleRemoveAttachment(attachment.attachment_id, attachment.timesheet_id)}
-                                    disabled={isAnySubmittedOrApproved(selectedEmployee ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee) : timesheets)}
+                                    disabled={isAnySubmittedOrApproved(selectedEmployee ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee) : C_TIMESHEETS)}
                                     style={{
-                                      cursor: isAnySubmittedOrApproved(selectedEmployee ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee) : timesheets)
+                                      cursor: isAnySubmittedOrApproved(selectedEmployee ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee) : C_TIMESHEETS)
                                         ? "not-allowed"
                                         : "pointer",
                                     }}
@@ -737,13 +737,13 @@ const Overview = () => {
                         type="button"
                         className="className99save-button"
                         onClick={() => handleSave()}
-                        disabled={isSaving || (selectedEmployee ? employeeTimesheets.some((t) => t.employee_id === selectedEmployee && (t.is_submitted === 1 || t.is_approved === 1)) : timesheets.some((ts) => ts.is_submitted === 1 || ts.is_approved === 1))}
+                        disabled={isSaving || (selectedEmployee ? employeeTimesheets.some((t) => t.employee_id === selectedEmployee && (t.is_submitted === 1 || t.is_approved === 1)) : C_TIMESHEETS.some((ts) => ts.is_submitted === 1 || ts.is_approved === 1))}
                         style={{
                           cursor:
                             isSaving ||
                             (selectedEmployee
                               ? employeeTimesheets.some((t) => t.employee_id === selectedEmployee && (t.is_submitted === 1 || t.is_approved === 1))
-                              : timesheets.some((ts) => ts.is_submitted === 1 || ts.is_approved === 1))
+                              : C_TIMESHEETS.some((ts) => ts.is_submitted === 1 || ts.is_approved === 1))
                               ? "not-allowed"
                               : "pointer",
                         }}

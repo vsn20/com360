@@ -51,13 +51,13 @@ export default async function Page({ searchParams }) {
 
     // Fetch active account types (g_id = 5)
     [accountTypes] = await pool.query(
-      'SELECT id, Name FROM generic_values WHERE g_id = ? AND orgid = ? AND isactive = 1',
+      'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = ? AND orgid = ? AND isactive = 1',
       [5, orgid]
     );
 
     // Fetch active branch types (g_id = 6)
     [branchTypes] = await pool.query(
-      'SELECT id, Name FROM generic_values WHERE g_id = ? AND orgid = ? AND isactive = 1',
+      'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = ? AND orgid = ? AND isactive = 1',
       [6, orgid]
     );
 

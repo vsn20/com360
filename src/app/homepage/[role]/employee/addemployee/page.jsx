@@ -49,7 +49,7 @@ export default async function AddEmployeePage({ params, searchParams }) {
     const adminRoleId = decoded.roleid;
     const pool = await DBconnection();
     const [roleRows] = await pool.query(
-      'SELECT orgid FROM org_role_table WHERE roleid = ?',
+      'SELECT orgid FROM C_ORG_ROLE_TABLE WHERE roleid = ?',
       [adminRoleId]
     );
 

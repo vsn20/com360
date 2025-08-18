@@ -33,9 +33,9 @@ export async function getAllroles() {
 
     const pool = await DBconnection();
 
-    // Fetch user's roles from emp_role_assign
+    // Fetch user's roles from C_EMP_ROLE_ASSIGN
     const [roleRows] = await pool.query(
-      'SELECT roleid FROM emp_role_assign WHERE empid = ? AND orgid = ?',
+      'SELECT roleid FROM C_EMP_ROLE_ASSIGN WHERE empid = ? AND orgid = ?',
       [empid, orgid]
     );
 
@@ -47,7 +47,7 @@ export async function getAllroles() {
 
     // Check if user has an admin role
     const [adminRows] = await pool.query(
-      'SELECT isadmin FROM org_role_table WHERE roleid IN (?) AND orgid = ?',
+      'SELECT isadmin FROM C_ORG_ROLE_TABLE WHERE roleid IN (?) AND orgid = ?',
       [roleids, orgid]
     );
 
@@ -58,7 +58,7 @@ export async function getAllroles() {
 
     // Fetch all roles for the organization
     const [allRoles] = await pool.query(
-      'SELECT roleid, rolename FROM org_role_table WHERE orgid = ?',
+      'SELECT roleid, rolename FROM C_ORG_ROLE_TABLE WHERE orgid = ?',
       [orgid]
     );
 

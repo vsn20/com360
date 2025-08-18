@@ -46,7 +46,7 @@ export async function getAllFeatures() {
     // Find the admin role for the organization
     const [adminRoleRows] = await pool.execute(
       `SELECT roleid 
-       FROM org_role_table 
+       FROM C_ORG_ROLE_TABLE 
        WHERE orgid = ? AND isadmin = 1 AND is_active = 1`,
       [orgId]
     );
@@ -58,10 +58,10 @@ export async function getAllFeatures() {
 
     const adminRoleId = adminRoleRows[0].roleid;
 
-    // Check if the employee is assigned the admin role in emp_role_assign
+    // Check if the employee is assigned the admin role in C_EMP_ROLE_ASSIGN
     const [roleAssignmentRows] = await pool.execute(
       `SELECT * 
-       FROM emp_role_assign 
+       FROM C_EMP_ROLE_ASSIGN 
        WHERE empid = ? AND roleid = ? AND orgid = ?`,
       [empId, adminRoleId, orgId]
     );
@@ -74,24 +74,24 @@ export async function getAllFeatures() {
     // Fetch menus assigned to the admin role
     const [menuRows] = await pool.execute(
       `SELECT DISTINCT m.id, m.name, m.hassubmenu
-       FROM menu m 
-       JOIN role_menu_permissions rmp ON m.id = rmp.menuid 
+       FROM C_MENU m 
+       JOIN C_ROLE_MENU_PERMISSIONS rmp ON m.id = rmp.menuid 
        WHERE rmp.roleid = ? AND m.is_active = 1`,
       [adminRoleId]
     );
 
-    const features = await Promise.all(menuRows.map(async (menu) => {
-      if (menu.hassubmenu === 'yes') {
+    const features = await Promise.all(menuRows.map(async (C_MENU) => {
+      if (C_MENU.hassubmenu === 'yes') {
         const [submenuRows] = await pool.query(
-          `SELECT submenu.id, submenu.name, submenu.url
-           FROM submenu
-           JOIN role_menu_permissions rmp ON submenu.id = rmp.submenuid
-           WHERE rmp.roleid = ? AND submenu.menuid = ? AND submenu.is_active = 1`,
-          [adminRoleId, menu.id]
+          `SELECT C_SUBMENU.id, C_SUBMENU.name, C_SUBMENU.url
+           FROM C_SUBMENU
+           JOIN C_ROLE_MENU_PERMISSIONS rmp ON C_SUBMENU.id = rmp.submenuid
+           WHERE rmp.roleid = ? AND C_SUBMENU.menuid = ? AND C_SUBMENU.is_active = 1`,
+          [adminRoleId, C_MENU.id]
         );
-        return { ...menu, submenu: submenuRows };
+        return { ...C_MENU, C_SUBMENU: submenuRows };
       }
-      return { ...menu, submenu: [] };
+      return { ...C_MENU, C_SUBMENU: [] };
     }));
 
     console.log('Fetched admin role features:', features);
@@ -128,7 +128,7 @@ export async function savePriorities(formData) {
     // Find the admin role for the organization
     const [adminRoleRows] = await pool.execute(
       `SELECT roleid 
-       FROM org_role_table 
+       FROM C_ORG_ROLE_TABLE 
        WHERE orgid = ? AND isadmin = 1 AND is_active = 1`,
       [orgId]
     );
@@ -140,10 +140,10 @@ export async function savePriorities(formData) {
 
     const adminRoleId = adminRoleRows[0].roleid;
 
-    // Check if the employee is assigned the admin role in emp_role_assign
+    // Check if the employee is assigned the admin role in C_EMP_ROLE_ASSIGN
     const [roleAssignmentRows] = await pool.execute(
       `SELECT * 
-       FROM emp_role_assign 
+       FROM C_EMP_ROLE_ASSIGN 
        WHERE empid = ? AND roleid = ? AND orgid = ?`,
       [empId, adminRoleId, orgId]
     );
@@ -161,23 +161,23 @@ export async function savePriorities(formData) {
       .map(async ([id, priority]) => {
         const itemId = parseInt(id);
         const type = priorities[`${id}_type`];
-        const column = type === 'submenu' ? 'submenuid' : 'menuid';
+        const column = type === 'C_SUBMENU' ? 'submenuid' : 'menuid';
 
         if (!type) return;
 
         const [existing] = await pool.query(
-          `SELECT * FROM org_menu_priority WHERE ${column} = ? AND orgid = ?`,
+          `SELECT * FROM C_ORG_MENU_PRIORITY WHERE ${column} = ? AND orgid = ?`,
           [itemId, orgId]
         );
 
         if (existing.length > 0) {
           await pool.query(
-            `UPDATE org_menu_priority SET priority = ? WHERE ${column} = ? AND orgid = ?`,
+            `UPDATE C_ORG_MENU_PRIORITY SET priority = ? WHERE ${column} = ? AND orgid = ?`,
             [priority, itemId, orgId]
           );
         } else {
           await pool.query(
-            `INSERT INTO org_menu_priority (orgid, ${column}, priority) VALUES (?, ?, ?)`,
+            `INSERT INTO C_ORG_MENU_PRIORITY (orgid, ${column}, priority) VALUES (?, ?, ?)`,
             [orgId, itemId, priority]
           );
         }

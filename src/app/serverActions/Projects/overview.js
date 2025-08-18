@@ -169,7 +169,7 @@ export async function updateproject(formData) {
 
         if (billType) {
           const [billTypeCheck] = await pool.execute(
-            'SELECT id FROM generic_values WHERE g_id = 7 AND Name = ? AND orgid = ? AND isactive = 1',
+            'SELECT id FROM C_GENERIC_VALUES WHERE g_id = 7 AND Name = ? AND orgid = ? AND isactive = 1',
             [billType, orgId]
           );
           if (billTypeCheck.length === 0) {
@@ -180,7 +180,7 @@ export async function updateproject(formData) {
 
         if (otBillType) {
           const [otBillTypeCheck] = await pool.execute(
-            'SELECT id FROM generic_values WHERE g_id = 8 AND Name = ? AND orgid = ? AND isactive = 1',
+            'SELECT id FROM C_GENERIC_VALUES WHERE g_id = 8 AND Name = ? AND orgid = ? AND isactive = 1',
             [otBillType, orgId]
           );
           if (otBillTypeCheck.length === 0) {
@@ -191,7 +191,7 @@ export async function updateproject(formData) {
 
         if (payTerm) {
           const [payTermCheck] = await pool.execute(
-            'SELECT id FROM generic_values WHERE g_id = 9 AND Name = ? AND orgid = ? AND isactive = 1',
+            'SELECT id FROM C_GENERIC_VALUES WHERE g_id = 9 AND Name = ? AND orgid = ? AND isactive = 1',
             [payTerm, orgId]
           );
           if (payTermCheck.length === 0) {
