@@ -33,14 +33,14 @@ const Delegate = () => {
           setHasPermission(result.hasPermission);
           setUserEmpId(result.userEmpId);
           if (result.hasPermission.TimeSheets) {
-            const empResult = await delegateAction('getEligibleEmployees', { menuName: 'TimeSheets' });
+            const empResult = await delegateAction('getEligibleEmployees', { menuName: 'Timesheets' });
             console.log('Eligible employees result for TimeSheets:', empResult);
             if (empResult.error) {
               setError(empResult.error);
             } else {
               setEmployeesTimeSheets(empResult.employees || []);
             }
-            const activeResult = await delegateAction('getActiveDelegations', { menuName: 'TimeSheets' });
+            const activeResult = await delegateAction('getActiveDelegations', { menuName: 'Timesheets' });
             console.log('Active delegations result for TimeSheets:', activeResult);
             if (activeResult.error) {
               setError(activeResult.error);

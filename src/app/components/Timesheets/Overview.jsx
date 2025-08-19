@@ -485,7 +485,7 @@ const Overview = () => {
                           disabled={isSaving}
                           style={{ cursor: isSaving ? "not-allowed" : "pointer" }}
                         />
-                        Approve All
+                        Approve
                       </label>
                     </div>
                   )}
@@ -505,7 +505,7 @@ const Overview = () => {
                               : "pointer",
                         }}
                       >
-                        {isSaving ? 'Submitting...' : 'Submit All'}
+                        {isSaving ? 'Submitting...' : 'Submit'}
                       </button>
                     </div>
                   )}

@@ -55,7 +55,7 @@ export async function delegateAction(action, data = {}) {
         [userEmpId, orgId]
       );
       console.log('Permission check result for empid', userEmpId, ':', permissionRows);
-      const hasTimeSheets = permissionRows.some(row => row.name === 'TimeSheets');
+      const hasTimeSheets = permissionRows.some(row => row.name === 'Timesheets');
       const hasLeaves = permissionRows.some(row => row.name === 'Leaves');
       return { hasPermission: { TimeSheets: hasTimeSheets, Leaves: hasLeaves }, userEmpId };
     }
@@ -119,7 +119,7 @@ export async function delegateAction(action, data = {}) {
     }
 
     if (action === 'C_DELEGATE') {
-      const { receiverEmpId, isActive, menuName = 'TimeSheets' } = data;
+      const { receiverEmpId, isActive, menuName = 'Timesheets' } = data;
       if (!receiverEmpId) {
         console.log('Receiver employee ID is missing for C_DELEGATE action');
         return { error: 'Receiver employee ID is required.' };
