@@ -14,20 +14,19 @@ html, body {
   padding: 0;
 }
 
-
-
+body {
+  background-color: #f3f2ef;
+  padding-top: 30px; /* Same as original navbar height */
+}
 
 #navid a:first-child {
   font-family: 'Orbitron', sans-serif;
   font-weight: bold;
   color: #0FD46C;
   font-size: 15px;
-  
-  
-  
 }
 
-/* Global navbar styles */
+/* Global navbar styles - keeping original height and styling */
 #navid {
   text-decoration: none;
   position: fixed;
@@ -38,20 +37,20 @@ html, body {
   z-index: 999;
   display: flex;
   align-items: center;
+  justify-content: space-between; /* This spreads elements evenly */
   padding: 0 20px;
-  background-color: rgba(255, 255, 255, 0.7); /* translucent white */
-  backdrop-filter: saturate(180%) blur(10px); /* blur effect */
-  -webkit-backdrop-filter: saturate(180%) blur(10px); /* Safari support */
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1); /* subtle border */
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* subtle shadow */
+  background-color: rgba(255, 255, 255, 0.7);
+  backdrop-filter: saturate(180%) blur(10px);
+  -webkit-backdrop-filter: saturate(180%) blur(10px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 #navid a {
   position: relative;
   text-decoration: none;
   color: #333;
-  margin: 0 16px;
-  font-family: Arial, sans-serif;
+  font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
   font-size: 11px;
   transition: color 0.3s ease;
   text-transform: uppercase;
@@ -61,11 +60,11 @@ html, body {
 #navid a::after {
   content: "";
   position: absolute;
-  bottom: -5px; /* Position under the text */
+  bottom: -5px;
   left: 0;
   width: 0%;
   height: 2px;
-  background-color: #0FD46C; /* Your brand color */
+  background-color: #0FD46C;
   transition: width 0.3s ease;
 }
 
@@ -86,6 +85,7 @@ html, body {
   height: 25px;
   cursor: pointer;
 }
+
 .button {
   background-color: #0FD46C;
   color: black !important;
@@ -94,17 +94,88 @@ html, body {
   border-radius: 5px;
   cursor: pointer;
   font-size: 14px;
-  font-family: Arial, sans-serif;
+  font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
   transition: background-color 0.3s ease, transform 0.1s ease, color 0.3s ease;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  text-decoration: none !important; /* to override default <a> style */
+  text-decoration: none !important;
 }
 
 .button:hover {
   background-color: #0CB25A;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  color: white !important; /* Force white on hover */
+  color: white !important;
 }
-body {
-  background-color: #f3f2ef;
+
+/* Hamburger menu button - hidden on desktop */
+.hamburger {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  flex-direction: column;
+  justify-content: space-around;
+  width: 20px;
+  height: 15px;
+  padding: 0;
+}
+
+.hamburger span {
+  width: 100%;
+  height: 2px;
+  background-color: #333;
+  transition: all 0.3s ease;
+}
+
+/* Mobile styles */
+@media screen and (max-width: 768px) {
+  .hamburger {
+    display: flex;
+  }
+
+  /* Hide menu icon on mobile */
+  .menu-icon {
+    display: none;
+  }
+
+  /* Hide all nav links except brand and login on mobile initially */
+  #navid a:not(:first-child):not(.button) {
+    display: none;
+    position: absolute;
+    top: 30px;
+    left: 0;
+    width: 100%;
+    background-color: rgba(255, 255, 255, 0.95);
+    backdrop-filter: saturate(180%) blur(10px);
+    -webkit-backdrop-filter: saturate(180%) blur(10px);
+    padding: 10px 20px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  }
+
+  /* Show nav links when menu is open */
+  #navid.menu-open a:not(:first-child):not(.button) {
+    display: block;
+  }
+
+  /* Stack the mobile menu items */
+  #navid.menu-open a:nth-child(2) { top: 30px; }
+  #navid.menu-open a:nth-child(3) { top: 60px; }
+  #navid.menu-open a:nth-child(4) { top: 90px; }
+  #navid.menu-open a:nth-child(5) { top: 120px; }
+  #navid.menu-open a:nth-child(6) { top: 150px; }
+  #navid.menu-open a:nth-child(7) { top: 180px; }
+  #navid.menu-open a:nth-child(8) { top: 210px; }
+  #navid.menu-open a:nth-child(9) { top: 240px; }
+
+  /* Hamburger animation */
+  .hamburger.active span:nth-child(1) {
+    transform: rotate(45deg) translate(5px, 5px);
+  }
+
+  .hamburger.active span:nth-child(2) {
+    opacity: 0;
+  }
+
+  .hamburger.active span:nth-child(3) {
+    transform: rotate(-45deg) translate(5px, -5px);
+  }
 }
