@@ -13,7 +13,6 @@ function LogoutButton({ logoLetter = 'M', username = 'Unknown', rolename = 'Unkn
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   useEffect(() => {
-    // Sync props with state after mount to handle hydration
     setUserData({
       logoLetter,
       username,
@@ -21,11 +20,10 @@ function LogoutButton({ logoLetter = 'M', username = 'Unknown', rolename = 'Unkn
       orgName,
       isLoading: false,
     });
-    console.log('LogoutButton props updated:', { logoLetter, username, rolename, orgName });
   }, [logoLetter, username, rolename, orgName]);
 
   if (userData.isLoading) {
-    return <div>Loading...</div>; // Prevent rendering until synced
+    return <div>Loading...</div>;
   }
 
   return (
@@ -37,9 +35,11 @@ function LogoutButton({ logoLetter = 'M', username = 'Unknown', rolename = 'Unkn
       <span className={styles.logo}>{userData.logoLetter.toUpperCase()}</span>
       {isDropdownOpen && (
         <div className={styles.dropdown}>
-          <p>Organization: {userData.orgName}</p>
-          <p>User ID: {userData.username}</p>
-          <p>Role: {userData.rolename}</p>
+          <div className={styles.userInfo}>
+            <div className={styles.username}>{userData.username}</div>
+            <div className={styles.userRole}>{userData.rolename}</div>
+          </div>
+          <div className={styles.divider}></div>
           <form action="/api/logout" method="POST">
             <button type="submit">Logout</button>
           </form>
