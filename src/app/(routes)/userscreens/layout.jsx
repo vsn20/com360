@@ -56,6 +56,13 @@ export default async function userscreenLayout({ children }) {
         );
         const roleids = roleRows.map(row => row.roleid);
 
+        const [employee]=await pool.query(
+          'select EMP_FST_NAME,EMP_LAST_NAME from C_EMP where empid=?',[decoded.empid]
+        );
+
+         userData.username=`${employee[0].EMP_FST_NAME} ${employee[0].EMP_LAST_NAME}`;
+         userData.logoLetter=(userData.username || 'M')[0].toUpperCase();
+
         if (roleids.length > 0) {
           const [adminRows] = await pool.query(
             'SELECT isadmin FROM C_ORG_ROLE_TABLE WHERE roleid IN (?) AND orgid = ?',
