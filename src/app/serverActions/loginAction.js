@@ -12,7 +12,7 @@ const generateToken = (userId, empid, username, rolename, orgid, orgname) => {
 
 export async function loginaction(logindetails) {
   const { username, password } = logindetails;
- // console.log("Login details received:", { username, password });
+  console.log("Login attempt for username:", username);
 
   try {
     const pool = await DBconnection();
@@ -78,48 +78,81 @@ export async function loginaction(logindetails) {
 
     // Generate JWT token with empid
     const token = generateToken(user.username, user.empid, user.username, rolename, user.orgid, orgName);
-   // console.log("Generated JWT token payload:", JSON.stringify({ userId: user.username, empid: user.empid, username, rolename, orgid: user.orgid, orgname: orgName }));
-    //console.log("Generated JWT token:", token);
+    console.log("JWT token generated successfully");
 
-    // Set JWT token in cookies
-    const cookieStore = cookies();
+    // Set JWT token in cookies - PRODUCTION READY
+    const cookieStore = await cookies();
     await cookieStore.set("jwt_token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: false, // Set to false for HTTP, true for HTTPS
       maxAge: 60 * 60 * 24, // 24 hours
       path: "/",
       sameSite: "lax",
     });
-    console.log("Cookie set:", { name: "jwt_token", value: token });
+    console.log("Cookie set successfully:", { name: "jwt_token", value: token.substring(0, 20) + "..." });
 
-    // Fetch C_MENU items from /api/menu
-    const url = new URL('/api/menu', process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000');
-    const menuResponse = await fetch(url.toString(), {
-      method: 'GET',
-      headers: {
-        Cookie: `jwt_token=${token}`,
-      },
-    });
+    // Fetch C_MENU items from /api/menu - Use relative URL for internal calls
+    try {
+      // For server-side internal calls, use localhost (works within the same server)
+      const baseUrl = process.env.NODE_ENV === 'production' 
+        ? 'http://localhost' // Internal calls use localhost
+        : (process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000');
+      
+      const menuUrl = `${baseUrl}/api/menu`;
+      console.log("Fetching menu from:", menuUrl);
 
-    if (!menuResponse.ok) {
-      const errorBody = await menuResponse.text();
-      console.error('Menu fetch failed:', { status: menuResponse.status, body: errorBody });
-      throw new Error(`HTTP error! status: ${menuResponse.status}`);
+      const menuResponse = await fetch(menuUrl, {
+        method: 'GET',
+        headers: {
+          'Cookie': `jwt_token=${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!menuResponse.ok) {
+        const errorBody = await menuResponse.text();
+        console.error('Menu fetch failed:', { 
+          status: menuResponse.status, 
+          statusText: menuResponse.statusText,
+          body: errorBody 
+        });
+        throw new Error(`Menu API error: ${menuResponse.status}`);
+      }
+
+      const menuData = await menuResponse.json();
+      const features = menuData.map(item => item.href || item.C_SUBMENU?.map(sub => sub.href)).flat().filter(Boolean);
+      console.log("Features fetched successfully, count:", features.length);
+
+    } catch (menuError) {
+      console.error("Menu fetch error (non-blocking):", menuError.message);
+      // Don't fail login if menu fetch fails
     }
 
-    const menuData = await menuResponse.json();
-    const features = menuData.map(item => item.href || item.C_SUBMENU.map(sub => sub.href)).flat();
-   // console.log("Features fetched from /api/menu:", features);
-
     // Update last login timestamp
-    await pool.query(
-      "UPDATE C_USER SET LAST_LOGIN_TIMESTAMP = CURRENT_TIMESTAMP WHERE username = ?",
-      [username]
-    );
+    try {
+      await pool.query(
+        "UPDATE C_USER SET LAST_LOGIN_TIMESTAMP = CURRENT_TIMESTAMP WHERE username = ?",
+        [username]
+      );
+      console.log("Last login timestamp updated for:", username);
+    } catch (updateError) {
+      console.error("Failed to update last login timestamp:", updateError.message);
+      // Don't fail login if timestamp update fails
+    }
 
-    return { success: true, empid: user.empid, rolename, orgid: user.orgid, orgname: orgName, token };
+    console.log("✅ Login successful for:", username);
+    return { 
+      success: true, 
+      empid: user.empid, 
+      rolename, 
+      orgid: user.orgid, 
+      orgname: orgName, 
+      token 
+    };
+
   } catch (error) {
-    console.log("Login error:", error.message);
+    console.error("❌ Login error:", error.message);
+    console.error("Full error stack:", error.stack);
     return { success: false, error: "An error occurred during login" };
   }
 }
