@@ -691,7 +691,7 @@ const Overview = ({
           ) : (
             <>
               <div className="table-wrapper">
-                <table className="service-requests-table four-column">
+                <table className="service-requests-table four-column93">
                   <colgroup>
                     <col />
                     <col />

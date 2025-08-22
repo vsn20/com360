@@ -1,3 +1,4 @@
+// File: Overview.jsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -20,8 +21,7 @@ const Overview = ({
   accounts,
 }) => {
   const router = useRouter();
-  // Added to detect route changes
-  const pathname = usePathname(); // Fixed: usePathname instead of 'hello'
+  const pathname = usePathname();
   const searchparams = useSearchParams();
   const [selectedAccntId, setSelectedAccntId] = useState(null);
   const [accountDetails, setAccountDetails] = useState(null);
@@ -81,12 +81,9 @@ const Overview = ({
     mailingCountryId: '',
     mailingPostalCode: '',
   });
-  // State for sorted accounts
   const [allAccounts, setAllAccounts] = useState(accounts);
-  // State for sorting configuration
   const [sortConfig, setSortConfig] = useState({ column: 'accntId', direction: 'asc' });
 
-  // Reset states on pathname change
   useEffect(() => {
     console.log("resetting");
     handleBackClick();
@@ -108,7 +105,7 @@ const Overview = ({
   }, [initialError]);
 
   useEffect(() => {
-    setAllAccounts(accounts); // Initialize with accounts prop
+    setAllAccounts(accounts);
   }, [accounts]);
 
   useEffect(() => {
@@ -264,10 +261,10 @@ const Overview = ({
         return;
       }
       formDataToSubmit.append('ACTIVE_FLAG', formData.activeFlag);
-      formDataToSubmit.append('ACCT_TYPE_CD', formData.acctTypeCd);
+      formDataToSubmit.append('ACCT_TYPE_CD', formData.acctTypeCd); // Now uses id
       formDataToSubmit.append('EMAIL', formData.email);
       formDataToSubmit.append('ALIAS_NAME', formData.aliasName || '');
-      formDataToSubmit.append('BRANCH_TYPE', formData.branchType || '');
+      formDataToSubmit.append('BRANCH_TYPE', formData.branchType || ''); // Now uses id
     } else if (section === 'businessAddress') {
       formDataToSubmit.append('BUSINESS_ADDR_LINE1', formData.businessAddrLine1 || '');
       formDataToSubmit.append('BUSINESS_ADDR_LINE2', formData.businessAddrLine2 || '');
@@ -346,12 +343,12 @@ const Overview = ({
   };
 
   const getAccountTypeName = (acctTypeCd) => {
-    const accountType = accountTypes.find(type => type.Name === acctTypeCd);
+    const accountType = accountTypes.find(type => String(type.id) === String(acctTypeCd));
     return accountType ? accountType.Name : 'No Account Type';
   };
 
   const getBranchTypeName = (branchType) => {
-    const branch = branchTypes.find(type => type.Name === branchType);
+    const branch = branchTypes.find(type => String(type.id) === String(branchType));
     return branch ? branch.Name : 'No Branch Type';
   };
 
@@ -403,6 +400,7 @@ const Overview = ({
     Object.entries(addformData).forEach(([key, value]) => {
       addformDataToSend.append(key, value);
     });
+    addformDataToSend.append('orgid', orgid); // Ensure orgid is included
 
     const addresult = await addAccount(addformDataToSend);
     if (addresult?.error) {
@@ -434,7 +432,6 @@ const Overview = ({
     }
   };
 
-  // Sorting functions
   const sortAccounts = (a, b, column, direction) => {
     let aValue, bValue;
     switch (column) {
@@ -511,7 +508,7 @@ const Overview = ({
                   >
                     <option value="">Select Account Type</option>
                     {accountTypes.map((type) => (
-                      <option key={type.id} value={type.Name}>
+                      <option key={type.id} value={type.id}>
                         {type.Name}
                       </option>
                     ))}
@@ -527,7 +524,7 @@ const Overview = ({
                   >
                     <option value="">Select Branch Type</option>
                     {branchTypes.map((type) => (
-                      <option key={type.id} value={type.Name}>
+                      <option key={type.id} value={type.id}>
                         {type.Name}
                       </option>
                     ))}
@@ -759,6 +756,9 @@ const Overview = ({
                   <th>
                     Account Type 
                   </th>
+                  <th>
+                    Branch Type
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -771,6 +771,7 @@ const Overview = ({
                     <td>Account-{getdisplayprojectid(account.ACCNT_ID)}</td>
                     <td>{account.ALIAS_NAME || '-'}</td>
                     <td>{getAccountTypeName(account.ACCT_TYPE_CD)}</td>
+                    <td>{getBranchTypeName(account.BRANCH_TYPE)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -796,7 +797,7 @@ const Overview = ({
                       <select name="acctTypeCd" value={formData.acctTypeCd} onChange={handleFormChange} required>
                         <option value="">Select Account Type</option>
                         {accountTypes.map((type) => (
-                          <option key={type.id} value={type.Name}>
+                          <option key={type.id} value={type.id}>
                             {type.Name}
                           </option>
                         ))}
@@ -822,7 +823,7 @@ const Overview = ({
                       <select name="branchType" value={formData.branchType} onChange={handleFormChange}>
                         <option value="">Select Branch Type</option>
                         {branchTypes.map((type) => (
-                          <option key={type.id} value={type.Name}>
+                          <option key={type.id} value={type.id}>
                             {type.Name}
                           </option>
                         ))}

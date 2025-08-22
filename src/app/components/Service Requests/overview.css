@@ -115,19 +115,19 @@ table {
   table-layout: fixed;
 }
 
-table.four-column col:nth-child(1) {
+table.four-column93 col:nth-child(1) {
   width: 15%;
 }
 
-table.four-column col:nth-child(2) {
+table.four-column93 col:nth-child(2) {
   width: 35%;
 }
 
-table.four-column col:nth-child(3) {
+table.four-column93 col:nth-child(3) {
   width: 15%;
 }
 
-table.four-column col:nth-child(4) {
+table.four-column93 col:nth-child(4) {
   width: 35%;
 }
 
@@ -233,10 +233,10 @@ tbody tr:hover {
   color: #dc2626;
 }
 
-.id-cell {
+/* .id-cell {
   display: flex;
   align-items: center;
-}
+} */
 
 .empty-state {
   text-align: center;
@@ -283,19 +283,19 @@ tbody tr:hover {
     padding: 12px 15px;
   }
 
-  table.four-column col:nth-child(1) {
+  table.four-column93 col:nth-child(1) {
     width: 20%;
   }
 
-  table.four-column col:nth-child(2) {
+  table.four-column93 col:nth-child(2) {
     width: 30%;
   }
 
-  table.four-column col:nth-child(3) {
+  table.four-column93 col:nth-child(3) {
     width: 20%;
   }
 
-  table.four-column col:nth-child(4) {
+  table.four-column93 col:nth-child(4) {
     width: 30%;
   }
 }
@@ -306,19 +306,19 @@ tbody tr:hover {
     padding: 10px 12px;
   }
 
-  table.four-column col:nth-child(1) {
+  table.four-column93 col:nth-child(1) {
     width: 25%;
   }
 
-  table.four-column col:nth-child(2) {
+  table.four-column93 col:nth-child(2) {
     width: 25%;
   }
 
-  table.four-column col:nth-child(3) {
+  table.four-column93 col:nth-child(3) {
     width: 25%;
   }
 
-  table.four-column col:nth-child(4) {
+  table.four-column93 col:nth-child(4) {
     width: 25%;
   }
 }
@@ -442,19 +442,19 @@ tbody tr:hover {
   table-layout: fixed;
 }
 
-.service-requests-table.four-column col:nth-child(1) {
+.service-requests-table.four-column93 col:nth-child(1) {
   width: 20%;
 }
 
-.service-requests-table.four-column col:nth-child(2) {
+.service-requests-table.four-column93 col:nth-child(2) {
   width: 35%;
 }
 
-.service-requests-table.four-column col:nth-child(3) {
+.service-requests-table.four-column93 col:nth-child(3) {
   width: 20%;
 }
 
-.service-requests-table.four-column col:nth-child(4) {
+.service-requests-table.four-column93 col:nth-child(4) {
   width: 25%;
 }
 
@@ -528,10 +528,10 @@ tbody tr:hover {
 }
 
 /* Role/Request Indicator */
-.id-cell {
+/* .id-cell {
   display: flex;
   align-items: center;
-}
+} */
 
 .role-indicator {
   display: inline-block;
@@ -774,7 +774,7 @@ tbody tr:hover {
     padding: 12px 15px;
   }
 
-  .service-requests-table.four-column col:nth-child(1) {
+  .service-requests-table.four-column93 col:nth-child(1) {
     width: 25%;
   }
 

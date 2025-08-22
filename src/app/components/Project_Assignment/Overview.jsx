@@ -24,27 +24,21 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
   const [isadd, setisadd] = useState(false);
   const router = useRouter();
   const [addform_success, setaddfrom_success] = useState(null);
-  const [addform_error, setaddform_error] = useState(null);
-  // State for sorted projects
   const [allProjects, setAllProjects] = useState([]);
-  // State for sorting configuration
   const [sortConfig, setSortConfig] = useState({ column: 'prjId', direction: 'asc' });
 
-  // Utility function to format dates for display and form input
   const formatDate = (date) => {
     if (!date) return '';
     if (date instanceof Date) {
-      // Use local date components to preserve YYYY-MM-DD
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
       return `${year}-${month}-${day}`;
     }
     if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}(T.*)?$/)) {
-      // If it's already a date string (YYYY-MM-DD), return it as is
       return date.split('T')[0];
     }
-    return ''; // Fallback for invalid dates
+    return '';
   };
 
   useEffect(() => {
@@ -66,7 +60,7 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
   }, []);
 
   useEffect(() => {
-    setAllProjects(projects); // Initialize with projects state
+    setAllProjects(projects);
   }, [projects]);
 
   useEffect(() => {
@@ -286,7 +280,6 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
             projectStartDt: formData.projectStartDt || '',
             projectEndDt: formData.projectEndDt || '',
           });
-          // Update assignmentData to reflect changes in the employee dropdown
           setAssignmentData((prev) =>
             prev.map((emp) =>
               emp.EMP_ID === formData.empId
@@ -311,7 +304,7 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
 
   const getDisplayValue = (value, options) => {
     if (!value || !options) return '-';
-    const option = options.find(opt => opt.Name === value);
+    const option = options.find(opt => opt.id === parseInt(value,10));
     return option ? option.Name : value;
   };
 
@@ -323,7 +316,45 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
     return prjid.split('_')[1] || prjid;
   };
 
-  // Add Project Assignment Logic
+  const sortProjects = (a, b, column, direction) => {
+    let aValue, bValue;
+    switch (column) {
+      case 'prjId':
+        aValue = parseInt(a.PRJ_ID.split('-')[1] || a.PRJ_ID);
+        bValue = parseInt(b.PRJ_ID.split('-')[1] || b.PRJ_ID);
+        return direction === 'asc' ? aValue - bValue : bValue - aValue;
+      case 'prjName':
+        aValue = (a.PRJ_NAME || '').toLowerCase();
+        bValue = (b.PRJ_NAME || '').toLowerCase();
+        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      case 'prsDesc':
+        aValue = (a.PRS_DESC || '').toLowerCase();
+        bValue = (b.PRS_DESC || '').toLowerCase();
+        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      case 'accntId':
+        aValue = (a.ACCNT_ID || '').toLowerCase();
+        bValue = (b.ACCNT_ID || '').toLowerCase();
+        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      case 'startDt':
+        aValue = new Date(a.START_DT || '1970-01-01');
+        bValue = new Date(b.START_DT || '1970-01-01');
+        return direction === 'asc' ? aValue - bValue : bValue - aValue;
+      case 'endDt':
+        aValue = new Date(a.END_DT || '1970-01-01');
+        bValue = new Date(b.END_DT || '1970-01-01');
+        return direction === 'asc' ? aValue - bValue : bValue - aValue;
+      default:
+        return 0;
+    }
+  };
+
+  const requestSort = (column) => {
+    setSortConfig(prev => ({
+      column,
+      direction: prev.column === column && prev.direction === 'asc' ? 'desc' : 'asc',
+    }));
+  };
+
   const [addformData, setaddFormData] = useState({
     empId: '',
     prjId: '',
@@ -351,11 +382,8 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
         addform_setProjects([]);
         return;
       }
-
       try {
-        console.log('Fetching projects for orgId:', orgId);
         const addform_projectsData = await fetchProjectsByOrgId(parseInt(orgId, 10));
-        console.log('Fetched projects:', addform_projectsData);
         addform_setProjects(addform_projectsData || []);
       } catch (error) {
         console.error('Error loading projects for orgId', orgId, ':', error);
@@ -372,11 +400,8 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
         addform_setEmployees([]);
         return;
       }
-
       try {
-        console.log('Fetching employees for orgId:', orgId, 'and prjId:', addformData.prjId);
         const addform_employeesData = await fetchEmployeesByOrgId(parseInt(orgId, 10), addformData.prjId);
-        console.log('Fetched employees:', addform_employeesData);
         addform_setEmployees(addform_employeesData || []);
       } catch (error) {
         console.error('Error loading employees for orgId', orgId, 'and prjId', addformData.prjId, ':', error);
@@ -419,17 +444,15 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
   const addform_formatDate = (date) => {
     if (!date) return '';
     if (date instanceof Date) {
-      // Use local date components to preserve YYYY-MM-DD
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
       return `${year}-${month}-${day}`;
     }
     if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}(T.*)?$/)) {
-      // If it's already a date string (YYYY-MM-DD), return it as is
       return date.split('T')[0];
     }
-    return ''; // Fallback for invalid dates
+    return '';
   };
 
   useEffect(() => {
@@ -453,50 +476,10 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
         ...prev,
         projectStartDt: '',
         projectEndDt: '',
-        empId: '', // Reset employee selection when project is cleared
+        empId: '',
       }));
     }
   }, [addformData.prjId, addform_projects]);
-
-  // Sorting functions
-  const sortProjects = (a, b, column, direction) => {
-    let aValue, bValue;
-    switch (column) {
-      case 'prjId':
-        aValue = parseInt(a.PRJ_ID.split('-')[1] || a.PRJ_ID);
-        bValue = parseInt(b.PRJ_ID.split('-')[1] || b.PRJ_ID);
-        return direction === 'asc' ? aValue - bValue : bValue - aValue;
-      case 'prjName':
-        aValue = (a.PRJ_NAME || '').toLowerCase();
-        bValue = (b.PRJ_NAME || '').toLowerCase();
-        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
-      case 'prsDesc':
-        aValue = (a.PRS_DESC || '').toLowerCase();
-        bValue = (b.PRS_DESC || '').toLowerCase();
-        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
-      case 'accntId':
-        aValue = (a.ACCNT_ID || '').toLowerCase();
-        bValue = (b.ACCNT_ID || '').toLowerCase();
-        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
-      case 'startDt':
-        aValue = new Date(a.START_DT || '1970-01-01');
-        bValue = new Date(b.START_DT || '1970-01-01');
-        return direction === 'asc' ? aValue - bValue : bValue - aValue;
-      case 'endDt':
-        aValue = new Date(a.END_DT || '1970-01-01');
-        bValue = new Date(b.END_DT || '1970-01-01');
-        return direction === 'asc' ? aValue - bValue : bValue - aValue;
-      default:
-        return 0;
-    }
-  };
-
-  const requestSort = (column) => {
-    setSortConfig(prev => ({
-      column,
-      direction: prev.column === column && prev.direction === 'asc' ? 'desc' : 'asc',
-    }));
-  };
 
   return (
     <div className="overview-container">
@@ -601,7 +584,7 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
                   <select name="billType" value={addformData.billType} onChange={handleform_handleChange} required>
                     <option value="">Select Type</option>
                     {billTypes.map((type) => (
-                      <option key={type.id} value={type.Name}>
+                      <option key={type.id} value={type.id}>
                         {type.Name}
                       </option>
                     ))}
@@ -624,7 +607,7 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
                   <select name="otBillType" value={addformData.otBillType} onChange={handleform_handleChange}>
                     <option value="">Select Type</option>
                     {otBillType.map((type) => (
-                      <option key={type.id} value={type.Name}>
+                      <option key={type.id} value={type.id}>
                         {type.Name}
                       </option>
                     ))}
@@ -653,7 +636,7 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
                   <select name="payTerm" value={addformData.payTerm} onChange={handleform_handleChange} required>
                     <option value="">Select Term</option>
                     {payTerms.map((term) => (
-                      <option key={term.id} value={term.Name}>
+                      <option key={term.id} value={term.id}>
                         {term.Name}
                       </option>
                     ))}
@@ -677,22 +660,22 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
               <thead>
                 <tr>
                   <th onClick={() => requestSort('prjId')}>
-                    Project ID 
+                    Project ID
                   </th>
                   <th onClick={() => requestSort('prjName')}>
-                    Project Name 
+                    Project Name
                   </th>
-                  <th >
-                    Description 
+                  <th>
+                    Description
                   </th>
                   <th onClick={() => requestSort('accntId')}>
-                    Account 
+                    Account
                   </th>
                   <th onClick={() => requestSort('startDt')}>
-                    Start Date 
+                    Start Date
                   </th>
                   <th onClick={() => requestSort('endDt')}>
-                    End Date 
+                    End Date
                   </th>
                 </tr>
               </thead>
@@ -863,7 +846,7 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
                         <select name="billType" value={formData.billType} onChange={handleChange} required>
                           <option value="">Select Type</option>
                           {billTypes.map((type) => (
-                            <option key={type.id} value={type.Name}>
+                            <option key={type.id} value={type.id}>
                               {type.Name}
                             </option>
                           ))}
@@ -886,7 +869,7 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
                         <select name="otBillType" value={formData.otBillType} onChange={handleChange}>
                           <option value="">Select Type</option>
                           {otBillType.map((type) => (
-                            <option key={type.id} value={type.Name}>
+                            <option key={type.id} value={type.id}>
                               {type.Name}
                             </option>
                           ))}
@@ -915,7 +898,7 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
                         <select name="payTerm" value={formData.payTerm} onChange={handleChange} required>
                           <option value="">Select Term</option>
                           {payTerms.map((term) => (
-                            <option key={term.id} value={term.Name}>
+                            <option key={term.id} value={term.id}>
                               {term.Name}
                             </option>
                           ))}
@@ -965,7 +948,7 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
                       </div>
                       <div className="details-group">
                         <label>OT Billable:</label>
-                        <p>{employeeDetails.OT_BILLABLE_FLAG === 1 ? 'Yes' : 'No'}</p>
+                        <p>{employeeDetails.OT_BILLABLE_FLAG === 1 ? 'No' : 'Yes'}</p>
                       </div>
                     </div>
                     <div className="details-row">

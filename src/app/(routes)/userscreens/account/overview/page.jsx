@@ -3,7 +3,6 @@ import Overview from '@/app/components/Account/Overview';
 import { cookies } from 'next/headers';
 import DBconnection from '@/app/utils/config/db';
 
-
 // Simple function to decode JWT without verification
 const decodeJwt = (token) => {
   try {
@@ -39,7 +38,7 @@ export default async function OverviewPage({ searchParams }) {
         orgid = decoded.orgid;
 
         [accounts] = await pool.query(
-          'SELECT ACCNT_ID, ACCT_TYPE_CD, EMAIL, ALIAS_NAME FROM C_ACCOUNT WHERE ORGID = ?',
+          'SELECT ACCNT_ID, ACCT_TYPE_CD, EMAIL, ALIAS_NAME, BRANCH_TYPE FROM C_ACCOUNT WHERE ORGID = ?',
           [orgid]
         );
 

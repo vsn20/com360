@@ -17,7 +17,6 @@ const decodeJwt = (token) => {
 
 const getCurrentUserEmpIdName = async (pool, userId, orgId) => {
   try {
-    // Fetch empid from C_USER using username (userId)
     const [userRows] = await pool.execute(
       'SELECT empid FROM C_USER WHERE username = ? AND orgid = ?',
       [userId, orgId]
@@ -28,7 +27,6 @@ const getCurrentUserEmpIdName = async (pool, userId, orgId) => {
     }
     const empid = userRows[0].empid;
 
-    // Fetch employee name from C_EMP
     const [empRows] = await pool.execute(
       'SELECT EMP_FST_NAME, EMP_LAST_NAME, roleid FROM C_EMP WHERE empid = ? AND orgid = ?',
       [empid, orgId]
@@ -219,7 +217,6 @@ export async function updateProjectAssignment(formData) {
           return { error: 'Start Date is required.', success: false };
         }
 
-        // Normalize dates to YYYY-MM-DD for comparison
         const normalizeDate = (dateStr) => {
           if (!dateStr) return null;
           const date = new Date(dateStr);
@@ -278,33 +275,33 @@ export async function updateProjectAssignment(formData) {
 
         if (billType) {
           const [billTypeCheck] = await pool.execute(
-            'SELECT id FROM C_GENERIC_VALUES WHERE g_id = 7 AND Name = ? AND orgid = ? AND isactive = 1',
+            'SELECT id FROM C_GENERIC_VALUES WHERE g_id = 7 AND id = ? AND orgid = ? AND isactive = 1',
             [billType, orgId]
           );
           if (billTypeCheck.length === 0) {
-            console.log('Invalid bill type');
+            console.log('Invalid bill type ID');
             return { error: 'Invalid bill type.', success: false };
           }
         }
 
         if (otBillType) {
           const [otBillTypeCheck] = await pool.execute(
-            'SELECT id FROM C_GENERIC_VALUES WHERE g_id = 8 AND Name = ? AND orgid = ? AND isactive = 1',
+            'SELECT id FROM C_GENERIC_VALUES WHERE g_id = 8 AND id = ? AND orgid = ? AND isactive = 1',
             [otBillType, orgId]
           );
           if (otBillTypeCheck.length === 0) {
-            console.log('Invalid OT bill type');
+            console.log('Invalid OT bill type ID');
             return { error: 'Invalid OT bill type.', success: false };
           }
         }
 
         if (payTerm) {
           const [payTermCheck] = await pool.execute(
-            'SELECT id FROM C_GENERIC_VALUES WHERE g_id = 9 AND Name = ? AND orgid = ? AND isactive = 1',
+            'SELECT id FROM C_GENERIC_VALUES WHERE g_id = 9 AND id = ? AND orgid = ? AND isactive = 1',
             [payTerm, orgId]
           );
           if (payTermCheck.length === 0) {
-            console.log('Invalid pay term');
+            console.log('Invalid pay term ID');
             return { error: 'Invalid pay term.', success: false };
           }
         }

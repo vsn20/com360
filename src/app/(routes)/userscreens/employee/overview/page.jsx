@@ -78,6 +78,7 @@ export default async function OverviewPage({ searchParams }) {
          e.HIRE, 
          e.MOBILE_NUMBER, 
          e.GENDER,
+         e.STATUS,
          GROUP_CONCAT(era.roleid) AS roleids
        FROM C_EMP e
        LEFT JOIN C_EMP_ROLE_ASSIGN era ON e.empid = era.empid AND e.orgid = era.orgid

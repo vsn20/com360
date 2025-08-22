@@ -129,19 +129,19 @@ export async function addProject(prevState, formData) {
   }
 
   // Validate billType if provided
-  if (billType && !billTypes.some(type => type.Name === billType)) {
+  if (billType && !billTypes.some(type => type.id === billType)) {
     console.log('Redirecting: Invalid bill type');
     return { error: 'Invalid bill type.' };
   }
 
   // Validate otBillType if provided
-  if (otBillType && !otBillTypes.some(type => type.Name === otBillType)) {
+  if (otBillType && !otBillTypes.some(type => type.id === otBillType)) {
     console.log('Redirecting: Invalid OT bill type');
     return { error: 'Invalid OT bill type.' };
   }
 
   // Validate payTerm if provided
-  if (payTerm && !payTerms.some(term => term.Name === payTerm)) {
+  if (payTerm && !payTerms.some(term => term.id === payTerm)) {
     console.log('Redirecting: Invalid pay term');
     return { error: 'Invalid pay term.' };
   }
@@ -178,7 +178,6 @@ export async function addProject(prevState, formData) {
 
       // Get current user's empid-name
       const createdBy = await getCurrentUserEmpIdName(pool, userId, orgId);
-     // const updatedBy= await getCurrentUserEmpIdName(pool, userId, orgId);
       // Get the current number of records in C_PROJECT and add 1 for PRJ_ID
       const [countResult] = await pool.query('SELECT COUNT(*) AS count FROM C_PROJECT WHERE ORG_ID = ?', [orgId]);
       const prjCount = countResult[0].count;
@@ -188,7 +187,7 @@ export async function addProject(prevState, formData) {
       const insertColumns = [
         'PRJ_ID', 'PRJ_NAME', 'PRS_DESC', 'ACCNT_ID', 'ORG_ID', 'BILL_RATE', 'BILL_TYPE',
         'OT_BILL_RATE', 'OT_BILL_TYPE', 'BILLABLE_FLAG', 'START_DT', 'END_DT', 'CLIENT_ID',
-        'PAY_TERM', 'INVOICE_EMAIL', 'INVOICE_FAX', 'INVOICE_PHONE', 'ROW_ID','Createdby'
+        'PAY_TERM', 'INVOICE_EMAIL', 'INVOICE_FAX', 'INVOICE_PHONE', 'ROW_ID', 'Createdby'
       ];
 
       // Define values (matching all 18 columns)

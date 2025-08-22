@@ -18,7 +18,6 @@ const decodeJwt = (token) => {
 
 const getCurrentUserEmpIdName = async (pool, userId, orgId) => {
   try {
-    // Fetch empid from C_USER using username (userId)
     const [userRows] = await pool.execute(
       'SELECT empid FROM C_USER WHERE username = ? AND orgid = ?',
       [userId, orgId]
@@ -29,7 +28,6 @@ const getCurrentUserEmpIdName = async (pool, userId, orgId) => {
     }
     const empid = userRows[0].empid;
 
-    // Fetch employee name from C_EMP
     const [empRows] = await pool.execute(
       'SELECT EMP_FST_NAME, EMP_LAST_NAME, roleid FROM C_EMP WHERE empid = ? AND orgid = ?',
       [empid, orgId]
@@ -47,7 +45,6 @@ const getCurrentUserEmpIdName = async (pool, userId, orgId) => {
 };
 
 export async function addProjectAssignment(prevState, formData) {
-  // Extract form data
   const empId = formData.get('empId')?.trim();
   const prjId = formData.get('prjId')?.trim();
   const startDt = formData.get('startDt')?.trim();
@@ -60,7 +57,6 @@ export async function addProjectAssignment(prevState, formData) {
   const otBillableFlag = formData.get('otBillableFlag')?.trim() === 'Yes' ? 1 : 0;
   const payTerm = formData.get('payTerm')?.trim();
 
-  // Log form data for debugging
   console.log("Form data received:", {
     empId,
     prjId,
@@ -76,7 +72,6 @@ export async function addProjectAssignment(prevState, formData) {
     orgId: "from JWT",
   });
 
-  // Get the JWT token from cookies
   const cookieStore = cookies();
   const token = cookieStore.get('jwt_token')?.value;
 
@@ -85,7 +80,6 @@ export async function addProjectAssignment(prevState, formData) {
     return { error: 'No token found. Please log in.', success: false };
   }
 
-  // Decode the token to get the orgid
   const decoded = decodeJwt(token);
   if (!decoded || !decoded.orgid || !decoded.userId) {
     console.log('Invalid token or orgid/userId not found');
@@ -95,7 +89,6 @@ export async function addProjectAssignment(prevState, formData) {
   const orgId = decoded.orgid;
   const userId = decoded.userId;
 
-  // Validation for required fields
   if (!empId) return { error: 'Employee is required.', success: false };
   if (!prjId) return { error: 'Project is required.', success: false };
   if (!startDt) return { error: 'Start date is required.', success: false };
@@ -108,7 +101,6 @@ export async function addProjectAssignment(prevState, formData) {
     pool = await DBconnection();
     console.log("MySQL connection pool acquired");
 
-    // Check if assignment already exists
     const [existing] = await pool.execute(
       'SELECT ROW_ID FROM C_PROJ_EMP WHERE PRJ_ID = ? AND EMP_ID = ?',
       [prjId, empId]
@@ -118,7 +110,6 @@ export async function addProjectAssignment(prevState, formData) {
       return { error: 'This employee is already assigned to the selected project.', success: false };
     }
 
-    // Validate start_dt and end_dt against C_PROJECT
     const [project] = await pool.query(
       'SELECT DATE_FORMAT(START_DT, "%Y-%m-%d") AS START_DT, DATE_FORMAT(END_DT, "%Y-%m-%d") AS END_DT FROM C_PROJECT WHERE PRJ_ID = ? AND ORG_ID = ?',
       [prjId, orgId]
@@ -130,7 +121,6 @@ export async function addProjectAssignment(prevState, formData) {
     const projectStartDt = project[0].START_DT;
     const projectEndDt = project[0].END_DT;
 
-    // Normalize dates to YYYY-MM-DD for comparison
     const normalizeDate = (dateStr) => {
       if (!dateStr) return null;
       const date = new Date(dateStr);
@@ -151,44 +141,41 @@ export async function addProjectAssignment(prevState, formData) {
       return { error: `Assignment end date must be on or before project end date (${normalizedProjectEndDt}).`, success: false };
     }
 
-    // Validate billType, otBillType, and payTerm against C_GENERIC_VALUES
     if (billType) {
       const [billTypeCheck] = await pool.execute(
-        'SELECT id FROM C_GENERIC_VALUES WHERE g_id = 7 AND Name = ? AND orgid = ? AND isactive = 1',
+        'SELECT id FROM C_GENERIC_VALUES WHERE g_id = 7 AND id = ? AND orgid = ? AND isactive = 1',
         [billType, orgId]
       );
       if (billTypeCheck.length === 0) {
-        console.log('Invalid bill type');
+        console.log('Invalid bill type ID');
         return { error: 'Invalid bill type.', success: false };
       }
     }
 
     if (otBillType) {
       const [otBillTypeCheck] = await pool.execute(
-        'SELECT id FROM C_GENERIC_VALUES WHERE g_id = 8 AND Name = ? AND orgid = ? AND isactive = 1',
+        'SELECT id FROM C_GENERIC_VALUES WHERE g_id = 8 AND id = ? AND orgid = ? AND isactive = 1',
         [otBillType, orgId]
       );
       if (otBillTypeCheck.length === 0) {
-        console.log('Invalid OT bill type');
+        console.log('Invalid OT bill type ID');
         return { error: 'Invalid OT bill type.', success: false };
       }
     }
 
     if (payTerm) {
       const [payTermCheck] = await pool.execute(
-        'SELECT id FROM C_GENERIC_VALUES WHERE g_id = 9 AND Name = ? AND orgid = ? AND isactive = 1',
+        'SELECT id FROM C_GENERIC_VALUES WHERE g_id = 9 AND id = ? AND orgid = ? AND isactive = 1',
         [payTerm, orgId]
       );
       if (payTermCheck.length === 0) {
-        console.log('Invalid pay term');
+        console.log('Invalid pay term ID');
         return { error: 'Invalid pay term.', success: false };
       }
     }
 
-    // Await the async function to get the created_by value
     const created_by = await getCurrentUserEmpIdName(pool, userId, orgId);
 
-    // Insert into C_PROJ_EMP table
     const [result] = await pool.query(
       `INSERT INTO C_PROJ_EMP (
         emp_id, prj_id, start_dt, end_dt, bill_rate, bill_type, ot_bill_rate,
@@ -255,7 +242,7 @@ export async function fetchProjectsByOrgId(orgId) {
   try {
     console.log(`Fetching projects for orgId: ${orgId}`);
     const pool = await DBconnection();
-    const today = new Date().toISOString().split('T')[0]; // Current date in YYYY-MM-DD
+    const today = new Date().toISOString().split('T')[0];
     const [rows] = await pool.execute(
       'SELECT prj_id, prj_name, DATE_FORMAT(START_DT, "%Y-%m-%d") AS START_DT, DATE_FORMAT(END_DT, "%Y-%m-%d") AS END_DT FROM C_PROJECT WHERE org_id = ? AND (END_DT IS NULL OR END_DT > ?)',
       [orgId, today]

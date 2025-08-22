@@ -142,6 +142,7 @@ export async function fetchAccountById(accntId) {
   }
 }
 
+// File: updateAccount server action
 export async function updateAccount(formData) {
   try {
     const accntId = formData.get('ACCNT_ID');
@@ -197,10 +198,10 @@ export async function updateAccount(formData) {
 
     if (section === 'basic') {
       const activeFlag = formData.get('ACTIVE_FLAG') === '1' ? 1 : 0;
-      const acctTypeCd = formData.get('ACCT_TYPE_CD');
+      const acctTypeCd = formData.get('ACCT_TYPE_CD'); // Now expects id
       const email = formData.get('EMAIL');
       const aliasName = formData.get('ALIAS_NAME') || null;
-      const branchType = formData.get('BRANCH_TYPE') || null;
+      const branchType = formData.get('BRANCH_TYPE') || null; // Now expects id
 
       console.log('Basic details:', {
         activeFlag, acctTypeCd, email, aliasName, branchType, lastUpdatedBy
@@ -226,7 +227,7 @@ export async function updateAccount(formData) {
 
       if (acctTypeCd) {
         const [typeCheck] = await pool.execute(
-          'SELECT id FROM C_GENERIC_VALUES WHERE g_id = 5 AND Name = ? AND orgid = ? AND isactive = 1',
+          'SELECT id FROM C_GENERIC_VALUES WHERE g_id = 5 AND id = ? AND orgid = ? AND isactive = 1',
           [acctTypeCd, orgId]
         );
         if (typeCheck.length === 0) {
@@ -237,7 +238,7 @@ export async function updateAccount(formData) {
 
       if (branchType) {
         const [branchCheck] = await pool.execute(
-          'SELECT id FROM C_GENERIC_VALUES WHERE g_id = 6 AND Name = ? AND orgid = ? AND isactive = 1',
+          'SELECT id FROM C_GENERIC_VALUES WHERE g_id = 6 AND id = ? AND orgid = ? AND isactive = 1',
           [branchType, orgId]
         );
         if (branchCheck.length === 0) {

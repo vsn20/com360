@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { updateproject, fetchProjectById } from '@/app/serverActions/Projects/overview';
-import { useActionState } from 'react';
 import { addProject, fetchAccountsByOrgId } from '@/app/serverActions/Projects/AddprojectAction';
 import './projectoverview.css';
+import { useActionState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 const addform_intialstate = { error: null, success: false };
@@ -21,26 +21,21 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
   const [isadd, setisadd] = useState(false);
   const [addformsuccess, setaddformsuccess] = useState(null);
   const router = useRouter();
-  // State for sorted projects
   const [allProjects, setAllProjects] = useState(projects);
-  // State for sorting configuration
   const [sortConfig, setSortConfig] = useState({ column: 'prjId', direction: 'asc' });
 
-  // Utility function to format dates for display and form input
   const formatDate = (date) => {
     if (!date) return '';
     if (date instanceof Date) {
-      // Use local date components to preserve YYYY-MM-DD
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
       return `${year}-${month}-${day}`;
     }
     if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}(T.*)?$/)) {
-      // If it's already a date string (YYYY-MM-DD), return it as is
       return date.split('T')[0];
     }
-    return ''; // Fallback for invalid dates
+    return '';
   };
 
   useEffect(() => {
@@ -48,7 +43,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
   }, [searchparams.get('refresh')]);
 
   useEffect(() => {
-    setAllProjects(projects); // Initialize with projects prop
+    setAllProjects(projects);
   }, [projects]);
 
   useEffect(() => {
@@ -64,14 +59,14 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
       prsDesc: project.PRS_DESC || '',
       accntId: project.ACCNT_ID || '',
       billRate: project.BILL_RATE || '',
-      billType: project.BILL_TYPE || '',
+      billType: project.BILL_TYPE || '', // Stores id
       otBillRate: project.OT_BILL_RATE || '',
-      otBillType: project.OT_BILL_TYPE || '',
+      otBillType: project.OT_BILL_TYPE || '', // Stores id
       billableFlag: project.BILLABLE_FLAG ? 'Yes' : 'No',
       startDt: formatDate(project.START_DT),
       endDt: formatDate(project.END_DT),
       clientId: project.CLIENT_ID || '',
-      payTerm: project.PAY_TERM || '',
+      payTerm: project.PAY_TERM || '', // Stores id
       invoiceEmail: project.INVOICE_EMAIL || '',
       invoiceFax: project.INVOICE_FAX || '',
       invoicePhone: project.INVOICE_PHONE || '',
@@ -165,7 +160,6 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
       if (result && result.success) {
         const updatedProject = await fetchProjectById(formData.prjId);
         setSelectedProject(updatedProject);
-        // Update projects array to reflect changes in table
         projects.forEach((project, index) => {
           if (project.PRJ_ID === formData.prjId) {
             projects[index] = {
@@ -207,7 +201,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
 
   const getDisplayValue = (value, options) => {
     if (!value || !options) return '-';
-    const option = options.find(opt => opt.Name === value);
+    const option = options.find(opt => opt.id === parseInt(value,10));
     return option ? option.Name : value;
   };
 
@@ -221,7 +215,6 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
     return prjid.split('-')[1] || prjid;
   };
 
-  // Sorting functions
   const sortProjects = (a, b, column, direction) => {
     let aValue, bValue;
     switch (column) {
@@ -253,7 +246,6 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
     }));
   };
 
-  // Add Project Logic
   const [addformData, setaddFormData] = useState({
     prjName: '',
     prsDesc: '',
@@ -329,7 +321,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
         invoicePhone: '',
       });
       setaddformsuccess('Project added successfully!');
-      setTimeout(() => setaddformsuccess(null), 4000); // Clear success message after 2 seconds
+      setTimeout(() => setaddformsuccess(null), 4000);
     }
   }, [state.success, orgId]);
 
@@ -345,7 +337,6 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
           {addformsuccess && <div className="success-message">{addformsuccess}</div>}
           {state.error && <div className="error-message">{state.error}</div>}
           <form action={addform_enhancedFormAction} className="project-details-container">
-            {/* Basic Details Block */}
             <div className="details-block">
               <h3>Basic Details</h3>
               <div className="form-row">
@@ -400,7 +391,6 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
               </div>
             </div>
 
-            {/* Additional Details Block */}
             <div className="details-block">
               <h3>Additional Details</h3>
               <div className="form-row">
@@ -423,7 +413,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                   >
                     <option value="">Select Type</option>
                     {billTypes.map((type) => (
-                      <option key={type.id} value={type.Name}>
+                      <option key={type.id} value={type.id}>
                         {type.Name}
                       </option>
                     ))}
@@ -450,7 +440,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                   >
                     <option value="">Select Type</option>
                     {otBillTypes.map((type) => (
-                      <option key={type.id} value={type.Name}>
+                      <option key={type.id} value={type.id}>
                         {type.Name}
                       </option>
                     ))}
@@ -519,7 +509,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                   >
                     <option value="">Select Term</option>
                     {payTerms.map((term) => (
-                      <option key={term.id} value={term.Name}>
+                      <option key={term.id} value={term.id}>
                         {term.Name}
                       </option>
                     ))}
@@ -606,7 +596,6 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
         <div className="project-details-container">
           <button className="back-button" onClick={handleBack}>x</button>
 
-          {/* Basic Details Block */}
           <div className="details-block">
             <h3>Basic Details</h3>
             {editingBasic && canEditProjects ? (
@@ -690,7 +679,6 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
             )}
           </div>
 
-          {/* Additional Details Block */}
           <div className="details-block">
             <h3>Additional Details</h3>
             {editingAdditional && canEditProjects ? (
@@ -715,7 +703,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                     >
                       <option value="">Select Type</option>
                       {billTypes.map((type) => (
-                        <option key={type.id} value={type.Name}>
+                        <option key={type.id} value={type.id}>
                           {type.Name}
                         </option>
                       ))}
@@ -742,7 +730,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                     >
                       <option value="">Select Type</option>
                       {otBillTypes.map((type) => (
-                        <option key={type.id} value={type.Name}>
+                        <option key={type.id} value={type.id}>
                           {type.Name}
                         </option>
                       ))}
@@ -808,7 +796,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                     >
                       <option value="">Select Term</option>
                       {payTerms.map((term) => (
-                        <option key={term.id} value={term.Name}>
+                        <option key={term.id} value={term.id}>
                           {term.Name}
                         </option>
                       ))}

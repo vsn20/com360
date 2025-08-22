@@ -11,7 +11,7 @@ export default function Applications() {
   useEffect(() => {
     const fetchApplications = async () => {
       try {
-        const response = await fetch('/api/C_APPLICATIONS', {
+        const response = await fetch('/api/applications', {
           credentials: 'include', // Ensure cookies are sent
         });
         const data = await response.json();

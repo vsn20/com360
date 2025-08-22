@@ -10,7 +10,6 @@ import './overview.css';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { addemployee } from '@/app/serverActions/addemployee';
 
-
 const CustomSelect = ({ name, value, onChange, options, placeholder, disabled }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -140,9 +139,10 @@ const Overview = ({
   const [leaveAssignments, setLeaveAssignments] = useState({});
   const [allEmployees, setAllEmployees] = useState(employees);
   const [selectedRoles, setSelectedRoles] = useState([]);
-  const router=useRouter();
-  const searchparams=useSearchParams();
-  let ts=timestamp;
+  const router = useRouter();
+  const searchparams = useSearchParams();
+  let ts = timestamp;
+  
   const [formData, setFormData] = useState({
     empid: '',
     orgid: orgid || '',
@@ -197,6 +197,7 @@ const Overview = ({
     emergCnctCountryId: '185',
     emergCnctPostalCode: '',
   });
+  
   const [formLeaves, setFormLeaves] = useState({});
   const [error, setError] = useState(initialError);
   const [canEditEmployees, setCanEditEmployees] = useState(true);
@@ -206,23 +207,38 @@ const Overview = ({
   const [editingWorkAddress, setEditingWorkAddress] = useState(false);
   const [editingHomeAddress, setEditingHomeAddress] = useState(false);
   const [editingEmergencyContact, setEditingEmergencyContact] = useState(false);
-  const[issadd,setisadd]=useState(false);
- // Add state for sorting configuration
-const [sortConfig, setSortConfig] = useState({ column: 'empid', direction: 'asc' });
+  const [issadd, setisadd] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [genderFilter, setGenderFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageInputValue, setPageInputValue] = useState('1');
+  const [employeesPerPage, setEmployeesPerPage] = useState(10);
+  const [employeesPerPageInput, setEmployeesPerPageInput] = useState('10');
+  
+  // Add state for sorting configuration
+  const [sortConfig, setSortConfig] = useState({ column: 'empid', direction: 'asc' });
 
-// Update useEffect for sorting
-useEffect(() => {
-  const sortedEmployees = [...employees].sort((a, b) => sortEmployees(a, b, sortConfig.column, sortConfig.direction));
-  setAllEmployees(sortedEmployees);
-}, [sortConfig, employees]);
+  // Update useEffect for sorting
+  useEffect(() => {
+    const sortedEmployees = [...employees].sort((a, b) => sortEmployees(a, b, sortConfig.column, sortConfig.direction));
+    setAllEmployees(sortedEmployees);
+  }, [sortConfig, employees]);
+
   useEffect(() => {
     setError(initialError);
   }, [initialError]);
  
-  useEffect(()=>{
-   handleBackClick();
-  },[searchparams.get('refresh')]);
-  
+  useEffect(() => {
+    handleBackClick();
+  }, [searchparams.get('refresh')]);
+
+  useEffect(() => {
+    setPageInputValue(currentPage.toString());
+  }, [currentPage]);
+
+  useEffect(() => {
+    setEmployeesPerPageInput(employeesPerPage.toString());
+  }, [employeesPerPage]);
 
   useEffect(() => {
     const loadEmployeeDetails = async () => {
@@ -301,7 +317,7 @@ useEffect(() => {
         }
         setEmployeeDetails(employee);
         setLeaveAssignments(leaveData);
-        setSelectedRoles(employee.roleids || []); // Load multiple roles
+        setSelectedRoles(employee.roleids || []);
         setFormData({
           empid: employee.empid || '',
           orgid: employee.orgid || orgid || '',
@@ -400,7 +416,7 @@ useEffect(() => {
     console.log('Back to employee list');
   };
 
-  const handleaddemployee=()=>{
+  const handleaddemployee = () => {
     setSelectedEmpId(null);
     setEditingPersonal(false);
     setEditingEmployment(false);
@@ -633,38 +649,27 @@ useEffect(() => {
     return prjid.split('_')[1] || prjid;
   };
 
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
+const handleRoleToggle = (roleid) => {
+  setSelectedRoles((prev) => {
+    const newRoles = prev.includes(roleid)
+      ? prev.filter((id) => id !== roleid)
+      : [...prev, roleid];
+    return [...new Set(newRoles)];
+  });
+};
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//addemployee
-
+  // Add employee form states
   const [addform_formError, addform_setFormError] = useState(null);
   const [addform_leaves, addform_setLeaves] = useState({});
   const [addform_workCountryId, addform_setWorkCountryId] = useState('185');
   const [addform_homeCountryId, addform_setHomeCountryId] = useState('185');
   const [addform_emergCnctCountryId, addform_setEmergCnctCountryId] = useState('185');
-  const [addform_selectedRoles, addform_setSelectedRoles] = useState([]); // State for selected roles
-  const [addform_isDropdownOpen, addform_setIsDropdownOpen] = useState(false); // State for dropdown visibility
-  const [addform_isSubmitting, addform_setIsSubmitting] = useState(false); // State to prevent multiple submissions
-  const[addform_success,addform_setsuccess]=useState(null);
+  const [addform_selectedRoles, addform_setSelectedRoles] = useState([]);
+  const [addform_isDropdownOpen, addform_setIsDropdownOpen] = useState(false);
+  const [addform_isSubmitting, addform_setIsSubmitting] = useState(false);
+  const [addform_success, addform_setsuccess] = useState(null);
   const addform_today = new Date().toISOString().split('T')[0];
 
   const addform_handleRoleToggle = (roleid) => {
@@ -672,7 +677,6 @@ useEffect(() => {
       const newRoles = prev.includes(roleid)
         ? prev.filter((id) => id !== roleid)
         : [...prev, roleid];
-      // Ensure uniqueness using Set
       return [...new Set(newRoles)];
     });
   };
@@ -682,14 +686,13 @@ useEffect(() => {
   };
 
   const addform_handleSubmit = async (formData) => {
-    if (addform_isSubmitting) return; // Prevent multiple submissions
+    if (addform_isSubmitting) return;
     addform_setIsSubmitting(true);
 
-    // Append currentRole and unique roleids
     formData.append('currentRole', currentrole || '');
-    const addform_uniqueRoleIds = [...new Set(addform_selectedRoles)]; // Ensure no duplicates
+    const addform_uniqueRoleIds = [...new Set(addform_selectedRoles)];
     addform_uniqueRoleIds.forEach((roleid) => {
-      formData.append('roleids', roleid); // Append each unique roleid
+      formData.append('roleids', roleid);
     });
     Object.entries(addform_leaves).forEach(([leaveid, noofleaves]) => {
       if (noofleaves !== '') formData.append(`leaves[${leaveid}]`, noofleaves || '0');
@@ -699,14 +702,14 @@ useEffect(() => {
       const addform_result = await addemployee(formData);
       if (addform_result?.error) {
         addform_setFormError(addform_result.error);
-        setTimeout(()=>addform_setFormError(null),4000)
+        setTimeout(() => addform_setFormError(null), 4000)
       } else {
-      addform_setsuccess("Employee added Successfully!");
-      setTimeout(()=>addform_setsuccess(null),4000);
+        addform_setsuccess("Employee added Successfully!");
+        setTimeout(() => addform_setsuccess(null), 4000);
       }
     } catch (error) {
       addform_setFormError(`Submission failed: ${error.message}`);
-      setTimeout(()=>addform_setsuccess(null),4000);
+      setTimeout(() => addform_setsuccess(null), 4000);
     } finally {
       addform_setIsSubmitting(false);
     }
@@ -722,731 +725,894 @@ useEffect(() => {
     return { ...employee, rolename };
   });
 
+  // Sorting functions
+  const sortEmployees = (a, b, column, direction) => {
+    let aValue, bValue;
+    switch (column) {
+      case 'empid':
+        aValue = parseInt(a.empid.split('_')[1] || a.empid);
+        bValue = parseInt(b.empid.split('_')[1] || b.empid);
+        return direction === 'asc' ? aValue - bValue : bValue - aValue;
+      case 'name':
+        aValue = (a.EMP_PREF_NAME || `${a.EMP_FST_NAME} ${a.EMP_MID_NAME || ''} ${a.EMP_LAST_NAME}`.trim()).toLowerCase();
+        bValue = (b.EMP_PREF_NAME || `${b.EMP_FST_NAME} ${b.EMP_MID_NAME || ''} ${b.EMP_LAST_NAME}`.trim()).toLowerCase();
+        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      case 'hireDate':
+        aValue = a.HIRE ? new Date(a.HIRE).getTime() : 0;
+        bValue = b.HIRE ? new Date(b.HIRE).getTime() : 0;
+        return direction === 'asc' ? aValue - bValue : bValue - aValue;
+      case 'gender':
+        aValue = a.GENDER || '';
+        bValue = b.GENDER || '';
+        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      default:
+        return 0;
+    }
+  };
 
+  const requestSort = (column) => {
+    setSortConfig(prev => ({
+      column,
+      direction: prev.column === column && prev.direction === 'asc' ? 'desc' : 'asc',
+    }));
+  };
 
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+    setCurrentPage(1);
+    setPageInputValue('1');
+  };
 
+  const handleGenderFilterChange = (e) => {
+    setGenderFilter(e.target.value);
+    setCurrentPage(1);
+    setPageInputValue('1');
+  };
 
+  const handleEmployeesPerPageInputChange = (e) => {
+    setEmployeesPerPageInput(e.target.value);
+  };
 
-  //sorting
+  const handleEmployeesPerPageInputKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      const value = parseInt(e.target.value, 10);
+      if (!isNaN(value) && value >= 1) {
+        setEmployeesPerPage(value);
+        setEmployeesPerPageInput(value.toString());
+        setCurrentPage(1);
+        setPageInputValue('1');
+      } else {
+        setEmployeesPerPageInput(employeesPerPage.toString());
+      }
+    }
+  };
 
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(prev => prev + 1);
+      setPageInputValue((currentPage + 1).toString());
+    }
+  };
 
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
+      setPageInputValue((currentPage - 1).toString());
+    }
+  };
 
-  // Add state for sorting configuration
+  const handlePageInputChange = (e) => {
+    setPageInputValue(e.target.value);
+  };
 
-// Update useEffect for sorting
-useEffect(() => {
-  const sortedEmployees = [...employees].sort((a, b) => sortEmployees(a, b, sortConfig.column, sortConfig.direction));
-  setAllEmployees(sortedEmployees);
-}, [sortConfig, employees]);
+  const handlePageInputKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      const value = parseInt(pageInputValue, 10);
+      if (!isNaN(value) && value >= 1 && value <= totalPages) {
+        setCurrentPage(value);
+        setPageInputValue(value.toString());
+      } else {
+        setPageInputValue(currentPage.toString());
+      }
+    }
+  };
 
-// Add sortEmployees function
-const sortEmployees = (a, b, column, direction) => {
-  let aValue, bValue;
-  switch (column) {
-    case 'empid':
-      aValue = parseInt(a.empid.split('_')[1] || a.empid);
-      bValue = parseInt(b.empid.split('_')[1] || b.empid);
-      return direction === 'asc' ? aValue - bValue : bValue - aValue;
-    case 'name':
-      aValue = (a.EMP_PREF_NAME || `${a.EMP_FST_NAME} ${a.EMP_MID_NAME || ''} ${a.EMP_LAST_NAME}`.trim()).toLowerCase();
-      bValue = (b.EMP_PREF_NAME || `${b.EMP_FST_NAME} ${b.EMP_MID_NAME || ''} ${b.EMP_LAST_NAME}`.trim()).toLowerCase();
-      return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
-    case 'hireDate':
-      aValue = a.HIRE ? new Date(a.HIRE).getTime() : 0;
-      bValue = b.HIRE ? new Date(b.HIRE).getTime() : 0;
-      return direction === 'asc' ? aValue - bValue : bValue - aValue;
-    case 'gender':
-      aValue = a.GENDER || '';
-      bValue = b.GENDER || '';
-      return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
-    default:
-      return 0;
-  }
-};
+  const uniqueGenders = [...new Set(allEmployees.map(emp => emp.GENDER).filter(Boolean))];
+    const uniqueStatus = [...new Set(allEmployees.map(emp => emp.STATUS).filter(Boolean))];
 
-// Add requestSort function
-const requestSort = (column) => {
-  setSortConfig(prev => ({
-    column,
-    direction: prev.column === column && prev.direction === 'asc' ? 'desc' : 'asc',
-  }));
-};
+  const filteredEmployees = allEmployees.filter(emp => {
+    const fullName = (emp.EMP_PREF_NAME || `${emp.EMP_FST_NAME} ${emp.EMP_MID_NAME || ''} ${emp.EMP_LAST_NAME}`.trim()).toLowerCase();
+    const matchesSearch = fullName.includes(searchQuery.toLowerCase()) || emp.empid.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesGender = genderFilter === 'all' || emp.STATUS === genderFilter;
+    return matchesSearch && matchesGender;
+  });
 
-
-
+  const totalPages = Math.ceil(filteredEmployees.length / employeesPerPage);
+  const indexOfLastEmployee = currentPage * employeesPerPage;
+  const indexOfFirstEmployee = indexOfLastEmployee - employeesPerPage;
+  const currentEmployees = filteredEmployees.slice(indexOfFirstEmployee, indexOfLastEmployee);
 
   return (
-    <div className="employee-overview-container">
+    <div className="roles-overview-container">
       {error && <div className="error-message">{error}</div>}
-      {issadd&&(
-        <div className="add-employee-container">
-      <h1>Add Employee</h1>
-      <button className="back-button" onClick={handleBackClick}>x</button>
-      {error && <p className="error-message">{error}</p>}
-      {addform_formError && <p className="error-message">{addform_formError}</p>}
-      {addform_success && <p className="success-message">{addform_success}</p>}
-      <form action={addform_handleSubmit}>
-        <div className="form-container">
-          {/* Personal Details */}
-          <div className="form-block">
-            <h3>Personal Details</h3>
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="orgid">Organization ID:</label>
-                <input
-                  type="text"
-                  id="orgid"
-                  name="orgid"
-                  value={orgid || ''}
-                  disabled
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="empFstName">First Name: *</label>
-                <input
-                  type="text"
-                  id="empFstName"
-                  name="empFstName"
-                  placeholder="Enter First Name"
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="empMidName">Middle Name:</label>
-                <input
-                  type="text"
-                  id="empMidName"
-                  name="empMidName"
-                  placeholder="Enter Middle Name"
-                />
-              </div>
-            </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="empLastName">Last Name: *</label>
-                <input
-                  type="text"
-                  id="empLastName"
-                  name="empLastName"
-                  placeholder="Enter Last Name"
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="email">Email: *</label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  placeholder="Enter Email"
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="empPrefName">Preferred Name:</label>
-                <input
-                  type="text"
-                  id="empPrefName"
-                  name="empPrefName"
-                  placeholder="Enter Preferred Name"
-                />
-              </div>
-            </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="gender">Gender:</label>
-                <select id="gender" name="gender">
-                  <option value="">Select Gender</option>
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label htmlFor="mobileNumber">Mobile Number:</label>
-                <input
-                  type="tel"
-                  id="mobileNumber"
-                  name="mobileNumber"
-                  placeholder="Enter Mobile Number"
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="phoneNumber">Phone Number:</label>
-                <input
-                  type="tel"
-                  id="phoneNumber"
-                  name="phoneNumber"
-                  placeholder="Enter Phone Number"
-                />
-              </div>
-            </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="dob">Date of Birth:</label>
-                <input
-                  type="date"
-                  id="dob"
-                  name="dob"
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="ssn">SSN:</label>
-                <input
-                  type="text"
-                  id="ssn"
-                  name="ssn"
-                  placeholder="Enter SSN"
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="linkedinUrl">LinkedIn URL:</label>
-                <input
-                  type="url"
-                  id="linkedinUrl"
-                  name="linkedinUrl"
-                  placeholder="Enter LinkedIn URL"
-                />
-              </div>
-            </div>
+      
+      {issadd && (
+        <div className="add-role-container">
+          <div className="header-section">
+            <h1 className="title">Add Employee</h1>
+            <button className="back-button" onClick={handleBackClick}></button>
           </div>
+          
+          {addform_formError && <p className="error-message">{addform_formError}</p>}
+          {addform_success && <p className="success-message">{addform_success}</p>}
+          
+          <form action={addform_handleSubmit} >
+            <div className="form-section">
+              {/* Personal Details */}
+              <div className="role-details-block93">
+                <h3>Personal Details</h3>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="orgid">Organization ID:</label>
+                    <input
+                      type="text"
+                      id="orgid"
+                      name="orgid"
+                      value={orgid || ''}
+                      className="bg-gray-100"
+                      disabled
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="empFstName">First Name: *</label>
+                    <input
+                      type="text"
+                      id="empFstName"
+                      name="empFstName"
+                      placeholder="Enter First Name"
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="empMidName">Middle Name:</label>
+                    <input
+                      type="text"
+                      id="empMidName"
+                      name="empMidName"
+                      placeholder="Enter Middle Name"
+                    />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="empLastName">Last Name: *</label>
+                    <input
+                      type="text"
+                      id="empLastName"
+                      name="empLastName"
+                      placeholder="Enter Last Name"
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="email">Email: *</label>
+                    <input
+                      type="email"
+                      id="email"
+                      name="email"
+                      placeholder="Enter Email"
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="empPrefName">Preferred Name:</label>
+                    <input
+                      type="text"
+                      id="empPrefName"
+                      name="empPrefName"
+                      placeholder="Enter Preferred Name"
+                    />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="gender">Gender:</label>
+                    <select id="gender" name="gender">
+                      <option value="">Select Gender</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="mobileNumber">Mobile Number:</label>
+                    <input
+                      type="tel"
+                      id="mobileNumber"
+                      name="mobileNumber"
+                      placeholder="Enter Mobile Number"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="phoneNumber">Phone Number:</label>
+                    <input
+                      type="tel"
+                      id="phoneNumber"
+                      name="phoneNumber"
+                      placeholder="Enter Phone Number"
+                    />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="dob">Date of Birth:</label>
+                    <input
+                      type="date"
+                      id="dob"
+                      name="dob"
+                      className="date-input"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="ssn">SSN:</label>
+                    <input
+                      type="text"
+                      id="ssn"
+                      name="ssn"
+                      placeholder="Enter SSN"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="linkedinUrl">LinkedIn URL:</label>
+                    <input
+                      type="url"
+                      id="linkedinUrl"
+                      name="linkedinUrl"
+                      placeholder="Enter LinkedIn URL"
+                    />
+                  </div>
+                </div>
+              </div>
 
-          {/* Employment Details */}
-          <div className="form-block">
-            <h3>Employment Details</h3>
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="roleids">Roles: * (Click to select/deselect)</label>
-                <div className="custom-select-container">
-                  <div
-                    className={`custom-select ${addform_isDropdownOpen ? 'open' : ''}`}
-                    onClick={addform_toggleDropdown}
-                  >
-                    <div className="selected-value">
-                      {addform_selectedRoles.length > 0
-                        ? addform_selectedRoles
-                            .map((id) => roles.find((r) => r.roleid === id)?.rolename)
-                            .join(', ')
-                        : 'Select Roles'}
-                    </div>
-                    {addform_isDropdownOpen && (
-                      <div className="options-container">
-                        {roles.map((role) => (
-                          <div
-                            key={role.roleid}
-                            className={`option ${addform_selectedRoles.includes(role.roleid) ? 'selected' : ''}`}
-                            onClick={(e) => {
-                              e.stopPropagation(); // Prevent closing dropdown
-                              addform_handleRoleToggle(role.roleid);
-                            }}
-                          >
-                            {role.rolename}
+              {/* Employment Details */}
+              <div className="role-details-block93">
+                <h3>Employment Details</h3>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="roleids">Roles: * (Click to select/deselect)</label>
+                    <div className="custom-select-container">
+                      <div
+                        className={`custom-select ${addform_isDropdownOpen ? 'open' : ''}`}
+                        onClick={addform_toggleDropdown}
+                      >
+                        <div className="selected-value">
+                          {addform_selectedRoles.length > 0
+                            ? addform_selectedRoles
+                                .map((id) => roles.find((r) => r.roleid === id)?.rolename)
+                                .join(', ')
+                            : 'Select Roles'}
+                        </div>
+                        {addform_isDropdownOpen && (
+                          <div className="options-container">
+                            {roles.map((role) => (
+                              <div
+                                key={role.roleid}
+                                className={`option ${addform_selectedRoles.includes(role.roleid) ? 'selected' : ''}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  addform_handleRoleToggle(role.roleid);
+                                }}
+                              >
+                                {role.rolename}
+                              </div>
+                            ))}
                           </div>
-                        ))}
+                        )}
+                      </div>
+                      {addform_selectedRoles.length === 0 && (
+                        <input type="hidden" name="roleids" value="" disabled />
+                      )}
+                      {addform_selectedRoles.map((roleid) => (
+                        <input key={roleid} type="hidden" name="roleids" value={roleid} />
+                      ))}
+                    </div>
+                    {addform_selectedRoles.length > 0 && (
+                      <div className="selected-roles">
+                        <p>Selected Roles: {addform_selectedRoles.map((id) => roles.find((r) => r.roleid === id)?.rolename).join(', ')}</p>
                       </div>
                     )}
                   </div>
-                  {addform_selectedRoles.length === 0 && (
-                    <input type="hidden" name="roleids" value="" disabled /> // Ensure form validation
-                  )}
-                  {addform_selectedRoles.map((roleid) => (
-                    <input key={roleid} type="hidden" name="roleids" value={roleid} />
-                  ))}
-                </div>
-                {addform_selectedRoles.length > 0 && (
-                  <div className="selected-roles">
-                    <p>Selected Roles: {addform_selectedRoles.map((id) => roles.find((r) => r.roleid === id)?.rolename).join(', ')}</p>
+                  <div className="form-group">
+                    <label htmlFor="superior">Superior:</label>
+                    <select id="superior" name="superior">
+                      <option value="">Select a Superior (Optional)</option>
+                      {addform_employeesWithRoles.map((employee) => (
+                        <option key={employee.empid} value={employee.empid}>
+                          {`${employee.empid} - ${employee.EMP_FST_NAME} ${employee.EMP_LAST_NAME}`}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                )}
-              </div>
-              <div className="form-group">
-                <label htmlFor="superior">Superior:</label>
-                <select id="superior" name="superior">
-                  <option value="">Select a Superior (Optional)</option>
-                  {addform_employeesWithRoles.map((employee) => (
-                    <option key={employee.empid} value={employee.empid}>
-                      {`${employee.empid} - ${employee.EMP_FST_NAME} ${employee.EMP_LAST_NAME}`}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label htmlFor="hireDate">Hire Date: *</label>
-                <input
-                  type="date"
-                  id="hireDate"
-                  name="hireDate"
-                  defaultValue={addform_today}
-                  required
-                />
-              </div>
-            </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="status">Status: *</label>
-                <select id="status" name="status" required>
-                  {statuses.map((status) => (
-                    <option key={status.id} value={status.Name}>
-                      {status.Name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label htmlFor="jobTitle">Job Title:</label>
-                <select id="jobTitle" name="jobTitle">
-                  <option value="">Select Job Title</option>
-                  {jobTitles.map((job) => (
-                    <option key={job.job_title_id} value={job.job_title_id}>
-                      {`${job.job_title} (Level: ${job.level || 'N/A'}, Salary Range: $${job.min_salary || 'N/A'} - $${job.max_salary || 'N/A'})`}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label htmlFor="payFrequency">Pay Frequency:</label>
-                <select id="payFrequency" name="payFrequency">
-                  <option value="">Select Pay Frequency</option>
-                  {payFrequencies.map((freq) => (
-                    <option key={freq.id} value={freq.Name}>
-                      {freq.Name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="deptId">Department:</label>
-                <select id="deptId" name="deptId">
-                  <option value="">Select Department</option>
-                  {departments.map((dept) => (
-                    <option key={dept.id} value={dept.id}>
-                      {dept.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label htmlFor="workCompClass">Work Compensation Class:</label>
-                <select id="workCompClass" name="workCompClass">
-                  <option value="">Select Work Compensation Class</option>
-                  {workerCompClasses.map((compClass) => (
-                    <option key={compClass.class_code} value={compClass.class_code}>
-                      {`${compClass.class_code} - ${compClass.phraseology}`}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Work Address */}
-          <div className="form-block">
-            <h3>Work Address</h3>
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="workAddrLine1">Address Line 1:</label>
-                <input
-                  type="text"
-                  id="workAddrLine1"
-                  name="workAddrLine1"
-                  placeholder="Enter Work Address Line 1"
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="workAddrLine2">Address Line 2:</label>
-                <input
-                  type="text"
-                  id="workAddrLine2"
-                  name="workAddrLine2"
-                  placeholder="Enter Work Address Line 2"
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="workAddrLine3">Address Line 3:</label>
-                <input
-                  type="text"
-                  id="workAddrLine3"
-                  name="workAddrLine3"
-                  placeholder="Enter Work Address Line 3"
-                />
-              </div>
-            </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="workCity">City:</label>
-                <input
-                  type="text"
-                  id="workCity"
-                  name="workCity"
-                  placeholder="Enter Work City"
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="workStateId">State:</label>
-                <select
-                  id="workStateId"
-                  name="workStateId"
-                  disabled={addform_workCountryId !== '185'}
-                >
-                  <option value="">Select State</option>
-                  {states.map((state) => (
-                    <option key={state.ID} value={state.ID}>
-                      {state.VALUE}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label htmlFor="workStateNameCustom">Custom State Name:</label>
-                <input
-                  type="text"
-                  id="workStateNameCustom"
-                  name="workStateNameCustom"
-                  placeholder="Enter Custom State Name"
-                  disabled={addform_workCountryId === '185'}
-                />
-              </div>
-            </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="workCountryId">Country:</label>
-                <select
-                  id="workCountryId"
-                  name="workCountryId"
-                  value={addform_workCountryId}
-                  onChange={(e) => addform_setWorkCountryId(e.target.value)}
-                >
-                  <option value="">Select Country</option>
-                  {countries.map((country) => (
-                    <option key={country.ID} value={country.ID}>
-                      {country.VALUE}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label htmlFor="workPostalCode">Postal Code:</label>
-                <input
-                  type="text"
-                  id="workPostalCode"
-                  name="workPostalCode"
-                  placeholder="Enter Work Postal Code"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Home Address */}
-          <div className="form-block">
-            <h3>Home Address</h3>
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="homeAddrLine1">Address Line 1:</label>
-                <input
-                  type="text"
-                  id="homeAddrLine1"
-                  name="homeAddrLine1"
-                  placeholder="Enter Home Address Line 1"
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="homeAddrLine2">Address Line 2:</label>
-                <input
-                  type="text"
-                  id="homeAddrLine2"
-                  name="homeAddrLine2"
-                  placeholder="Enter Home Address Line 2"
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="homeAddrLine3">Address Line 3:</label>
-                <input
-                  type="text"
-                  id="homeAddrLine3"
-                  name="homeAddrLine3"
-                  placeholder="Enter Home Address Line 3"
-                />
-              </div>
-            </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="homeCity">City:</label>
-                <input
-                  type="text"
-                  id="homeCity"
-                  name="homeCity"
-                  placeholder="Enter Home City"
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="homeStateId">State:</label>
-                <select
-                  id="homeStateId"
-                  name="homeStateId"
-                  disabled={addform_homeCountryId !== '185'}
-                >
-                  <option value="">Select State</option>
-                  {states.map((state) => (
-                    <option key={state.ID} value={state.ID}>
-                      {state.VALUE}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label htmlFor="homeStateNameCustom">Custom State Name:</label>
-                <input
-                  type="text"
-                  id="homeStateNameCustom"
-                  name="homeStateNameCustom"
-                  placeholder="Enter Custom State Name"
-                  disabled={addform_homeCountryId === '185'}
-                />
-              </div>
-            </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="homeCountryId">Country:</label>
-                <select
-                  id="homeCountryId"
-                  name="homeCountryId"
-                  value={addform_homeCountryId}
-                  onChange={(e) => addform_setHomeCountryId(e.target.value)}
-                >
-                  <option value="">Select Country</option>
-                  {countries.map((country) => (
-                    <option key={country.ID} value={country.ID}>
-                      {country.VALUE}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label htmlFor="homePostalCode">Postal Code:</label>
-                <input
-                  type="text"
-                  id="homePostalCode"
-                  name="homePostalCode"
-                  placeholder="Enter Home Postal Code"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Emergency Contact */}
-          <div className="form-block">
-            <h3>Emergency Contact</h3>
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="emergCnctName">Name:</label>
-                <input
-                  type="text"
-                  id="emergCnctName"
-                  name="emergCnctName"
-                  placeholder="Enter Emergency Contact Name"
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="emergCnctPhoneNumber">Phone Number:</label>
-                <input
-                  type="tel"
-                  id="emergCnctPhoneNumber"
-                  name="emergCnctPhoneNumber"
-                  placeholder="Enter Emergency Contact Phone Number"
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="emergCnctEmail">Email:</label>
-                <input
-                  type="email"
-                  id="emergCnctEmail"
-                  name="emergCnctEmail"
-                  placeholder="Enter Emergency Contact Email"
-                />
-              </div>
-            </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="emergCnctAddrLine1">Address Line 1:</label>
-                <input
-                  type="text"
-                  id="emergCnctAddrLine1"
-                  name="emergCnctAddrLine1"
-                  placeholder="Enter Emergency Contact Address Line 1"
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="emergCnctAddrLine2">Address Line 2:</label>
-                <input
-                  type="text"
-                  id="emergCnctAddrLine2"
-                  name="emergCnctAddrLine2"
-                  placeholder="Enter Emergency Contact Address Line 2"
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="emergCnctAddrLine3">Address Line 3:</label>
-                <input
-                  type="text"
-                  id="emergCnctAddrLine3"
-                  name="emergCnctAddrLine3"
-                  placeholder="Enter Emergency Contact Address Line 3"
-                />
-              </div>
-            </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="emergCnctCity">City:</label>
-                <input
-                  type="text"
-                  id="emergCnctCity"
-                  name="emergCnctCity"
-                  placeholder="Enter Emergency Contact City"
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="emergCnctStateId">State:</label>
-                <select
-                  id="emergCnctStateId"
-                  name="emergCnctStateId"
-                  disabled={addform_emergCnctCountryId !== '185'}
-                >
-                  <option value="">Select State</option>
-                  {states.map((state) => (
-                    <option key={state.ID} value={state.ID}>
-                      {state.VALUE}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label htmlFor="emergCnctStateNameCustom">Custom State Name:</label>
-                <input
-                  type="text"
-                  id="emergCnctStateNameCustom"
-                  name="emergCnctStateNameCustom"
-                  placeholder="Enter Custom State Name"
-                  disabled={addform_emergCnctCountryId === '185'}
-                />
-              </div>
-            </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="emergCnctCountryId">Country:</label>
-                <select
-                  id="emergCnctCountryId"
-                  name="emergCnctCountryId"
-                  value={addform_emergCnctCountryId}
-                  onChange={(e) => addform_setEmergCnctCountryId(e.target.value)}
-                >
-                  <option value="">Select Country</option>
-                  {countries.map((country) => (
-                    <option key={country.ID} value={country.ID}>
-                      {country.VALUE}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label htmlFor="emergCnctPostalCode">Postal Code:</label>
-                <input
-                  type="text"
-                  id="emergCnctPostalCode"
-                  name="emergCnctPostalCode"
-                  placeholder="Enter Emergency Contact Postal Code"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Leaves */}
-          <div className="form-block">
-            <h3>Leaves</h3>
-            <div className="leaves-container">
-              {leaveTypes.map((leave) => (
-                <div key={leave.id} className="form-group">
-                  <label htmlFor={`noofleaves_${leave.id}`}>{leave.Name} (Number of Leaves):</label>
-                  <input
-                    type="number"
-                    id={`noofleaves_${leave.id}`}
-                    name={`noofleaves_${leave.id}`}
-                    value={addform_leaves[leave.id] || ''}
-                    onChange={(e) => addform_handleLeaveChange(leave.id, e.target.value)}
-                    min="0"
-                    step="any"
-                  />
+                  <div className="form-group">
+                    <label htmlFor="hireDate">Hire Date: *</label>
+                    <input
+                      type="date"
+                      id="hireDate"
+                      name="hireDate"
+                      defaultValue={addform_today}
+                      className="date-input"
+                      required
+                    />
+                  </div>
                 </div>
-              ))}
-            </div>
-          </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="status">Status: *</label>
+                    <select id="status" name="status" required>
+                      {statuses.map((status) => (
+                        <option key={status.id} value={status.Name}>
+                          {status.Name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="jobTitle">Job Title:</label>
+                    <select id="jobTitle" name="jobTitle">
+                      <option value="">Select Job Title</option>
+                      {jobTitles.map((job) => (
+                        <option key={job.job_title_id} value={job.job_title_id}>
+                          {`${job.job_title} (Level: ${job.level || 'N/A'}, Salary Range: ${job.min_salary || 'N/A'} - ${job.max_salary || 'N/A'})`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="payFrequency">Pay Frequency:</label>
+                    <select id="payFrequency" name="payFrequency">
+                      <option value="">Select Pay Frequency</option>
+                      {payFrequencies.map((freq) => (
+                        <option key={freq.id} value={freq.Name}>
+                          {freq.Name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="deptId">Department:</label>
+                    <select id="deptId" name="deptId">
+                      <option value="">Select Department</option>
+                      {departments.map((dept) => (
+                        <option key={dept.id} value={dept.id}>
+                          {dept.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="workCompClass">Work Compensation Class:</label>
+                    <select id="workCompClass" name="workCompClass">
+                      <option value="">Select Work Compensation Class</option>
+                      {workerCompClasses.map((compClass) => (
+                        <option key={compClass.class_code} value={compClass.class_code}>
+                          {`${compClass.class_code} - ${compClass.phraseology}`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
 
-          {/* Submit Button */}
-          <div className="form-buttons">
-            <button type="submit" className="submit-button" disabled={addform_isSubmitting}>
-              {addform_isSubmitting ? 'Submitting...' : 'Add Employee'}
-            </button>
+              {/* Work Address */}
+              <div className="role-details-block93">
+                <h3>Work Address</h3>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="workAddrLine1">Address Line 1:</label>
+                    <input
+                      type="text"
+                      id="workAddrLine1"
+                      name="workAddrLine1"
+                      placeholder="Enter Work Address Line 1"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="workAddrLine2">Address Line 2:</label>
+                    <input
+                      type="text"
+                      id="workAddrLine2"
+                      name="workAddrLine2"
+                      placeholder="Enter Work Address Line 2"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="workAddrLine3">Address Line 3:</label>
+                    <input
+                      type="text"
+                      id="workAddrLine3"
+                      name="workAddrLine3"
+                      placeholder="Enter Work Address Line 3"
+                    />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="workCity">City:</label>
+                    <input
+                      type="text"
+                      id="workCity"
+                      name="workCity"
+                      placeholder="Enter Work City"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="workStateId">State:</label>
+                    <select
+                      id="workStateId"
+                      name="workStateId"
+                      disabled={addform_workCountryId !== '185'}
+                    >
+                      <option value="">Select State</option>
+                      {states.map((state) => (
+                        <option key={state.ID} value={state.ID}>
+                          {state.VALUE}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="workStateNameCustom">Custom State Name:</label>
+                    <input
+                      type="text"
+                      id="workStateNameCustom"
+                      name="workStateNameCustom"
+                      placeholder="Enter Custom State Name"
+                      disabled={addform_workCountryId === '185'}
+                    />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="workCountryId">Country:</label>
+                    <select
+                      id="workCountryId"
+                      name="workCountryId"
+                      value={addform_workCountryId}
+                      onChange={(e) => addform_setWorkCountryId(e.target.value)}
+                    >
+                      <option value="">Select Country</option>
+                      {countries.map((country) => (
+                        <option key={country.ID} value={country.ID}>
+                          {country.VALUE}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="workPostalCode">Postal Code:</label>
+                    <input
+                      type="text"
+                      id="workPostalCode"
+                      name="workPostalCode"
+                      placeholder="Enter Work Postal Code"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Home Address */}
+              <div className="role-details-block93">
+                <h3>Home Address</h3>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="homeAddrLine1">Address Line 1:</label>
+                    <input
+                      type="text"
+                      id="homeAddrLine1"
+                      name="homeAddrLine1"
+                      placeholder="Enter Home Address Line 1"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="homeAddrLine2">Address Line 2:</label>
+                    <input
+                      type="text"
+                      id="homeAddrLine2"
+                      name="homeAddrLine2"
+                      placeholder="Enter Home Address Line 2"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="homeAddrLine3">Address Line 3:</label>
+                    <input
+                      type="text"
+                      id="homeAddrLine3"
+                      name="homeAddrLine3"
+                      placeholder="Enter Home Address Line 3"
+                    />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="homeCity">City:</label>
+                    <input
+                      type="text"
+                      id="homeCity"
+                      name="homeCity"
+                      placeholder="Enter Home City"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="homeStateId">State:</label>
+                    <select
+                      id="homeStateId"
+                      name="homeStateId"
+                      disabled={addform_homeCountryId !== '185'}
+                    >
+                      <option value="">Select State</option>
+                      {states.map((state) => (
+                        <option key={state.ID} value={state.ID}>
+                          {state.VALUE}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="homeStateNameCustom">Custom State Name:</label>
+                    <input
+                      type="text"
+                      id="homeStateNameCustom"
+                      name="homeStateNameCustom"
+                      placeholder="Enter Custom State Name"
+                      disabled={addform_homeCountryId === '185'}
+                    />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="homeCountryId">Country:</label>
+                    <select
+                      id="homeCountryId"
+                      name="homeCountryId"
+                      value={addform_homeCountryId}
+                      onChange={(e) => addform_setHomeCountryId(e.target.value)}
+                    >
+                      <option value="">Select Country</option>
+                      {countries.map((country) => (
+                        <option key={country.ID} value={country.ID}>
+                          {country.VALUE}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="homePostalCode">Postal Code:</label>
+                    <input
+                      type="text"
+                      id="homePostalCode"
+                      name="homePostalCode"
+                      placeholder="Enter Home Postal Code"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Emergency Contact */}
+              <div className="role-details-block93">
+                <h3>Emergency Contact</h3>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="emergCnctName">Name:</label>
+                    <input
+                      type="text"
+                      id="emergCnctName"
+                      name="emergCnctName"
+                      placeholder="Enter Emergency Contact Name"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="emergCnctPhoneNumber">Phone Number:</label>
+                    <input
+                      type="tel"
+                      id="emergCnctPhoneNumber"
+                      name="emergCnctPhoneNumber"
+                      placeholder="Enter Emergency Contact Phone Number"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="emergCnctEmail">Email:</label>
+                    <input
+                      type="email"
+                      id="emergCnctEmail"
+                      name="emergCnctEmail"
+                      placeholder="Enter Emergency Contact Email"
+                    />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="emergCnctAddrLine1">Address Line 1:</label>
+                    <input
+                      type="text"
+                      id="emergCnctAddrLine1"
+                      name="emergCnctAddrLine1"
+                      placeholder="Enter Emergency Contact Address Line 1"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="emergCnctAddrLine2">Address Line 2:</label>
+                    <input
+                      type="text"
+                      id="emergCnctAddrLine2"
+                      name="emergCnctAddrLine2"
+                      placeholder="Enter Emergency Contact Address Line 2"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="emergCnctAddrLine3">Address Line 3:</label>
+                    <input
+                      type="text"
+                      id="emergCnctAddrLine3"
+                      name="emergCnctAddrLine3"
+                      placeholder="Enter Emergency Contact Address Line 3"
+                    />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="emergCnctCity">City:</label>
+                    <input
+                      type="text"
+                      id="emergCnctCity"
+                      name="emergCnctCity"
+                      placeholder="Enter Emergency Contact City"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="emergCnctStateId">State:</label>
+                    <select
+                      id="emergCnctStateId"
+                      name="emergCnctStateId"
+                      disabled={addform_emergCnctCountryId !== '185'}
+                    >
+                      <option value="">Select State</option>
+                      {states.map((state) => (
+                        <option key={state.ID} value={state.ID}>
+                          {state.VALUE}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="emergCnctStateNameCustom">Custom State Name:</label>
+                    <input
+                      type="text"
+                      id="emergCnctStateNameCustom"
+                      name="emergCnctStateNameCustom"
+                      placeholder="Enter Custom State Name"
+                      disabled={addform_emergCnctCountryId === '185'}
+                    />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="emergCnctCountryId">Country:</label>
+                    <select
+                      id="emergCnctCountryId"
+                      name="emergCnctCountryId"
+                      value={addform_emergCnctCountryId}
+                      onChange={(e) => addform_setEmergCnctCountryId(e.target.value)}
+                    >
+                      <option value="">Select Country</option>
+                      {countries.map((country) => (
+                        <option key={country.ID} value={country.ID}>
+                          {country.VALUE}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="emergCnctPostalCode">Postal Code:</label>
+                    <input
+                      type="text"
+                      id="emergCnctPostalCode"
+                      name="emergCnctPostalCode"
+                      placeholder="Enter Emergency Contact Postal Code"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Leaves */}
+              <div className="role-details-block93">
+                <h3>Leaves</h3>
+                <div className="leaves-container">
+                  {leaveTypes.map((leave) => (
+                    <div key={leave.id} className="form-group">
+                      <label htmlFor={`noofleaves_${leave.id}`}>{leave.Name} (Number of Leaves):</label>
+                      <input
+                        type="number"
+                        id={`noofleaves_${leave.id}`}
+                        name={`noofleaves_${leave.id}`}
+                        value={addform_leaves[leave.id] || ''}
+                        onChange={(e) => addform_handleLeaveChange(leave.id, e.target.value)}
+                        min="0"
+                        step="any"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Submit Section */}
+              <div className="submit-section">
+                <button 
+                  type="submit" 
+                  className={`button save ${addform_isSubmitting ? 'disabled' : ''}`}
+                  disabled={addform_isSubmitting}
+                >
+                  {addform_isSubmitting ? 'Submitting...' : 'Add Employee'}
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      )}
+      
+      {!issadd && !selectedEmpId ? (
+        <div className="roles-list">
+          <div className="header-section">
+            <h2 className="title">Employees</h2>
+            <button className="button save" onClick={handleaddemployee}>Add Employee</button>
+          </div>
+          
+          <div className="search-filter-container">
+            <input
+              type="text"
+              placeholder="Search by Name or Emp ID"
+              value={searchQuery}
+              onChange={handleSearchChange}
+              className="search-input"
+            />
+            <select
+              value={genderFilter}
+              onChange={handleGenderFilterChange}
+              className="filter-select"
+            >
+              <option value="all">Status</option>
+              {uniqueStatus.map((gender) => (
+                <option key={gender} value={gender}>{gender}</option>
+              ))}
+            </select>
+          </div>
+          
+          {employees.length === 0 && !error ? (
+            <div className="empty-state">
+              <p>No active employees found.</p>
+            </div>
+          ) : (
+            <div className="table-wrapper">
+              <table className="six-column">
+                <colgroup>
+                  <col />
+                  <col />
+                  <col />
+                  <col />
+                  <col />
+                  <col />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th 
+                      className={`sortable ${sortConfig.column === 'empid' ? `sort-${sortConfig.direction}` : ''}`}
+                      onClick={() => requestSort('empid')}
+                    >
+                      Employee ID
+                    </th>
+                    <th 
+                      className={`sortable ${sortConfig.column === 'name' ? `sort-${sortConfig.direction}` : ''}`}
+                      onClick={() => requestSort('name')}
+                    >
+                      Name
+                    </th>
+                    <th>Email</th>
+                    <th 
+                      className={`sortable ${sortConfig.column === 'hireDate' ? `sort-${sortConfig.direction}` : ''}`}
+                      onClick={() => requestSort('hireDate')}
+                    >
+                      Hire Date
+                    </th>
+                    <th>Mobile</th>
+                    <th>
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {currentEmployees.map((employee) => (
+                    <tr
+                      key={employee.empid}
+                      onClick={() => handleRowClick(employee.empid)}
+                      className={selectedEmpId === employee.empid ? 'selected-row' : ''}
+                    >
+                      <td className="id-cell">
+                        <span className={employee.STATUS.toLowerCase() === 'active' ? 'role-indicator' : 'role-indicatorinactive '}></span>
+                        Employee-{getdisplayprojectid(employee.empid)}
+                      </td>
+                      <td>{employee.EMP_PREF_NAME || `${employee.EMP_FST_NAME} ${employee.EMP_MID_NAME || ''} ${employee.EMP_LAST_NAME}`.trim()}</td>
+                      <td>{employee.email}</td>
+                      <td>{employee.HIRE ? new Date(employee.HIRE).toLocaleDateString('en-US') : '-'}</td>
+                      <td>{employee.MOBILE_NUMBER || '-'}</td>
+                      <td>
+                        {/* {employee.STATUS || '-'} */}
+                        {employee.STATUS && (
+                          <span className={`status-badge ${employee.STATUS.toLowerCase() === 'active' ? 'active' : 'inactive'}`}>
+                            {employee.STATUS}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          
+          {filteredEmployees.length > employeesPerPage && (
+            <div className="pagination-container">
+              <button
+                className="button"
+                onClick={handlePrevPage}
+                disabled={currentPage === 1}
+              >
+                ← Previous
+              </button>
+              <span className="pagination-text">
+                Page{' '}
+                <input
+                  type="text"
+                  value={pageInputValue}
+                  onChange={handlePageInputChange}
+                  onKeyPress={handlePageInputKeyPress}
+                  className="pagination-input"
+                />{' '}
+                of {totalPages}
+              </span>
+              <button
+                className="button"
+                onClick={handleNextPage}
+                disabled={currentPage === totalPages}
+              >
+                Next →
+              </button>
+            </div>
+          )}
+          
+          <div className="rows-per-page-container">
+            <label className="rows-per-page-label">Rows per Page:</label>
+            <input
+              type="text"
+              value={employeesPerPageInput}
+              onChange={handleEmployeesPerPageInputChange}
+              onKeyPress={handleEmployeesPerPageInputKeyPress}
+              placeholder="Employees per page"
+              className="rows-per-page-input"
+              aria-label="Number of rows per page"
+            />
           </div>
         </div>
-      </form>
-    </div>
-      )}
-      {!issadd&&!selectedEmpId ? (
-        <div className="employee-list">
-          <button onClick={()=>{handleaddemployee()}} className='submit-button'>Add Employee</button>
-          {employees.length === 0 && !error ? (
-            <p>No active employees found.</p>
-          ) : (
-            <table className="employee-table">
-              <thead>
-                <tr>
-    <th onClick={() => requestSort('empid')}>
-      Employee ID 
-    </th>
-    <th onClick={() => requestSort('name')}>
-      Name
-    </th>
-    <th onClick={() => requestSort('email')}>
-      Email
-    </th>
-    <th onClick={() => requestSort('hireDate')}>
-      Hire Date 
-    </th>
-    <th >
-      Mobile
-    </th>
-    <th>
-      Gender 
-    </th>
-  </tr>
-              </thead>
-              <tbody>
-                {allEmployees.map((employee) => (
-                  <tr
-                    key={employee.empid}
-                    onClick={() => handleRowClick(employee.empid)}
-                    className={selectedEmpId === employee.empid ? 'selected-row' : ''}
-                  >
-                    <td>Employee-{getdisplayprojectid(employee.empid)}</td>
-                    <td>{employee.EMP_PREF_NAME || `${employee.EMP_FST_NAME} ${employee.EMP_MID_NAME || ''} ${employee.EMP_LAST_NAME}`.trim()}</td>
-                    <td>{employee.email}</td>
-                    <td>{employee.HIRE ? new Date(employee.HIRE).toLocaleDateString('en-US') : '-'}</td>
-                    <td>{employee.MOBILE_NUMBER || '-'}</td>
-                    <td>{employee.GENDER || '-'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      ) : !issadd&&(
+      ) : !issadd && (
         employeeDetails && (
-          <div className="employee-details-container">
-            <button className="back-button" onClick={handleBackClick}>x</button>
+          <div className="role-details-container">
+            <div className="roledetails-header">
+              <h2 className="title">Employee Details</h2>
+              <button className="back-button" onClick={handleBackClick}></button>
+            </div>
 
             {/* Personal Details Section */}
-            <div className="details-block">
+            <div className="role-details-block96">
               <h3>Personal Details</h3>
               {editingPersonal && canEditEmployees ? (
                 <form onSubmit={(e) => { e.preventDefault(); handleSave('personal'); }}>
@@ -1498,7 +1664,7 @@ const requestSort = (column) => {
                   <div className="form-row">
                     <div className="form-group">
                       <label>Date of Birth</label>
-                      <input type="date" name="dob" value={formData.dob} onChange={handleFormChange} />
+                      <input type="date" name="dob" value={formData.dob} onChange={handleFormChange} className="date-input" />
                     </div>
                     <div className="form-group">
                       <label>SSN</label>
@@ -1512,94 +1678,94 @@ const requestSort = (column) => {
                     </div>
                   </div>
                   <div className="form-buttons">
-                    <button type="submit" className="save-button">Save</button>
-                    <button type="button" className="cancel-button" onClick={() => setEditingPersonal(false)}>Cancel</button>
+                    <button type="submit" className="save">Save</button>
+                    <button type="button" className="cancel" onClick={() => setEditingPersonal(false)}>Cancel</button>
                   </div>
                 </form>
               ) : (
                 <div className="view-details">
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Employee ID</label>
                       <p>Employee-{getdisplayprojectid(employeeDetails.empid)}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Organization ID</label>
                       <p>{employeeDetails.orgid}</p>
                     </div>
                   </div>
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>First Name</label>
                       <p>{employeeDetails.EMP_FST_NAME}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Middle Name</label>
                       <p>{employeeDetails.EMP_MID_NAME || '-'}</p>
                     </div>
                   </div>
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Last Name</label>
                       <p>{employeeDetails.EMP_LAST_NAME}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Preferred Name</label>
                       <p>{employeeDetails.EMP_PREF_NAME || '-'}</p>
                     </div>
                   </div>
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Email</label>
                       <p>{employeeDetails.email}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Gender</label>
                       <p>{employeeDetails.GENDER || '-'}</p>
                     </div>
                   </div>
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Mobile Number</label>
                       <p>{employeeDetails.MOBILE_NUMBER || '-'}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Phone Number</label>
                       <p>{employeeDetails.PHONE_NUMBER || '-'}</p>
                     </div>
                   </div>
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Date of Birth</label>
                       <p>{employeeDetails.DOB ? new Date(employeeDetails.DOB).toLocaleDateString('en-US') : '-'}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>SSN</label>
                       <p>{employeeDetails.SSN || '-'}</p>
                     </div>
                   </div>
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>LinkedIn URL</label>
                       <p>{employeeDetails.LINKEDIN_URL || '-'}</p>
                     </div>
                   </div>
                   {canEditEmployees && (
-                    <div className="details-buttons">
-                      <button className="edit-button" onClick={() => handleEdit('personal')}>Edit</button>
-                    </div>
+                   
+                      <button className="button" onClick={() => handleEdit('personal')}>Edit</button>
+                    
                   )}
                 </div>
               )}
             </div>
 
             {/* Employment Details Section */}
-            <div className="details-block">
+            <div className="role-details-block96">
               <h3>Employment Details</h3>
               {editingEmployment && canEditEmployees ? (
                 <form onSubmit={(e) => { e.preventDefault(); handleSave('employment'); }}>
                   <div className="form-row">
-                    <div className="form-group">
+                    {/* <div className="form-group">
                       <label>Roles*</label>
                       <MultiSelectRoles
                         selectedRoles={selectedRoles}
@@ -1607,10 +1773,54 @@ const requestSort = (column) => {
                         roles={roles}
                         disabled={false}
                       />
-                    </div>
+                    </div> */}
+                    <div className="form-group">
+  <label htmlFor="roleids">Roles: * (Click to select/deselect)</label>
+  <div className="custom-select-container">
+    <div
+      className={`custom-select ${isDropdownOpen ? 'open' : ''}`}
+      onClick={() => setIsDropdownOpen(prev => !prev)}
+    >
+      <div className="selected-value">
+        {selectedRoles.length > 0
+          ? selectedRoles
+              .map((id) => roles.find((r) => r.roleid === id)?.rolename)
+              .join(', ')
+          : 'Select Roles'}
+      </div>
+      {isDropdownOpen && (
+        <div className="options-container">
+          {roles.map((role) => (
+            <div
+              key={role.roleid}
+              className={`option ${selectedRoles.includes(role.roleid) ? 'selected' : ''}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleRoleToggle(role.roleid);
+              }}
+            >
+              {role.rolename}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+    {selectedRoles.length === 0 && (
+      <input type="hidden" name="roleids" value="" disabled />
+    )}
+    {selectedRoles.map((roleid) => (
+      <input key={roleid} type="hidden" name="roleids" value={roleid} />
+    ))}
+  </div>
+  {/* {selectedRoles.length > 0 && (
+    <div className="selected-roles">
+      <p>Selected Roles: {selectedRoles.map((id) => roles.find((r) => r.roleid === id)?.rolename).join(', ')}</p>
+    </div>
+  )} */}
+</div>
                     <div className="form-group">
                       <label>Hire Date*</label>
-                      <input type="date" name="hireDate" value={formData.hireDate} onChange={handleFormChange} required />
+                      <input type="date" name="hireDate" value={formData.hireDate} onChange={handleFormChange} className="date-input" required />
                     </div>
                   </div>
                   <div className="form-row">
@@ -1631,7 +1841,7 @@ const requestSort = (column) => {
                         <option value="">Select Job Title</option>
                         {jobTitles.map((job) => (
                           <option key={job.job_title_id} value={job.job_title_id}>
-                            {`${job.job_title} (Level: ${job.level || 'N/A'}, Salary Rane: $${job.min_salary || 'N/A'} - $${job.max_salary || 'N/A'})`}
+                            {`${job.job_title} (Level: ${job.level || 'N/A'}, Salary Range: ${job.min_salary || 'N/A'} - ${job.max_salary || 'N/A'})`}
                           </option>
                         ))}
                       </select>
@@ -1690,93 +1900,93 @@ const requestSort = (column) => {
                   <div className="form-row">
                     <div className="form-group">
                       <label>Last Work Date</label>
-                      <input type="date" name="lastWorkDate" value={formData.lastWorkDate} onChange={handleFormChange} />
+                      <input type="date" name="lastWorkDate" value={formData.lastWorkDate} onChange={handleFormChange} className="date-input" />
                     </div>
                     <div className="form-group">
                       <label>Terminated Date</label>
-                      <input type="date" name="terminatedDate" value={formData.terminatedDate} onChange={handleFormChange} />
+                      <input type="date" name="terminatedDate" value={formData.terminatedDate} onChange={handleFormChange} className="date-input" />
                     </div>
                   </div>
                   <div className="form-row">
                     <div className="form-group">
                       <label>Rejoin Date</label>
-                      <input type="date" name="rejoinDate" value={formData.rejoinDate} onChange={handleFormChange} />
+                      <input type="date" name="rejoinDate" value={formData.rejoinDate} onChange={handleFormChange} className="date-input" />
                     </div>
                   </div>
                   <div className="form-buttons">
-                    <button type="submit" className="save-button">Save</button>
-                    <button type="button" className="cancel-button" onClick={() => setEditingEmployment(false)}>Cancel</button>
+                    <button type="submit" className="save">Save</button>
+                    <button type="button" className="cancel" onClick={() => setEditingEmployment(false)}>Cancel</button>
                   </div>
                 </form>
               ) : (
                 <div className="view-details">
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Roles</label>
                       <p>{getRoleNames(employeeDetails.roleids)}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Hire Date</label>
                       <p>{employeeDetails.HIRE ? new Date(employeeDetails.HIRE).toLocaleDateString('en-US') : '-'}</p>
                     </div>
                   </div>
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Status</label>
                       <p>{getStatusName(employeeDetails.STATUS)}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Job Title</label>
                       <p>{getJobTitleName(employeeDetails.JOB_TITLE)}</p>
                     </div>
                   </div>
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Pay Frequency</label>
                       <p>{getPayFrequencyName(employeeDetails.PAY_FREQUENCY)}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Department</label>
                       <p>{getDepartmentName(employeeDetails.DEPT_ID)}</p>
                     </div>
                   </div>
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Work Compensation Class</label>
                       <p>{getWorkerCompClassName(employeeDetails.WORK_COMP_CLASS)}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Superior</label>
                       <p>{getSuperiorName(employeeDetails.superior)}</p>
                     </div>
                   </div>
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Last Work Date</label>
                       <p>{employeeDetails.LAST_WORK_DATE ? new Date(employeeDetails.LAST_WORK_DATE).toLocaleDateString('en-US') : '-'}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Terminated Date</label>
                       <p>{employeeDetails.TERMINATED_DATE ? new Date(employeeDetails.TERMINATED_DATE).toLocaleDateString('en-US') : '-'}</p>
                     </div>
                   </div>
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Rejoin Date</label>
                       <p>{employeeDetails.REJOIN_DATE ? new Date(employeeDetails.REJOIN_DATE).toLocaleDateString('en-US') : '-'}</p>
                     </div>
                   </div>
                   {canEditEmployees && (
-                    <div className="details-buttons">
-                      <button className="edit-button" onClick={() => handleEdit('employment')}>Edit</button>
-                    </div>
+                    
+                      <button className="button" onClick={() => handleEdit('employment')}>Edit</button>
+                    
                   )}
                 </div>
               )}
             </div>
 
             {/* Work Address Section */}
-            <div className="details-block">
+            <div className="role-details-block96">
               <h3>Work Address</h3>
               {editingWorkAddress && canEditEmployees ? (
                 <form onSubmit={(e) => { e.preventDefault(); handleSave('workAddress'); }}>
@@ -1835,59 +2045,59 @@ const requestSort = (column) => {
                     </div>
                   </div>
                   <div className="form-buttons">
-                    <button type="submit" className="save-button">Save</button>
-                    <button type="button" className="cancel-button" onClick={() => setEditingWorkAddress(false)}>Cancel</button>
+                    <button type="submit" className="save">Save</button>
+                    <button type="button" className="cancel" onClick={() => setEditingWorkAddress(false)}>Cancel</button>
                   </div>
                 </form>
               ) : (
                 <div className="view-details">
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Address Line 1</label>
                       <p>{employeeDetails.WORK_ADDR_LINE1 || '-'}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Address Line 2</label>
                       <p>{employeeDetails.WORK_ADDR_LINE2 || '-'}</p>
                     </div>
                   </div>
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Address Line 3</label>
                       <p>{employeeDetails.WORK_ADDR_LINE3 || '-'}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>City</label>
                       <p>{employeeDetails.WORK_CITY || '-'}</p>
                     </div>
                   </div>
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Country</label>
                       <p>{getCountryName(employeeDetails.WORK_COUNTRY_ID)}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>State</label>
                       <p>{employeeDetails.WORK_STATE_ID ? getStateName(employeeDetails.WORK_STATE_ID) : employeeDetails.WORK_STATE_NAME_CUSTOM || '-'}</p>
                     </div>
                   </div>
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Postal Code</label>
                       <p>{employeeDetails.WORK_POSTAL_CODE || '-'}</p>
                     </div>
                   </div>
                   {canEditEmployees && (
-                    <div className="details-buttons">
-                      <button className="edit-button" onClick={() => handleEdit('workAddress')}>Edit</button>
-                    </div>
+                   
+                      <button className="button" onClick={() => handleEdit('workAddress')}>Edit</button>
+                   
                   )}
                 </div>
               )}
             </div>
 
             {/* Home Address Section */}
-            <div className="details-block">
+            <div className="role-details-block96">
               <h3>Home Address</h3>
               {editingHomeAddress && canEditEmployees ? (
                 <form onSubmit={(e) => { e.preventDefault(); handleSave('homeAddress'); }}>
@@ -1946,59 +2156,59 @@ const requestSort = (column) => {
                     </div>
                   </div>
                   <div className="form-buttons">
-                    <button type="submit" className="save-button">Save</button>
-                    <button type="button" className="cancel-button" onClick={() => setEditingHomeAddress(false)}>Cancel</button>
+                    <button type="submit" className="save">Save</button>
+                    <button type="button" className="cancel" onClick={() => setEditingHomeAddress(false)}>Cancel</button>
                   </div>
                 </form>
               ) : (
                 <div className="view-details">
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Address Line 1</label>
                       <p>{employeeDetails.HOME_ADDR_LINE1 || '-'}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Address Line 2</label>
                       <p>{employeeDetails.HOME_ADDR_LINE2 || '-'}</p>
                     </div>
                   </div>
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Address Line 3</label>
                       <p>{employeeDetails.HOME_ADDR_LINE3 || '-'}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>City</label>
                       <p>{employeeDetails.HOME_CITY || '-'}</p>
                     </div>
                   </div>
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Country</label>
                       <p>{getCountryName(employeeDetails.HOME_COUNTRY_ID)}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>State</label>
                       <p>{employeeDetails.HOME_STATE_ID ? getStateName(employeeDetails.HOME_STATE_ID) : employeeDetails.HOME_STATE_NAME_CUSTOM || '-'}</p>
                     </div>
                   </div>
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Postal Code</label>
                       <p>{employeeDetails.HOME_POSTAL_CODE || '-'}</p>
                     </div>
                   </div>
                   {canEditEmployees && (
-                    <div className="details-buttons">
-                      <button className="edit-button" onClick={() => handleEdit('homeAddress')}>Edit</button>
-                    </div>
+                    
+                      <button className="button" onClick={() => handleEdit('homeAddress')}>Edit</button>
+                  
                   )}
                 </div>
               )}
             </div>
 
             {/* Emergency Contact Section */}
-            <div className="details-block">
+            <div className="role-details-block96">
               <h3>Emergency Contact</h3>
               {editingEmergencyContact && canEditEmployees ? (
                 <form onSubmit={(e) => { e.preventDefault(); handleSave('emergencyContact'); }}>
@@ -2073,73 +2283,73 @@ const requestSort = (column) => {
                     </div>
                   </div>
                   <div className="form-buttons">
-                    <button type="submit" className="save-button">Save</button>
-                    <button type="button" className="cancel-button" onClick={() => setEditingEmergencyContact(false)}>Cancel</button>
+                    <button type="submit" className="save">Save</button>
+                    <button type="button" className="cancel" onClick={() => setEditingEmergencyContact(false)}>Cancel</button>
                   </div>
                 </form>
               ) : (
                 <div className="view-details">
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Name</label>
                       <p>{employeeDetails.EMERG_CNCT_NAME || '-'}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Phone Number</label>
                       <p>{employeeDetails.EMERG_CNCT_PHONE_NUMBER || '-'}</p>
                     </div>
                   </div>
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Email</label>
                       <p>{employeeDetails.EMERG_CNCT_EMAIL || '-'}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Address Line 1</label>
                       <p>{employeeDetails.EMERG_CNCT_ADDR_LINE1 || '-'}</p>
                     </div>
                   </div>
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Address Line 2</label>
                       <p>{employeeDetails.EMERG_CNCT_ADDR_LINE2 || '-'}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Address Line 3</label>
                       <p>{employeeDetails.EMERG_CNCT_ADDR_LINE3 || '-'}</p>
                     </div>
                   </div>
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>City</label>
                       <p>{employeeDetails.EMERG_CNCT_CITY || '-'}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Country</label>
                       <p>{getCountryName(employeeDetails.EMERG_CNCT_COUNTRY_ID)}</p>
                     </div>
                   </div>
                   <div className="details-row">
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>State</label>
                       <p>{employeeDetails.EMERG_CNCT_STATE_ID ? getStateName(employeeDetails.EMERG_CNCT_STATE_ID) : employeeDetails.EMERG_CNCT_STATE_NAME_CUSTOM || '-'}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="details-g">
                       <label>Postal Code</label>
                       <p>{employeeDetails.EMERG_CNCT_POSTAL_CODE || '-'}</p>
                     </div>
                   </div>
                   {canEditEmployees && (
-                    <div className="details-buttons">
-                      <button className="edit-button" onClick={() => handleEdit('emergencyContact')}>Edit</button>
-                    </div>
+                    
+                      <button className="button" onClick={() => handleEdit('emergencyContact')}>Edit</button>
+                    
                   )}
                 </div>
               )}
             </div>
 
             {/* Leave Assignments Section */}
-            <div className="details-block">
+            <div className="role-details-block96">
               <h3>Leave Assignments</h3>
               {editingLeaves && canEditEmployees ? (
                 <div className="leaves-container">
@@ -2157,8 +2367,8 @@ const requestSort = (column) => {
                     </div>
                   ))}
                   <div className="form-buttons">
-                    <button className="save-button" onClick={() => handleSave('leaves')}>Save</button>
-                    <button className="cancel-button" onClick={() => setEditingLeaves(false)}>Cancel</button>
+                    <button className="save" onClick={() => handleSave('leaves')}>Save</button>
+                    <button className="cancel" onClick={() => setEditingLeaves(false)}>Cancel</button>
                   </div>
                 </div>
               ) : (
@@ -2168,7 +2378,7 @@ const requestSort = (column) => {
                   ) : (
                     leaveTypes.map((leave) => (
                       leaveAssignments[leave.id] !== undefined && (
-                        <div key={leave.id} className="details-group">
+                        <div key={leave.id} className="details-g">
                           <label>{leave.Name}</label>
                           <p>{leaveAssignments[leave.id] || '0'}</p>
                         </div>
@@ -2176,9 +2386,7 @@ const requestSort = (column) => {
                     ))
                   )}
                   {canEditEmployees && (
-                    <div className="details-buttons">
-                      <button className="edit-button" onClick={() => handleEdit('leaves')}>Edit</button>
-                    </div>
+                      <button className="button" onClick={() => handleEdit('leaves')}>Edit</button>  
                   )}
                 </div>
               )}
