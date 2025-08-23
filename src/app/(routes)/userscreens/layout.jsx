@@ -90,7 +90,7 @@ export default async function userscreenLayout({ children }) {
     }
   }
 
-  console.log('Decoded user data:', userData);
+  //console.log('Decoded user data:', userData);
 
   return (
     <div>

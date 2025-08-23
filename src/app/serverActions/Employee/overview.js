@@ -15,6 +15,16 @@ const decodeJwt = (token) => {
   }
 };
 
+
+const formatDate = (date) => {
+    if (!date || isNaN(new Date(date))) return '';
+    const d = new Date(date);
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${month}/${day}/${d.getFullYear()}`;
+  };
+
+
 export async function updateEmployee(prevState, formData) {
   try {
     const empid = formData.get('empid');
@@ -266,9 +276,7 @@ export async function updateEmployee(prevState, formData) {
       // Update C_EMP with the first roleid (for backward compatibility with existing schema)
       const primaryRoleId = roleids[0] || null;
       const [result] = await pool.query(
-        `UPDATE C_EMP 
-         SET 
-        
+        `UPDATE C_EMP SET         
            HIRE = ?, 
            LAST_WORK_DATE = ?, 
            TERMINATED_DATE = ?, 
@@ -688,6 +696,61 @@ export async function fetchEmployeesByOrgId() {
   }
 }
 
+export async function fetchdocumentsbyid(empid) {
+  try {
+    const cookieStore = cookies();
+    const token = cookieStore.get('jwt_token')?.value;
+
+    if (!token) {
+      console.log('No token found');
+      throw new Error('No token found. Please log in.');
+    }
+
+    const decoded = decodeJwt(token);
+    if (!decoded || !decoded.orgid) {
+      console.log('Invalid token or orgid not found');
+      throw new Error('Invalid token or orgid not found.');
+    }
+
+    const orgId = decoded.orgid;
+    if (!orgId) {
+      console.log('orgId is undefined or invalid');
+      throw new Error('Organization ID is missing or invalid.');
+    }
+
+    if (!empid) {
+      console.log('empid is missing');
+      throw new Error('Employee ID is required.');
+    }
+
+    const pool = await DBconnection();
+    console.log("MySQL connection pool acquired");
+    const [rows] = await pool.query(
+      `SELECT id, empid, orgid, document_name, document_type, document_path, document_purpose, 
+              created_by, updated_by, created_date, last_updated_date 
+       FROM C_EMP_DOCUMENTS 
+       WHERE empid = ? AND orgid = ?`,
+      [empid, orgId]
+    );
+
+    if (rows.length === 0) {
+      console.log('No documents found for empid:', empid);
+      return [];
+    }
+
+    // Map over rows to format last_updated_date for each document
+    const formattedDocuments = rows.map((doc) => ({
+      ...doc,
+      last_updated_date: formatDate(doc.last_updated_date),
+    }));
+
+    console.log("Formatted document rows:", formattedDocuments);
+    return formattedDocuments;
+  } catch (error) {
+    console.error('Error fetching employee documents:', error.message);
+    throw new Error(`Failed to fetch employee documents: ${error.message}`);
+  }
+}
 export async function fetchEmployeeById(empid) {
   try {
     const cookieStore = cookies();

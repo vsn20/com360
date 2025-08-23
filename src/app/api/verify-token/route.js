@@ -25,8 +25,9 @@ export async function POST(request) {
     let isUploadPath = pathname && pathname.match(/^\/Uploads\/[^/]+\/[^/]+\/[^/]+$/);
     const isResumePath = pathname && pathname.match(/^\/uploads\/resumes\/[^_]+_[^/]+\.pdf$/);
     const isOfferLetterPath = pathname && pathname.match(/^\/uploads\/offerletter\/[^_]+_[^/]+\.pdf$/);
-
-    if (isUploadPath || isResumePath || isOfferLetterPath) {
+    const isDocumentsPath = pathname && pathname.match(/^\/public\/uploads\/documents\/.*$/); // New unrestricted access to /public/uploads/documents
+    
+    if (isUploadPath || isResumePath || isOfferLetterPath || isDocumentsPath) {
       // Check if the first character of applicationid (from pathname) matches orgid for resume or offer letter paths
       if (isResumePath || isOfferLetterPath) {
         const applicationidMatch = pathname.match(/^\/uploads\/(resumes|offerletter)\/([^_]+)_/);
@@ -40,6 +41,11 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Access denied due to orgid mismatch', accessibleItems: [] }, { status: 403 });
           }
         }
+      }
+      // Unrestricted access to /public/uploads/documents
+      if (isDocumentsPath) {
+        console.log(`Unrestricted access granted to ${pathname} for empid ${empid} (documents path)`);
+        return NextResponse.json({ success: true, accessibleItems: [] });
       }
       console.log(`Universal access granted to ${pathname} for empid ${empid} (upload path)`);
       return NextResponse.json({ success: true, accessibleItems: [] });
@@ -179,6 +185,13 @@ export async function POST(request) {
       });
     });
 
+    // Add unrestricted /public/uploads/documents to accessible items
+    accessibleItems.push({
+      href: '/public/uploads/documents/*',
+      isMenu: false,
+      priority: 10006,
+    });
+
     if (isAdmin) {
       accessibleItems.push({
         href: '/userscreens/prioritysetting',
@@ -270,6 +283,7 @@ export async function POST(request) {
     const isaddleave = pathname.match(/^\/userscreens\/leaves\/addleave$/);
     const ispendingleaves = pathname.match(/^\/userscreens\/leaves\/pending$/);
     isUploadPath = pathname.match(/^\/Uploads\/[^/]+\/[^/]+\/[^/]+$/);
+    const isDocumentsPathCheck = pathname.match(/^\/public\/uploads\/documents\/.*$/); // Check for documents path
 
     if (isEditEmployeePath && accessiblePaths.includes('/userscreens/employee/edit/:empid')) {
       console.log(`Access granted to ${pathname} for empid ${empid} (dynamic employee edit route)`);
@@ -305,6 +319,10 @@ export async function POST(request) {
     }
     if (isUploadPath && accessiblePaths.includes('/Uploads/:employeeId/:date/:filename')) {
       console.log(`Access granted to ${pathname} for empid ${empid} (upload path)`);
+      return NextResponse.json({ success: true, accessibleItems });
+    }
+    if (isDocumentsPathCheck && accessiblePaths.includes('/public/uploads/documents/*')) {
+      console.log(`Unrestricted access granted to ${pathname} for empid ${empid} (documents path)`);
       return NextResponse.json({ success: true, accessibleItems });
     }
 

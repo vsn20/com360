@@ -4,12 +4,15 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   fetchEmployeeById, 
   fetchLeaveAssignments, 
-  updateEmployee 
+  updateEmployee,
+  fetchdocumentsbyid ,
 } from '@/app/serverActions/Employee/overview';
 import './overview.css';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { addemployee } from '@/app/serverActions/addemployee';
-
+import styles from '../../(routes)/userscreens/userscreens.module.css';
+import EmplopyeeDocument from './EmplopyeeDocument';
+import Image from 'next/image';
 const CustomSelect = ({ name, value, onChange, options, placeholder, disabled }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -139,6 +142,8 @@ const Overview = ({
   const [leaveAssignments, setLeaveAssignments] = useState({});
   const [allEmployees, setAllEmployees] = useState(employees);
   const [selectedRoles, setSelectedRoles] = useState([]);
+  const [activeTab, setActiveTab] = useState('personal');
+  const [selecteddocument,setselecteddocument]=useState(null);
   const router = useRouter();
   const searchparams = useSearchParams();
   let ts = timestamp;
@@ -214,6 +219,7 @@ const Overview = ({
   const [pageInputValue, setPageInputValue] = useState('1');
   const [employeesPerPage, setEmployeesPerPage] = useState(10);
   const [employeesPerPageInput, setEmployeesPerPageInput] = useState('10');
+  const [employeedocuments,setemployeedocuments]=useState({});
   
   // Add state for sorting configuration
   const [sortConfig, setSortConfig] = useState({ column: 'empid', direction: 'asc' });
@@ -246,6 +252,7 @@ const Overview = ({
         setEmployeeDetails(null);
         setLeaveAssignments({});
         setSelectedRoles([]);
+        setemployeedocuments([]); 
         setFormData({
           empid: '',
           orgid: orgid || '',
@@ -305,10 +312,12 @@ const Overview = ({
         return;
       }
       try {
-        const [employee, leaveData] = await Promise.all([
+        const [employee, leaveData,docs] = await Promise.all([
           fetchEmployeeById(selectedEmpId),
           fetchLeaveAssignments(selectedEmpId),
+          fetchdocumentsbyid(selectedEmpId),
         ]);
+        console.log("documentssssss",docs);
         console.log('Fetched employee data:', employee);
         if (!employee.orgid) {
           console.error('Employee data missing orgid for empid:', selectedEmpId);
@@ -317,6 +326,8 @@ const Overview = ({
         }
         setEmployeeDetails(employee);
         setLeaveAssignments(leaveData);
+        setemployeedocuments(docs);
+        setemployeedocuments(Array.isArray(docs) ? docs : []);
         setSelectedRoles(employee.roleids || []);
         setFormData({
           empid: employee.empid || '',
@@ -381,6 +392,7 @@ const Overview = ({
         setEmployeeDetails(null);
         setLeaveAssignments({});
         setSelectedRoles([]);
+        setemployeedocuments([]);
         setFormLeaves({});
       }
     };
@@ -397,6 +409,11 @@ const Overview = ({
     setEditingEmergencyContact(false);
     setError(null);
     setisadd(false);
+    setselecteddocument(null);
+    setActiveTab('personal')
+    setpersonaldetails(empid);
+    setworkdetails(null);
+    setemployementdetails(null);
     console.log('Selected employee:', empid);
   };
 
@@ -409,6 +426,10 @@ const Overview = ({
     setEditingWorkAddress(false);
     setEditingHomeAddress(false);
     setEditingEmergencyContact(false);
+    setselecteddocument(null);
+    setpersonaldetails(null);
+    setemployementdetails(null);
+    setworkdetails(null);
     setSelectedRoles([]);
     setError(null);
     setisadd(false);
@@ -426,10 +447,89 @@ const Overview = ({
     setEditingEmergencyContact(false);
     setSelectedRoles([]);
     setError(null);
+    setselecteddocument(null);
+    setpersonaldetails(null);
+    setemployementdetails(null);
+    setworkdetails(null);
     setisadd(true);
     console.log('Back to employee list');
   };
 
+  const documentselecting=(id)=>{
+    setselecteddocument(id);
+    setpersonaldetails(null);
+    setemployementdetails(null);
+    setActiveTab('documents')
+    setworkdetails(null);
+    router.refresh();
+    setEditingPersonal(false);
+    setEditingEmployment(false);
+    setEditingLeaves(false);
+    setEditingWorkAddress(false);
+    setEditingHomeAddress(false);
+    setEditingEmergencyContact(false);
+    setSelectedRoles([]);
+    setError(null);
+    setisadd(false);
+    router.refresh();
+  }
+  const [personaldetails,setpersonaldetails]=useState(null);
+  const  personaldetailsselecting=(id)=>{
+    setselecteddocument(null);
+    setpersonaldetails(id);
+    setActiveTab('personal')
+    setemployementdetails(null);
+    setworkdetails(null);
+    router.refresh();
+    setEditingPersonal(false);
+    setEditingEmployment(false);
+    setEditingLeaves(false);
+    setEditingWorkAddress(false);
+    setEditingHomeAddress(false);
+    setEditingEmergencyContact(false);
+    setSelectedRoles([]);
+    setError(null);
+    setisadd(false);
+    router.refresh();
+  }
+const [employementdetails,setemployementdetails]=useState(null);
+   const employementdetailselecting=(id)=>{
+    setselecteddocument(null);
+    setpersonaldetails(null);
+    setActiveTab('employment')
+    setemployementdetails(id);
+    setworkdetails(null);
+    router.refresh();
+    setEditingPersonal(false);
+    setEditingEmployment(false);
+    setEditingLeaves(false);
+    setEditingWorkAddress(false);
+    setEditingHomeAddress(false);
+    setEditingEmergencyContact(false);
+    setSelectedRoles([]);
+    setError(null);
+    setisadd(false);
+    router.refresh();
+   }
+   const [workdetails,setworkdetails]=useState(null);
+   const workdetailsselecting=(id)=>{
+    setselecteddocument(null);
+    setpersonaldetails(null);
+    setemployementdetails(null);
+    setActiveTab('address');
+    setworkdetails(id);
+    router.refresh();
+    setEditingPersonal(false);
+    setEditingEmployment(false);
+    setEditingLeaves(false);
+    setEditingWorkAddress(false);
+    setEditingHomeAddress(false);
+    setEditingEmergencyContact(false);
+    setSelectedRoles([]);
+    setError(null);
+    setisadd(false);
+    router.refresh();
+   }
   const handleEdit = (section) => {
     if (section === 'personal') setEditingPersonal(true);
     if (section === 'employment') setEditingEmployment(true);
@@ -439,6 +539,20 @@ const Overview = ({
     if (section === 'emergencyContact') setEditingEmergencyContact(true);
     console.log(`Editing ${section} details`);
   };
+
+  const handleDocumentsUpdate = async () => {
+  if (selectedEmpId) {
+    try {
+      const updatedDocuments = await fetchdocumentsbyid(selectedEmpId);
+      setemployeedocuments(updatedDocuments);
+      setError(null);
+      console.log('Documents updated for empid:', selectedEmpId);
+    } catch (err) {
+      console.error('Error updating documents:', err);
+      setError('Failed to refresh documents.');
+    }
+  }
+};
 
   const ensureOrgId = async () => {
     if (!formData.orgid || formData.orgid === '') {
@@ -454,136 +568,139 @@ const Overview = ({
   };
 
   const handleSave = async (section) => {
-    const orgid = await ensureOrgId();
-    if (!orgid) {
-      setError('Organization ID is missing or invalid.');
-      console.error('Missing or invalid orgid in formData:', formData);
+  const orgid = await ensureOrgId();
+  if (!orgid) {
+    setError('Organization ID is missing or invalid.');
+    console.error('Missing or invalid orgid in formData:', formData);
+    return;
+  }
+  const formDataToSubmit = new FormData();
+  formDataToSubmit.append('empid', formData.empid);
+  formDataToSubmit.append('orgid', orgid);
+  formDataToSubmit.append('section', section);
+
+  if (section === 'personal') {
+    if (!formData.empFstName.trim()) {
+      setError('First Name is required.');
       return;
     }
-    const formDataToSubmit = new FormData();
-    formDataToSubmit.append('empid', formData.empid);
-    formDataToSubmit.append('orgid', orgid);
-    formDataToSubmit.append('section', section);
-
-    if (section === 'personal') {
-      if (!formData.empFstName.trim()) {
-        setError('First Name is required.');
-        return;
-      }
-      if (!formData.empLastName.trim()) {
-        setError('Last Name is required.');
-        return;
-      }
-      if (!formData.email.trim()) {
-        setError('Email is required.');
-        return;
-      }
-      formDataToSubmit.append('empFstName', formData.empFstName);
-      formDataToSubmit.append('empMidName', formData.empMidName || '');
-      formDataToSubmit.append('empLastName', formData.empLastName);
-      formDataToSubmit.append('empPrefName', formData.empPrefName || '');
-      formDataToSubmit.append('email', formData.email);
-      formDataToSubmit.append('gender', formData.gender || '');
-      formDataToSubmit.append('mobileNumber', formData.mobileNumber || '');
-      formDataToSubmit.append('phoneNumber', formData.phoneNumber || '');
-      formDataToSubmit.append('dob', formData.dob || '');
-      formDataToSubmit.append('ssn', formData.ssn || '');
-      formDataToSubmit.append('linkedinUrl', formData.linkedinUrl || '');
-    } else if (section === 'employment') {
-      if (selectedRoles.length === 0) {
-        setError('At least one role is required.');
-        return;
-      }
-      if (!formData.hireDate) {
-        setError('Hire Date is required.');
-        return;
-      }
-      if (!formData.status) {
-        setError('Status is required.');
-        return;
-      }
-      selectedRoles.forEach((roleid) => formDataToSubmit.append('roleids', roleid));
-      formDataToSubmit.append('hireDate', formData.hireDate || '');
-      formDataToSubmit.append('lastWorkDate', formData.lastWorkDate || '');
-      formDataToSubmit.append('terminatedDate', formData.terminatedDate || '');
-      formDataToSubmit.append('rejoinDate', formData.rejoinDate || '');
-      formDataToSubmit.append('superior', formData.superior || '');
-      formDataToSubmit.append('status', formData.status || '');
-      formDataToSubmit.append('jobTitle', formData.jobTitle || '');
-      formDataToSubmit.append('payFrequency', formData.payFrequency || '');
-      formDataToSubmit.append('deptId', formData.deptId || '');
-      formDataToSubmit.append('deptName', formData.deptName || '');
-      formDataToSubmit.append('workCompClass', formData.workCompClass || '');
-    } else if (section === 'leaves') {
-      Object.entries(formLeaves).forEach(([leaveid, noofleaves]) => {
-        if (noofleaves !== '' && noofleaves !== null && noofleaves !== undefined) {
-          formDataToSubmit.append(`leaves[${leaveid}]`, noofleaves);
-        }
-      });
-      if (Object.keys(formLeaves).length === 0) {
-        setError('At least one leave assignment is required.');
-        return;
-      }
-    } else if (section === 'workAddress') {
-      formDataToSubmit.append('workAddrLine1', formData.workAddrLine1 || '');
-      formDataToSubmit.append('workAddrLine2', formData.workAddrLine2 || '');
-      formDataToSubmit.append('workAddrLine3', formData.workAddrLine3 || '');
-      formDataToSubmit.append('workCity', formData.workCity || '');
-      formDataToSubmit.append('workStateId', formData.workStateId || '');
-      formDataToSubmit.append('workStateNameCustom', formData.workStateNameCustom || '');
-      formDataToSubmit.append('workCountryId', formData.workCountryId || '');
-      formDataToSubmit.append('workPostalCode', formData.workPostalCode || '');
-    } else if (section === 'homeAddress') {
-      formDataToSubmit.append('homeAddrLine1', formData.homeAddrLine1 || '');
-      formDataToSubmit.append('homeAddrLine2', formData.homeAddrLine2 || '');
-      formDataToSubmit.append('homeAddrLine3', formData.homeAddrLine3 || '');
-      formDataToSubmit.append('homeCity', formData.homeCity || '');
-      formDataToSubmit.append('homeStateId', formData.homeStateId || '');
-      formDataToSubmit.append('homeStateNameCustom', formData.homeStateNameCustom || '');
-      formDataToSubmit.append('homeCountryId', formData.homeCountryId || '');
-      formDataToSubmit.append('homePostalCode', formData.homePostalCode || '');
-    } else if (section === 'emergencyContact') {
-      formDataToSubmit.append('emergCnctName', formData.emergCnctName || '');
-      formDataToSubmit.append('emergCnctPhoneNumber', formData.emergCnctPhoneNumber || '');
-      formDataToSubmit.append('emergCnctEmail', formData.emergCnctEmail || '');
-      formDataToSubmit.append('emergCnctAddrLine1', formData.emergCnctAddrLine1 || '');
-      formDataToSubmit.append('emergCnctAddrLine2', formData.emergCnctAddrLine2 || '');
-      formDataToSubmit.append('emergCnctAddrLine3', formData.emergCnctAddrLine3 || '');
-      formDataToSubmit.append('emergCnctCity', formData.emergCnctCity || '');
-      formDataToSubmit.append('emergCnctStateId', formData.emergCnctStateId || '');
-      formDataToSubmit.append('emergCnctStateNameCustom', formData.emergCnctStateNameCustom || '');
-      formDataToSubmit.append('emergCnctCountryId', formData.emergCnctCountryId || '');
-      formDataToSubmit.append('emergCnctPostalCode', formData.emergCnctPostalCode || '');
+    if (!formData.empLastName.trim()) {
+      setError('Last Name is required.');
+      return;
     }
-
-    console.log(`${section} FormData:`, Object.fromEntries(formDataToSubmit));
-    try {
-      const result = await updateEmployee({}, formDataToSubmit);
-      console.log('updateEmployee response:', result);
-      if (result && typeof result === 'object' && result.success) {
-        const updatedEmployee = await fetchEmployeeById(formData.empid);
-        console.log('Updated employee data:', updatedEmployee);
-        setEmployeeDetails(updatedEmployee);
-        setLeaveAssignments(await fetchLeaveAssignments(formData.empid));
-        setSelectedRoles(updatedEmployee.roleids || []);
-        if (section === 'personal') setEditingPersonal(false);
-        if (section === 'employment') setEditingEmployment(false);
-        if (section === 'leaves') setEditingLeaves(false);
-        if (section === 'workAddress') setEditingWorkAddress(false);
-        if (section === 'homeAddress') setEditingHomeAddress(false);
-        if (section === 'emergencyContact') setEditingEmergencyContact(false);
-        setError(null);
-        console.log(`${section} details saved successfully for empid:`, formData.empid);
-      } else {
-        const errorMessage = result && result.error ? result.error : 'Failed to save: Invalid response from server';
-        setError(errorMessage);
-        console.error('Error from server:', errorMessage);
-      }
-    } catch (err) {
-      console.error(`Error saving ${section} details:`, err);
-      setError(err.message || 'An unexpected error occurred while saving.');
+    if (!formData.email.trim()) {
+      setError('Email is required.');
+      return;
     }
-  };
+    formDataToSubmit.append('empFstName', formData.empFstName);
+    formDataToSubmit.append('empMidName', formData.empMidName || '');
+    formDataToSubmit.append('empLastName', formData.empLastName);
+    formDataToSubmit.append('empPrefName', formData.empPrefName || '');
+    formDataToSubmit.append('email', formData.email);
+    formDataToSubmit.append('gender', formData.gender || '');
+    formDataToSubmit.append('mobileNumber', formData.mobileNumber || '');
+    formDataToSubmit.append('phoneNumber', formData.phoneNumber || '');
+    formDataToSubmit.append('dob', formData.dob || '');
+    formDataToSubmit.append('ssn', formData.ssn || '');
+    formDataToSubmit.append('linkedinUrl', formData.linkedinUrl || '');
+  } else if (section === 'employment') {
+    if (selectedRoles.length === 0) {
+      setError('At least one role is required.');
+      return;
+    }
+    if (!formData.hireDate) {
+      setError('Hire Date is required.');
+      return;
+    }
+    if (!formData.status) {
+      setError('Status is required.');
+      return;
+    }
+    selectedRoles.forEach((roleid) => formDataToSubmit.append('roleids', roleid));
+    formDataToSubmit.append('hireDate', formData.hireDate || '');
+    formDataToSubmit.append('lastWorkDate', formData.lastWorkDate || '');
+    formDataToSubmit.append('terminatedDate', formData.terminatedDate || '');
+    formDataToSubmit.append('rejoinDate', formData.rejoinDate || '');
+    formDataToSubmit.append('superior', formData.superior || '');
+    formDataToSubmit.append('status', formData.status || '');
+    formDataToSubmit.append('jobTitle', formData.jobTitle || '');
+    formDataToSubmit.append('payFrequency', formData.payFrequency || '');
+    formDataToSubmit.append('deptId', formData.deptId || '');
+    formDataToSubmit.append('deptName', formData.deptName || '');
+    formDataToSubmit.append('workCompClass', formData.workCompClass || '');
+  } else if (section === 'leaves') {
+    Object.entries(formLeaves).forEach(([leaveid, noofleaves]) => {
+      if (noofleaves !== '' && noofleaves !== null && noofleaves !== undefined) {
+        formDataToSubmit.append(`leaves[${leaveid}]`, noofleaves);
+      }
+    });
+    if (Object.keys(formLeaves).length === 0) {
+      setError('At least one leave assignment is required.');
+      return;
+    }
+  } else if (section === 'workAddress') {
+    formDataToSubmit.append('workAddrLine1', formData.workAddrLine1 || '');
+    formDataToSubmit.append('workAddrLine2', formData.workAddrLine2 || '');
+    formDataToSubmit.append('workAddrLine3', formData.workAddrLine3 || '');
+    formDataToSubmit.append('workCity', formData.workCity || '');
+    formDataToSubmit.append('workStateId', formData.workStateId || '');
+    formDataToSubmit.append('workStateNameCustom', formData.workStateNameCustom || '');
+    formDataToSubmit.append('workCountryId', formData.workCountryId || '');
+    formDataToSubmit.append('workPostalCode', formData.workPostalCode || '');
+  } else if (section === 'homeAddress') {
+    formDataToSubmit.append('homeAddrLine1', formData.homeAddrLine1 || '');
+    formDataToSubmit.append('homeAddrLine2', formData.homeAddrLine2 || '');
+    formDataToSubmit.append('homeAddrLine3', formData.homeAddrLine3 || '');
+    formDataToSubmit.append('homeCity', formData.homeCity || '');
+    formDataToSubmit.append('homeStateId', formData.homeStateId || '');
+    formDataToSubmit.append('homeStateNameCustom', formData.homeStateNameCustom || '');
+    formDataToSubmit.append('homeCountryId', formData.homeCountryId || '');
+    formDataToSubmit.append('homePostalCode', formData.homePostalCode || '');
+  } else if (section === 'emergencyContact') {
+    formDataToSubmit.append('emergCnctName', formData.emergCnctName || '');
+    formDataToSubmit.append('emergCnctPhoneNumber', formData.emergCnctPhoneNumber || '');
+    formDataToSubmit.append('emergCnctEmail', formData.emergCnctEmail || '');
+    formDataToSubmit.append('emergCnctAddrLine1', formData.emergCnctAddrLine1 || '');
+    formDataToSubmit.append('emergCnctAddrLine2', formData.emergCnctAddrLine2 || '');
+    formDataToSubmit.append('emergCnctAddrLine3', formData.emergCnctAddrLine3 || '');
+    formDataToSubmit.append('emergCnctCity', formData.emergCnctCity || '');
+    formDataToSubmit.append('emergCnctStateId', formData.emergCnctStateId || '');
+    formDataToSubmit.append('emergCnctStateNameCustom', formData.emergCnctStateNameCustom || '');
+    formDataToSubmit.append('emergCnctCountryId', formData.emergCnctCountryId || '');
+    formDataToSubmit.append('emergCnctPostalCode', formData.emergCnctPostalCode || '');
+  }
+
+  console.log(`${section} FormData:`, Object.fromEntries(formDataToSubmit));
+  try {
+    const result = await updateEmployee({}, formDataToSubmit);
+    console.log('updateEmployee response:', result);
+    if (result && typeof result === 'object' && result.success) {
+      const updatedEmployee = await fetchEmployeeById(formData.empid);
+      const updatedLeaveAssignments = await fetchLeaveAssignments(formData.empid);
+      const updatedDocuments = await fetchdocumentsbyid(formData.empid);
+      setEmployeeDetails(updatedEmployee);
+      setLeaveAssignments(updatedLeaveAssignments);
+      setemployeedocuments(updatedDocuments); // Refresh documents
+      setSelectedRoles(updatedEmployee.roleids || []);
+      if (section === 'personal') setEditingPersonal(false);
+      if (section === 'employment') setEditingEmployment(false);
+      if (section === 'leaves') setEditingLeaves(false);
+      if (section === 'workAddress') setEditingWorkAddress(false);
+      if (section === 'homeAddress') setEditingHomeAddress(false);
+      if (section === 'emergencyContact') setEditingEmergencyContact(false);
+      setError(null);
+      console.log(`${section} details saved successfully for empid:`, formData.empid);
+    } else {
+      const errorMessage = result && result.error ? result.error : 'Failed to save: Invalid response from server';
+      setError(errorMessage);
+      console.error('Error from server:', errorMessage);
+    }
+  } catch (err) {
+    console.error(`Error saving ${section} details:`, err);
+    setError(err.message || 'An unexpected error occurred while saving.');
+  }
+};
+
 
   const handleFormChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -831,6 +948,8 @@ const handleRoleToggle = (roleid) => {
   const indexOfLastEmployee = currentPage * employeesPerPage;
   const indexOfFirstEmployee = indexOfLastEmployee - employeesPerPage;
   const currentEmployees = filteredEmployees.slice(indexOfFirstEmployee, indexOfLastEmployee);
+
+  
 
   return (
     <div className="roles-overview-container">
@@ -1460,8 +1579,13 @@ const handleRoleToggle = (roleid) => {
           </form>
         </div>
       )}
+
+      {/* {!issadd && !selectedEmpId&&selecteddocument&&(
+        <>{selecteddocument}</>
+      )} */}
       
-      {!issadd && !selectedEmpId ? (
+      {!issadd && !selectedEmpId&&!selecteddocument ? 
+      (
         <div className="roles-list">
           <div className="header-section">
             <h2 className="title">Employees</h2>
@@ -1603,16 +1727,52 @@ const handleRoleToggle = (roleid) => {
             />
           </div>
         </div>
-      ) : !issadd && (
+      ) :  !issadd&& 
+      (
+        
         employeeDetails && (
           <div className="role-details-container">
-            <div className="roledetails-header">
-              <h2 className="title">Employee Details</h2>
-              <button className="back-button" onClick={handleBackClick}></button>
+            <div className="roledetails-header">                          
+              <h2 className="title">Employee Details</h2>            
+              <button className="back-button" onClick={handleBackClick}></button>            
             </div>
+              <div className="employee-submenu-bar">
+        <button
+          className={activeTab === 'personal' ? 'active' : ''}
+          onClick={() => personaldetailsselecting(employeeDetails.empid)}
+        >
+          Personal Details
+        </button>
+        <button
+          className={activeTab === 'employment' ? 'active' : ''}
+          onClick={() => employementdetailselecting(employeeDetails.empid)}
+        >
+          Employment Details
+        </button>
+        <button
+          className={activeTab === 'address' ? 'active' : ''}
+          onClick={() =>workdetailsselecting(employeeDetails.empid)}
+        >
+          Address Details
+        </button>
+        <button
+          className={activeTab === 'documents' ? 'active' : ''}
+          onClick={() => documentselecting(employeeDetails.empid)}
+        >
+          Documents
+        </button>
+      </div>
+
+                <br />
+                {selecteddocument&&!personaldetails&&!employementdetails&&!workdetails&&(
+                 <EmplopyeeDocument id={employeeDetails.empid}
+                 documents={employeedocuments}
+                 onDocumentsUpdate={handleDocumentsUpdate}/>
+                 )}
 
             {/* Personal Details Section */}
-            <div className="role-details-block96">
+            {!employementdetails&&personaldetails&&!workdetails&&(
+                <div className="role-details-block96">
               <h3>Personal Details</h3>
               {editingPersonal && canEditEmployees ? (
                 <form onSubmit={(e) => { e.preventDefault(); handleSave('personal'); }}>
@@ -1758,9 +1918,13 @@ const handleRoleToggle = (roleid) => {
                 </div>
               )}
             </div>
+            )}
+            
 
             {/* Employment Details Section */}
-            <div className="role-details-block96">
+            {employementdetails&&!workdetails&&(
+              <>
+                <div className="role-details-block96">
               <h3>Employment Details</h3>
               {editingEmployment && canEditEmployees ? (
                 <form onSubmit={(e) => { e.preventDefault(); handleSave('employment'); }}>
@@ -1812,12 +1976,12 @@ const handleRoleToggle = (roleid) => {
       <input key={roleid} type="hidden" name="roleids" value={roleid} />
     ))}
   </div>
-  {/* {selectedRoles.length > 0 && (
-    <div className="selected-roles">
-      <p>Selected Roles: {selectedRoles.map((id) => roles.find((r) => r.roleid === id)?.rolename).join(', ')}</p>
-    </div>
-  )} */}
-</div>
+                    {/* {selectedRoles.length > 0 && (
+                          <div className="selected-roles">
+                         <p>Selected Roles: {selectedRoles.map((id) => roles.find((r) => r.roleid === id)?.rolename).join(', ')}</p>
+                     </div>
+                    )} */}
+                   </div>
                     <div className="form-group">
                       <label>Hire Date*</label>
                       <input type="date" name="hireDate" value={formData.hireDate} onChange={handleFormChange} className="date-input" required />
@@ -1983,10 +2147,59 @@ const handleRoleToggle = (roleid) => {
                   )}
                 </div>
               )}
-            </div>
+              </div>
 
-            {/* Work Address Section */}
+                          
             <div className="role-details-block96">
+              <h3>Leave Assignments</h3>
+              {editingLeaves && canEditEmployees ? (
+                <div className="leaves-container">
+                  {leaveTypes.map((leave) => (
+                    <div key={leave.id} className="form-group">
+                      <label>{leave.Name} (Number of Leaves)</label>
+                      <input
+                        type="number"
+                        name={`noofleaves_${leave.id}`}
+                        value={formLeaves[leave.id] || ''}
+                        onChange={(e) => handleLeaveChange(leave.id, e.target.value)}
+                        min="0"
+                        step="any"
+                      />
+                    </div>
+                  ))}
+                  <div className="form-buttons">
+                    <button className="save" onClick={() => handleSave('leaves')}>Save</button>
+                    <button className="cancel" onClick={() => setEditingLeaves(false)}>Cancel</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="view-leaves">
+                  {Object.keys(leaveAssignments).length === 0 ? (
+                    <p>No leave assignments.</p>
+                  ) : (
+                    leaveTypes.map((leave) => (
+                      leaveAssignments[leave.id] !== undefined && (
+                        <div key={leave.id} className="details-g">
+                          <label>{leave.Name}</label>
+                          <p>{leaveAssignments[leave.id] || '0'}</p>
+                        </div>
+                      )
+                    ))
+                  )}
+                  {canEditEmployees && (
+                      <button className="button" onClick={() => handleEdit('leaves')}>Edit</button>  
+                  )}
+                </div>
+              )}                
+            </div>
+            </>       
+            )}
+            
+            {/* Work Address Section */}
+
+            {workdetails&&(
+             <>
+               <div className="role-details-block96">
               <h3>Work Address</h3>
               {editingWorkAddress && canEditEmployees ? (
                 <form onSubmit={(e) => { e.preventDefault(); handleSave('workAddress'); }}>
@@ -2096,7 +2309,7 @@ const handleRoleToggle = (roleid) => {
               )}
             </div>
 
-            {/* Home Address Section */}
+
             <div className="role-details-block96">
               <h3>Home Address</h3>
               {editingHomeAddress && canEditEmployees ? (
@@ -2206,9 +2419,10 @@ const handleRoleToggle = (roleid) => {
                 </div>
               )}
             </div>
+             
 
-            {/* Emergency Contact Section */}
-            <div className="role-details-block96">
+
+             <div className="role-details-block96">
               <h3>Emergency Contact</h3>
               {editingEmergencyContact && canEditEmployees ? (
                 <form onSubmit={(e) => { e.preventDefault(); handleSave('emergencyContact'); }}>
@@ -2339,63 +2553,21 @@ const handleRoleToggle = (roleid) => {
                       <p>{employeeDetails.EMERG_CNCT_POSTAL_CODE || '-'}</p>
                     </div>
                   </div>
-                  {canEditEmployees && (
-                    
-                      <button className="button" onClick={() => handleEdit('emergencyContact')}>Edit</button>
-                    
+                  {canEditEmployees && (                    
+                      <button className="button" onClick={() => handleEdit('emergencyContact')}>Edit</button>                    
                   )}
                 </div>
               )}
             </div>
-
-            {/* Leave Assignments Section */}
-            <div className="role-details-block96">
-              <h3>Leave Assignments</h3>
-              {editingLeaves && canEditEmployees ? (
-                <div className="leaves-container">
-                  {leaveTypes.map((leave) => (
-                    <div key={leave.id} className="form-group">
-                      <label>{leave.Name} (Number of Leaves)</label>
-                      <input
-                        type="number"
-                        name={`noofleaves_${leave.id}`}
-                        value={formLeaves[leave.id] || ''}
-                        onChange={(e) => handleLeaveChange(leave.id, e.target.value)}
-                        min="0"
-                        step="any"
-                      />
-                    </div>
-                  ))}
-                  <div className="form-buttons">
-                    <button className="save" onClick={() => handleSave('leaves')}>Save</button>
-                    <button className="cancel" onClick={() => setEditingLeaves(false)}>Cancel</button>
-                  </div>
-                </div>
-              ) : (
-                <div className="view-leaves">
-                  {Object.keys(leaveAssignments).length === 0 ? (
-                    <p>No leave assignments.</p>
-                  ) : (
-                    leaveTypes.map((leave) => (
-                      leaveAssignments[leave.id] !== undefined && (
-                        <div key={leave.id} className="details-g">
-                          <label>{leave.Name}</label>
-                          <p>{leaveAssignments[leave.id] || '0'}</p>
-                        </div>
-                      )
-                    ))
-                  )}
-                  {canEditEmployees && (
-                      <button className="button" onClick={() => handleEdit('leaves')}>Edit</button>  
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        )
+            </>
+            )}           
+          </div>            
+        )       
       )}
+    
     </div>
   );
+
 };
 
 export default Overview;
