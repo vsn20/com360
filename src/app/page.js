@@ -220,12 +220,13 @@ const Home = () => {
             ].map((testimonial, index) => (
               <div key={index} className={styles.testimonialCard} style={{ animationDelay: `${index * 0.1}s` }}>
                 <div className={styles.testimonialQuote}>
-                  <p>"{testimonial.quote}"</p>
+                  <p>&ldquo;{testimonial.quote}&rdquo;</p>
                 </div>
                 <div className={styles.testimonialAuthor}>
                   <h4>— {testimonial.author}</h4>
                 </div>
               </div>
+              
             ))}
           </div>
         </div>

@@ -54,10 +54,10 @@ function Sidebar({ isAdmin }) {
     const timestamp = new Date().getTime();
     router.push(`${href}?refresh=${timestamp}`); // Navigate immediately
     // Delay hiding C_SUBMENU and locking for 2 seconds
-    setTimeout(() => {
+   
       setOpenSubmenuIndex(null); // Close C_SUBMENU after 2 seconds
       setIsSubmenuLocked(true); // Lock C_SUBMENU to prevent hover
-    }, 3500);
+   
   };
 
   return (
