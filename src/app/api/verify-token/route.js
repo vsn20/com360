@@ -14,7 +14,7 @@ export async function POST(request) {
 
     // Verify the JWT token
     const decoded = jwt.verify(token, JWT_SECRET);
-   // console.log("Token verified in API, decoded payload:", decoded);
+    // console.log("Token verified in API, decoded payload:", decoded);
 
     const { empid, orgid } = decoded;
     if (!empid || !orgid) {
@@ -25,9 +25,10 @@ export async function POST(request) {
     let isUploadPath = pathname && pathname.match(/^\/Uploads\/[^/]+\/[^/]+\/[^/]+$/);
     const isResumePath = pathname && pathname.match(/^\/uploads\/resumes\/[^_]+_[^/]+\.pdf$/);
     const isOfferLetterPath = pathname && pathname.match(/^\/uploads\/offerletter\/[^_]+_[^/]+\.pdf$/);
-    const isDocumentsPath = pathname && pathname.match(/^\/public\/uploads\/documents\/.*$/); // New unrestricted access to /public/uploads/documents
-    
-    if (isUploadPath || isResumePath || isOfferLetterPath || isDocumentsPath) {
+    const isDocumentsPath = pathname && pathname.match(/^\/public\/uploads\/documents\/.*$/); // Unrestricted access to /public/uploads/documents
+    const isProfilePhotoPath = pathname && pathname.match(/^\/public\/uploads\/profile_photos\/.*$/); // Unrestricted access to /public/uploads/profile_photos
+
+    if (isUploadPath || isResumePath || isOfferLetterPath || isDocumentsPath || isProfilePhotoPath) {
       // Check if the first character of applicationid (from pathname) matches orgid for resume or offer letter paths
       if (isResumePath || isOfferLetterPath) {
         const applicationidMatch = pathname.match(/^\/uploads\/(resumes|offerletter)\/([^_]+)_/);
@@ -42,9 +43,9 @@ export async function POST(request) {
           }
         }
       }
-      // Unrestricted access to /public/uploads/documents
-      if (isDocumentsPath) {
-        console.log(`Unrestricted access granted to ${pathname} for empid ${empid} (documents path)`);
+      // Unrestricted access to /public/uploads/documents and /public/uploads/profile_photos
+      if (isDocumentsPath || isProfilePhotoPath) {
+        console.log(`Unrestricted access granted to ${pathname} for empid ${empid} (${isDocumentsPath ? 'documents' : 'profile photos'} path)`);
         return NextResponse.json({ success: true, accessibleItems: [] });
       }
       console.log(`Universal access granted to ${pathname} for empid ${empid} (upload path)`);
@@ -185,11 +186,16 @@ export async function POST(request) {
       });
     });
 
-    // Add unrestricted /public/uploads/documents to accessible items
+    // Add unrestricted /public/uploads/documents and /public/uploads/profile_photos to accessible items
     accessibleItems.push({
       href: '/public/uploads/documents/*',
       isMenu: false,
       priority: 10006,
+    });
+    accessibleItems.push({
+      href: '/public/uploads/profile_photos/*',
+      isMenu: false,
+      priority: 10007,
     });
 
     if (isAdmin) {
@@ -267,7 +273,7 @@ export async function POST(request) {
     }
 
     accessibleItems.sort((a, b) => a.priority - b.priority);
-   // console.log("Accessible items for user:", JSON.stringify(accessibleItems, null, 2));
+    // console.log("Accessible items for user:", JSON.stringify(accessibleItems, null, 2));
 
     if (!pathname) {
       return NextResponse.json({ success: true, accessibleItems });
@@ -284,6 +290,7 @@ export async function POST(request) {
     const ispendingleaves = pathname.match(/^\/userscreens\/leaves\/pending$/);
     isUploadPath = pathname.match(/^\/Uploads\/[^/]+\/[^/]+\/[^/]+$/);
     const isDocumentsPathCheck = pathname.match(/^\/public\/uploads\/documents\/.*$/); // Check for documents path
+    const isProfilePhotoPathCheck = pathname.match(/^\/public\/uploads\/profile_photos\/.*$/); // Check for profile photos path
 
     if (isEditEmployeePath && accessiblePaths.includes('/userscreens/employee/edit/:empid')) {
       console.log(`Access granted to ${pathname} for empid ${empid} (dynamic employee edit route)`);
@@ -323,6 +330,10 @@ export async function POST(request) {
     }
     if (isDocumentsPathCheck && accessiblePaths.includes('/public/uploads/documents/*')) {
       console.log(`Unrestricted access granted to ${pathname} for empid ${empid} (documents path)`);
+      return NextResponse.json({ success: true, accessibleItems });
+    }
+    if (isProfilePhotoPathCheck && accessiblePaths.includes('/public/uploads/profile_photos/*')) {
+      console.log(`Unrestricted access granted to ${pathname} for empid ${empid} (profile photos path)`);
       return NextResponse.json({ success: true, accessibleItems });
     }
 

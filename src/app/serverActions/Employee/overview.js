@@ -2,6 +2,8 @@
 
 import DBconnection from '@/app/utils/config/db';
 import { cookies } from 'next/headers';
+import fs from 'fs/promises';
+import path from 'path';
 
 const decodeJwt = (token) => {
   try {
@@ -944,5 +946,30 @@ export async function fetchLeaveAssignments(empid) {
   } catch (error) {
     console.error('Error fetching leave assignments:', error.message);
     return {};
+  }
+}
+export async function uploadProfilePhoto(formData) {
+  const file = formData.get('file');
+  const empId = formData.get('empId');
+
+  if (!file || !empId) {
+    throw new Error('File or employee ID is missing.');
+  }
+
+  const uploadDir = path.join(process.cwd(), 'public/uploads/profile_photos');
+  const filePath = path.join(uploadDir, `${empId}.png`);
+
+  try {
+    // Ensure upload directory exists
+    await fs.mkdir(uploadDir, { recursive: true });
+
+    // Convert file to buffer and write to disk (overwrites if exists)
+    const arrayBuffer = await file.arrayBuffer();
+    await fs.writeFile(filePath, Buffer.from(arrayBuffer));
+
+    return { success: true, message: 'Profile photo uploaded successfully.' };
+  } catch (error) {
+    console.error('Error uploading profile photo:', error);
+    throw new Error('Failed to upload profile photo.');
   }
 }

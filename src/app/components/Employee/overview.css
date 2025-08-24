@@ -1261,4 +1261,21 @@ tbody tr:hover {
   padding-top: 24px; /* Adds space between the submenu and the content */
 }
 
-
+.profile-photo {
+  margin-bottom: 20px;
+}
+.profile-photo img {
+  border-radius: 50%;
+  object-fit: cover;
+}
+.edit-photo-button {
+  margin-left: 10px;
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: #007bff;
+}
+.edit-photo-button:hover {
+  color: #0056b3;
+}

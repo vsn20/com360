@@ -6,6 +6,7 @@ import {
   fetchLeaveAssignments, 
   updateEmployee,
   fetchdocumentsbyid ,
+  uploadProfilePhoto
 } from '@/app/serverActions/Employee/overview';
 import './overview.css';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -146,6 +147,8 @@ const Overview = ({
   const [selecteddocument,setselecteddocument]=useState(null);
   const router = useRouter();
   const searchparams = useSearchParams();
+  const [imgSrc, setImgSrc] = useState();
+
   let ts = timestamp;
   
   const [formData, setFormData] = useState({
@@ -415,6 +418,7 @@ const Overview = ({
     setworkdetails(null);
     setemployementdetails(null);
     console.log('Selected employee:', empid);
+    setImgSrc(`/uploads/profile_photos/${empid}.png`);
   };
 
   const handleBackClick = () => {
@@ -530,6 +534,24 @@ const [employementdetails,setemployementdetails]=useState(null);
     setisadd(false);
     router.refresh();
    }
+
+   const handleProfilePhotoUpload = async (e, empId) => {
+  const file = e.target.files[0];
+  if (file && empId) {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('empId', empId);
+    try {
+      await uploadProfilePhoto(formData); // Server action
+      setImgSrc(`/uploads/profile_photos/${empId}.png?${new Date().getTime()}`); // Force refresh
+      setError(null);
+      console.log('Profile photo uploaded successfully for empid:', empId);
+    } catch (err) {
+      console.error('Error uploading profile photo:', err);
+      setError('Failed to upload profile photo.');
+    }
+  }
+};
   const handleEdit = (section) => {
     if (section === 'personal') setEditingPersonal(true);
     if (section === 'employment') setEditingEmployment(true);
@@ -1732,6 +1754,31 @@ const handleRoleToggle = (roleid) => {
         
         employeeDetails && (
           <div className="role-details-container">
+<div className="profile-photo">
+  <Image
+    src={imgSrc}
+    alt="Profile Photo"
+    width={75}
+    height={75}
+    onError={() => setImgSrc("/uploads/profile_photos/default.png")}
+  />
+  <input
+    type="file"
+    id="profilePhotoUpload"
+    style={{ display: 'none' }}
+    accept="image/*"
+    onChange={(e) => handleProfilePhotoUpload(e, employeeDetails?.empid)}
+  />
+  <button
+    className="edit-photo-button"
+    onClick={() => document.getElementById('profilePhotoUpload').click()}
+  >
+    ✎
+  </button>
+  
+   <p>{employeeDetails.EMP_FST_NAME} {employeeDetails.EMP_LAST_NAME}</p>
+</div>
+
             <div className="roledetails-header">                          
               <h2 className="title">Employee Details</h2>            
               <button className="back-button" onClick={handleBackClick}></button>            
