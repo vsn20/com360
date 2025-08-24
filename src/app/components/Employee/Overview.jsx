@@ -6,7 +6,8 @@ import {
   fetchLeaveAssignments, 
   updateEmployee,
   fetchdocumentsbyid ,
-  uploadProfilePhoto
+  uploadProfilePhoto,
+  deleteProfilePhoto
 } from '@/app/serverActions/Employee/overview';
 import './overview.css';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -823,6 +824,19 @@ const handleRoleToggle = (roleid) => {
   const addform_toggleDropdown = () => {
     addform_setIsDropdownOpen((prev) => !prev);
   };
+
+  const handleDeleteProfilePhoto = async (empId) => {
+  if (!empId || imgSrc === "/uploads/profile_photos/default.png") return;
+  try {
+    await deleteProfilePhoto(empId); // Server action
+    setImgSrc("/uploads/profile_photos/default.png"); // Revert to default
+    setError(null);
+    console.log('Profile photo deleted successfully for empid:', empId);
+  } catch (err) {
+    console.error('Error deleting profile photo:', err);
+    setError('Failed to delete profile photo.');
+  }
+};
 
   const addform_handleSubmit = async (formData) => {
     if (addform_isSubmitting) return;
@@ -1754,6 +1768,8 @@ const handleRoleToggle = (roleid) => {
         
         employeeDetails && (
           <div className="role-details-container">
+             <div className="roledetails-header"> 
+              </div>
 <div className="profile-photo">
   <Image
     src={imgSrc}
@@ -1774,6 +1790,13 @@ const handleRoleToggle = (roleid) => {
     onClick={() => document.getElementById('profilePhotoUpload').click()}
   >
     ✎
+  </button>
+  <button
+    className="delete-photo-button"
+    onClick={() => handleDeleteProfilePhoto(employeeDetails?.empid)}
+    disabled={imgSrc === "/uploads/profile_photos/default.png"}
+  >
+    🗑️
   </button>
   
    <p>{employeeDetails.EMP_FST_NAME} {employeeDetails.EMP_LAST_NAME}</p>

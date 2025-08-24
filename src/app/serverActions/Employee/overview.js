@@ -973,3 +973,26 @@ export async function uploadProfilePhoto(formData) {
     throw new Error('Failed to upload profile photo.');
   }
 }
+
+export async function deleteProfilePhoto(empId) {
+  if (!empId) {
+    throw new Error('Employee ID is missing.');
+  }
+
+  const uploadDir = path.join(process.cwd(), 'public/uploads/profile_photos');
+  const filePath = path.join(uploadDir, `${empId}.png`);
+
+  try {
+    // Check if file exists before attempting to delete
+    await fs.access(filePath);
+    await fs.unlink(filePath);
+    return { success: true, message: 'Profile photo deleted successfully.' };
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      // File doesn't exist, which is fine
+      return { success: true, message: 'No profile photo to delete.' };
+    }
+    console.error('Error deleting profile photo:', error);
+    throw new Error('Failed to delete profile photo.');
+  }
+}

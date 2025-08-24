@@ -1279,3 +1279,19 @@ tbody tr:hover {
 .edit-photo-button:hover {
   color: #0056b3;
 }
+
+.delete-photo-button {
+  margin-left: 5px;
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: #dc3545;
+}
+.delete-photo-button:hover {
+  color: #a71d2a;
+}
+.delete-photo-button:disabled {
+  color: #ccc;
+  cursor: not-allowed;
+}
