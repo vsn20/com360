@@ -19,7 +19,6 @@ const decodeJwt = (token) => {
 // Helper function to get current user's empid-name
 const getCurrentUserEmpIdName = async (pool, userId, orgId) => {
   try {
-    // Fetch empid from C_USER using username (userId)
     const [userRows] = await pool.execute(
       'SELECT empid FROM C_USER WHERE username = ? AND orgid = ?',
       [userId, orgId]
@@ -30,16 +29,15 @@ const getCurrentUserEmpIdName = async (pool, userId, orgId) => {
     }
     const empid = userRows[0].empid;
 
-    // Fetch employee name from C_EMP
     const [empRows] = await pool.execute(
-      'SELECT EMP_FST_NAME, EMP_LAST_NAME,roleid FROM C_EMP WHERE empid = ? AND orgid = ?',
+      'SELECT EMP_FST_NAME, EMP_LAST_NAME, roleid FROM C_EMP WHERE empid = ? AND orgid = ?',
       [empid, orgId]
     );
     if (empRows.length === 0) {
       console.error('Employee not found in C_EMP for empid:', empid);
       return `${empid}-unknown`;
     }
-     const { EMP_FST_NAME, EMP_LAST_NAME } = empRows[0];
+    const { EMP_FST_NAME, EMP_LAST_NAME } = empRows[0];
     return `${empid}-${EMP_FST_NAME} ${EMP_LAST_NAME}`;
   } catch (error) {
     console.error('Error fetching empid-name:', error.message);
@@ -52,8 +50,8 @@ export async function addAccount(formData) {
   try {
     const orgId = formData.get('orgid');
     const accountName = formData.get('accountName');
-    const acctTypeCd = formData.get('acctTypeCd'); // Now expects id
-    const branchType = formData.get('branchType'); // Now expects id
+    const acctTypeCd = formData.get('acctTypeCd');
+    const branchType = formData.get('branchType');
     const email = formData.get('email');
     const aliasName = formData.get('aliasName') || null;
     const businessAddrLine1 = formData.get('businessAddrLine1') || null;
@@ -70,13 +68,14 @@ export async function addAccount(formData) {
     const mailingStateId = formData.get('mailingStateId') || null;
     const mailingCountryId = formData.get('mailingCountryId') || null;
     const mailingPostalCode = formData.get('mailingPostalCode') || null;
+    const suborgid = formData.get('suborgid') || null; // Added suborgid
 
     console.log('addAccount FormData:', {
       orgId, accountName, acctTypeCd, branchType, email, aliasName,
       businessAddrLine1, businessAddrLine2, businessAddrLine3, businessCity,
       businessStateId, businessCountryId, businessPostalCode,
       mailingAddrLine1, mailingAddrLine2, mailingAddrLine3, mailingCity,
-      mailingStateId, mailingCountryId, mailingPostalCode
+      mailingStateId, mailingCountryId, mailingPostalCode, suborgid
     });
 
     const cookieStore = cookies();
@@ -150,6 +149,17 @@ export async function addAccount(formData) {
       }
     }
 
+    if (suborgid) {
+      const [suborgCheck] = await pool.execute(
+        'SELECT suborgid FROM C_SUB_ORG WHERE suborgid = ? AND orgid = ? AND isstatus = 1',
+        [suborgid, orgId]
+      );
+      if (suborgCheck.length === 0) {
+        console.log('Invalid suborganization selected');
+        return { error: 'Selected suborganization is invalid or inactive.' };
+      }
+    }
+
     if (businessCountryId) {
       const [countryCheck] = await pool.execute(
         'SELECT ID FROM C_COUNTRY WHERE ID = ? AND ACTIVE = 1',
@@ -194,14 +204,14 @@ export async function addAccount(formData) {
       }
     }
 
-    const [countrows]=await pool.execute(
-      'select count(*) as count from C_ACCOUNT where ORGID=?',
+    const [countrows] = await pool.execute(
+      'SELECT count(*) as count FROM C_ACCOUNT WHERE ORGID = ?',
       [orgId]
     );
 
-    const counting=countrows[0].count;
+    const counting = countrows[0].count;
 
-    const accntId = `${orgId}-${counting+1}`;
+    const accntId = `${orgId}-${counting + 1}`;
     const createdBy = await getCurrentUserEmpIdName(pool, decoded.userId, orgId);
 
     const [result] = await pool.query(
@@ -211,15 +221,15 @@ export async function addAccount(formData) {
         BUSINESS_STATE_ID, BUSINESS_COUNTRY_ID, BUSINESS_POSTAL_CODE,
         MAILING_ADDR_LINE1, MAILING_ADDR_LINE2, MAILING_ADDR_LINE3, MAILING_CITY,
         MAILING_STATE_ID, MAILING_COUNTRY_ID, MAILING_POSTAL_CODE,
-        CREATED_BY, LAST_UPDATED_BY, BRANCH_TYPE
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        CREATED_BY, LAST_UPDATED_BY, BRANCH_TYPE, suborgid
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         accntId, orgId, 1, acctTypeCd, email, accountName,
         businessAddrLine1, businessAddrLine2, businessAddrLine3, businessCity,
         businessStateId, businessCountryId, businessPostalCode,
         mailingAddrLine1, mailingAddrLine2, mailingAddrLine3, mailingCity,
         mailingStateId, mailingCountryId, mailingPostalCode,
-        createdBy, createdBy, branchType
+        createdBy, createdBy, branchType, suborgid
       ]
     );
 

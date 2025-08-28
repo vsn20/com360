@@ -26,6 +26,7 @@ export default async function OverviewPage({ searchParams }) {
   let branchTypes = [];
   let countries = [];
   let states = [];
+  let suborgid=[];
   try {
     const pool = await DBconnection();
     console.log("1234")
@@ -59,6 +60,10 @@ export default async function OverviewPage({ searchParams }) {
         [states] = await pool.query(
           'SELECT ID, VALUE FROM C_STATE WHERE ACTIVE = 1'
         );
+        [suborgid] = await pool.query(
+          'SELECT suborgid, suborgname FROM C_SUB_ORG WHERE orgid = ? AND isstatus = 1',
+          [orgid]
+        );
       }
     }
   } catch (error) {
@@ -74,6 +79,7 @@ export default async function OverviewPage({ searchParams }) {
       orgid={orgid}
       error={error}
       accounts={accounts}
+      suborgs={suborgid}
     />
   );
 }

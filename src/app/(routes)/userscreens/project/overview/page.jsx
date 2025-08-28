@@ -1,3 +1,5 @@
+'use server';
+
 import Overview from '@/app/components/Project/Overview';
 import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
@@ -35,15 +37,23 @@ const page = async () => {
         pool = await DBconnection();
         console.log('MySQL connection pool acquired');
 
-        // Fetch projects
+        // Fetch projects with suborgname
         const [projectRows] = await pool.execute(
-          `SELECT PRJ_ID, PRJ_NAME, PRS_DESC, ACCNT_ID, ORG_ID, BILL_RATE, BILL_TYPE, OT_BILL_RATE, OT_BILL_TYPE,
-                  BILLABLE_FLAG, START_DT, END_DT, CLIENT_ID, PAY_TERM, INVOICE_EMAIL, INVOICE_FAX, INVOICE_PHONE,
-                  Createdby, Updatedby
-           FROM C_PROJECT WHERE ORG_ID = ?`,
+          `SELECT p.PRJ_ID, p.PRJ_NAME, p.PRS_DESC, p.ACCNT_ID, p.ORG_ID, p.BILL_RATE, p.BILL_TYPE, p.OT_BILL_RATE, p.OT_BILL_TYPE,
+                  p.BILLABLE_FLAG, p.START_DT, p.END_DT, p.CLIENT_ID, p.PAY_TERM, p.INVOICE_EMAIL, p.INVOICE_FAX, p.INVOICE_PHONE,
+                  p.Createdby, p.Updatedby, p.suborgid, s.suborgname
+           FROM C_PROJECT p
+           LEFT JOIN C_SUB_ORG s ON p.suborgid = s.suborgid AND p.ORG_ID = s.orgid
+           WHERE p.ORG_ID = ?`,
           [orgId]
         );
         projects = projectRows;
+        console.log('Fetched projects:', projects.map(row => ({
+          PRJ_ID: row.PRJ_ID,
+          ACCNT_ID: row.ACCNT_ID,
+          suborgid: row.suborgid,
+          suborgname: row.suborgname
+        })));
 
         // Fetch billTypes (g_id = 7)
         const [billTypeRows] = await pool.query(
@@ -51,6 +61,7 @@ const page = async () => {
           [7, orgId]
         );
         billTypes = billTypeRows;
+        console.log('Fetched billTypes:', billTypes);
 
         // Fetch otBillTypes (g_id = 8)
         const [otBillTypeRows] = await pool.query(
@@ -58,6 +69,7 @@ const page = async () => {
           [8, orgId]
         );
         otBillTypes = otBillTypeRows;
+        console.log('Fetched otBillTypes:', otBillTypes);
 
         // Fetch payTerms (g_id = 9)
         const [payTermRows] = await pool.query(
@@ -65,13 +77,23 @@ const page = async () => {
           [9, orgId]
         );
         payTerms = payTermRows;
+        console.log('Fetched payTerms:', payTerms);
 
-        // Fetch accounts for ACCNT_ID and CLIENT_ID mapping
+        // Fetch accounts with suborgid and suborgname
         const [accountRows] = await pool.execute(
-          'SELECT ACCNT_ID, ALIAS_NAME FROM C_ACCOUNT WHERE ORGID = ? AND ACTIVE_FLAG = 1',
+          `SELECT a.ACCNT_ID, a.ALIAS_NAME, a.suborgid, s.suborgname
+           FROM C_ACCOUNT a
+           LEFT JOIN C_SUB_ORG s ON a.suborgid = s.suborgid AND a.ORGID = s.orgid
+           WHERE a.ORGID = ? AND a.ACTIVE_FLAG = 1`,
           [orgId]
         );
         accounts = accountRows;
+        console.log('Fetched accounts:', accounts.map(row => ({
+          ACCNT_ID: row.ACCNT_ID,
+          ALIAS_NAME: row.ALIAS_NAME,
+          suborgid: row.suborgid,
+          suborgname: row.suborgname
+        })));
 
         break;
       } catch (error) {
@@ -82,18 +104,16 @@ const page = async () => {
           continue;
         }
         break;
-      } 
+      }
     }
   } else {
     console.warn('No valid orgId, skipping data fetch');
   }
 
-  console.log('Fetched data:', { projects, billTypes, otBillTypes, payTerms, accounts });
-
   return (
     <div>
       <Overview
-      orgId={orgId}
+        orgId={orgId}
         projects={projects}
         billTypes={billTypes}
         otBillTypes={otBillTypes}

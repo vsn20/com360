@@ -11,19 +11,26 @@ const addform_intialstate = { error: null, success: false };
 
 const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts }) => {
   const searchparams = useSearchParams();
+  const router = useRouter();
   const [selectedProject, setSelectedProject] = useState(null);
   const [formData, setFormData] = useState({});
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [canEditProjects, setCanEditProjects] = useState(true); // Default to true for all authenticated users
+  const [canEditProjects, setCanEditProjects] = useState(true);
   const [editingBasic, setEditingBasic] = useState(false);
   const [editingAdditional, setEditingAdditional] = useState(false);
   const [isadd, setisadd] = useState(false);
   const [addformsuccess, setaddformsuccess] = useState(null);
-  const router = useRouter();
   const [allProjects, setAllProjects] = useState(projects);
   const [sortConfig, setSortConfig] = useState({ column: 'prjId', direction: 'asc' });
-
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageInputValue, setPageInputValue] = useState('1');
+  const [projectsPerPage, setProjectsPerPage] = useState(10);
+  const [projectsPerPageInput, setProjectsPerPageInput] = useState('10');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [accountFilter, setAccountFilter] = useState('all');
+  const [basicdetailsdisplay,setbasicdetailsdisplay]=useState(false);
+  const [additionaldetailsdisplay,setadditionaldetailsdisplay]=useState(false);
   const formatDate = (date) => {
     if (!date) return '';
     if (date instanceof Date) {
@@ -51,7 +58,43 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
     setAllProjects(sortedProjects);
   }, [sortConfig, projects]);
 
+  useEffect(() => {
+    setPageInputValue(currentPage.toString());
+  }, [currentPage]);
+
+  const sortProjects = (a, b, column, direction) => {
+    let aValue, bValue;
+    switch (column) {
+      case 'prjId':
+        aValue = parseInt(a.PRJ_ID.split('-')[1] || a.PRJ_ID);
+        bValue = parseInt(b.PRJ_ID.split('-')[1] || b.PRJ_ID);
+        return direction === 'asc' ? aValue - bValue : bValue - aValue;
+      case 'prjName':
+        aValue = (a.PRJ_NAME || '').toLowerCase();
+        bValue = (b.PRJ_NAME || '').toLowerCase();
+        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      case 'prsDesc':
+        aValue = (a.PRS_DESC || '').toLowerCase();
+        bValue = (b.PRS_DESC || '').toLowerCase();
+        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      case 'accntId':
+        aValue = getAccountName(a.ACCNT_ID).toLowerCase();
+        bValue = getAccountName(b.ACCNT_ID).toLowerCase();
+        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      default:
+        return 0;
+    }
+  };
+
+  const requestSort = (column) => {
+    setSortConfig(prev => ({
+      column,
+      direction: prev.column === column && prev.direction === 'asc' ? 'desc' : 'asc',
+    }));
+  };
+
   const handleRowClick = (project) => {
+    console.log('Selected project:', { PRJ_ID: project.PRJ_ID, suborgid: project.suborgid, suborgname: project.suborgname });
     setSelectedProject(project);
     setFormData({
       prjId: project.PRJ_ID,
@@ -59,27 +102,56 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
       prsDesc: project.PRS_DESC || '',
       accntId: project.ACCNT_ID || '',
       billRate: project.BILL_RATE || '',
-      billType: project.BILL_TYPE || '', // Stores id
+      billType: project.BILL_TYPE || '',
       otBillRate: project.OT_BILL_RATE || '',
-      otBillType: project.OT_BILL_TYPE || '', // Stores id
+      otBillType: project.OT_BILL_TYPE || '',
       billableFlag: project.BILLABLE_FLAG ? 'Yes' : 'No',
       startDt: formatDate(project.START_DT),
       endDt: formatDate(project.END_DT),
       clientId: project.CLIENT_ID || '',
-      payTerm: project.PAY_TERM || '', // Stores id
+      payTerm: project.PAY_TERM || '',
       invoiceEmail: project.INVOICE_EMAIL || '',
       invoiceFax: project.INVOICE_FAX || '',
       invoicePhone: project.INVOICE_PHONE || '',
       createdBy: project.Createdby || '',
       updatedBy: project.Updatedby || '',
       lastUpdatedDate: formatDate(project.last_updated_date) || '',
+      suborgid: project.suborgid || '',
+      suborgname: project.suborgname || ''
     });
     setEditingBasic(false);
     setEditingAdditional(false);
     setError(null);
     setIsLoading(false);
     setisadd(false);
+    setbasicdetailsdisplay(true);
+    setadditionaldetailsdisplay(false);
+    setSearchQuery('');
+    setAccountFilter('all');
   };
+
+  const handlebasicdetailsdisplay=()=>{
+    setEditingBasic(false);
+    setEditingAdditional(false);
+    setError(null);
+    setIsLoading(false);
+    setisadd(false);
+    setSearchQuery('');
+    setAccountFilter('all');
+    setbasicdetailsdisplay(true);
+    setadditionaldetailsdisplay(false);
+  }
+  const handleadditionaldetailsdisplay=()=>{
+    setEditingBasic(false);
+    setEditingAdditional(false);
+    setError(null);
+    setIsLoading(false);
+    setisadd(false);
+    setSearchQuery('');
+    setAccountFilter('all');
+    setbasicdetailsdisplay(false);
+    setadditionaldetailsdisplay(true);
+  }
 
   const handleBack = () => {
     router.refresh();
@@ -89,6 +161,10 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
     setError(null);
     setIsLoading(false);
     setisadd(false);
+    setSearchQuery('');
+    setAccountFilter('all');
+    setbasicdetailsdisplay(false);
+    setadditionaldetailsdisplay(false);
   };
 
   const handleaddproject = () => {
@@ -98,6 +174,8 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
     setError(null);
     setIsLoading(false);
     setisadd(true);
+    setbasicdetailsdisplay(false);
+    setadditionaldetailsdisplay(false);
   };
 
   const handleEdit = (section) => {
@@ -107,10 +185,23 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => {
+      let newData = { ...prev, [name]: value };
+      if (name === 'accntId') {
+        const selectedAccount = accounts.find(acc => acc.ACCNT_ID === value);
+        console.log('Account changed:', { accntId: value, selectedAccount });
+        if (selectedAccount) {
+          newData.suborgid = selectedAccount.suborgid || '';
+          newData.suborgname = selectedAccount.suborgname || '';
+          console.log('Updated suborg:', { suborgid: newData.suborgid, suborgname: newData.suborgname });
+        } else {
+          newData.suborgid = '';
+          newData.suborgname = '';
+          console.log('No account found, resetting suborg:', { suborgid: '', suborgname: '' });
+        }
+      }
+      return newData;
+    });
   };
 
   const handleSave = async (section) => {
@@ -139,6 +230,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
       formDataToSubmit.append('PRJ_NAME', formData.prjName || '');
       formDataToSubmit.append('PRS_DESC', formData.prsDesc || '');
       formDataToSubmit.append('ACCNT_ID', formData.accntId || '');
+      formDataToSubmit.append('suborgid', formData.suborgid || '');
     } else if (section === 'additional') {
       formDataToSubmit.append('BILL_RATE', formData.billRate || '');
       formDataToSubmit.append('BILL_TYPE', formData.billType || '');
@@ -155,10 +247,11 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
     }
 
     try {
-      console.log('FormData to submit:', Object.fromEntries(formDataToSubmit));
+      console.log('Submitting form data:', Object.fromEntries(formDataToSubmit));
       const result = await updateproject(formDataToSubmit);
       if (result && result.success) {
         const updatedProject = await fetchProjectById(formData.prjId);
+        console.log('Fetched updated project:', updatedProject);
         setSelectedProject(updatedProject);
         projects.forEach((project, index) => {
           if (project.PRJ_ID === formData.prjId) {
@@ -182,6 +275,8 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
               Createdby: updatedProject.Createdby || project.Createdby,
               Updatedby: updatedProject.Updatedby || project.Updatedby,
               last_updated_date: updatedProject.last_updated_date || project.last_updated_date,
+              suborgid: updatedProject.suborgid || project.suborgid,
+              suborgname: updatedProject.suborgname || project.suborgname
             };
           }
         });
@@ -201,7 +296,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
 
   const getDisplayValue = (value, options) => {
     if (!value || !options) return '-';
-    const option = options.find(opt => opt.id === parseInt(value,10));
+    const option = options.find(opt => String(opt.id) === String(value));
     return option ? option.Name : value;
   };
 
@@ -215,36 +310,80 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
     return prjid.split('-')[1] || prjid;
   };
 
-  const sortProjects = (a, b, column, direction) => {
-    let aValue, bValue;
-    switch (column) {
-      case 'prjId':
-        aValue = parseInt(a.PRJ_ID.split('-')[1] || a.PRJ_ID);
-        bValue = parseInt(b.PRJ_ID.split('-')[1] || b.PRJ_ID);
-        return direction === 'asc' ? aValue - bValue : bValue - aValue;
-      case 'prjName':
-        aValue = (a.PRJ_NAME || '').toLowerCase();
-        bValue = (b.PRJ_NAME || '').toLowerCase();
-        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
-      case 'prsDesc':
-        aValue = (a.PRS_DESC || '').toLowerCase();
-        bValue = (b.PRS_DESC || '').toLowerCase();
-        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
-      case ' acclId':
-        aValue = getAccountName(a.ACCNT_ID).toLowerCase();
-        bValue = getAccountName(b.ACCNT_ID).toLowerCase();
-        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
-      default:
-        return 0;
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage((prev) => prev + 1);
+      setPageInputValue((currentPage + 1).toString());
     }
   };
 
-  const requestSort = (column) => {
-    setSortConfig(prev => ({
-      column,
-      direction: prev.column === column && prev.direction === 'asc' ? 'desc' : 'asc',
-    }));
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage((prev) => prev - 1);
+      setPageInputValue((currentPage - 1).toString());
+    }
   };
+
+  const handlePageInputChange = (e) => {
+    setPageInputValue(e.target.value);
+  };
+
+  const handlePageInputKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      const value = parseInt(pageInputValue, 10);
+      if (!isNaN(value) && value >= 1 && value <= totalPages) {
+        setCurrentPage(value);
+        setPageInputValue(value.toString());
+      } else {
+        setPageInputValue(currentPage.toString());
+      }
+    }
+  };
+
+  const handleProjectsPerPageInputChange = (e) => {
+    setProjectsPerPageInput(e.target.value);
+  };
+
+  const handleProjectsPerPageInputKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      const value = parseInt(e.target.value, 10);
+      if (!isNaN(value) && value >= 1) {
+        setProjectsPerPage(value);
+        setProjectsPerPageInput(value.toString());
+        setCurrentPage(1);
+        setPageInputValue('1');
+      } else {
+        setProjectsPerPageInput(projectsPerPage.toString());
+        setCurrentPage(1);
+        setPageInputValue('1');
+      }
+    }
+  };
+
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+    setCurrentPage(1);
+    setPageInputValue('1');
+  };
+
+  const handleAccountFilterChange = (e) => {
+    setAccountFilter(e.target.value);
+    setCurrentPage(1);
+    setPageInputValue('1');
+  };
+
+  // Filter logic
+  const filteredProjects = allProjects.filter((project) => {
+    const matchesSearch = project.PRJ_NAME?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesAccount = accountFilter === 'all' || String(project.ACCNT_ID) === accountFilter;
+    return matchesSearch && matchesAccount;
+  });
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredProjects.length / projectsPerPage);
+  const indexOfLastProject = currentPage * projectsPerPage;
+  const indexOfFirstProject = indexOfLastProject - projectsPerPage;
+  const currentProjects = filteredProjects.slice(indexOfFirstProject, indexOfLastProject);
 
   const [addformData, setaddFormData] = useState({
     prjName: '',
@@ -263,6 +402,8 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
     invoiceEmail: '',
     invoiceFax: '',
     invoicePhone: '',
+    suborgid: '',
+    suborgname: ''
   });
 
   const [addform_accounts, addform_setAccounts] = useState([]);
@@ -273,6 +414,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
       try {
         if (orgId) {
           const accountsData = await fetchAccountsByOrgId(parseInt(orgId, 10));
+          console.log('Loaded accounts for add form:', accountsData);
           addform_setAccounts(accountsData);
         } else {
           addform_setAccounts([]);
@@ -286,14 +428,28 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
   }, [orgId]);
 
   const addform_handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setaddFormData((prev) => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
+    const { name, value } = e.target;
+    setaddFormData((prev) => {
+      let newData = { ...prev, [name]: value };
+      if (name === 'accntId') {
+        const selectedAccount = addform_accounts.find(acc => acc.ACCNT_ID === value);
+        console.log('Add form account changed:', { accntId: value, selectedAccount });
+        if (selectedAccount) {
+          newData.suborgid = selectedAccount.suborgid || '';
+          newData.suborgname = selectedAccount.suborgname || '';
+          console.log('Add form updated suborg:', { suborgid: newData.suborgid, suborgname: newData.suborgname });
+        } else {
+          newData.suborgid = '';
+          newData.suborgname = '';
+          console.log('Add form no account found, resetting suborg:', { suborgid: '', suborgname: '' });
+        }
+      }
+      return newData;
+    });
   };
 
   const addform_enhancedFormAction = async (formData) => {
+    console.log('Add form data before submission:', Object.fromEntries(formData));
     formData.append('billTypes', JSON.stringify(billTypes));
     formData.append('otBillTypes', JSON.stringify(otBillTypes));
     formData.append('payTerms', JSON.stringify(payTerms));
@@ -319,9 +475,12 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
         invoiceEmail: '',
         invoiceFax: '',
         invoicePhone: '',
+        suborgid: '',
+        suborgname: ''
       });
       setaddformsuccess('Project added successfully!');
       setTimeout(() => setaddformsuccess(null), 4000);
+      setTimeout(() => router.refresh(), 4000);
     }
   }, [state.success, orgId]);
 
@@ -332,8 +491,10 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
     
       {isadd && (
         <div className="project-overview-container">
-          <h2>Add Project</h2>
-          <button className="back-button" onClick={handleBack}>x</button>
+          <div className="header-section">
+            <h2 className="title">Add Project</h2>
+            <button className="back-button" onClick={handleBack}></button>
+          </div>
           {addformsuccess && <div className="success-message">{addformsuccess}</div>}
           {state.error && <div className="error-message">{state.error}</div>}
           <form action={addform_enhancedFormAction} className="project-details-container">
@@ -379,6 +540,16 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                   </select>
                 </div>
                 <div className="form-group">
+                  <label>Organization:</label>
+                  <input
+                    type="text"
+                    value={addformData.suborgname || ''}
+                    disabled
+                  />
+                </div>
+              </div>
+              {/* <div className="form-row">
+                <div className="form-group">
                   <label>Organization*:</label>
                   <input
                     type="number"
@@ -388,7 +559,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                     className="bg-gray-100"
                   />
                 </div>
-              </div>
+              </div> */}
             </div>
 
             <div className="details-block">
@@ -409,7 +580,10 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                   <select
                     name="billType"
                     value={addformData.billType}
-                    onChange={addform_handleChange}
+                    onChange={(e) => {
+                      console.log('Selected billType:', e.target.value);
+                      addform_handleChange(e);
+                    }}
                   >
                     <option value="">Select Type</option>
                     {billTypes.map((type) => (
@@ -436,7 +610,10 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                   <select
                     name="otBillType"
                     value={addformData.otBillType}
-                    onChange={addform_handleChange}
+                    onChange={(e) => {
+                      console.log('Selected otBillType:', e.target.value);
+                      addform_handleChange(e);
+                    }}
                   >
                     <option value="">Select Type</option>
                     {otBillTypes.map((type) => (
@@ -505,7 +682,10 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                   <select
                     name="payTerm"
                     value={addformData.payTerm}
-                    onChange={addform_handleChange}
+                    onChange={(e) => {
+                      console.log('Selected payTerm:', e.target.value);
+                      addform_handleChange(e);
+                    }}
                   >
                     <option value="">Select Term</option>
                     {payTerms.map((term) => (
@@ -557,46 +737,123 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
       )}
 
       {!isadd && !selectedProject ? (
-        <div>
-          <button onClick={() => handleaddproject()} className='submit-button'>Add Project</button>
-          {projects.length === 0 ? (
-            <p>No Projects found.</p>
+        <div className="project-list">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h1 className="title">Existing Projects</h1>
+            <button onClick={() => handleaddproject()} className="submit-button">Add Project</button>
+          </div>
+          <div className="search-filter-container">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={handleSearchChange}
+              className="search-input"
+              placeholder="Search by project name..."
+            />
+            <select value={accountFilter} onChange={handleAccountFilterChange} className="filter-select">
+              <option value="all">All Accounts</option>
+              {accounts.map((account) => (
+                <option key={account.ACCNT_ID} value={account.ACCNT_ID}>
+                  {account.ALIAS_NAME}
+                </option>
+              ))}
+            </select>
+          </div>
+          {filteredProjects.length === 0 ? (
+            <div className="empty-state">No projects found.</div>
           ) : (
-            <table className="project-table">
-              <thead>
-                <tr>
-                  <th onClick={() => requestSort('prjId')}>
-                    Project ID 
-                  </th>
-                  <th onClick={() => requestSort('prjName')}>
-                    Project Name
-                  </th>
-                  <th>
-                    Description 
-                  </th>
-                  <th onClick={() => requestSort('accntId')}>
-                    Account 
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {allProjects.map((project) => (
-                  <tr key={project.PRJ_ID} onClick={() => handleRowClick(project)} className="clickable-row">
-                    <td>Project-{getdisplayprojectid(project.PRJ_ID)}</td>
-                    <td>{project.PRJ_NAME || '-'}</td>
-                    <td>{project.PRS_DESC || '-'}</td>
-                    <td>{getAccountName(project.ACCNT_ID)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <>
+              <div className="table-wrapper">
+                <table className="project-table">
+                  <thead>
+                    <tr>
+                      <th className={sortConfig.column === 'prjId' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('prjId')}>
+                        Project ID
+                      </th>
+                      <th className={sortConfig.column === 'prjName' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('prjName')}>
+                        Project Name
+                      </th>
+                      <th className={sortConfig.column === 'prsDesc' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('prsDesc')}>
+                        Description
+                      </th>
+                      <th className={sortConfig.column === 'accntId' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('accntId')}>
+                        Account
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentProjects.map((project) => (
+                      <tr
+                        key={project.PRJ_ID}
+                        onClick={() => handleRowClick(project)}
+                        className={selectedProject && selectedProject.PRJ_ID === project.PRJ_ID ? 'selected-row' : 'clickable-row'}
+                      >
+                        <td>Project-{getdisplayprojectid(project.PRJ_ID)}</td>
+                        <td>{project.PRJ_NAME || '-'}</td>
+                        <td>{project.PRS_DESC || '-'}</td>
+                        <td>{getAccountName(project.ACCNT_ID)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {filteredProjects.length > projectsPerPage && (
+                <div className="pagination-container">
+                  <button
+                    className="button"
+                    onClick={handlePrevPage}
+                    disabled={currentPage === 1}
+                  >
+                    ← Previous
+                  </button>
+                  <span className="pagination-text">
+                    Page{' '}
+                    <input
+                      type="text"
+                      value={pageInputValue}
+                      onChange={handlePageInputChange}
+                      onKeyPress={handlePageInputKeyPress}
+                      className="pagination-input"
+                    />{' '}
+                    of {totalPages}
+                  </span>
+                  <button
+                    className="button"
+                    onClick={handleNextPage}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
+              {filteredProjects.length > 0 && (
+                <div className="rows-per-page-container">
+                  <label className="rows-per-page-label">Rows/ Page</label>
+                  <input
+                    type="text"
+                    value={projectsPerPageInput}
+                    onChange={handleProjectsPerPageInputChange}
+                    onKeyPress={handleProjectsPerPageInputKeyPress}
+                    className="rows-per-page-input"
+                    aria-label="Number of rows per page"
+                  />
+                </div>
+              )}
+            </>
           )}
         </div>
       ) : !isadd && (
         <div className="project-details-container">
-          <button className="back-button" onClick={handleBack}>x</button>
-
-          <div className="details-block">
+          <div className="header-section">
+            <h1 className="title">Project Details</h1>
+            <button className="back-button" onClick={handleBack}></button>
+          </div>
+          
+          <button onClick={()=>{handlebasicdetailsdisplay()}}>Basic Details</button>
+          <button onClick={()=>{handleadditionaldetailsdisplay()}}>Additional Details</button>
+          {basicdetailsdisplay && !additionaldetailsdisplay&&
+          (
+            <div className="details-block">
             <h3>Basic Details</h3>
             {editingBasic && canEditProjects ? (
               <form onSubmit={(e) => { e.preventDefault(); handleSave('basic'); }} className="project-form">
@@ -639,6 +896,16 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                     </select>
                   </div>
                 </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Organization:</label>
+                    <input
+                      type="text"
+                      value={formData.suborgname || ''}
+                      disabled
+                    />
+                  </div>
+                </div>
                 <div className="form-buttons">
                   <button type="submit" className="submit-button" disabled={isLoading}>
                     {isLoading ? 'Saving...' : 'Save'}
@@ -670,6 +937,12 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                     <p>{getAccountName(selectedProject.ACCNT_ID)}</p>
                   </div>
                 </div>
+                <div className="details-row">
+                  <div className="details-group">
+                    <label>Organization:</label>
+                    <p>{selectedProject.suborgname || '---'}</p>
+                  </div>
+                </div>
                 {canEditProjects && (
                   <div className="details-buttons">
                     <button className="edit-button" onClick={() => handleEdit('basic')}>Edit</button>
@@ -678,7 +951,10 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
               </div>
             )}
           </div>
-
+          )
+          }
+          {additionaldetailsdisplay&&
+          (<>
           <div className="details-block">
             <h3>Additional Details</h3>
             {editingAdditional && canEditProjects ? (
@@ -699,7 +975,10 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                     <select
                       name="billType"
                       value={formData.billType}
-                      onChange={handleChange}
+                      onChange={(e) => {
+                        console.log('Selected billType:', e.target.value);
+                        handleChange(e);
+                      }}
                     >
                       <option value="">Select Type</option>
                       {billTypes.map((type) => (
@@ -726,7 +1005,10 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                     <select
                       name="otBillType"
                       value={formData.otBillType}
-                      onChange={handleChange}
+                      onChange={(e) => {
+                        console.log('Selected otBillType:', e.target.value);
+                        handleChange(e);
+                      }}
                     >
                       <option value="">Select Type</option>
                       {otBillTypes.map((type) => (
@@ -792,7 +1074,10 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                     <select
                       name="payTerm"
                       value={formData.payTerm}
-                      onChange={handleChange}
+                      onChange={(e) => {
+                        console.log('Selected payTerm:', e.target.value);
+                        handleChange(e);
+                      }}
                     >
                       <option value="">Select Term</option>
                       {payTerms.map((term) => (
@@ -927,10 +1212,12 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
               </div>
             )}
           </div>
+          </>)
+          }
         </div>
       )}
     </div>
-  );
+  )
 };
 
 export default Overview;

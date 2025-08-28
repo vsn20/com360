@@ -26,7 +26,17 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
   const [addform_success, setaddfrom_success] = useState(null);
   const [allProjects, setAllProjects] = useState([]);
   const [sortConfig, setSortConfig] = useState({ column: 'prjId', direction: 'asc' });
-
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageInputValue, setPageInputValue] = useState('1');
+  const [projectsPerPage, setProjectsPerPage] = useState(10);
+  const [projectsPerPageInput, setProjectsPerPageInput] = useState('10');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [accountFilter, setAccountFilter] = useState('');
+  const [startDateFilter, setStartDateFilter] = useState('');
+  const [endDateFilter, setEndDateFilter] = useState('');
+  const [accountOptions, setAccountOptions] = useState([]);
+  const [basicdetailsdisplay,setbasicdetailsdisplay]=useState(false);
+  const [additionaldetailsdisplay,setadditionaldetailsdisplay]=useState(false);
   const formatDate = (date) => {
     if (!date) return '';
     if (date instanceof Date) {
@@ -50,6 +60,9 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
       try {
         const projectData = await fetchProjectsForAssignment();
         setProjects(projectData);
+        // Extract unique account IDs for dropdown
+        const uniqueAccounts = [...new Set(projectData.map(project => project.ACCNT_ID))].filter(id => id).sort();
+        setAccountOptions(uniqueAccounts);
         setError(null);
       } catch (err) {
         console.error('Error loading projects for assignment:', err);
@@ -67,6 +80,10 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
     const sortedProjects = [...projects].sort((a, b) => sortProjects(a, b, sortConfig.column, sortConfig.direction));
     setAllProjects(sortedProjects);
   }, [sortConfig, projects]);
+
+  useEffect(() => {
+    setPageInputValue(currentPage.toString());
+  }, [currentPage]);
 
   useEffect(() => {
     const loadAssignmentData = async () => {
@@ -163,8 +180,19 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
     setEditingAdditional(false);
     setError(null);
     setisadd(false);
+    setbasicdetailsdisplay(true);
+    setadditionaldetailsdisplay(false);
     router.refresh();
   };
+
+  const handlebasicdetailsdisplay=()=>{
+    setbasicdetailsdisplay(true);
+    setadditionaldetailsdisplay(false);
+  };
+  const handleadditionaldetailsdisplay=()=>{
+    setbasicdetailsdisplay(false);
+    setadditionaldetailsdisplay(true);
+  }
 
   const handleBack = () => {
     router.refresh();
@@ -176,6 +204,14 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
     setEditingAdditional(false);
     setError(null);
     setisadd(false);
+    setbasicdetailsdisplay(false);
+    setadditionaldetailsdisplay(false);
+    setSearchQuery('');
+    setAccountFilter('');
+    setStartDateFilter('');
+    setEndDateFilter('');
+    setCurrentPage(1);
+    setPageInputValue('1');
   };
 
   const handleaddprojectassignment = () => {
@@ -187,6 +223,8 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
     setEditingAdditional(false);
     setError(null);
     setisadd(true);
+    setbasicdetailsdisplay(false);
+    setadditionaldetailsdisplay(false);
   };
 
   const handleEmployeeSelect = (empId) => {
@@ -481,6 +519,104 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
     }
   }, [addformData.prjId, addform_projects]);
 
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+    setCurrentPage(1);
+    setPageInputValue('1');
+  };
+
+  const handlecancelclick=()=>{
+    setEditingAdditional(false);
+  }
+  const handleAccountFilterChange = (e) => {
+    setAccountFilter(e.target.value);
+    setCurrentPage(1);
+    setPageInputValue('1');
+  };
+
+  const handleStartDateFilterChange = (e) => {
+    setStartDateFilter(e.target.value);
+    setCurrentPage(1);
+    setPageInputValue('1');
+  };
+
+  const handleEndDateFilterChange = (e) => {
+    setEndDateFilter(e.target.value);
+    setCurrentPage(1);
+    setPageInputValue('1');
+  };
+
+  const handlePageInputChange = (e) => {
+    setPageInputValue(e.target.value);
+  };
+
+  const handlePageInputKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      const value = parseInt(pageInputValue, 10);
+      if (!isNaN(value) && value >= 1 && value <= totalPages) {
+        setCurrentPage(value);
+        setPageInputValue(value.toString());
+      } else {
+        setPageInputValue(currentPage.toString());
+      }
+    }
+  };
+
+  const handleProjectsPerPageInputChange = (e) => {
+    setProjectsPerPageInput(e.target.value);
+  };
+
+  const handleProjectsPerPageInputKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      const value = parseInt(e.target.value, 10);
+      if (!isNaN(value) && value >= 1) {
+        setProjectsPerPage(value);
+        setProjectsPerPageInput(value.toString());
+        setCurrentPage(1);
+        setPageInputValue('1');
+      } else {
+        setProjectsPerPageInput(projectsPerPage.toString());
+        setCurrentPage(1);
+        setPageInputValue('1');
+      }
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage((prev) => prev + 1);
+      setPageInputValue((currentPage + 1).toString());
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage((prev) => prev - 1);
+      setPageInputValue((currentPage - 1).toString());
+    }
+  };
+
+  // Filter logic
+  const filteredProjects = allProjects.filter((project) => {
+    const matchesSearch = project.PRJ_NAME?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesAccount = accountFilter ? project.ACCNT_ID === accountFilter : true;
+    const matchesStartDate = startDateFilter
+      ? new Date(project.START_DT).toISOString().slice(0, 10) >= startDateFilter
+      : true;
+    const matchesEndDate = endDateFilter
+      ? project.END_DT
+        ? new Date(project.END_DT).toISOString().slice(0, 10) <= endDateFilter
+        : true
+      : true;
+    return matchesSearch && matchesAccount && matchesStartDate && matchesEndDate;
+  });
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredProjects.length / projectsPerPage);
+  const indexOfLastProject = currentPage * projectsPerPage;
+  const indexOfFirstProject = indexOfLastProject - projectsPerPage;
+  const currentProjects = filteredProjects.slice(indexOfFirstProject, indexOfLastProject);
+
   return (
     <div className="overview-container">
       {error && <div className="error-message">{error}</div>}
@@ -653,49 +789,128 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
       {!isadd && !selectedProject ? (
         <div>
           <button onClick={() => handleaddprojectassignment()} className="submit-button">Assign Project</button>
-          {projects.length === 0 ? (
+          <div className="search-filter-container">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={handleSearchChange}
+              className="search-input"
+              placeholder="Search by project name..."
+            />
+            <select
+              value={accountFilter}
+              onChange={handleAccountFilterChange}
+              className="filter-select"
+            >
+              <option value="">All Accounts</option>
+              {accountOptions.map((accountId) => (
+                <option key={accountId} value={accountId}>
+                  Account-{getdisplayprojectid(accountId)}
+                </option>
+              ))}
+            </select>
+            <input
+              type="date"
+              value={startDateFilter}
+              onChange={handleStartDateFilterChange}
+              className="search-input"
+              placeholder="Start Date"
+            />
+            <input
+              type="date"
+              value={endDateFilter}
+              onChange={handleEndDateFilterChange}
+              className="search-input"
+              placeholder="End Date"
+            />
+          </div>
+          {filteredProjects.length === 0 ? (
             <p>No Projects found.</p>
           ) : (
-            <table className="project-table">
-              <thead>
-                <tr>
-                  <th onClick={() => requestSort('prjId')}>
-                    Project ID
-                  </th>
-                  <th onClick={() => requestSort('prjName')}>
-                    Project Name
-                  </th>
-                  <th>
-                    Description
-                  </th>
-                  <th onClick={() => requestSort('accntId')}>
-                    Account
-                  </th>
-                  <th onClick={() => requestSort('startDt')}>
-                    Start Date
-                  </th>
-                  <th onClick={() => requestSort('endDt')}>
-                    End Date
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {allProjects.map((project) => (
-                  <tr
-                    key={project.PRJ_ID}
-                    onClick={() => handleRowClick(project)}
-                    className="clickable-row"
-                  >
-                    <td>Project-{getdisplayprojectid(project.PRJ_ID)}</td>
-                    <td>{project.PRJ_NAME || '-'}</td>
-                    <td>{project.PRS_DESC || '-'}</td>
-                    <td>Account-{getdisplayprojectid(project.ACCNT_ID)}</td>
-                    <td>{formatDate(project.START_DT) || '-'}</td>
-                    <td>{formatDate(project.END_DT) || '-'}</td>
+            <>
+              <table className="project-table">
+                <thead>
+                  <tr>
+                    <th onClick={() => requestSort('prjId')}>
+                      Project ID
+                    </th>
+                    <th onClick={() => requestSort('prjName')}>
+                      Project Name
+                    </th>
+                    <th>
+                      Description
+                    </th>
+                    <th onClick={() => requestSort('accntId')}>
+                      Account
+                    </th>
+                    <th onClick={() => requestSort('startDt')}>
+                      Start Date
+                    </th>
+                    <th onClick={() => requestSort('endDt')}>
+                      End Date
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {currentProjects.map((project) => (
+                    <tr
+                      key={project.PRJ_ID}
+                      onClick={() => handleRowClick(project)}
+                      className="clickable-row"
+                    >
+                      <td>Project-{getdisplayprojectid(project.PRJ_ID)}</td>
+                      <td>{project.PRJ_NAME || '-'}</td>
+                      <td>{project.PRS_DESC || '-'}</td>
+                      <td>Account-{getdisplayprojectid(project.ACCNT_ID)}</td>
+                      <td>{formatDate(project.START_DT) || '-'}</td>
+                      <td>{formatDate(project.END_DT) || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {filteredProjects.length > projectsPerPage && (
+                <div className="pagination-container">
+                  <button
+                    className="button"
+                    onClick={handlePrevPage}
+                    disabled={currentPage === 1}
+                  >
+                    ← Previous
+                  </button>
+                  <span className="pagination-text">
+                    Page{' '}
+                    <input
+                      type="text"
+                      value={pageInputValue}
+                      onChange={handlePageInputChange}
+                      onKeyPress={handlePageInputKeyPress}
+                      className="pagination-input"
+                    />{' '}
+                    of {totalPages}
+                  </span>
+                  <button
+                    className="button"
+                    onClick={handleNextPage}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
+              {filteredProjects.length > 0 && (
+                <div className="rows-per-page-container">
+                  <label className="rows-per-page-label">Rows/ Page</label>
+                  <input
+                    type="text"
+                    value={projectsPerPageInput}
+                    onChange={handleProjectsPerPageInputChange}
+                    onKeyPress={handleProjectsPerPageInputKeyPress}
+                    className="rows-per-page-input"
+                    aria-label="Number of rows per page"
+                  />
+                </div>
+              )}
+            </>
           )}
         </div>
       ) : !isadd && (
@@ -724,7 +939,11 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
           </div>
           {employeeDetails && (
             <>
-              <div className="details-block">
+            <button onClick={()=>{handlebasicdetailsdisplay()}}>Basic Details</button>
+            <button onClick={()=>{handleadditionaldetailsdisplay()}}>Additional Details</button>
+            {basicdetailsdisplay && !additionaldetailsdisplay&&
+            (
+              <div className="details-block">                
                 <h3>Basic Details</h3>
                 {editingBasic ? (
                   <form onSubmit={(e) => { e.preventDefault(); handleSave('basic'); }} className="assignment-form">
@@ -825,7 +1044,10 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
                   </div>
                 )}
               </div>
-              <div className="details-block">
+            )}
+              {additionaldetailsdisplay&&
+            (<>
+            <div className="details-block">
                 <h3>Additional Details</h3>
                 {editingAdditional ? (
                   <form onSubmit={(e) => { e.preventDefault(); handleSave('additional'); }} className="assignment-form">
@@ -981,6 +1203,7 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
                   </div>
                 )}
               </div>
+            </>)}
             </>
           )}
         </div>

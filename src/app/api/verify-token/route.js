@@ -272,8 +272,8 @@ export async function POST(request) {
       });
     }
 
-    accessibleItems.sort((a, b) => a.priority - b.priority);
-    // console.log("Accessible items for user:", JSON.stringify(accessibleItems, null, 2));
+    //accessibleItems.sort((a, b) => a.priority - b.priority);
+    console.log("Accessible items for user:", JSON.stringify(accessibleItems, null, 2));
 
     if (!pathname) {
       return NextResponse.json({ success: true, accessibleItems });

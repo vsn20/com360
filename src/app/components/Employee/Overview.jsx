@@ -1770,42 +1770,41 @@ const handleRoleToggle = (roleid) => {
           <div className="role-details-container">
              <div className="roledetails-header"> 
               </div>
-<div className="profile-photo">
-  <Image
-    src={imgSrc}
-    alt="Profile Photo"
-    width={75}
-    height={75}
-    onError={() => setImgSrc("/uploads/profile_photos/default.png")}
-  />
-  <input
-    type="file"
-    id="profilePhotoUpload"
-    style={{ display: 'none' }}
-    accept="image/*"
-    onChange={(e) => handleProfilePhotoUpload(e, employeeDetails?.empid)}
-  />
-  <button
-    className="edit-photo-button"
-    onClick={() => document.getElementById('profilePhotoUpload').click()}
-  >
-    ✎
-  </button>
-  <button
-    className="delete-photo-button"
-    onClick={() => handleDeleteProfilePhoto(employeeDetails?.empid)}
-    disabled={imgSrc === "/uploads/profile_photos/default.png"}
-  >
-    🗑️
-  </button>
-  
-   <p>{employeeDetails.EMP_FST_NAME} {employeeDetails.EMP_LAST_NAME}</p>
-</div>
+              <div className="profile-photo">
+                <Image
+                  src={imgSrc}
+                  alt="Profile Photo"
+                  width={75}
+                  height={75}
+                  onError={() => setImgSrc("/uploads/profile_photos/default.png")}
+               />
+                <input
+                  type="file"
+                  id="profilePhotoUpload"
+                  style={{ display: 'none' }}
+                  accept="image/*"
+                  onChange={(e) => handleProfilePhotoUpload(e, employeeDetails?.empid)}
+               />
+               <button
+                  className="edit-photo-button"
+                  onClick={() => document.getElementById('profilePhotoUpload').click()}
+                >
+                  ✎
+                </button>
+                <button
+                 className="delete-photo-button"
+                 onClick={() => handleDeleteProfilePhoto(employeeDetails?.empid)}
+                 disabled={imgSrc === "/uploads/profile_photos/default.png"}
+               >
+                 🗑️
+                </button>
+                 <p>{employeeDetails.EMP_FST_NAME} {employeeDetails.EMP_LAST_NAME}</p>
+              </div>
 
-            <div className="roledetails-header">                          
-              <h2 className="title">Employee Details</h2>            
-              <button className="back-button" onClick={handleBackClick}></button>            
-            </div>
+              <div className="roledetails-header">                          
+                <h2 className="title">Employee Details</h2>            
+                <button className="back-button" onClick={handleBackClick}></button>            
+              </div>
               <div className="employee-submenu-bar">
         <button
           className={activeTab === 'personal' ? 'active' : ''}
