@@ -65,6 +65,7 @@ export async function addemployee(formData) {
   const emergCnctPostalCode = formData.get('emergCnctPostalCode') || null;
   const adminEmpFlag = formData.get('adminEmpFlag') ? 1 : 0;
   const superUserFlag = formData.get('superUserFlag') ? 1 : 0;
+  const suborgid = formData.get('suborgid') || null;
 
   const cookieStore = await cookies();
   const token = cookieStore.get('jwt_token')?.value;
@@ -132,6 +133,17 @@ export async function addemployee(formData) {
         return { error: 'Invalid department ID.' };
       }
     }
+    if (suborgid) 
+    {
+       const [suborgResult] = await pool.query(
+       'SELECT suborgid FROM C_SUB_ORG WHERE suborgid = ? AND orgid = ? AND isstatus = 1',
+      [suborgid, orgid]
+     );
+      if (suborgResult.length === 0) 
+      {
+        return { error: 'Invalid suborganization ID.' };
+      }
+   }
 
     // Generate employee ID
     const [countResult] = await pool.query('SELECT COUNT(*) AS count FROM C_EMP WHERE orgid = ?', [orgid]);
@@ -152,7 +164,7 @@ export async function addemployee(formData) {
       'EMERG_CNCT_NAME', 'EMERG_CNCT_PHONE_NUMBER', 'EMERG_CNCT_EMAIL',
       'EMERG_CNCT_ADDR_LINE1', 'EMERG_CNCT_ADDR_LINE2', 'EMERG_CNCT_ADDR_LINE3',
       'EMERG_CNCT_CITY', 'EMERG_CNCT_STATE_ID', 'EMERG_CNCT_STATE_NAME_CUSTOM',
-      'EMERG_CNCT_COUNTRY_ID', 'EMERG_CNCT_POSTAL_CODE', 'MODIFICATION_NUM'
+      'EMERG_CNCT_COUNTRY_ID', 'EMERG_CNCT_POSTAL_CODE', 'MODIFICATION_NUM','suborgid'
     ];
 
     const values = [
@@ -166,7 +178,7 @@ export async function addemployee(formData) {
       deptId, deptName, workCompClass, emergCnctName, emergCnctPhoneNumber, 
       emergCnctEmail, emergCnctAddrLine1, emergCnctAddrLine2, emergCnctAddrLine3, 
       emergCnctCity, emergCnctStateId, emergCnctStateNameCustom, emergCnctCountryId, 
-      emergCnctPostalCode, 1
+      emergCnctPostalCode, 1,suborgid
     ];
 
     if (values.length !== insertColumns.length) {

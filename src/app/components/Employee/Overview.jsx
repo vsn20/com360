@@ -137,7 +137,8 @@ const Overview = ({
   jobTitles,
   statuses,
   workerCompClasses,
-  timestamp
+  timestamp,
+  suborgs,
 }) => {
   const [selectedEmpId, setSelectedEmpId] = useState(null);
   const [employeeDetails, setEmployeeDetails] = useState(null);
@@ -178,6 +179,7 @@ const Overview = ({
     deptId: '',
     deptName: '',
     workCompClass: '',
+    suborgid: '',
     workAddrLine1: '',
     workAddrLine2: '',
     workAddrLine3: '',
@@ -286,6 +288,7 @@ const Overview = ({
           workAddrLine1: '',
           workAddrLine2: '',
           workAddrLine3: '',
+          suborgid:'',
           workCity: '',
           workStateId: '',
           workStateNameCustom: '',
@@ -359,6 +362,7 @@ const Overview = ({
           deptId: employee.DEPT_ID !== null && employee.DEPT_ID !== undefined ? String(employee.DEPT_ID) : '',
           deptName: employee.DEPT_NAME || '',
           workCompClass: employee.WORK_COMP_CLASS || '',
+          suborgid: employee.suborgid || '',
           workAddrLine1: employee.WORK_ADDR_LINE1 || '',
           workAddrLine2: employee.WORK_ADDR_LINE2 || '',
           workAddrLine3: employee.WORK_ADDR_LINE3 || '',
@@ -555,7 +559,12 @@ const [employementdetails,setemployementdetails]=useState(null);
 };
   const handleEdit = (section) => {
     if (section === 'personal') setEditingPersonal(true);
-    if (section === 'employment') setEditingEmployment(true);
+    if (section === 'employment') 
+      {
+        setEditingEmployment(true);
+       setSelectedRoles(employeeDetails.roleids || []);
+       
+    }
     if (section === 'leaves') setEditingLeaves(true);
     if (section === 'workAddress') setEditingWorkAddress(true);
     if (section === 'homeAddress') setEditingHomeAddress(true);
@@ -651,6 +660,7 @@ const [employementdetails,setemployementdetails]=useState(null);
     formDataToSubmit.append('deptId', formData.deptId || '');
     formDataToSubmit.append('deptName', formData.deptName || '');
     formDataToSubmit.append('workCompClass', formData.workCompClass || '');
+    formDataToSubmit.append('suborgid', formData.suborgid || '');
   } else if (section === 'leaves') {
     Object.entries(formLeaves).forEach(([leaveid, noofleaves]) => {
       if (noofleaves !== '' && noofleaves !== null && noofleaves !== undefined) {
@@ -784,6 +794,10 @@ const [employementdetails,setemployementdetails]=useState(null);
     const state = states.find(s => s.ID === stateId);
     return state ? state.VALUE : 'No State';
   };
+  const getSuborgName = (suborgid) => {
+  const suborg = suborgs.find((s) => s.suborgid === suborgid);
+  return suborg ? suborg.suborgname : '-';
+};
 
   const getdisplayprojectid = (prjid) => {
     return prjid.split('_')[1] || prjid;
@@ -838,35 +852,42 @@ const handleRoleToggle = (roleid) => {
   }
 };
 
-  const addform_handleSubmit = async (formData) => {
-    if (addform_isSubmitting) return;
-    addform_setIsSubmitting(true);
+ const addform_handleSubmit = async (formData) => {
+  if (addform_isSubmitting) return;
+  addform_setIsSubmitting(true);
 
-    formData.append('currentRole', currentrole || '');
-    const addform_uniqueRoleIds = [...new Set(addform_selectedRoles)];
-    addform_uniqueRoleIds.forEach((roleid) => {
-      formData.append('roleids', roleid);
-    });
-    Object.entries(addform_leaves).forEach(([leaveid, noofleaves]) => {
-      if (noofleaves !== '') formData.append(`leaves[${leaveid}]`, noofleaves || '0');
-    });
+  formData.append('currentRole', currentrole || '');
+  const addform_uniqueRoleIds = [...new Set(addform_selectedRoles)];
+  addform_uniqueRoleIds.forEach((roleid) => {
+    formData.append('roleids', roleid);
+  });
+  Object.entries(addform_leaves).forEach(([leaveid, noofleaves]) => {
+    if (noofleaves !== '') formData.append(`leaves[${leaveid}]`, noofleaves || '0');
+  });
 
-    try {
-      const addform_result = await addemployee(formData);
-      if (addform_result?.error) {
-        addform_setFormError(addform_result.error);
-        setTimeout(() => addform_setFormError(null), 4000)
-      } else {
-        addform_setsuccess("Employee added Successfully!");
-        setTimeout(() => addform_setsuccess(null), 4000);
-      }
-    } catch (error) {
-      addform_setFormError(`Submission failed: ${error.message}`);
+  try {
+    const addform_result = await addemployee(formData);
+    if (addform_result?.error) {
+      addform_setFormError(addform_result.error);
+      setTimeout(() => addform_setFormError(null), 4000)
+    } else {
+      addform_setsuccess("Employee added Successfully!");
       setTimeout(() => addform_setsuccess(null), 4000);
-    } finally {
-      addform_setIsSubmitting(false);
+      
+      // ADD THIS BLOCK TO RESET THE ROLES AND OTHER FORM FIELDS
+      addform_setSelectedRoles([]);
+      addform_setLeaves({});
+      addform_setIsDropdownOpen(false);
+      // Reset the form if needed
+      document.querySelector('form').reset();
     }
-  };
+  } catch (error) {
+    addform_setFormError(`Submission failed: ${error.message}`);
+    setTimeout(() => addform_setFormError(null), 4000);
+  } finally {
+    addform_setIsSubmitting(false);
+  }
+};
 
   const addform_handleLeaveChange = (leaveid, value) => {
     addform_setLeaves((prev) => ({ ...prev, [leaveid]: value }));
@@ -1007,7 +1028,7 @@ const handleRoleToggle = (roleid) => {
               <div className="role-details-block93">
                 <h3>Personal Details</h3>
                 <div className="form-row">
-                  <div className="form-group">
+                  {/* <div className="form-group">
                     <label htmlFor="orgid">Organization ID:</label>
                     <input
                       type="text"
@@ -1017,7 +1038,7 @@ const handleRoleToggle = (roleid) => {
                       className="bg-gray-100"
                       disabled
                     />
-                  </div>
+                  </div> */}
                   <div className="form-group">
                     <label htmlFor="empFstName">First Name: *</label>
                     <input
@@ -1257,6 +1278,21 @@ const handleRoleToggle = (roleid) => {
                       ))}
                     </select>
                   </div>
+                   <div className="form-group">
+                  <label>Organization</label>
+                  <select
+                   name="suborgid"
+                   value={formData.suborgid}
+                   onChange={handleFormChange}
+                  >
+                  <option value="">Select Sub Organization</option>
+                    {suborgs.map((sub) => (
+                      <option key={sub.suborgid} value={sub.suborgid}>
+                      {sub.suborgname}
+                  </option>
+                  ))}
+                  </select>
+                </div>
                 </div>
               </div>
 
@@ -1918,10 +1954,10 @@ const handleRoleToggle = (roleid) => {
                       <label>Employee ID</label>
                       <p>Employee-{getdisplayprojectid(employeeDetails.empid)}</p>
                     </div>
-                    <div className="details-g">
+                    {/* <div className="details-g">
                       <label>Organization ID</label>
                       <p>{employeeDetails.orgid}</p>
-                    </div>
+                    </div> */}
                   </div>
                   <div className="details-row">
                     <div className="details-g">
@@ -2010,17 +2046,21 @@ const handleRoleToggle = (roleid) => {
                     <div className="form-group">
   <label htmlFor="roleids">Roles: * (Click to select/deselect)</label>
   <div className="custom-select-container">
-    <div
-      className={`custom-select ${isDropdownOpen ? 'open' : ''}`}
-      onClick={() => setIsDropdownOpen(prev => !prev)}
-    >
+   <div
+  className={`custom-select ${isDropdownOpen ? 'open' : ''}`}
+  onClick={(e) => {
+    e.preventDefault();
+    setIsDropdownOpen(prev => !prev);
+  }}
+>
       <div className="selected-value">
-        {selectedRoles.length > 0
-          ? selectedRoles
-              .map((id) => roles.find((r) => r.roleid === id)?.rolename)
-              .join(', ')
-          : 'Select Roles'}
-      </div>
+  {selectedRoles.length > 0
+    ? selectedRoles
+        .map((id) => roles.find((r) => String(r.roleid) === String(id))?.rolename)
+        .filter(name => name) // Filter out undefined names
+        .join(', ')
+    : 'Select Roles'}
+</div>
       {isDropdownOpen && (
         <div className="options-container">
           {roles.map((role) => (
@@ -2145,6 +2185,21 @@ const handleRoleToggle = (roleid) => {
                       <label>Rejoin Date</label>
                       <input type="date" name="rejoinDate" value={formData.rejoinDate} onChange={handleFormChange} className="date-input" />
                     </div>
+                    <div className="form-group">
+                      <label>Organization</label>
+                      <select
+                        name="suborgid"
+                        value={formData.suborgid}
+                        onChange={handleFormChange}
+                      >
+                      <option value="">Select Sub Organization</option>
+                       {suborgs.map((sub) => (
+                          <option key={sub.suborgid} value={sub.suborgid}>
+                          {sub.suborgname}
+                      </option>
+                      ))}
+                     </select>
+                    </div>
                   </div>
                   <div className="form-buttons">
                     <button type="submit" className="save">Save</button>
@@ -2208,11 +2263,13 @@ const handleRoleToggle = (roleid) => {
                       <label>Rejoin Date</label>
                       <p>{employeeDetails.REJOIN_DATE ? new Date(employeeDetails.REJOIN_DATE).toLocaleDateString('en-US') : '-'}</p>
                     </div>
+                    <div className="details-g">
+                    <label>Organization</label>
+                    <p>{getSuborgName(employeeDetails.suborgid)}</p>
+                    </div>
                   </div>
-                  {canEditEmployees && (
-                    
-                      <button className="button" onClick={() => handleEdit('employment')}>Edit</button>
-                    
+                  {canEditEmployees && (                    
+                    <button className="button" onClick={() => handleEdit('employment')}>Edit</button>
                   )}
                 </div>
               )}
