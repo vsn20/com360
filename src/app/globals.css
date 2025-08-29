@@ -16,7 +16,6 @@ html, body {
 
 body {
   background-color: #f3f2ef;
-  padding-top: 30px; /* Same as original navbar height */
 }
 
 #navid a:first-child {
