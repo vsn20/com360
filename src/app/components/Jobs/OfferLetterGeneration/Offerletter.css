@@ -196,11 +196,20 @@ tbody tr:hover {
   box-shadow: 4px 0 12px rgba(15, 212, 108, 0.1);
 }
 
-.role-indicator {
+.role-indicator111 {
   display: inline-block;
   width: 8px;
   height: 8px;
   background-color: #0fd46c;
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+.role-indicator1110 {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background-color: #dc2626;
   border-radius: 50%;
   margin-right: 8px;
   vertical-align: middle;
@@ -847,4 +856,43 @@ tbody tr:hover {
     padding: 12px 8px;
     font-size: 12px;
   }
+}
+
+/* The main container for the submenu */
+.offerletter-submenu-bar {
+  display: flex; /* Aligns buttons in a row */
+  gap: 24px; /* Space between the buttons */
+  border-bottom: 1px solid #e5e7eb; /* Light grey bottom border, like the example */
+  margin-top: 16px; /* Space below the header */
+  padding: 0 4px; /* Small horizontal padding to align text */
+}
+
+/* Styling for each button in the submenu */
+.offerletter-submenu-bar button {
+  background: none; /* Removes default button background */
+  border: none; /* Removes default button border */
+  cursor: pointer;
+  padding: 8px 0; /* Vertical padding */
+  margin-bottom: -1px; /* Aligns the active border with the container's border */
+  font-size: 14px;
+  font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  color: #6b7280; /* A neutral, inactive color */
+  transition: color 0.2s ease;
+}
+
+/* Styling for the active tab/button */
+.offerletter-submenu-bar button.active {
+  color: #1f2937; /* Darker color for active text */
+  font-weight: 600;
+  border-bottom: 2px solid #0fd46c; /* The green highlight border */
+}
+
+/* Optional: Add a subtle hover effect for better UX */
+.offerletter-submenu-bar button:not(.active):hover {
+  color: #1f2937;
+}
+
+/* Container for the content below the submenu bar */
+.offerletter-details-content {
+  padding-top: 24px; /* Adds space between the submenu and the content */
 }

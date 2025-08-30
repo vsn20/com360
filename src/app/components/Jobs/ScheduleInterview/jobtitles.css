@@ -205,6 +205,26 @@ tbody tr:hover {
   vertical-align: middle;
 }
 
+.role-indicatorinactiver {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background-color:  #dc2626;
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.roleindicatorsemiinactive{
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background-color:  #166534;
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
 .status-badge {
   display: inline-flex;
   align-items: center;

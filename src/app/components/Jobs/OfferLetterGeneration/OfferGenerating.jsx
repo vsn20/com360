@@ -237,7 +237,7 @@ const OfferGenerating = ({ empid, orgid, interviewdetails, acceptingtime, handle
                     {currentRows.map((details) => (
                       <tr key={details.interview_id} onClick={() => selectid(details.interview_id)}>
                         <td className="id-cell2">
-                          <span className="role-indicator2"></span>
+                          <span className={details.status === 'active' ? 'role-indicator' : 'role-indicator1'}></span>
                           {getdisplayprojectid(details.interview_id)}
                         </td>
                         <td>{getdisplayprojectid(details.application_id)}</td>

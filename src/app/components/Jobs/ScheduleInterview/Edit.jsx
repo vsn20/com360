@@ -678,7 +678,7 @@ const Edit = ({ id, orgid, empid, handleback, time, status }) => {
   };
 
   const renderViewMode = () => (
-    <div className="interview-edit-container">
+    <div>
       <div className="header-edit-section">
         <h1 className="title">Interview Details</h1>
         <button className="back-button" onClick={handleback}></button>
@@ -796,7 +796,7 @@ const Edit = ({ id, orgid, empid, handleback, time, status }) => {
   );
 
   const renderEditMode = () => (
-    <div className="interview-edit-container">
+    <div>
       <div className="header-edit-section">
         <h1 className="title">
           {!interviewDetails ? 'Create New Interview' : 'Edit Interview'} 

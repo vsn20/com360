@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, use } from 'react';
 import { updateExternalJob, fetchExternalJobById } from '@/app/serverActions/Jobs/ExternalJobs/Overview';
 import './externaljobs.css';
+import { set } from 'mongoose';
 
 const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, countries, states, jobtype }) => {
   const [jobDetails, setJobDetails] = useState(null);
@@ -32,7 +33,9 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
-
+  const [basicdetailsdisplay,setbasicdetailsdisplay]=useState(true);
+  const [additionaldetailsdisplay,setadditionaldetailsdisplay]=useState(false);
+  const [activetab,setactivetab]=useState('basic');
   const getdisplayprojectid = (prjid) => {
     return prjid.split('-')[1] || prjid;
   };
@@ -137,6 +140,16 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
     if (section === 'additional') setEditingAdditional(true);
   };
 
+  const handlebasicdetails=()=>{
+    setbasicdetailsdisplay(true);
+    setadditionaldetailsdisplay(false);
+    setactivetab('basic');
+  };
+  const handleadditionaldetails=()=>{
+    setadditionaldetailsdisplay(true);
+    setbasicdetailsdisplay(false);
+    setactivetab('additional');
+  }
   const handleSave = async (section) => {
     if (section === 'basic') {
       if (!formData.displayJobName) {
@@ -251,6 +264,13 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
       {successMessage && <div className="success-message">{successMessage}</div>}
       {jobDetails && (
         <>
+        <div className='employee-submenu-bar'> 
+           <button onClick={handlebasicdetails} className={activetab==='basic'?'active':''}>Basic Details</button>
+        <button onClick={handleadditionaldetails} className={activetab==='additional'?'active':''}>Additional Details</button>
+        </div>
+       
+        {basicdetailsdisplay &&!additionaldetailsdisplay &&(
+          <>
           <div className="details-block">
             <div className="roledetails-header">
               <div>Basic Details</div>
@@ -418,6 +438,10 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
               </div>
             )}
           </div>
+          </>
+        )}
+        {additionaldetailsdisplay && !basicdetailsdisplay &&(
+          <>
           <div className="details-block">
             <div className="roledetails-header">
               <div>Additional Details</div>
@@ -630,6 +654,10 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
               </div>
             )}
           </div>
+          </>
+        )}
+          
+          
         </>
       )}
     </div>

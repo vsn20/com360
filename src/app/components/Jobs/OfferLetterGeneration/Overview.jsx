@@ -121,6 +121,12 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
   const [success, setSuccess] = useState(null);
   const [editingStatus, setEditingStatus] = useState(false);
   const [offerLetterUrls, setOfferLetterUrls] = useState({});
+  const [displayBasicDetails, setDisplayBasicDetails] = useState(true);
+  const [displayApplicationDetails, setDisplayApplicationDetails] = useState(false);
+  const [displayInterviewStatus, setDisplayInterviewStatus] = useState(false);
+  const [displayRounds, setDisplayRounds] = useState(false);
+  const [displayAddressDetails, setDisplayAddressDetails] = useState(false);
+  const [activetab, setActivetab] = useState('basic');
 
   // Pagination and filtering state
   const [sortConfig, setSortConfig] = useState({ column: 'interview_id', direction: 'asc' });
@@ -138,7 +144,6 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
   useEffect(() => {
     handleBack();
   }, [searchparams.get('refresh')]);
-
 
   // Fetch offerletter_url for each interview
   useEffect(() => {
@@ -183,7 +188,6 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
   const [offerLetterGeneratedSorted, setOfferLetterGeneratedSorted] = useState(offerlettergenerated);
 
   // Fetch details and dropdown data when selecting an interview
-  // Fetch details and dropdown data when selecting an interview
   const selectId = async (interviewId) => {
     setSelectedInterviewId(interviewId);
     setIsLoading(true);
@@ -205,7 +209,6 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
           adress_lane_2: result.data?.offerletter?.adress_lane_2 || '',
           zipcode: result.data?.offerletter?.zipcode || result.data?.zipcode || '',
           stateid: result.data?.offerletter?.stateid || '',
-          // --- FIX: Convert loaded country ID to a string and set default ---
           countryid: String(result.data?.offerletter?.countryid || '185'),
           custom_state_name: result.data?.offerletter?.custom_state_name || '',
           expected_join_date: result.data?.offerletter?.expected_join_date
@@ -213,6 +216,12 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
             : '',
           url: result.data?.offerletter?.offerletter_url || '',
         });
+        setDisplayBasicDetails(true);
+        setDisplayApplicationDetails(false);
+        setDisplayInterviewStatus(false);
+        setDisplayRounds(false);
+        setDisplayAddressDetails(false);
+        setActivetab('basic');
 
         if (result.data?.status === 'offerletter-processing' && result.data?.offerletter?.offer_letter_sent === 1) {
           setError('Cannot edit: Offer letter has already been sent.');
@@ -237,6 +246,50 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
     }
   };
 
+  const handleBasicDetails = () => {
+    setDisplayBasicDetails(true);
+    setDisplayApplicationDetails(false);
+    setDisplayInterviewStatus(false);
+    setDisplayRounds(false);
+    setDisplayAddressDetails(false);
+    setActivetab('basic');
+  };
+
+  const handleApplicationDetails = () => {
+    setDisplayBasicDetails(false);
+    setDisplayApplicationDetails(true);
+    setDisplayInterviewStatus(false);
+    setDisplayRounds(false);
+    setDisplayAddressDetails(false);
+    setActivetab('application');
+  };
+
+  const handleInterviewStatus = () => {
+    setDisplayBasicDetails(false);
+    setDisplayApplicationDetails(false);
+    setDisplayInterviewStatus(true);
+    setDisplayRounds(false);
+    setDisplayAddressDetails(false);
+    setActivetab('status');
+  };
+
+  const handleRounds = () => {
+    setDisplayBasicDetails(false);
+    setDisplayApplicationDetails(false);
+    setDisplayInterviewStatus(false);
+    setDisplayRounds(true);
+    setDisplayAddressDetails(false);
+    setActivetab('rounds');
+  };
+
+  const handleAddressDetails = () => {
+    setDisplayBasicDetails(false);
+    setDisplayApplicationDetails(false);
+    setDisplayInterviewStatus(false);
+    setDisplayRounds(false);
+    setDisplayAddressDetails(true);
+    setActivetab('address');
+  };
 
   const handleStatusChange = (e) => {
     setFormData((prev) => ({ ...prev, status: e.target.value }));
@@ -263,7 +316,7 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
     }
   };
 
- const handleCopy = () => {
+  const handleCopy = () => {
     let salary;
     if (!salarycopy()) {
       salary = details.max_salary;
@@ -271,7 +324,6 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
       salary = details.salary_expected;
     }
 
-    // --- FIX: Convert country ID to a string to prevent type mismatch ---
     const countryIdStr = String(details.c1 || '');
 
     setOfferLetterData((prev) => ({
@@ -280,7 +332,6 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
       adress_lane_1: details.a1 || '',
       adress_lane_2: details.a2 || '',
       zipcode: details.z1 || '',
-      // --- Use the string version for all logic and state updates ---
       stateid: countryIdStr === '185' ? details.s1 || '' : '',
       countryid: countryIdStr,
       custom_state_name: countryIdStr !== '185' ? details.s2 || '' : '',
@@ -309,7 +360,6 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
       }
 
       if (formData.status === 'offerletter-generated') {
-        // Adjust offerLetterData to send null for disabled fields
         const adjustedOfferLetterData = {
           ...offerLetterData,
           stateid: offerLetterData.countryid === '185' ? offerLetterData.stateid : null,
@@ -363,7 +413,6 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
       adress_lane_2: details?.offerletter?.adress_lane_2 || '',
       zipcode: details?.offerletter?.zipcode || details?.zipcode || '',
       stateid: details?.offerletter?.stateid || '',
-      // --- FIX: Convert country ID to a string on cancel ---
       countryid: String(details?.offerletter?.countryid || '185'),
       custom_state_name: details?.offerletter?.custom_state_name || '',
       expected_join_date: details?.offerletter?.expected_join_date
@@ -383,6 +432,12 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
     setError(null);
     setCurrentPage(1);
     setPageInputValue('1');
+    setDisplayBasicDetails(true);
+    setDisplayApplicationDetails(false);
+    setDisplayInterviewStatus(false);
+    setDisplayRounds(false);
+    setDisplayAddressDetails(false);
+    setActivetab('basic');
   };
 
   const formatDate = (date) => {
@@ -515,10 +570,6 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
 
       {generate ? (
         <div className="employee-details-container1">
-          {/* <div className="header-section1">
-            <h1 className="title">Generate Offer Letters</h1>
-            <button className="back-button" onClick={handleBack}></button>
-          </div> */}
           <OfferGenerating
             empid={empid}
             orgid={orgid}
@@ -534,398 +585,437 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
             <button className="back-button" onClick={handleBack}></button>
           </div>
 
-          <div className="details-block1">
-            <h3>Basic Details</h3>
-            <div className="details-row1">
-              <div className="details-group1">
-                <label>First Name</label>
-                <p>{details?.first_name || '-'}</p>
-              </div>
-              <div className="details-group1">
-                <label>Last Name</label>
-                <p>{details?.last_name || '-'}</p>
-              </div>
-            </div>
-            <div className="details-row1">
-              <div className="details-group1">
-                <label>Email</label>
-                <p>{details?.email || '-'}</p>
-              </div>
-              <div className="details-group1">
-                <label>Mobile Number</label>
-                <p>{details?.mobilenumber || '-'}</p>
-              </div>
-            </div>
-            <div className="details-row1">
-              <div className="details-group1">
-                <label>Date of Birth</label>
-                <p>{formatDate(details?.dateofbirth)}</p>
-              </div>
-              <div className="details-group1">
-                <label>Gender</label>
-                <p>{details?.gender || '-'}</p>
-              </div>
-            </div>
-            <div className="details-row1">
-              <div className="details-group1">
-                <label>Job Name</label>
-                <p>{details.display_job_name || '-'}</p>
-              </div>
-              <div className="details-group1">
-                <label>Applied Date</label>
-                <p>{formatDate(details?.applieddate)}</p>
-              </div>
-            </div>
+          <div className="offerletter-submenu-bar">
+            <button
+              onClick={handleBasicDetails}
+              className={activetab === 'basic' ? 'active' : ''}
+            >
+              Basic Details
+            </button>
+            <button
+              onClick={handleApplicationDetails}
+              className={activetab === 'application' ? 'active' : ''}
+            >
+              Application Details
+            </button>
+            <button
+              onClick={handleInterviewStatus}
+              className={activetab === 'status' ? 'active' : ''}
+            >
+              Interview Status Management
+            </button>
+            <button
+              onClick={handleRounds}
+              className={activetab === 'rounds' ? 'active' : ''}
+            >
+              Rounds
+            </button>
+            <button
+              onClick={handleAddressDetails}
+              className={activetab === 'address' ? 'active' : ''}
+            >
+              Address Details
+            </button>
           </div>
 
-          <div className="details-block1">
-            <h3>Application Details</h3>
-            <div className="details-row1">
-              <div className="details-group1">
-                <label>Interview ID</label>
-                <p>{getdisplayprojectid(details?.interview_id) || '-'}</p>
-              </div>
-              <div className="details-group1">
-                <label>Application ID</label>
-                <p>{getdisplayprojectid(details?.application_id) || '-'}</p>
-              </div>
-            </div>
-            <div className="details-row1">
-              <div className="details-group1">
-                <label>Organization ID</label>
-                <p>{details?.orgid || '-'}</p>
-              </div>
-              <div className="details-group1">
-                <label>Job Title</label>
-                <p>
-                  {details?.job_title
-                    ? `${details.job_title} minsalary-${details?.min_salary || '-'} maxsalary-${details?.max_salary || '-'} level-${details?.level || '-'}`
-                    : '-'}
-                </p>
-              </div>
-            </div>
-            <div className="details-row1">
-              <div className="details-group1">
-                <label>Resume Path</label>
-                {details?.resumepath ? (
-                  <a href={details.resumepath} className="view-resume-link1" target="_blank" rel="noopener noreferrer">
-                    View Resume
-                  </a>
-                ) : (
-                  <span className="no-resume-text1">No Resume</span>
-                )}
-              </div>
-              <div className="details-group1">
-                <label>Salary Expected</label>
-                <p>{details?.salary_expected || '-'}</p>
-              </div>
-            </div>
-            <div className="details-row1">
-              <div className="details-group1">
-                <label>Status</label>
-                <p>{details?.status || '-'}</p>
-              </div>
-              <div className="details-group1">
-                <label>Offer Letter</label>
-                {details?.offerletter_url ? (
-                  <a href={details.offerletter_url} className="view-resume-link1" target="_blank" rel="noopener noreferrer">
-                    View Offer Letter
-                  </a>
-                ) : (
-                  <span className="no-resume-text1">-</span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="details-block1">
-            <h3>Interview Status Management</h3>
-            {editingStatus ? (
-              <form onSubmit={handleSave}>
-                <div className="form-row1">
-                  <div className="form-group1">
-                    <label>Status</label>
-                    <select
-                      name="status"
-                      value={formData.status}
-                      onChange={handleStatusChange}
-                      required
-                    >
-                      <option>Select Status Option</option>
-                      <option value="offerletter-generated">Offer Letter Generated</option>
-                      <option value="offerletter-rejected">Offer Letter Rejected</option>
-                      <option value="offerletter-hold">Offer Letter Hold</option>
-                    </select>
-                  </div>
+          {displayBasicDetails && !displayApplicationDetails && !displayInterviewStatus && !displayRounds && !displayAddressDetails && (
+            <div className="details-block1">
+              <h3>Basic Details</h3>
+              <div className="details-row1">
+                <div className="details-group1">
+                  <label>First Name</label>
+                  <p>{details?.first_name || '-'}</p>
                 </div>
+                <div className="details-group1">
+                  <label>Last Name</label>
+                  <p>{details?.last_name || '-'}</p>
+                </div>
+              </div>
+              <div className="details-row1">
+                <div className="details-group1">
+                  <label>Email</label>
+                  <p>{details?.email || '-'}</p>
+                </div>
+                <div className="details-group1">
+                  <label>Mobile Number</label>
+                  <p>{details?.mobilenumber || '-'}</p>
+                </div>
+              </div>
+              <div className="details-row1">
+                <div className="details-group1">
+                  <label>Date of Birth</label>
+                  <p>{formatDate(details?.dateofbirth)}</p>
+                </div>
+                <div className="details-group1">
+                  <label>Gender</label>
+                  <p>{details?.gender || '-'}</p>
+                </div>
+              </div>
+              <div className="details-row1">
+                <div className="details-group1">
+                  <label>Job Name</label>
+                  <p>{details.display_job_name || '-'}</p>
+                </div>
+                <div className="details-group1">
+                  <label>Applied Date</label>
+                  <p>{formatDate(details?.applieddate)}</p>
+                </div>
+              </div>
+            </div>
+          )}
 
-                {formData.status === 'offerletter-generated' && (
-                  <div className="offer-letter-form1">
-                    <div className="offer-letter-column1">
-                      <h4>Expected Details</h4>
-                      <div className="form-group1">
-                        <label>Expected Job Title</label>
-                        <input type="text" value={details?.job_title || ''} disabled />
-                      </div>
-                      <div className="form-group1">
-                        <label>Expected Salary</label>
-                        <input type="text" value={details?.salary_expected || ''} disabled />
-                      </div>
-                      <div className="form-group1">
-                        <label>Min Salary</label>
-                        <input type="text" value={details?.min_salary || ''} disabled />
-                      </div>
-                      <div className="form-group1">
-                        <label>Max Salary</label>
-                        <input type="text" value={details?.max_salary || ''} disabled />
-                      </div>
-                      <div className="form-group1">
-                        <label>Level</label>
-                        <input type="text" value={details?.level || ''} disabled />
-                      </div>
-                      <div className="form-group1">
-                        <label>Expected Department</label>
-                        <input type="text" value={details.departmentname || ''} disabled />
-                      </div>
-                      <div className="form-group1">
-                        <label>Expected Job Type</label>
-                        <input type="text" value={details.jobtypename || ''} disabled />
-                      </div>
-                      <div className="form-group1">
-                        <label>Address Lane-1</label>
-                        <input type="text" value={details.a1 || ''} disabled />
-                      </div>
-                      <div className="form-group1">
-                        <label>Address Lane-2</label>
-                        <input type="text" value={details.a2 || ''} disabled />
-                      </div>
-                      <div className="form-group1">
-                        <label>Zipcode</label>
-                        <input type="text" value={details.z1 || ''} disabled />
-                      </div>
-                      <div className="form-group1">
-                        <label>State</label>
-                        <input type="text" value={details.statename || ''} disabled />
-                      </div>
-                      <div className="form-group1">
-                        <label>Custom State Name</label>
-                        <input type="text" value={details.s2 || ''} disabled />
-                      </div>
-                      <div className="form-group1">
-                        <label>Country</label>
-                        <input type="text" value={details.countryname || ''} disabled />
-                      </div>
-                    </div>
-                    <div className="offer-letter-column1">
-                      <h4>Finalized Details</h4>
-                      <div className="form-group1">
-                        <label>Finalized Job Title</label>
-                        <select
-                          name="finalised_jobtitle"
-                          value={offerLetterData.finalised_jobtitle}
-                          onChange={handleOfferLetterChange}
-                          required
-                        >
-                          <option value="">Select Job Title</option>
-                          {dropdownData.jobTitles?.map((job) => (
-                            <option key={job.job_title_id} value={job.job_title_id}>
-                              {job.job_title}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="form-group1">
-                        <label>Finalized Salary</label>
-                        <input
-                          type="text"
-                          name="finalised_salary"
-                          value={offerLetterData.finalised_salary}
-                          onChange={handleOfferLetterChange}
-                          required
-                        />
-                      </div>
-                      <div className="form-group1">
-                        <label>Finalized Roles</label>
-                        <MultiSelectDropdown
-                          options={dropdownData.roles}
-                          selectedValues={offerLetterData.finalised_roleids}
-                          onChange={handleOfferLetterChange}
-                          name="finalised_roleids"
-                          required
-                        />
-                      </div>
-                      <div className="form-group1">
-                        <label>Finalized Department</label>
-                        <select
-                          name="finalised_department"
-                          value={offerLetterData.finalised_department}
-                          onChange={handleOfferLetterChange}
-                          required
-                        >
-                          <option value="">Select Department</option>
-                          {dropdownData.departments?.map((dept) => (
-                            <option key={dept.id} value={dept.id}>
-                              {dept.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="form-group1">
-                        <label>Finalized Job Type</label>
-                        <select
-                          name="finalised_jobtype"
-                          value={offerLetterData.finalised_jobtype}
-                          onChange={handleOfferLetterChange}
-                          required
-                        >
-                          <option value="">Select Job Type</option>
-                          {dropdownData.jobtype?.map((type) => (
-                            <option key={type.id} value={type.id}>
-                              {type.Name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="form-group1">
-                        <label>Pay Term</label>
-                        <select
-                          name="finalised_pay_term"
-                          value={offerLetterData.finalised_pay_term}
-                          onChange={handleOfferLetterChange}
-                          required
-                        >
-                          <option value="">Select Pay Term</option>
-                          {dropdownData.payFrequencies?.map((freq) => (
-                            <option key={freq.id} value={freq.Name}>
-                              {freq.Name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="form-group1">
-                        <label>Report To Employee ID</label>
-                        <select
-                          name="reportto_empid"
-                          value={offerLetterData.reportto_empid}
-                          onChange={handleOfferLetterChange}
-                          required
-                        >
-                          <option value="">Select Employee</option>
-                          {dropdownData.employees?.map((emp) => (
-                            <option key={emp.empid} value={emp.empid}>
-                              {emp.name} ({emp.empid})
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="form-group1">
-                        <label>Address Line 1</label>
-                        <input
-                          type="text"
-                          name="adress_lane_1"
-                          value={offerLetterData.adress_lane_1}
-                          onChange={handleOfferLetterChange}
-                          required
-                        />
-                      </div>
-                      <div className="form-group1">
-                        <label>Address Line 2</label>
-                        <input
-                          type="text"
-                          name="adress_lane_2"
-                          value={offerLetterData.adress_lane_2}
-                          onChange={handleOfferLetterChange}
-                        />
-                      </div>
-                      <div className="form-group1">
-                        <label>Zip Code</label>
-                        <input
-                          type="text"
-                          name="zipcode"
-                          value={offerLetterData.zipcode}
-                          onChange={handleOfferLetterChange}
-                          required
-                        />
-                      </div>
-                      <div className="form-group1">
-                        <label>State</label>
-                        <select
-                          name="stateid"
-                          value={offerLetterData.stateid}
-                          onChange={handleOfferLetterChange}
-                          disabled={offerLetterData.countryid !== '185'}
-                        >
-                          <option value="">Select State</option>
-                          {dropdownData.states?.map((state) => (
-                            <option key={state.ID} value={state.ID}>
-                              {state.VALUE}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="form-group1">
-                        <label>Country</label>
-                        <select
-                          name="countryid"
-                          value={offerLetterData.countryid}
-                          onChange={handleOfferLetterChange}
-                          required
-                        >
-                          <option value="">Select Country</option>
-                          {dropdownData.countries?.map((country) => (
-                            <option key={country.ID} value={country.ID}>
-                              {country.VALUE}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="form-group1">
-                        <label>Custom State Name</label>
-                        <input
-                          type="text"
-                          name="custom_state_name"
-                          value={offerLetterData.custom_state_name}
-                          onChange={handleOfferLetterChange}
-                          disabled={offerLetterData.countryid === '185'}
-                        />
-                      </div>
-                      <div className="form-group1">
-                        <label>Expected Join Date</label>
-                        <input
-                          type="date"
-                          name="expected_join_date"
-                          value={offerLetterData.expected_join_date}
-                          onChange={handleOfferLetterChange}
-                          required
-                        />
-                      </div>
-                      <div className="form-row1">
-                        <button type="button" className="button" onClick={handleCopy}>
-                          Copy Expected Details
-                        </button>
-                      </div>
+          {displayApplicationDetails && !displayBasicDetails && !displayInterviewStatus && !displayRounds && !displayAddressDetails && (
+            <div className="details-block1">
+              <h3>Application Details</h3>
+              <div className="details-row1">
+                <div className="details-group1">
+                  <label>Interview ID</label>
+                  <p>{getdisplayprojectid(details?.interview_id) || '-'}</p>
+                </div>
+                <div className="details-group1">
+                  <label>Application ID</label>
+                  <p>{getdisplayprojectid(details?.application_id) || '-'}</p>
+                </div>
+              </div>
+              <div className="details-row1">
+                <div className="details-group1">
+                  <label>Organization ID</label>
+                  <p>{details?.orgid || '-'}</p>
+                </div>
+                <div className="details-group1">
+                  <label>Job Title</label>
+                  <p>
+                    {details?.job_title
+                      ? `${details.job_title} minsalary-${details?.min_salary || '-'} maxsalary-${details?.max_salary || '-'} level-${details?.level || '-'}`
+                      : '-'}
+                  </p>
+                </div>
+              </div>
+              <div className="details-row1">
+                <div className="details-group1">
+                  <label>Resume Path</label>
+                  {details?.resumepath ? (
+                    <a href={details.resumepath} className="view-resume-link1" target="_blank" rel="noopener noreferrer">
+                      View Resume
+                    </a>
+                  ) : (
+                    <span className="no-resume-text1">No Resume</span>
+                  )}
+                </div>
+                <div className="details-group1">
+                  <label>Salary Expected</label>
+                  <p>{details?.salary_expected || '-'}</p>
+                </div>
+              </div>
+              <div className="details-row1">
+                <div className="details-group1">
+                  <label>Status</label>
+                  <p>{details?.status || '-'}</p>
+                </div>
+                <div className="details-group1">
+                  <label>Offer Letter</label>
+                  {details?.offerletter_url ? (
+                    <a href={details.offerletter_url} className="view-resume-link1" target="_blank" rel="noopener noreferrer">
+                      View Offer Letter
+                    </a>
+                  ) : (
+                    <span className="no-resume-text1">-</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {displayInterviewStatus && !displayBasicDetails && !displayApplicationDetails && !displayRounds && !displayAddressDetails && (
+            <div className="details-block1">
+              <h3>Interview Status Management</h3>
+              {editingStatus ? (
+                <form onSubmit={handleSave}>
+                  <div className="form-row1">
+                    <div className="form-group1">
+                      <label>Status</label>
+                      <select
+                        name="status"
+                        value={formData.status}
+                        onChange={handleStatusChange}
+                        required
+                      >
+                        <option>Select Status Option</option>
+                        <option value="offerletter-generated">Offer Letter Generated</option>
+                        <option value="offerletter-rejected">Offer Letter Rejected</option>
+                        <option value="offerletter-hold">Offer Letter Hold</option>
+                      </select>
                     </div>
                   </div>
-                )}
-                <div className="form-buttons1">
-                  <button type="submit" className="save" disabled={isLoading}>
-                    {isLoading ? 'Saving...' : 'Save Status'}
-                  </button>
-                  <button type="button" className="cancel" onClick={handleCancel} disabled={isLoading}>
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <div className="view-details">
-                <div className="details-buttons1">
-                  <button className="button" onClick={handleEditStatus}>Edit Status</button>
-                </div>
-              </div>
-            )}
-          </div>
 
-          {details?.rounds && details.rounds.length > 0 && (
+                  {formData.status === 'offerletter-generated' && (
+                    <div className="offer-letter-form1">
+                      <div className="offer-letter-column1">
+                        <h4>Expected Details</h4>
+                        <div className="form-group1">
+                          <label>Expected Job Title</label>
+                          <input type="text" value={details?.job_title || ''} disabled />
+                        </div>
+                        <div className="form-group1">
+                          <label>Expected Salary</label>
+                          <input type="text" value={details?.salary_expected || ''} disabled />
+                        </div>
+                        <div className="form-group1">
+                          <label>Min Salary</label>
+                          <input type="text" value={details?.min_salary || ''} disabled />
+                        </div>
+                        <div className="form-group1">
+                          <label>Max Salary</label>
+                          <input type="text" value={details?.max_salary || ''} disabled />
+                        </div>
+                        <div className="form-group1">
+                          <label>Level</label>
+                          <input type="text" value={details?.level || ''} disabled />
+                        </div>
+                        <div className="form-group1">
+                          <label>Expected Department</label>
+                          <input type="text" value={details.departmentname || ''} disabled />
+                        </div>
+                        <div className="form-group1">
+                          <label>Expected Job Type</label>
+                          <input type="text" value={details.jobtypename || ''} disabled />
+                        </div>
+                        <div className="form-group1">
+                          <label>Address Lane-1</label>
+                          <input type="text" value={details.a1 || ''} disabled />
+                        </div>
+                        <div className="form-group1">
+                          <label>Address Lane-2</label>
+                          <input type="text" value={details.a2 || ''} disabled />
+                        </div>
+                        <div className="form-group1">
+                          <label>Zipcode</label>
+                          <input type="text" value={details.z1 || ''} disabled />
+                        </div>
+                        <div className="form-group1">
+                          <label>State</label>
+                          <input type="text" value={details.statename || ''} disabled />
+                        </div>
+                        <div className="form-group1">
+                          <label>Custom State Name</label>
+                          <input type="text" value={details.s2 || ''} disabled />
+                        </div>
+                        <div className="form-group1">
+                          <label>Country</label>
+                          <input type="text" value={details.countryname || ''} disabled />
+                        </div>
+                      </div>
+                      <div className="offer-letter-column1">
+                        <h4>Finalized Details</h4>
+                        <div className="form-group1">
+                          <label>Finalized Job Title</label>
+                          <select
+                            name="finalised_jobtitle"
+                            value={offerLetterData.finalised_jobtitle}
+                            onChange={handleOfferLetterChange}
+                            required
+                          >
+                            <option value="">Select Job Title</option>
+                            {dropdownData.jobTitles?.map((job) => (
+                              <option key={job.job_title_id} value={job.job_title_id}>
+                                {job.job_title}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="form-group1">
+                          <label>Finalized Salary</label>
+                          <input
+                            type="text"
+                            name="finalised_salary"
+                            value={offerLetterData.finalised_salary}
+                            onChange={handleOfferLetterChange}
+                            required
+                          />
+                        </div>
+                        <div className="form-group1">
+                          <label>Finalized Roles</label>
+                          <MultiSelectDropdown
+                            options={dropdownData.roles}
+                            selectedValues={offerLetterData.finalised_roleids}
+                            onChange={handleOfferLetterChange}
+                            name="finalised_roleids"
+                            required
+                          />
+                        </div>
+                        <div className="form-group1">
+                          <label>Finalized Department</label>
+                          <select
+                            name="finalised_department"
+                            value={offerLetterData.finalised_department}
+                            onChange={handleOfferLetterChange}
+                            required
+                          >
+                            <option value="">Select Department</option>
+                            {dropdownData.departments?.map((dept) => (
+                              <option key={dept.id} value={dept.id}>
+                                {dept.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="form-group1">
+                          <label>Finalized Job Type</label>
+                          <select
+                            name="finalised_jobtype"
+                            value={offerLetterData.finalised_jobtype}
+                            onChange={handleOfferLetterChange}
+                            required
+                          >
+                            <option value="">Select Job Type</option>
+                            {dropdownData.jobtype?.map((type) => (
+                              <option key={type.id} value={type.id}>
+                                {type.Name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="form-group1">
+                          <label>Pay Term</label>
+                          <select
+                            name="finalised_pay_term"
+                            value={offerLetterData.finalised_pay_term}
+                            onChange={handleOfferLetterChange}
+                            required
+                          >
+                            <option value="">Select Pay Term</option>
+                            {dropdownData.payFrequencies?.map((freq) => (
+                              <option key={freq.id} value={freq.Name}>
+                                {freq.Name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="form-group1">
+                          <label>Report To Employee ID</label>
+                          <select
+                            name="reportto_empid"
+                            value={offerLetterData.reportto_empid}
+                            onChange={handleOfferLetterChange}
+                            required
+                          >
+                            <option value="">Select Employee</option>
+                            {dropdownData.employees?.map((emp) => (
+                              <option key={emp.empid} value={emp.empid}>
+                                {emp.name} ({emp.empid})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="form-group1">
+                          <label>Address Line 1</label>
+                          <input
+                            type="text"
+                            name="adress_lane_1"
+                            value={offerLetterData.adress_lane_1}
+                            onChange={handleOfferLetterChange}
+                            required
+                          />
+                        </div>
+                        <div className="form-group1">
+                          <label>Address Line 2</label>
+                          <input
+                            type="text"
+                            name="adress_lane_2"
+                            value={offerLetterData.adress_lane_2}
+                            onChange={handleOfferLetterChange}
+                          />
+                        </div>
+                        <div className="form-group1">
+                          <label>Zip Code</label>
+                          <input
+                            type="text"
+                            name="zipcode"
+                            value={offerLetterData.zipcode}
+                            onChange={handleOfferLetterChange}
+                            required
+                          />
+                        </div>
+                        <div className="form-group1">
+                          <label>State</label>
+                          <select
+                            name="stateid"
+                            value={offerLetterData.stateid}
+                            onChange={handleOfferLetterChange}
+                            disabled={offerLetterData.countryid !== '185'}
+                          >
+                            <option value="">Select State</option>
+                            {dropdownData.states?.map((state) => (
+                              <option key={state.ID} value={state.ID}>
+                                {state.VALUE}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="form-group1">
+                          <label>Country</label>
+                          <select
+                            name="countryid"
+                            value={offerLetterData.countryid}
+                            onChange={handleOfferLetterChange}
+                            required
+                          >
+                            <option value="">Select Country</option>
+                            {dropdownData.countries?.map((country) => (
+                              <option key={country.ID} value={country.ID}>
+                                {country.VALUE}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="form-group1">
+                          <label>Custom State Name</label>
+                          <input
+                            type="text"
+                            name="custom_state_name"
+                            value={offerLetterData.custom_state_name}
+                            onChange={handleOfferLetterChange}
+                            disabled={offerLetterData.countryid === '185'}
+                          />
+                        </div>
+                        <div className="form-group1">
+                          <label>Expected Join Date</label>
+                          <input
+                            type="date"
+                            name="expected_join_date"
+                            value={offerLetterData.expected_join_date}
+                            onChange={handleOfferLetterChange}
+                            required
+                          />
+                        </div>
+                        <div className="form-row1">
+                          <button type="button" className="button" onClick={handleCopy}>
+                            Copy Expected Details
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  <div className="form-buttons1">
+                    <button type="submit" className="save" disabled={isLoading}>
+                      {isLoading ? 'Saving...' : 'Save Status'}
+                    </button>
+                    <button type="button" className="cancel" onClick={handleCancel} disabled={isLoading}>
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="view-details">
+                  <div className="details-buttons1">
+                    <button className="button" onClick={handleEditStatus}>Edit Status</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {displayRounds && !displayBasicDetails && !displayApplicationDetails && !displayInterviewStatus && !displayAddressDetails && details?.rounds && details.rounds.length > 0 && (
             <>
               {details.rounds.map((round, index) => (
                 <div key={`${round.Roundid}-${index}`} className="details-block1">
@@ -996,25 +1086,27 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
             </>
           )}
 
-          <div className="details-block1">
-            <h3>Address Details</h3>
-            <div className="details-row1">
-              <div className="details-group1">
-                <label>Address Line 1</label>
-                <p>{details?.addresslane1 || '-'}</p>
+          {displayAddressDetails && !displayBasicDetails && !displayApplicationDetails && !displayInterviewStatus && !displayRounds && (
+            <div className="details-block1">
+              <h3>Address Details</h3>
+              <div className="details-row1">
+                <div className="details-group1">
+                  <label>Address Line 1</label>
+                  <p>{details?.addresslane1 || '-'}</p>
+                </div>
+                <div className="details-group1">
+                  <label>Address Line 2</label>
+                  <p>{details?.addresslane2 || '-'}</p>
+                </div>
               </div>
-              <div className="details-group1">
-                <label>Address Line 2</label>
-                <p>{details?.addresslane2 || '-'}</p>
+              <div className="details-row1">
+                <div className="details-group1">
+                  <label>Zip Code</label>
+                  <p>{details?.zipcode || '-'}</p>
+                </div>
               </div>
             </div>
-            <div className="details-row1">
-              <div className="details-group1">
-                <label>Zip Code</label>
-                <p>{details?.zipcode || '-'}</p>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
       ) : (
         <div className="employee-list1">
@@ -1086,7 +1178,7 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
                         style={{ cursor: 'pointer' }}
                       >
                         <td className="id-cell1">
-                          <span className="role-indicator1"></span>
+                          <span className={details.status === 'offerletter-generated' ? 'role-indicator111' : 'role-indicator1110'}></span>
                           {getdisplayprojectid(details.interview_id)}
                         </td>
                         <td>{getdisplayprojectid(details.application_id)}</td>

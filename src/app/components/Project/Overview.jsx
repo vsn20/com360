@@ -6,6 +6,7 @@ import { addProject, fetchAccountsByOrgId } from '@/app/serverActions/Projects/A
 import './projectoverview.css';
 import { useActionState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { set } from 'mongoose';
 
 const addform_intialstate = { error: null, success: false };
 
@@ -29,8 +30,10 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
   const [projectsPerPageInput, setProjectsPerPageInput] = useState('10');
   const [searchQuery, setSearchQuery] = useState('');
   const [accountFilter, setAccountFilter] = useState('all');
-  const [basicdetailsdisplay,setbasicdetailsdisplay]=useState(false);
-  const [additionaldetailsdisplay,setadditionaldetailsdisplay]=useState(false);
+  const [basicdetailsdisplay, setbasicdetailsdisplay] = useState(false);
+  const [additionaldetailsdisplay, setadditionaldetailsdisplay] = useState(false);
+  const [activetab, setactivetab] = useState('basic');
+
   const formatDate = (date) => {
     if (!date) return '';
     if (date instanceof Date) {
@@ -128,9 +131,10 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
     setadditionaldetailsdisplay(false);
     setSearchQuery('');
     setAccountFilter('all');
+    setactivetab('basic');
   };
 
-  const handlebasicdetailsdisplay=()=>{
+  const handlebasicdetailsdisplay = () => {
     setEditingBasic(false);
     setEditingAdditional(false);
     setError(null);
@@ -140,8 +144,10 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
     setAccountFilter('all');
     setbasicdetailsdisplay(true);
     setadditionaldetailsdisplay(false);
-  }
-  const handleadditionaldetailsdisplay=()=>{
+    setactivetab('basic');
+  };
+
+  const handleadditionaldetailsdisplay = () => {
     setEditingBasic(false);
     setEditingAdditional(false);
     setError(null);
@@ -151,7 +157,8 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
     setAccountFilter('all');
     setbasicdetailsdisplay(false);
     setadditionaldetailsdisplay(true);
-  }
+    setactivetab('additional');
+  };
 
   const handleBack = () => {
     router.refresh();
@@ -165,6 +172,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
     setAccountFilter('all');
     setbasicdetailsdisplay(false);
     setadditionaldetailsdisplay(false);
+    setactivetab('');
   };
 
   const handleaddproject = () => {
@@ -548,18 +556,6 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                   />
                 </div>
               </div>
-              {/* <div className="form-row">
-                <div className="form-group">
-                  <label>Organization*:</label>
-                  <input
-                    type="number"
-                    name="orgId"
-                    value={orgId || ''}
-                    readOnly
-                    className="bg-gray-100"
-                  />
-                </div>
-              </div> */}
             </div>
 
             <div className="details-block">
@@ -848,376 +844,373 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
             <h1 className="title">Project Details</h1>
             <button className="back-button" onClick={handleBack}></button>
           </div>
-          
-          <button onClick={()=>{handlebasicdetailsdisplay()}}>Basic Details</button>
-          <button onClick={()=>{handleadditionaldetailsdisplay()}}>Additional Details</button>
-          {basicdetailsdisplay && !additionaldetailsdisplay&&
-          (
+          <div className="project-submenubar">
+            <button onClick={handlebasicdetailsdisplay} className={activetab==='basic'? 'active':''}>Basic Details</button>
+            <button onClick={handleadditionaldetailsdisplay} className={activetab==='additional'?'active':''}>Additional Details</button>
+          </div>
+          {basicdetailsdisplay && !additionaldetailsdisplay && (
             <div className="details-block">
-            <h3>Basic Details</h3>
-            {editingBasic && canEditProjects ? (
-              <form onSubmit={(e) => { e.preventDefault(); handleSave('basic'); }} className="project-form">
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Project Name*:</label>
-                    <input
-                      type="text"
-                      name="prjName"
-                      value={formData.prjName}
-                      onChange={handleChange}
-                      required
-                    />
+              <h3>Basic Details</h3>
+              {editingBasic && canEditProjects ? (
+                <form onSubmit={(e) => { e.preventDefault(); handleSave('basic'); }} className="project-form">
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Project Name*:</label>
+                      <input
+                        type="text"
+                        name="prjName"
+                        value={formData.prjName}
+                        onChange={handleChange}
+                        required
+                      />
+                    </div>
                   </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Description:</label>
+                      <input
+                        type="text"
+                        name="prsDesc"
+                        value={formData.prsDesc}
+                        onChange={handleChange}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Account*:</label>
+                      <select
+                        name="accntId"
+                        value={formData.accntId}
+                        onChange={handleChange}
+                        required
+                      >
+                        <option value="">Select Account</option>
+                        {accounts.map((account) => (
+                          <option key={account.ACCNT_ID} value={account.ACCNT_ID}>
+                            {account.ALIAS_NAME}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Organization:</label>
+                      <input
+                        type="text"
+                        value={formData.suborgname || ''}
+                        disabled
+                      />
+                    </div>
+                  </div>
+                  <div className="form-buttons">
+                    <button type="submit" className="submit-button" disabled={isLoading}>
+                      {isLoading ? 'Saving...' : 'Save'}
+                    </button>
+                    <button type="button" className="cancel-button" onClick={() => setEditingBasic(false)} disabled={isLoading}>
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="view-details">
+                  <div className="details-row">
+                    <div className="details-group">
+                      <label>Project ID:</label>
+                      <p>Project-{getdisplayprojectid(selectedProject.PRJ_ID)}</p>
+                    </div>
+                    <div className="details-group">
+                      <label>Project Name:</label>
+                      <p>{selectedProject.PRJ_NAME || '-'}</p>
+                    </div>
+                  </div>
+                  <div className="details-row">
+                    <div className="details-group">
+                      <label>Description:</label>
+                      <p>{selectedProject.PRS_DESC || '-'}</p>
+                    </div>
+                    <div className="details-group">
+                      <label>Account:</label>
+                      <p>{getAccountName(selectedProject.ACCNT_ID)}</p>
+                    </div>
+                  </div>
+                  <div className="details-row">
+                    <div className="details-group">
+                      <label>Organization:</label>
+                      <p>{selectedProject.suborgname || '---'}</p>
+                    </div>
+                  </div>
+                  {canEditProjects && (
+                    <div className="details-buttons">
+                      <button className="edit-button" onClick={() => handleEdit('basic')}>Edit</button>
+                    </div>
+                  )}
                 </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Description:</label>
-                    <input
-                      type="text"
-                      name="prsDesc"
-                      value={formData.prsDesc}
-                      onChange={handleChange}
-                    />
+              )}
+            </div>
+          )}
+          {additionaldetailsdisplay && (
+            <div className="details-block">
+              <h3>Additional Details</h3>
+              {editingAdditional && canEditProjects ? (
+                <form onSubmit={(e) => { e.preventDefault(); handleSave('additional'); }} className="project-form">
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Bill Rate:</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        name="billRate"
+                        value={formData.billRate}
+                        onChange={handleChange}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Bill Type:</label>
+                      <select
+                        name="billType"
+                        value={formData.billType}
+                        onChange={(e) => {
+                          console.log('Selected billType:', e.target.value);
+                          handleChange(e);
+                        }}
+                      >
+                        <option value="">Select Type</option>
+                        {billTypes.map((type) => (
+                          <option key={type.id} value={type.id}>
+                            {type.Name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
-                  <div className="form-group">
-                    <label>Account*:</label>
-                    <select
-                      name="accntId"
-                      value={formData.accntId}
-                      onChange={handleChange}
-                      required
-                    >
-                      <option value="">Select Account</option>
-                      {accounts.map((account) => (
-                        <option key={account.ACCNT_ID} value={account.ACCNT_ID}>
-                          {account.ALIAS_NAME}
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>OT Bill Rate:</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        name="otBillRate"
+                        value={formData.otBillRate}
+                        onChange={handleChange}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>OT Bill Type:</label>
+                      <select
+                        name="otBillType"
+                        value={formData.otBillType}
+                        onChange={(e) => {
+                          console.log('Selected otBillType:', e.target.value);
+                          handleChange(e);
+                        }}
+                      >
+                        <option value="">Select Type</option>
+                        {otBillTypes.map((type) => (
+                          <option key={type.id} value={type.id}>
+                            {type.Name}
                         </option>
-                      ))}
-                    </select>
+                        ))}
+                      </select>
+                    </div>
                   </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Billable:</label>
+                      <select
+                        name="billableFlag"
+                        value={formData.billableFlag}
+                        onChange={handleChange}
+                      >
+                        <option value="No">No</option>
+                        <option value="Yes">Yes</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>Start Date:</label>
+                      <input
+                        type="date"
+                        name="startDt"
+                        value={formData.startDt}
+                        onChange={handleChange}
+                      />
+                    </div>
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>End Date:</label>
+                      <input
+                        type="date"
+                        name="endDt"
+                        value={formData.endDt}
+                        onChange={handleChange}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Client*:</label>
+                      <select
+                        name="clientId"
+                        value={formData.clientId}
+                        onChange={handleChange}
+                        required
+                      >
+                        <option value="">Select Client</option>
+                        {accounts.map((account) => (
+                          <option key={account.ACCNT_ID} value={account.ACCNT_ID}>
+                            {account.ALIAS_NAME}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Payment Term:</label>
+                      <select
+                        name="payTerm"
+                        value={formData.payTerm}
+                        onChange={(e) => {
+                          console.log('Selected payTerm:', e.target.value);
+                          handleChange(e);
+                        }}
+                      >
+                        <option value="">Select Term</option>
+                        {payTerms.map((term) => (
+                          <option key={term.id} value={term.id}>
+                            {term.Name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>Invoice Email:</label>
+                      <input
+                        type="email"
+                        name="invoiceEmail"
+                        value={formData.invoiceEmail}
+                        onChange={handleChange}
+                      />
+                    </div>
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Invoice Fax:</label>
+                      <input
+                        type="text"
+                        name="invoiceFax"
+                        value={formData.invoiceFax}
+                        onChange={handleChange}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Invoice Phone:</label>
+                      <input
+                        type="text"
+                        name="invoicePhone"
+                        value={formData.invoicePhone}
+                        onChange={handleChange}
+                      />
+                    </div>
+                  </div>
+                  <div className="form-buttons">
+                    <button type="submit" className="submit-button" disabled={isLoading}>
+                      {isLoading ? 'Saving...' : 'Save'}
+                    </button>
+                    <button type="button" className="cancel-button" onClick={() => setEditingAdditional(false)} disabled={isLoading}>
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="view-details">
+                  <div className="details-row">
+                    <div className="details-group">
+                      <label>Bill Rate:</label>
+                      <p>{selectedProject.BILL_RATE || '-'}</p>
+                    </div>
+                    <div className="details-group">
+                      <label>Bill Type:</label>
+                      <p>{getDisplayValue(selectedProject.BILL_TYPE, billTypes)}</p>
+                    </div>
+                  </div>
+                  <div className="details-row">
+                    <div className="details-group">
+                      <label>OT Bill Rate:</label>
+                      <p>{selectedProject.OT_BILL_RATE || '-'}</p>
+                    </div>
+                    <div className="details-group">
+                      <label>OT Bill Type:</label>
+                      <p>{getDisplayValue(selectedProject.OT_BILL_TYPE, otBillTypes)}</p>
+                    </div>
+                  </div>
+                  <div className="details-row">
+                    <div className="details-group">
+                      <label>Billable:</label>
+                      <p>{selectedProject.BILLABLE_FLAG ? 'Yes' : 'No'}</p>
+                    </div>
+                    <div className="details-group">
+                      <label>Start Date:</label>
+                      <p>{formatDate(selectedProject.START_DT) || '-'}</p>
+                    </div>
+                  </div>
+                  <div className="details-row">
+                    <div className="details-group">
+                      <label>End Date:</label>
+                      <p>{formatDate(selectedProject.END_DT) || '-'}</p>
+                    </div>
+                    <div className="details-group">
+                      <label>Client:</label>
+                      <p>{getAccountName(selectedProject.CLIENT_ID)}</p>
+                    </div>
+                  </div>
+                  <div className="details-row">
+                    <div className="details-group">
+                      <label>Payment Term:</label>
+                      <p>{getDisplayValue(selectedProject.PAY_TERM, payTerms)}</p>
+                    </div>
+                    <div className="details-group">
+                      <label>Invoice Email:</label>
+                      <p>{selectedProject.INVOICE_EMAIL || '-'}</p>
+                    </div>
+                  </div>
+                  <div className="details-row">
+                    <div className="details-group">
+                      <label>Invoice Fax:</label>
+                      <p>{selectedProject.INVOICE_FAX || '-'}</p>
+                    </div>
+                    <div className="details-group">
+                      <label>Invoice Phone:</label>
+                      <p>{selectedProject.INVOICE_PHONE || '-'}</p>
+                    </div>
+                  </div>
+                  <div className="details-row">
+                    <div className="details-group">
+                      <label>Created By:</label>
+                      <p>{selectedProject.Createdby || '-'}</p>
+                    </div>
+                    <div className="details-group">
+                      <label>Updated By:</label>
+                      <p>{selectedProject.Updatedby || '-'}</p>
+                    </div>
+                  </div>
+                  <div className="details-row">
+                    <div className="details-group">
+                      <label>Last Updated Date:</label>
+                      <p>{formatDate(selectedProject.last_updated_date) || '-'}</p>
+                    </div>
+                  </div>
+                  {canEditProjects && (
+                    <div className="details-buttons">
+                      <button className="edit-button" onClick={() => handleEdit('additional')}>Edit</button>
+                    </div>
+                  )}
                 </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Organization:</label>
-                    <input
-                      type="text"
-                      value={formData.suborgname || ''}
-                      disabled
-                    />
-                  </div>
-                </div>
-                <div className="form-buttons">
-                  <button type="submit" className="submit-button" disabled={isLoading}>
-                    {isLoading ? 'Saving...' : 'Save'}
-                  </button>
-                  <button type="button" className="cancel-button" onClick={() => setEditingBasic(false)} disabled={isLoading}>
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <div className="view-details">
-                <div className="details-row">
-                  <div className="details-group">
-                    <label>Project ID:</label>
-                    <p>Project-{getdisplayprojectid(selectedProject.PRJ_ID)}</p>
-                  </div>
-                  <div className="details-group">
-                    <label>Project Name:</label>
-                    <p>{selectedProject.PRJ_NAME || '-'}</p>
-                  </div>
-                </div>
-                <div className="details-row">
-                  <div className="details-group">
-                    <label>Description:</label>
-                    <p>{selectedProject.PRS_DESC || '-'}</p>
-                  </div>
-                  <div className="details-group">
-                    <label>Account:</label>
-                    <p>{getAccountName(selectedProject.ACCNT_ID)}</p>
-                  </div>
-                </div>
-                <div className="details-row">
-                  <div className="details-group">
-                    <label>Organization:</label>
-                    <p>{selectedProject.suborgname || '---'}</p>
-                  </div>
-                </div>
-                {canEditProjects && (
-                  <div className="details-buttons">
-                    <button className="edit-button" onClick={() => handleEdit('basic')}>Edit</button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-          )
-          }
-          {additionaldetailsdisplay&&
-          (<>
-          <div className="details-block">
-            <h3>Additional Details</h3>
-            {editingAdditional && canEditProjects ? (
-              <form onSubmit={(e) => { e.preventDefault(); handleSave('additional'); }} className="project-form">
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Bill Rate:</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      name="billRate"
-                      value={formData.billRate}
-                      onChange={handleChange}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Bill Type:</label>
-                    <select
-                      name="billType"
-                      value={formData.billType}
-                      onChange={(e) => {
-                        console.log('Selected billType:', e.target.value);
-                        handleChange(e);
-                      }}
-                    >
-                      <option value="">Select Type</option>
-                      {billTypes.map((type) => (
-                        <option key={type.id} value={type.id}>
-                          {type.Name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>OT Bill Rate:</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      name="otBillRate"
-                      value={formData.otBillRate}
-                      onChange={handleChange}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>OT Bill Type:</label>
-                    <select
-                      name="otBillType"
-                      value={formData.otBillType}
-                      onChange={(e) => {
-                        console.log('Selected otBillType:', e.target.value);
-                        handleChange(e);
-                      }}
-                    >
-                      <option value="">Select Type</option>
-                      {otBillTypes.map((type) => (
-                        <option key={type.id} value={type.id}>
-                          {type.Name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Billable:</label>
-                    <select
-                      name="billableFlag"
-                      value={formData.billableFlag}
-                      onChange={handleChange}
-                    >
-                      <option value="No">No</option>
-                      <option value="Yes">Yes</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Start Date:</label>
-                    <input
-                      type="date"
-                      name="startDt"
-                      value={formData.startDt}
-                      onChange={handleChange}
-                    />
-                  </div>
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>End Date:</label>
-                    <input
-                      type="date"
-                      name="endDt"
-                      value={formData.endDt}
-                      onChange={handleChange}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Client*:</label>
-                    <select
-                      name="clientId"
-                      value={formData.clientId}
-                      onChange={handleChange}
-                      required
-                    >
-                      <option value="">Select Client</option>
-                      {accounts.map((account) => (
-                        <option key={account.ACCNT_ID} value={account.ACCNT_ID}>
-                          {account.ALIAS_NAME}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Payment Term:</label>
-                    <select
-                      name="payTerm"
-                      value={formData.payTerm}
-                      onChange={(e) => {
-                        console.log('Selected payTerm:', e.target.value);
-                        handleChange(e);
-                      }}
-                    >
-                      <option value="">Select Term</option>
-                      {payTerms.map((term) => (
-                        <option key={term.id} value={term.id}>
-                          {term.Name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Invoice Email:</label>
-                    <input
-                      type="email"
-                      name="invoiceEmail"
-                      value={formData.invoiceEmail}
-                      onChange={handleChange}
-                    />
-                  </div>
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Invoice Fax:</label>
-                    <input
-                      type="text"
-                      name="invoiceFax"
-                      value={formData.invoiceFax}
-                      onChange={handleChange}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Invoice Phone:</label>
-                    <input
-                      type="text"
-                      name="invoicePhone"
-                      value={formData.invoicePhone}
-                      onChange={handleChange}
-                    />
-                  </div>
-                </div>
-                <div className="form-buttons">
-                  <button type="submit" className="submit-button" disabled={isLoading}>
-                    {isLoading ? 'Saving...' : 'Save'}
-                  </button>
-                  <button type="button" className="cancel-button" onClick={() => setEditingAdditional(false)} disabled={isLoading}>
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <div className="view-details">
-                <div className="details-row">
-                  <div className="details-group">
-                    <label>Bill Rate:</label>
-                    <p>{selectedProject.BILL_RATE || '-'}</p>
-                  </div>
-                  <div className="details-group">
-                    <label>Bill Type:</label>
-                    <p>{getDisplayValue(selectedProject.BILL_TYPE, billTypes)}</p>
-                  </div>
-                </div>
-                <div className="details-row">
-                  <div className="details-group">
-                    <label>OT Bill Rate:</label>
-                    <p>{selectedProject.OT_BILL_RATE || '-'}</p>
-                  </div>
-                  <div className="details-group">
-                    <label>OT Bill Type:</label>
-                    <p>{getDisplayValue(selectedProject.OT_BILL_TYPE, otBillTypes)}</p>
-                  </div>
-                </div>
-                <div className="details-row">
-                  <div className="details-group">
-                    <label>Billable:</label>
-                    <p>{selectedProject.BILLABLE_FLAG ? 'Yes' : 'No'}</p>
-                  </div>
-                  <div className="details-group">
-                    <label>Start Date:</label>
-                    <p>{formatDate(selectedProject.START_DT) || '-'}</p>
-                  </div>
-                </div>
-                <div className="details-row">
-                  <div className="details-group">
-                    <label>End Date:</label>
-                    <p>{formatDate(selectedProject.END_DT) || '-'}</p>
-                  </div>
-                  <div className="details-group">
-                    <label>Client:</label>
-                    <p>{getAccountName(selectedProject.CLIENT_ID)}</p>
-                  </div>
-                </div>
-                <div className="details-row">
-                  <div className="details-group">
-                    <label>Payment Term:</label>
-                    <p>{getDisplayValue(selectedProject.PAY_TERM, payTerms)}</p>
-                  </div>
-                  <div className="details-group">
-                    <label>Invoice Email:</label>
-                    <p>{selectedProject.INVOICE_EMAIL || '-'}</p>
-                  </div>
-                </div>
-                <div className="details-row">
-                  <div className="details-group">
-                    <label>Invoice Fax:</label>
-                    <p>{selectedProject.INVOICE_FAX || '-'}</p>
-                  </div>
-                  <div className="details-group">
-                    <label>Invoice Phone:</label>
-                    <p>{selectedProject.INVOICE_PHONE || '-'}</p>
-                  </div>
-                </div>
-                <div className="details-row">
-                  <div className="details-group">
-                    <label>Created By:</label>
-                    <p>{selectedProject.Createdby || '-'}</p>
-                  </div>
-                  <div className="details-group">
-                    <label>Updated By:</label>
-                    <p>{selectedProject.Updatedby || '-'}</p>
-                  </div>
-                </div>
-                <div className="details-row">
-                  <div className="details-group">
-                    <label>Last Updated Date:</label>
-                    <p>{formatDate(selectedProject.last_updated_date) || '-'}</p>
-                  </div>
-                </div>
-                {canEditProjects && (
-                  <div className="details-buttons">
-                    <button className="edit-button" onClick={() => handleEdit('additional')}>Edit</button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-          </>)
-          }
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
-  )
+  );
 };
 
 export default Overview;

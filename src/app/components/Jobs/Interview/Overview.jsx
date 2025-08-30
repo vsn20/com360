@@ -27,6 +27,9 @@ const Overview = ({ orgid, empid, interviewdetails, time, acceptingtime, editing
   const [searchQuery, setSearchQuery] = useState('');
   const [interviewsPerPage, setInterviewsPerPage] = useState(10);
   const [duplicate, setduplicate] = useState(10);
+  const [displayinterviewinformation, setdisplayinterviewinformation] = useState(true);
+  const [displayrounds, setdisplayrounds] = useState(false);
+  const [activetab, setactivetab] = useState('interviewinformation');
 
   useEffect(() => {
     handleback();
@@ -62,6 +65,21 @@ const Overview = ({ orgid, empid, interviewdetails, time, acceptingtime, editing
     setError('');
     setCurrentPage(1);
     setPageInputValue('1');
+    setdisplayinterviewinformation(true);
+    setdisplayrounds(false);
+    setactivetab('interviewinformation');
+  };
+
+  const handleInterviewInformation = () => {
+    setdisplayinterviewinformation(true);
+    setdisplayrounds(false);
+    setactivetab('interviewinformation');
+  };
+
+  const handleRounds = () => {
+    setdisplayinterviewinformation(false);
+    setdisplayrounds(true);
+    setactivetab('rounds');
   };
 
   const formatDate = (date) => {
@@ -100,6 +118,9 @@ const Overview = ({ orgid, empid, interviewdetails, time, acceptingtime, editing
         setCanEdit(result.canEdit);
         setSelectedid(interview_id);
         setSelected(true);
+        setdisplayinterviewinformation(true);
+        setdisplayrounds(false);
+        setactivetab('interviewinformation');
         const roundsResult = await fetchRoundsByInterviewId({ orgid, interview_id, empid, editing });
         if (roundsResult.success) {
           const updatedRounds = roundsResult.rounds.map(round => ({
@@ -419,13 +440,19 @@ const Overview = ({ orgid, empid, interviewdetails, time, acceptingtime, editing
                   <tbody>
                     {currentInterviews.map((detail) => (
                       <tr key={detail.interview_id} onClick={() => fetchid(detail.interview_id)}>
-                        <td className="id-cell">
-                          <span className="interview-indicator"></span>App-{getdisplayprojectid(detail.applicationid)}
+                        <td>
+                          <span className={
+                              detail.status === 'offerletter-generated'
+                              ? 'role-indicator2'
+                              : detail.status === 'scheduled'
+                              ? 'role-indicator'
+                              : 'role-indicator1'
+                            }></span>App-{getdisplayprojectid(detail.applicationid)}
                         </td>
                         <td>Interview-{getdisplayprojectid(detail.interview_id)}</td>
                         <td>{`${detail.first_name} ${detail.last_name}`}</td>
                         <td>{`${getdisplayprojectid(detail.jobid)}-${detail.display_job_name}`}</td>
-                        <td >
+                        <td>
                           <span
                              className={
                               detail.status === 'offerletter-generated'
@@ -498,70 +525,87 @@ const Overview = ({ orgid, empid, interviewdetails, time, acceptingtime, editing
             <h1 className="title">Interview Details</h1>
             <button className="back-button" onClick={handleback}></button>
           </div>
-          
-          <div className="interview-details-block">
-            <div className="interview-details-header">
-              <div>Interview Information</div>
-            </div>
-            
-            <div className="view-details">
-              <div className="details-row">
-                <div className="details-g">
-                  <label>Application ID</label>
-                  <p>App-{getdisplayprojectid(iddetails.applicationid || '-')}</p>
-                </div>
-                <div className="details-g">
-                  <label>Interview ID</label>
-                  <p>Interview-{getdisplayprojectid(iddetails.interview_id || '-')}</p>
-                </div>
-              </div>
-              
-              <div className="details-row">
-                <div className="details-g">
-                  <label>Applicant Name</label>
-                  <p>{`${iddetails.first_name || ''} ${iddetails.last_name || ''}`}</p>
-                </div>
-                <div className="details-g">
-                  <label>Job Title</label>
-                  <p>{iddetails.display_job_name || '-'}</p>
-                </div>
-              </div>
-              
-              <div className="details-row">
-                <div className="details-g">
-                  <label>Email</label>
-                  <p>{iddetails.email || '-'}</p>
-                </div>
-                <div className="details-g">
-                  <label>Application Status</label>
-                  <p className="application-status-text">
-                    {iddetails.status || '-'}
-                  </p>
-                </div>
-              </div>
-              
-              <div className="details-row">
-                <div className="details-g">
-                  <label>Resume</label>
-                  {iddetails.resumepath ? (
-                    <a
-                      href={iddetails.resumepath}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="view-resume-link"
-                      onClick={handleViewResume}
-                    >
-                      View Resume
-                    </a>
-                  ) : (
-                    <span className="no-resume-text">No resume available</span>
-                  )}
-                </div>
-              </div>
-            </div>
+
+          <div className="interview-submenu-bar">
+            <button
+              onClick={handleInterviewInformation}
+              className={activetab === 'interviewinformation' ? 'active' : ''}
+            >
+              Interview Information
+            </button>
+            <button
+              onClick={handleRounds}
+              className={activetab === 'rounds' ? 'active' : ''}
+            >
+              Rounds
+            </button>
           </div>
           
-          {rounds.length > 0 && (
+          {displayinterviewinformation && !displayrounds && (
+            <div className="interview-details-block">
+              <div className="interview-details-header">
+                <div>Interview Information</div>
+              </div>
+              
+              <div className="view-details">
+                <div className="details-row">
+                  <div className="details-g">
+                    <label>Application ID</label>
+                    <p>App-{getdisplayprojectid(iddetails.applicationid || '-')}</p>
+                  </div>
+                  <div className="details-g">
+                    <label>Interview ID</label>
+                    <p>Interview-{getdisplayprojectid(iddetails.interview_id || '-')}</p>
+                  </div>
+                </div>
+                
+                <div className="details-row">
+                  <div className="details-g">
+                    <label>Applicant Name</label>
+                    <p>{`${iddetails.first_name || ''} ${iddetails.last_name || ''}`}</p>
+                  </div>
+                  <div className="details-g">
+                    <label>Job Title</label>
+                    <p>{iddetails.display_job_name || '-'}</p>
+                  </div>
+                </div>
+                
+                <div className="details-row">
+                  <div className="details-g">
+                    <label>Email</label>
+                    <p>{iddetails.email || '-'}</p>
+                  </div>
+                  <div className="details-g">
+                    <label>Application Status</label>
+                    <p className="application-status-text">
+                      {iddetails.status || '-'}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="details-row">
+                  <div className="details-g">
+                    <label>Resume</label>
+                    {iddetails.resumepath ? (
+                      <a
+                        href={iddetails.resumepath}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="view-resume-link"
+                        onClick={handleViewResume}
+                      >
+                        View Resume
+                      </a>
+                    ) : (
+                      <span className="no-resume-text">No resume available</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {displayrounds && !displayinterviewinformation && rounds.length > 0 && (
             <div className="rounds-container">
               {rounds.map((round, index) => (
                 <div key={`${round.Roundid}-${index}`} className="round-block">

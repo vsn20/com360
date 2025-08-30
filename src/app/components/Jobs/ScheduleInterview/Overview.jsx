@@ -174,8 +174,19 @@ const Overview = ({ scheduledetails, applieddetails, orgid, empid, time }) => {
   const uniqueStatuses = [...new Set(scheduledetails.map(app => app.status))];
 
   return (
+    <>
+    {selectedid && (<>
+    <Edit
+            id={selectedid}
+            orgid={orgid}
+            empid={empid}
+            handleback={handleback}
+            time={time}
+            status={selectedstatus}
+          />
+    </>)}
     <div className="employee-overview-container">
-      {applyinterview && (
+      {applyinterview &&!selectedid && (
         <>
           <SubmittingApplication
             applieddetails={applieddetails}
@@ -252,7 +263,13 @@ const Overview = ({ scheduledetails, applieddetails, orgid, empid, time }) => {
                       {currentApplications.map((details) => (
                         <tr key={details.applicationid} onClick={() => handlerowclick(details.applicationid, details.status)}>
                           <td className="id-cell">
-                            <span className="application-indicator"></span>
+                            <span  className={
+                                details.status === 'offerletter-generated'
+                                  ? 'roleindicatorsemiinactive'
+                                  : details.status === 'scheduled'
+                                  ? 'role-indicator'
+                                  : 'role-indicatorinactiver'
+                              }></span>
                             {getdisplayprojectid(details.applicationid)}
                           </td>
                           <td>{`${details.first_name} ${details.last_name}`}</td>
@@ -328,20 +345,9 @@ const Overview = ({ scheduledetails, applieddetails, orgid, empid, time }) => {
             )}
           </div>
         </>
-      ) : selectedid && (
-        <>
-          <button className="back-button" onClick={handleback}>×</button>
-          <Edit
-            id={selectedid}
-            orgid={orgid}
-            empid={empid}
-            handleback={handleback}
-            time={time}
-            status={selectedstatus}
-          />
-        </>
-      )}
+      ) : null}
     </div>
+    </>
   );
 };
 

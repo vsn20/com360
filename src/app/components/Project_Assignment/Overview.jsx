@@ -37,6 +37,7 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
   const [accountOptions, setAccountOptions] = useState([]);
   const [basicdetailsdisplay,setbasicdetailsdisplay]=useState(false);
   const [additionaldetailsdisplay,setadditionaldetailsdisplay]=useState(false);
+  const [activetab, setactivetab] = useState('basic');
   const formatDate = (date) => {
     if (!date) return '';
     if (date instanceof Date) {
@@ -182,16 +183,19 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
     setisadd(false);
     setbasicdetailsdisplay(true);
     setadditionaldetailsdisplay(false);
+    setactivetab('basic');
     router.refresh();
   };
 
   const handlebasicdetailsdisplay=()=>{
     setbasicdetailsdisplay(true);
     setadditionaldetailsdisplay(false);
+    setactivetab('basic');
   };
   const handleadditionaldetailsdisplay=()=>{
     setbasicdetailsdisplay(false);
     setadditionaldetailsdisplay(true);
+    setactivetab('additional');
   }
 
   const handleBack = () => {
@@ -212,6 +216,7 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
     setEndDateFilter('');
     setCurrentPage(1);
     setPageInputValue('1');
+    setactivetab('');
   };
 
   const handleaddprojectassignment = () => {
@@ -939,8 +944,10 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
           </div>
           {employeeDetails && (
             <>
-            <button onClick={()=>{handlebasicdetailsdisplay()}}>Basic Details</button>
-            <button onClick={()=>{handleadditionaldetailsdisplay()}}>Additional Details</button>
+            <div className='projectassignment-submenu-bar'>
+            <button onClick={()=>{handlebasicdetailsdisplay()}} className={activetab==='basic'?'active':''}>Basic Details</button>
+            <button onClick={()=>{handleadditionaldetailsdisplay()}} className={activetab==='additional'?'active':''}>Additional Details</button>
+            </div>
             {basicdetailsdisplay && !additionaldetailsdisplay&&
             (
               <div className="details-block">                

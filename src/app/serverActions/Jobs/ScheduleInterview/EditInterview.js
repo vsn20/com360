@@ -55,7 +55,7 @@ export async function getEmployees(orgid) {
   try {
     const pool = await DBconnection();
     const [rows] = await pool.query(
-      `SELECT e.empid, e.EMP_FST_NAME, e.EMP_LAST_NAME, e.email
+      `SELECT DISTINCT e.empid, e.EMP_FST_NAME, e.EMP_LAST_NAME, e.email
        FROM C_EMP e
        JOIN C_EMP_ROLE_ASSIGN era ON e.empid = era.empid AND e.orgid = era.orgid
        JOIN C_ROLE_MENU_PERMISSIONS rmp ON era.roleid = rmp.roleid

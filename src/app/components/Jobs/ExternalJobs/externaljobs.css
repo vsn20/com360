@@ -120,7 +120,7 @@ table.four-column col:nth-child(1) {
 }
 
 table.four-column col:nth-child(2) {
-  width: 35%;
+  width: 15%;
 }
 
 table.four-column col:nth-child(3) {
@@ -128,7 +128,7 @@ table.four-column col:nth-child(3) {
 }
 
 table.four-column col:nth-child(4) {
-  width: 35%;
+  width: 15%;
 }
 
 th {
@@ -204,6 +204,30 @@ tbody tr:hover {
   margin-right: 8px;
   vertical-align: middle;
 }
+
+.role-indicatorinactiver {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background-color: #dc2626;
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.filter-select90 {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: border-color 0.2s ease;
+}
+
+.filter-select90:focus {
+  outline: none;
+  border-color: #0fd46c;
+}
+
 
 .status-badge {
   display: inline-flex;
@@ -431,10 +455,13 @@ table.three-column col:nth-child(1) {
 }
 
 table.three-column col:nth-child(2) {
-  width: 60%; /* Job Name column */
+  width: 20%; /* Job Name column */
 }
 
 table.three-column col:nth-child(3) {
+  width: 20%; /* Vacancies column */
+}
+table.three-column col:nth-child(4) {
   width: 20%; /* Vacancies column */
 }
 
@@ -643,4 +670,43 @@ table.three-column col:nth-child(3) {
     gap: 10px;
     align-items: flex-start;
   }
+}
+
+/* The main container for the submenu */
+.employee-submenu-bar {
+  display: flex; /* Aligns buttons in a row */
+  gap: 24px; /* Space between the buttons */
+  border-bottom: 1px solid #e5e7eb; /* Light grey bottom border, like the example */
+  margin-top: 16px; /* Space below the header */
+  padding: 0 4px; /* Small horizontal padding to align text */
+}
+
+/* Styling for each button in the submenu */
+.employee-submenu-bar button {
+  background: none; /* Removes default button background */
+  border: none; /* Removes default button border */
+  cursor: pointer;
+  padding: 8px 0; /* Vertical padding */
+  margin-bottom: -1px; /* Aligns the active border with the container's border */
+  font-size: 14px;
+  font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  color: #6b7280; /* A neutral, inactive color */
+  transition: color 0.2s ease;
+}
+
+/* Styling for the active tab/button */
+.employee-submenu-bar button.active {
+  color: #1f2937; /* Darker color for active text */
+  font-weight: 600;
+  border-bottom: 2px solid #0fd46c; /* The green highlight border */
+}
+
+/* Optional: Add a subtle hover effect for better UX */
+.employee-submenu-bar button:not(.active):hover {
+  color: #1f2937;
+}
+
+/* Container for the content below the submenu bar */
+.employee-details-content {
+  padding-top: 24px; /* Adds space between the submenu and the content */
 }

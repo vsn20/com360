@@ -20,6 +20,7 @@ const Overview = ({ orgid, empid, expectedjobtitles, expectedepartment, expected
   const [jobsPerPage, setJobsPerPage] = useState(10);
   const [jobsPerPageInput, setJobsPerPageInput] = useState('10');
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all'); // Added state for status filter
 
   const formatDate = (date) => {
     if (!date) return '';
@@ -58,6 +59,7 @@ const Overview = ({ orgid, empid, expectedjobtitles, expectedepartment, expected
     setSelectedJob(null);
     setError(null);
     setSearchQuery('');
+    setStatusFilter('all'); // Reset status filter on back
   };
 
   const handleAdd = () => {
@@ -153,9 +155,16 @@ const Overview = ({ orgid, empid, expectedjobtitles, expectedepartment, expected
     setPageInputValue('1');
   };
 
+  const handleStatusFilterChange = (e) => {
+    setStatusFilter(e.target.value);
+    setCurrentPage(1);
+    setPageInputValue('1');
+  };
+
   // Filter logic
   const filteredJobs = allJobs.filter((job) =>
-    job.display_job_name?.toLowerCase().includes(searchQuery.toLowerCase())
+    job.display_job_name?.toLowerCase().includes(searchQuery.toLowerCase()) &&
+    (statusFilter === 'all' || (statusFilter === 'active' && job.active == 1) || (statusFilter === 'inactive' && job.active != 1))
   );
 
   // Pagination logic
@@ -187,7 +196,7 @@ const Overview = ({ orgid, empid, expectedjobtitles, expectedepartment, expected
       ) : selectedJob ? (
         <div className="employee-details-container">
           <div className="header-section">
-            <h1 className="title">Edit External Job</h1>
+            <h1 className="title">External Job Details</h1>
             <button className="back-button" onClick={handleBack}></button>
           </div>
           <Edit
@@ -215,6 +224,15 @@ const Overview = ({ orgid, empid, expectedjobtitles, expectedepartment, expected
               className="search-input"
               placeholder="Search by job name..."
             />
+            <select
+              value={statusFilter}
+              onChange={handleStatusFilterChange}
+              className="filter-select90"
+            >
+              <option value="all">All Statuses</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
           </div>
           {filteredJobs.length === 0 ? (
             <div className="empty-state">No external jobs found.</div>
@@ -223,6 +241,7 @@ const Overview = ({ orgid, empid, expectedjobtitles, expectedepartment, expected
               <div className="table-wrapper">
                 <table className="three-column">
                   <colgroup>
+                    <col />
                     <col />
                     <col />
                     <col />
@@ -238,17 +257,21 @@ const Overview = ({ orgid, empid, expectedjobtitles, expectedepartment, expected
                       <th className={sortConfig.column === 'no_of_vacancies' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('no_of_vacancies')}>
                         Vacancies
                       </th>
+                      <th>
+                        Status
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {currentJobs.map((job) => (
                       <tr key={job.jobid} onClick={() => handleRowClick(job)} className={selectedJob && selectedJob.jobid === job.jobid ? 'selected-row' : ''}>
                         <td className="id-cell">
-                          <span className="role-indicator"></span>
+                         <span className={job.active==1 ? 'role-indicator' : 'role-indicatorinactiver'}></span>
                           {getdisplayprojectid(job.jobid)}
                         </td>
                         <td>{job.display_job_name || '-'}</td>
                         <td>{job.no_of_vacancies || '-'}</td>
+                        <td className={job.active==1 ? 'status-badge active' : 'status-badge inactive'}>{job.active==1?'Active':"Inactive"||'-'}</td>
                       </tr>
                     ))}
                   </tbody>

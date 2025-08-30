@@ -243,7 +243,7 @@ const Jobtitle = ({ orgid, empid, jobtitles }) => {
                       {currentJobTitles.map((job) => (
                         <tr key={job.job_title_id} onClick={() => handleRowClick(job.job_title_id)}>
                           <td className="id-cell">
-                            <span className="role-indicator"></span>
+                            <span className={job.is_active ? 'role-indicator' : 'role-indicatorinactiver'}></span>
                             {job.job_title_id.split('-')[1] || job.job_title_id}
                           </td>
                           <td>{job.job_title || '-'}</td>
