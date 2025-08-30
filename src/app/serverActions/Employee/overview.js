@@ -176,6 +176,7 @@ export async function updateEmployee(prevState, formData) {
       const deptId = formData.get('deptId') || null;
       const deptName = formData.get('deptName')?.trim() || null;
       const workCompClass = formData.get('workCompClass') || null;
+      const suborgid = formData.get('suborgid') || null;
 
       console.log('Employment details:', {
         roleids, hireDate, lastWorkDate, terminatedDate, rejoinDate, superior,
@@ -274,6 +275,18 @@ export async function updateEmployee(prevState, formData) {
       } else {
         finalDeptName = null; // Clear DEPT_NAME if deptId is not provided
       }
+    if(suborgid) 
+    {
+         const [suborgCheck] = await pool.execute(
+         'SELECT suborgid FROM C_SUB_ORG WHERE suborgid = ? AND orgid = ? AND isstatus = 1',
+        [suborgid, orgid]
+      );
+      if(suborgCheck.length === 0) 
+      {
+        console.log('Invalid suborganization selected');
+        return { error: 'Selected suborganization is invalid or inactive.' };
+      }
+   }
 
       // Update C_EMP with the first roleid (for backward compatibility with existing schema)
       const primaryRoleId = roleids[0] || null;
@@ -289,13 +302,14 @@ export async function updateEmployee(prevState, formData) {
            PAY_FREQUENCY = ?, 
            DEPT_ID = ?, 
            DEPT_NAME = ?, 
-           WORK_COMP_CLASS = ?, 
+           WORK_COMP_CLASS = ?,
+           suborgid = ?, 
            LAST_UPDATED_DATE = CURRENT_TIMESTAMP, 
            LAST_UPDATED_BY = ? 
          WHERE empid = ? AND orgid = ?`,
         [
            hireDate, lastWorkDate, terminatedDate, rejoinDate, superior,
-          status, jobTitle, payFrequency, deptId, finalDeptName, workCompClass,
+          status, jobTitle, payFrequency, deptId, finalDeptName, workCompClass,suborgid,
           'system', empid, orgid,
         ]
       );
@@ -785,22 +799,23 @@ export async function fetchEmployeeById(empid) {
     const pool = await DBconnection();
     console.log('MySQL connection pool acquired');
     const [rows] = await pool.execute(
-      `SELECT empid, orgid, EMP_FST_NAME, EMP_MID_NAME, EMP_LAST_NAME, EMP_PREF_NAME, email, 
-              roleid, GENDER, MOBILE_NUMBER, PHONE_NUMBER, DOB, HIRE, LAST_WORK_DATE, 
-              TERMINATED_DATE, REJOIN_DATE, CREATED_BY, LAST_UPDATED_BY, superior, 
-              STATUS, JOB_TITLE, PAY_FREQUENCY, DEPT_ID, DEPT_NAME, WORK_COMP_CLASS, 
-              SSN, LINKEDIN_URL,
-              WORK_ADDR_LINE1, WORK_ADDR_LINE2, WORK_ADDR_LINE3, WORK_CITY, WORK_STATE_ID,
-              WORK_STATE_NAME_CUSTOM, WORK_COUNTRY_ID, WORK_POSTAL_CODE,
-              HOME_ADDR_LINE1, HOME_ADDR_LINE2, HOME_ADDR_LINE3, HOME_CITY, HOME_STATE_ID,
-              HOME_STATE_NAME_CUSTOM, HOME_COUNTRY_ID, HOME_POSTAL_CODE,
-              EMERG_CNCT_NAME, EMERG_CNCT_PHONE_NUMBER, EMERG_CNCT_EMAIL, EMERG_CNCT_ADDR_LINE1,
-              EMERG_CNCT_ADDR_LINE2, EMERG_CNCT_ADDR_LINE3, EMERG_CNCT_CITY, EMERG_CNCT_STATE_ID,
-              EMERG_CNCT_STATE_NAME_CUSTOM, EMERG_CNCT_COUNTRY_ID, EMERG_CNCT_POSTAL_CODE
-       FROM C_EMP 
-       WHERE empid = ? AND orgid = ?`,
-      [empid, orgId]
-    );
+  `SELECT empid, orgid, EMP_FST_NAME, EMP_MID_NAME, EMP_LAST_NAME, EMP_PREF_NAME, email, 
+          roleid, GENDER, MOBILE_NUMBER, PHONE_NUMBER, DOB, HIRE, LAST_WORK_DATE, 
+          TERMINATED_DATE, REJOIN_DATE, CREATED_BY, LAST_UPDATED_BY, superior, 
+          STATUS, JOB_TITLE, PAY_FREQUENCY, DEPT_ID, DEPT_NAME, WORK_COMP_CLASS, 
+          SSN, LINKEDIN_URL,
+          WORK_ADDR_LINE1, WORK_ADDR_LINE2, WORK_ADDR_LINE3, WORK_CITY, WORK_STATE_ID,
+          WORK_STATE_NAME_CUSTOM, WORK_COUNTRY_ID, WORK_POSTAL_CODE,
+          HOME_ADDR_LINE1, HOME_ADDR_LINE2, HOME_ADDR_LINE3, HOME_CITY, HOME_STATE_ID,
+          HOME_STATE_NAME_CUSTOM, HOME_COUNTRY_ID, HOME_POSTAL_CODE,
+          EMERG_CNCT_NAME, EMERG_CNCT_PHONE_NUMBER, EMERG_CNCT_EMAIL, EMERG_CNCT_ADDR_LINE1,
+          EMERG_CNCT_ADDR_LINE2, EMERG_CNCT_ADDR_LINE3, EMERG_CNCT_CITY, EMERG_CNCT_STATE_ID,
+          EMERG_CNCT_STATE_NAME_CUSTOM, EMERG_CNCT_COUNTRY_ID, EMERG_CNCT_POSTAL_CODE,
+          suborgid
+   FROM C_EMP 
+   WHERE empid = ? AND orgid = ?`,
+  [empid, orgId]
+);
     if (rows.length === 0) {
       console.log('Employee not found');
       throw new Error('Employee not found.');

@@ -35,6 +35,7 @@ export default async function OverviewPage({ searchParams }) {
   let jobTitles = [];
   let statuses = [];
   let workerCompClasses = [];
+  let suborgs=[];
   let timestamp = new Date().getTime();
   try {
     // Establish database connection
@@ -131,6 +132,9 @@ export default async function OverviewPage({ searchParams }) {
     [workerCompClasses] = await pool.query(
       'SELECT class_code, phraseology FROM C_WORK_COMPENSATION_CLASS'
     );
+    [suborgs] = await pool.query(
+      'SELECT suborgid, suborgname FROM C_SUB_ORG WHERE orgid = ? AND isstatus = 1',[orgid]
+    );
 
     // Fetch all roles for the role dropdown
     const { success, roles: fetchedRoles, error: fetchError } = await getAllroles();
@@ -174,6 +178,7 @@ export default async function OverviewPage({ searchParams }) {
       statuses={statuses}
       workerCompClasses={workerCompClasses}
       timestamp={timestamp}
+      suborgs={suborgs}
     />
   );
 }
