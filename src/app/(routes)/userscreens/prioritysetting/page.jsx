@@ -1,6 +1,6 @@
-import PrioritySetting from "@/app/components/PrioritySetting";
 import { cookies } from 'next/headers';
-import { getAllFeatures } from "@/app/serverActions/getAllFeatures";
+import { getMenusWithPriorities, savePriorities } from '@/app/serverActions/priorityAction';
+import PrioritySettingClient from './PrioritySettingClient';
 
 const decodeJwt = (token) => {
   try {
@@ -14,21 +14,36 @@ const decodeJwt = (token) => {
   }
 };
 
-export default async function Page() {
+export default async function PrioritySettingPage() {
   const cookieStore = cookies();
   const token = cookieStore.get('jwt_token')?.value;
   const decoded = token ? decodeJwt(token) : null;
   const orgid = decoded?.orgid || null;
 
-  const { success, features, error } = await getAllFeatures();
+  if (!orgid) {
+    return (
+      <div style={{ padding: '20px', color: 'red' }}>
+        <p>Error: No organization ID found. Please log in again.</p>
+      </div>
+    );
+  }
+
+  const { success, menus, error } = await getMenusWithPriorities();
+  
   if (!success) {
-    throw new Error(error || 'Failed to fetch features');
+    return (
+      <div style={{ padding: '20px', color: 'red' }}>
+        <p>Error: {error}</p>
+      </div>
+    );
   }
 
   return (
     <div style={{ padding: '20px', marginLeft: '200px' }}>
-      <h1>Priority Setting</h1>
-      <PrioritySetting features={features} orgid={orgid} token={token} />
+      <PrioritySettingClient 
+        initialMenus={menus} 
+        orgid={orgid}
+      />
     </div>
   );
 }
