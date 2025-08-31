@@ -493,23 +493,23 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
   }, [state.success, orgId]);
 
   return (
-    <div className="project-overview-container">
-      {error && <div className="error-message">{error}</div>}
-      {isLoading && <div className="loading-message">Saving...</div>}
+    <div className="project_overview_container">
+      {error && <div className="project_error_message">{error}</div>}
+      {isLoading && <div className="project_loading_message">Saving...</div>}
     
       {isadd && (
-        <div className="project-overview-container">
-          <div className="header-section">
-            <h2 className="title">Add Project</h2>
-            <button className="back-button" onClick={handleBack}></button>
+        <div className="project_add_container">
+          <div className="project_header_section">
+            <h2 className="project_title">Add Project</h2>
+            <button className="project_back_button" onClick={handleBack}></button>
           </div>
-          {addformsuccess && <div className="success-message">{addformsuccess}</div>}
-          {state.error && <div className="error-message">{state.error}</div>}
-          <form action={addform_enhancedFormAction} className="project-details-container">
-            <div className="details-block">
+          {addformsuccess && <div className="project_success_message">{addformsuccess}</div>}
+          {state.error && <div className="project_error_message">{state.error}</div>}
+          <form action={addform_enhancedFormAction} className="project_form_container">
+            <div className="project_form_section">
               <h3>Basic Details</h3>
-              <div className="form-row">
-                <div className="form-group">
+              <div className="project_form_row">
+                <div className="project_form_group">
                   <label>Project Name*:</label>
                   <input
                     type="text"
@@ -519,7 +519,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                     required
                   />
                 </div>
-                <div className="form-group">
+                <div className="project_form_group">
                   <label>Description:</label>
                   <input
                     type="text"
@@ -529,8 +529,8 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                   />
                 </div>
               </div>
-              <div className="form-row">
-                <div className="form-group">
+              <div className="project_form_row">
+                <div className="project_form_group">
                   <label>Account*:</label>
                   <select
                     name="accntId"
@@ -547,7 +547,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                     ))}
                   </select>
                 </div>
-                <div className="form-group">
+                <div className="project_form_group">
                   <label>Organization:</label>
                   <input
                     type="text"
@@ -558,10 +558,10 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
               </div>
             </div>
 
-            <div className="details-block">
+            <div className="project_form_section">
               <h3>Additional Details</h3>
-              <div className="form-row">
-                <div className="form-group">
+              <div className="project_form_row">
+                <div className="project_form_group">
                   <label>Bill Rate:</label>
                   <input
                     type="number"
@@ -571,7 +571,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                     onChange={addform_handleChange}
                   />
                 </div>
-                <div className="form-group">
+                <div className="project_form_group">
                   <label>Bill Type:</label>
                   <select
                     name="billType"
@@ -590,8 +590,8 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                   </select>
                 </div>
               </div>
-              <div className="form-row">
-                <div className="form-group">
+              <div className="project_form_row">
+                <div className="project_form_group">
                   <label>OT Bill Rate:</label>
                   <input
                     type="number"
@@ -601,7 +601,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                     onChange={addform_handleChange}
                   />
                 </div>
-                <div className="form-group">
+                <div className="project_form_group">
                   <label>OT Bill Type:</label>
                   <select
                     name="otBillType"
@@ -620,8 +620,8 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                   </select>
                 </div>
               </div>
-              <div className="form-row">
-                <div className="form-group">
+              <div className="project_form_row">
+                <div className="project_form_group">
                   <label>Billable:</label>
                   <select
                     name="billableFlag"
@@ -632,7 +632,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                     <option value="Yes">Yes</option>
                   </select>
                 </div>
-                <div className="form-group">
+                <div className="project_form_group">
                   <label>Start Date:</label>
                   <input
                     type="date"
@@ -643,8 +643,8 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                   />
                 </div>
               </div>
-              <div className="form-row">
-                <div className="form-group">
+              <div className="project_form_row">
+                <div className="project_form_group">
                   <label>End Date:</label>
                   <input
                     type="date"
@@ -654,7 +654,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                     placeholder="mm/dd/yyyy"
                   />
                 </div>
-                <div className="form-group">
+                <div className="project_form_group">
                   <label>Client*:</label>
                   <select
                     name="clientId"
@@ -672,8 +672,8 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                   </select>
                 </div>
               </div>
-              <div className="form-row">
-                <div className="form-group">
+              <div className="project_form_row">
+                <div className="project_form_group">
                   <label>Payment Term:</label>
                   <select
                     name="payTerm"
@@ -691,7 +691,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                     ))}
                   </select>
                 </div>
-                <div className="form-group">
+                <div className="project_form_group">
                   <label>Invoice Email:</label>
                   <input
                     type="email"
@@ -701,8 +701,8 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                   />
                 </div>
               </div>
-              <div className="form-row">
-                <div className="form-group">
+              <div className="project_form_row">
+                <div className="project_form_group">
                   <label>Invoice Fax:</label>
                   <input
                     type="text"
@@ -711,7 +711,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                     onChange={addform_handleChange}
                   />
                 </div>
-                <div className="form-group">
+                <div className="project_form_group">
                   <label>Invoice Phone:</label>
                   <input
                     type="text"
@@ -723,8 +723,8 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
               </div>
             </div>
 
-            <div className="form-buttons">
-              <button type="submit" className="submit-button" disabled={!orgId}>
+            <div className="project_form_buttons">
+              <button type="submit" className="project_submit_button" disabled={!orgId}>
                 Add Project
               </button>
             </div>
@@ -733,20 +733,20 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
       )}
 
       {!isadd && !selectedProject ? (
-        <div className="project-list">
+        <div className="project_list">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h1 className="title">Existing Projects</h1>
-            <button onClick={() => handleaddproject()} className="submit-button">Add Project</button>
+            <h1 className="project_title">Existing Projects</h1>
+            <button onClick={() => handleaddproject()} className="project_submit_button">Add Project</button>
           </div>
-          <div className="search-filter-container">
+          <div className="project_search_filter_container">
             <input
               type="text"
               value={searchQuery}
               onChange={handleSearchChange}
-              className="search-input"
+              className="project_search_input"
               placeholder="Search by project name..."
             />
-            <select value={accountFilter} onChange={handleAccountFilterChange} className="filter-select">
+            <select value={accountFilter} onChange={handleAccountFilterChange} className="project_filter_select">
               <option value="all">All Accounts</option>
               {accounts.map((account) => (
                 <option key={account.ACCNT_ID} value={account.ACCNT_ID}>
@@ -756,35 +756,39 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
             </select>
           </div>
           {filteredProjects.length === 0 ? (
-            <div className="empty-state">No projects found.</div>
+            <div className="project_empty_state">No projects found.</div>
           ) : (
             <>
-              <div className="table-wrapper">
-                <table className="project-table">
+              <div className="project_table_wrapper">
+                <table className="project_table">
                   <thead>
                     <tr>
-                      <th className={sortConfig.column === 'prjId' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('prjId')}>
+                      <th className={sortConfig.column === 'prjId' ? `project_sortable project_sort_${sortConfig.direction}` : 'project_sortable'} onClick={() => requestSort('prjId')}>
                         Project ID
                       </th>
-                      <th className={sortConfig.column === 'prjName' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('prjName')}>
+                      <th className={sortConfig.column === 'prjName' ? `project_sortable project_sort_${sortConfig.direction}` : 'project_sortable'} onClick={() => requestSort('prjName')}>
                         Project Name
                       </th>
-                      <th className={sortConfig.column === 'prsDesc' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('prsDesc')}>
+                      <th className={sortConfig.column === 'prsDesc' ? `project_sortable project_sort_${sortConfig.direction}` : 'project_sortable'} onClick={() => requestSort('prsDesc')}>
                         Description
                       </th>
-                      <th className={sortConfig.column === 'accntId' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('accntId')}>
+                      <th className={sortConfig.column === 'accntId' ? `project_sortable project_sort_${sortConfig.direction}` : 'project_sortable'} onClick={() => requestSort('accntId')}>
                         Account
                       </th>
                     </tr>
                   </thead>
                   <tbody>
                     {currentProjects.map((project) => (
+
                       <tr
                         key={project.PRJ_ID}
                         onClick={() => handleRowClick(project)}
-                        className={selectedProject && selectedProject.PRJ_ID === project.PRJ_ID ? 'selected-row' : 'clickable-row'}
+                        className={selectedProject && selectedProject.PRJ_ID === project.PRJ_ID ? 'project_selected_row' : 'project_clickable_row'}
                       >
-                        <td>Project-{getdisplayprojectid(project.PRJ_ID)}</td>
+                        <td className='project_id_cell'>
+                          <span className='project_indicator'></span>
+                            Project-{getdisplayprojectid(project.PRJ_ID)}
+                          </td>
                         <td>{project.PRJ_NAME || '-'}</td>
                         <td>{project.PRS_DESC || '-'}</td>
                         <td>{getAccountName(project.ACCNT_ID)}</td>
@@ -794,27 +798,27 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                 </table>
               </div>
               {filteredProjects.length > projectsPerPage && (
-                <div className="pagination-container">
+                <div className="project_pagination_container">
                   <button
-                    className="button"
+                    className="project_button"
                     onClick={handlePrevPage}
                     disabled={currentPage === 1}
                   >
                     ← Previous
                   </button>
-                  <span className="pagination-text">
+                  <span className="project_pagination_text">
                     Page{' '}
                     <input
                       type="text"
                       value={pageInputValue}
                       onChange={handlePageInputChange}
                       onKeyPress={handlePageInputKeyPress}
-                      className="pagination-input"
+                      className="project_pagination_input"
                     />{' '}
                     of {totalPages}
                   </span>
                   <button
-                    className="button"
+                    className="project_button"
                     onClick={handleNextPage}
                     disabled={currentPage === totalPages}
                   >
@@ -823,14 +827,14 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                 </div>
               )}
               {filteredProjects.length > 0 && (
-                <div className="rows-per-page-container">
-                  <label className="rows-per-page-label">Rows/ Page</label>
+                <div className="project_rows_per_page_container">
+                  <label className="project_rows_per_page_label">Rows/ Page</label>
                   <input
                     type="text"
                     value={projectsPerPageInput}
                     onChange={handleProjectsPerPageInputChange}
                     onKeyPress={handleProjectsPerPageInputKeyPress}
-                    className="rows-per-page-input"
+                    className="project_rows_per_page_input"
                     aria-label="Number of rows per page"
                   />
                 </div>
@@ -839,22 +843,22 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
           )}
         </div>
       ) : !isadd && (
-        <div className="project-details-container">
-          <div className="header-section">
-            <h1 className="title">Project Details</h1>
-            <button className="back-button" onClick={handleBack}></button>
+        <div className="project_details_container">
+          <div className="project_header_section">
+            <h1 className="project_title">Project Details</h1>
+            <button className="project_back_button" onClick={handleBack}></button>
           </div>
-          <div className="project-submenubar">
-            <button onClick={handlebasicdetailsdisplay} className={activetab==='basic'? 'active':''}>Basic Details</button>
-            <button onClick={handleadditionaldetailsdisplay} className={activetab==='additional'?'active':''}>Additional Details</button>
+          <div className="project_submenu_bar">
+            <button onClick={handlebasicdetailsdisplay} className={activetab==='basic'? 'project_active':''}>Basic Details</button>
+            <button onClick={handleadditionaldetailsdisplay} className={activetab==='additional'?'project_active':''}>Additional Details</button>
           </div>
           {basicdetailsdisplay && !additionaldetailsdisplay && (
-            <div className="details-block">
+            <div className="project_details_block">
               <h3>Basic Details</h3>
               {editingBasic && canEditProjects ? (
-                <form onSubmit={(e) => { e.preventDefault(); handleSave('basic'); }} className="project-form">
-                  <div className="form-row">
-                    <div className="form-group">
+                <form onSubmit={(e) => { e.preventDefault(); handleSave('basic'); }} className="project_form">
+                  <div className="project_form_row">
+                    <div className="project_form_group">
                       <label>Project Name*:</label>
                       <input
                         type="text"
@@ -865,8 +869,8 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                       />
                     </div>
                   </div>
-                  <div className="form-row">
-                    <div className="form-group">
+                  <div className="project_form_row">
+                    <div className="project_form_group">
                       <label>Description:</label>
                       <input
                         type="text"
@@ -875,7 +879,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                         onChange={handleChange}
                       />
                     </div>
-                    <div className="form-group">
+                    <div className="project_form_group">
                       <label>Account*:</label>
                       <select
                         name="accntId"
@@ -892,8 +896,8 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                       </select>
                     </div>
                   </div>
-                  <div className="form-row">
-                    <div className="form-group">
+                  <div className="project_form_row">
+                    <div className="project_form_group">
                       <label>Organization:</label>
                       <input
                         type="text"
@@ -902,46 +906,46 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                       />
                     </div>
                   </div>
-                  <div className="form-buttons">
-                    <button type="submit" className="submit-button" disabled={isLoading}>
+                  <div className="project_form_buttons">
+                    <button type="submit" className="project_submit_button" disabled={isLoading}>
                       {isLoading ? 'Saving...' : 'Save'}
                     </button>
-                    <button type="button" className="cancel-button" onClick={() => setEditingBasic(false)} disabled={isLoading}>
+                    <button type="button" className="project_cancel_button" onClick={() => setEditingBasic(false)} disabled={isLoading}>
                       Cancel
                     </button>
                   </div>
                 </form>
               ) : (
-                <div className="view-details">
-                  <div className="details-row">
-                    <div className="details-group">
+                <div className="project_view_details">
+                  <div className="project_details_row">
+                    <div className="project_details_group">
                       <label>Project ID:</label>
                       <p>Project-{getdisplayprojectid(selectedProject.PRJ_ID)}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="project_details_group">
                       <label>Project Name:</label>
                       <p>{selectedProject.PRJ_NAME || '-'}</p>
                     </div>
                   </div>
-                  <div className="details-row">
-                    <div className="details-group">
+                  <div className="project_details_row">
+                    <div className="project_details_group">
                       <label>Description:</label>
                       <p>{selectedProject.PRS_DESC || '-'}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="project_details_group">
                       <label>Account:</label>
                       <p>{getAccountName(selectedProject.ACCNT_ID)}</p>
                     </div>
                   </div>
-                  <div className="details-row">
-                    <div className="details-group">
+                  <div className="project_details_row">
+                    <div className="project_details_group">
                       <label>Organization:</label>
                       <p>{selectedProject.suborgname || '---'}</p>
                     </div>
                   </div>
                   {canEditProjects && (
-                    <div className="details-buttons">
-                      <button className="edit-button" onClick={() => handleEdit('basic')}>Edit</button>
+                    <div className="project_details_buttons">
+                      <button className="project_edit_button" onClick={() => handleEdit('basic')}>Edit</button>
                     </div>
                   )}
                 </div>
@@ -949,12 +953,12 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
             </div>
           )}
           {additionaldetailsdisplay && (
-            <div className="details-block">
+            <div className="project_details_block">
               <h3>Additional Details</h3>
               {editingAdditional && canEditProjects ? (
-                <form onSubmit={(e) => { e.preventDefault(); handleSave('additional'); }} className="project-form">
-                  <div className="form-row">
-                    <div className="form-group">
+                <form onSubmit={(e) => { e.preventDefault(); handleSave('additional'); }} className="project_form">
+                  <div className="project_form_row">
+                    <div className="project_form_group">
                       <label>Bill Rate:</label>
                       <input
                         type="number"
@@ -964,7 +968,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                         onChange={handleChange}
                       />
                     </div>
-                    <div className="form-group">
+                    <div className="project_form_group">
                       <label>Bill Type:</label>
                       <select
                         name="billType"
@@ -983,8 +987,8 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                       </select>
                     </div>
                   </div>
-                  <div className="form-row">
-                    <div className="form-group">
+                  <div className="project_form_row">
+                    <div className="project_form_group">
                       <label>OT Bill Rate:</label>
                       <input
                         type="number"
@@ -994,7 +998,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                         onChange={handleChange}
                       />
                     </div>
-                    <div className="form-group">
+                    <div className="project_form_group">
                       <label>OT Bill Type:</label>
                       <select
                         name="otBillType"
@@ -1008,13 +1012,13 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                         {otBillTypes.map((type) => (
                           <option key={type.id} value={type.id}>
                             {type.Name}
-                        </option>
+                          </option>
                         ))}
                       </select>
                     </div>
                   </div>
-                  <div className="form-row">
-                    <div className="form-group">
+                  <div className="project_form_row">
+                    <div className="project_form_group">
                       <label>Billable:</label>
                       <select
                         name="billableFlag"
@@ -1025,7 +1029,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                         <option value="Yes">Yes</option>
                       </select>
                     </div>
-                    <div className="form-group">
+                    <div className="project_form_group">
                       <label>Start Date:</label>
                       <input
                         type="date"
@@ -1035,8 +1039,8 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                       />
                     </div>
                   </div>
-                  <div className="form-row">
-                    <div className="form-group">
+                  <div className="project_form_row">
+                    <div className="project_form_group">
                       <label>End Date:</label>
                       <input
                         type="date"
@@ -1045,7 +1049,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                         onChange={handleChange}
                       />
                     </div>
-                    <div className="form-group">
+                    <div className="project_form_group">
                       <label>Client*:</label>
                       <select
                         name="clientId"
@@ -1062,8 +1066,8 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                       </select>
                     </div>
                   </div>
-                  <div className="form-row">
-                    <div className="form-group">
+                  <div className="project_form_row">
+                    <div className="project_form_group">
                       <label>Payment Term:</label>
                       <select
                         name="payTerm"
@@ -1081,7 +1085,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                         ))}
                       </select>
                     </div>
-                    <div className="form-group">
+                    <div className="project_form_group">
                       <label>Invoice Email:</label>
                       <input
                         type="email"
@@ -1091,8 +1095,8 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                       />
                     </div>
                   </div>
-                  <div className="form-row">
-                    <div className="form-group">
+                  <div className="project_form_row">
+                    <div className="project_form_group">
                       <label>Invoice Fax:</label>
                       <input
                         type="text"
@@ -1101,7 +1105,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                         onChange={handleChange}
                       />
                     </div>
-                    <div className="form-group">
+                    <div className="project_form_group">
                       <label>Invoice Phone:</label>
                       <input
                         type="text"
@@ -1111,96 +1115,96 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                       />
                     </div>
                   </div>
-                  <div className="form-buttons">
-                    <button type="submit" className="submit-button" disabled={isLoading}>
+                  <div className="project_form_buttons">
+                    <button type="submit" className="project_submit_button" disabled={isLoading}>
                       {isLoading ? 'Saving...' : 'Save'}
                     </button>
-                    <button type="button" className="cancel-button" onClick={() => setEditingAdditional(false)} disabled={isLoading}>
+                    <button type="button" className="project_cancel_button" onClick={() => setEditingAdditional(false)} disabled={isLoading}>
                       Cancel
                     </button>
                   </div>
                 </form>
               ) : (
-                <div className="view-details">
-                  <div className="details-row">
-                    <div className="details-group">
+                <div className="project_view_details">
+                  <div className="project_details_row">
+                    <div className="project_details_group">
                       <label>Bill Rate:</label>
                       <p>{selectedProject.BILL_RATE || '-'}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="project_details_group">
                       <label>Bill Type:</label>
                       <p>{getDisplayValue(selectedProject.BILL_TYPE, billTypes)}</p>
                     </div>
                   </div>
-                  <div className="details-row">
-                    <div className="details-group">
+                  <div className="project_details_row">
+                    <div className="project_details_group">
                       <label>OT Bill Rate:</label>
                       <p>{selectedProject.OT_BILL_RATE || '-'}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="project_details_group">
                       <label>OT Bill Type:</label>
                       <p>{getDisplayValue(selectedProject.OT_BILL_TYPE, otBillTypes)}</p>
                     </div>
                   </div>
-                  <div className="details-row">
-                    <div className="details-group">
+                  <div className="project_details_row">
+                    <div className="project_details_group">
                       <label>Billable:</label>
                       <p>{selectedProject.BILLABLE_FLAG ? 'Yes' : 'No'}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="project_details_group">
                       <label>Start Date:</label>
                       <p>{formatDate(selectedProject.START_DT) || '-'}</p>
                     </div>
                   </div>
-                  <div className="details-row">
-                    <div className="details-group">
+                  <div className="project_details_row">
+                    <div className="project_details_group">
                       <label>End Date:</label>
                       <p>{formatDate(selectedProject.END_DT) || '-'}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="project_details_group">
                       <label>Client:</label>
                       <p>{getAccountName(selectedProject.CLIENT_ID)}</p>
                     </div>
                   </div>
-                  <div className="details-row">
-                    <div className="details-group">
+                  <div className="project_details_row">
+                    <div className="project_details_group">
                       <label>Payment Term:</label>
                       <p>{getDisplayValue(selectedProject.PAY_TERM, payTerms)}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="project_details_group">
                       <label>Invoice Email:</label>
                       <p>{selectedProject.INVOICE_EMAIL || '-'}</p>
                     </div>
                   </div>
-                  <div className="details-row">
-                    <div className="details-group">
+                  <div className="project_details_row">
+                    <div className="project_details_group">
                       <label>Invoice Fax:</label>
                       <p>{selectedProject.INVOICE_FAX || '-'}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="project_details_group">
                       <label>Invoice Phone:</label>
                       <p>{selectedProject.INVOICE_PHONE || '-'}</p>
                     </div>
                   </div>
-                  <div className="details-row">
-                    <div className="details-group">
+                  <div className="project_details_row">
+                    <div className="project_details_group">
                       <label>Created By:</label>
                       <p>{selectedProject.Createdby || '-'}</p>
                     </div>
-                    <div className="details-group">
+                    <div className="project_details_group">
                       <label>Updated By:</label>
                       <p>{selectedProject.Updatedby || '-'}</p>
                     </div>
                   </div>
-                  <div className="details-row">
-                    <div className="details-group">
+                  <div className="project_details_row">
+                    <div className="project_details_group">
                       <label>Last Updated Date:</label>
                       <p>{formatDate(selectedProject.last_updated_date) || '-'}</p>
                     </div>
                   </div>
                   {canEditProjects && (
-                    <div className="details-buttons">
-                      <button className="edit-button" onClick={() => handleEdit('additional')}>Edit</button>
+                    <div className="project_details_buttons">
+                      <button className="project_edit_button" onClick={() => handleEdit('additional')}>Edit</button>
                     </div>
                   )}
                 </div>

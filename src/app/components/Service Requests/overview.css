@@ -528,16 +528,26 @@ tbody tr:hover {
 }
 
 /* Role/Request Indicator */
-/* .id-cell {
+.id-cell {
   display: flex;
   align-items: center;
-} */
+}
 
-.role-indicator {
+.service-request-indicator-active {
   display: inline-block;
   width: 8px;
   height: 8px;
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: middle;
   background-color: #0fd46c;
+}
+
+.service-request-indicator-inactive {
+  display: inline-block;
+  width: 0px;
+  height: 8px;
+  background-color: #dc2626;
   border-radius: 50%;
   margin-right: 8px;
   vertical-align: middle;

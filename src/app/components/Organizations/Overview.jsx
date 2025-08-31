@@ -243,7 +243,7 @@ const Overview = ({ orgid, empid, organizations, countries, states }) => {
                       {currentOrganizations.map((org) => (
                         <tr key={org.suborgid} onClick={() => handleRowClick(org.suborgid)}>
                           <td className="id-cell89">
-                            <span className="org-indicator89"></span>
+                            <span className={org.isstatus ? 'org-indicator-active' : 'org-indicator-inactive'}></span>
                             {org.suborgid.split('-')[1] || org.suborgid}
                           </td>
                           <td>{org.suborgname || '-'}</td>

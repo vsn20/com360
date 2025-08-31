@@ -195,7 +195,7 @@ tbody tr:hover {
   box-shadow: 4px 0 12px rgba(15, 212, 108, 0.1);
 }
 
-.role-indicator {
+.role-indicator-active{
   display: inline-block;
   width: 8px;
   height: 8px;
@@ -204,6 +204,17 @@ tbody tr:hover {
   margin-right: 8px;
   vertical-align: middle;
 }
+
+.role-indicator-inactive {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background-color: #dc2626;
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
 
 .status-badge {
   display: inline-flex;

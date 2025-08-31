@@ -1,3 +1,18 @@
+/* Button styles */
+.button89 {
+  background-color: #0FD46C;
+  color: white !important;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: Arial, sans-serif;
+  transition: background-color 0.3s ease, transform 0.1s ease, color 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  text-decoration: none !important;
+}
+
 /* Button disabled state */
 .button89:disabled {
   background-color: #6c757d;
@@ -9,7 +24,7 @@
 .button89:hover:not(:disabled) {
   background-color: #0CB25A;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  color: black !important;
+  color: white !important;
 }
 
 /* Save and Cancel buttons */
@@ -34,7 +49,7 @@
 .save89:hover {
   background-color: #0CB25A;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  color: black !important;
+  color: white !important;
 }
 
 .cancel89 {
@@ -44,7 +59,7 @@
 .cancel89:hover {
   background-color: #D32F2F;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  color: black !important;
+  color: white !important;
 }
 
 /* Title */
@@ -187,6 +202,7 @@ td {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 14px;
 }
 
 tbody tr {
@@ -207,11 +223,21 @@ td.id-cell89 {
   gap: 8px;
 }
 
-.org-indicator89 {
+.org-indicator-active {
   display: inline-block;
   width: 8px;
   height: 8px;
   background-color: #0fd46c;
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.org-indicator-inactive {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background-color:  #dc2626;
   border-radius: 50%;
   margin-right: 8px;
   vertical-align: middle;
@@ -354,6 +380,9 @@ td.id-cell89 {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
 }
 
 .form-row89 {
@@ -372,6 +401,9 @@ td.id-cell89 {
 .form-group89 label,
 .details-g89 label {
   margin-bottom: 5px;
+  font-weight: 500;
+  color: #555;
+  font-size: 14px;
 }
 
 .form-group89 input,
@@ -381,6 +413,7 @@ td.id-cell89 {
   border: 1px solid #ddd;
   border-radius: 4px;
   box-sizing: border-box;
+  font-size: 14px;
 }
 
 .form-group89 input.bg-gray-10089 {
@@ -389,6 +422,27 @@ td.id-cell89 {
 
 .details-g89 p {
   margin: 0;
+  padding: 8px 0;
+  color: #333;
+  font-size: 14px;
+}
+
+/* Fix for view details layout - ensure 2 columns per row */
+.view-details89 {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.details-row89 {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.details-row89 .details-g89 {
+  flex: 1;
+  min-width: 0;
 }
 
 .form-buttons89 {
@@ -400,24 +454,26 @@ td.id-cell89 {
 .error-message89 {
   color: #dc3545;
   margin-bottom: 15px;
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .success-message89 {
   color: #28a745;
   margin-bottom: 15px;
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .loading-message89 {
   color: #007bff;
   margin-bottom: 15px;
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .empty-state89 {
   text-align: center;
   padding: 48px 20px;
+  font-size: 14px;
+  color: #666;
 }
 
 @media (max-width: 768px) {
@@ -426,7 +482,8 @@ td.id-cell89 {
     padding: 20px;
   }
 
-  .form-row89 {
+  .form-row89,
+  .details-row89 {
     display: flex;
     flex-direction: column;
     gap: 15px;

@@ -723,7 +723,7 @@ const Overview = ({
                         className={selectedSrNum === request.SR_NUM ? 'selected-row' : ''}
                       >
                         <td className="id-cell">
-                          <span className="role-indicator"></span>SR-{getdisplayprojectid(request.SR_NUM)}
+                          <span className={`status-badge ${request.STATUS_CD?.toLowerCase() === 'resolved' ? 'service-request-indicator-active' : 'service-request-indicator-inactive'}`}></span>SR-{getdisplayprojectid(request.SR_NUM)}
                         </td>
                         <td className="name-cell">{request.SERVICE_NAME || '-'}</td>
                         <td className="status-cell">

@@ -1228,7 +1228,7 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
                     {currentRoles.map((role) => (
                       <tr key={`${role.roleid}-${role.orgid}`} onClick={() => handleRoleClick(role)} style={{ cursor: 'pointer' }}>
                         <td className="id-cell">
-                          <span className="role-indicator"></span>Role-{getDisplayRoleId(role.roleid)}
+                          <span className={role.is_active ? 'role-indicator-active' : 'role-indicator-inactive'}></span>Role-{getDisplayRoleId(role.roleid)}
                         </td>
                         <td className="name-cell">{role.rolename}</td>
                         <td className={role.is_active ? 'status-badge active' : 'status-badge inactive'}>

@@ -629,23 +629,23 @@ const Overview = ({
   };
 
   return (
-    <div className="employee-overview-container88">
-      {error && <div className="error-message88">{error}</div>}
-      {isLoading && <div className="loading-message88">Saving...</div>}
+    <div className="account_overview_container">
+      {error && <div className="account_error_message">{error}</div>}
+      {isLoading && <div className="account_loading_message">Saving...</div>}
     
       {isadd && (
-        <div className="employee-overview-container88">
-          <div className="header-section88">
-            <h2 className="title88">Add Account</h2>
-            <button className="back-button88" onClick={handleBackClick}></button>
+        <div className="account_overview_container">
+          <div className="account_header_section">
+            <h2 className="account_title">Add Account</h2>
+            <button className="account_back_button" onClick={handleBackClick}></button>
           </div>
-          {addFormError && <div className="error-message88">{addFormError}</div>}
-          {addFormSuccess && <div className="success-message88">{addFormSuccess}</div>}
-          <form onSubmit={addhandleSubmit} className="employee-details-container88">
-            <div className="details-block88">
+          {addFormError && <div className="account_error_message">{addFormError}</div>}
+          {addFormSuccess && <div className="account_success_message">{addFormSuccess}</div>}
+          <form onSubmit={addhandleSubmit} className="account_details_container">
+            <div className="account_details_block">
               <h3>Basic Details</h3>
-              <div className="form-row88">
-                <div className="form-group88">
+              <div className="account_form_row">
+                <div className="account_form_group">
                   <label>Account Name*</label>
                   <input
                     type="text"
@@ -657,8 +657,8 @@ const Overview = ({
                   />
                 </div>
               </div>
-              <div className="form-row88">
-                <div className="form-group88">
+              <div className="account_form_row">
+                <div className="account_form_group">
                   <label>Account Type*</label>
                   <select
                     name="acctTypeCd"
@@ -674,7 +674,7 @@ const Overview = ({
                     ))}
                   </select>
                 </div>
-                <div className="form-group88">
+                <div className="account_form_group">
                   <label>Branch Type*</label>
                   <select
                     name="branchType"
@@ -691,8 +691,8 @@ const Overview = ({
                   </select>
                 </div>
               </div>
-              <div className="form-row88">
-                <div className="form-group88">
+              <div className="account_form_row">
+                <div className="account_form_group">
                   <label>Email*</label>
                   <input
                     type="email"
@@ -703,7 +703,7 @@ const Overview = ({
                     required
                   />
                 </div>
-                <div className="form-group88">
+                <div className="account_form_group">
                   <label>Organization</label>
                   <select
                     name="suborgid"
@@ -721,10 +721,10 @@ const Overview = ({
               </div>
             </div>
 
-            <div className="details-block88">
+            <div className="account_details_block">
               <h3>Business Address</h3>
-              <div className="form-row88">
-                <div className="form-group88">
+              <div className="account_form_row">
+                <div className="account_form_group">
                   <label>Address Line 1</label>
                   <input
                     type="text"
@@ -734,7 +734,7 @@ const Overview = ({
                     placeholder="Enter Address Line 1"
                   />
                 </div>
-                <div className="form-group88">
+                <div className="account_form_group">
                   <label>Address Line 2</label>
                   <input
                     type="text"
@@ -745,8 +745,8 @@ const Overview = ({
                   />
                 </div>
               </div>
-              <div className="form-row88">
-                <div className="form-group88">
+              <div className="account_form_row">
+                <div className="account_form_group">
                   <label>Address Line 3</label>
                   <input
                     type="text"
@@ -756,7 +756,7 @@ const Overview = ({
                     placeholder="Enter Address Line 3"
                   />
                 </div>
-                <div className="form-group88">
+                <div className="account_form_group">
                   <label>City</label>
                   <input
                     type="text"
@@ -767,8 +767,8 @@ const Overview = ({
                   />
                 </div>
               </div>
-              <div className="form-row88">
-                <div className="form-group88">
+              <div className="account_form_row">
+                <div className="account_form_group">
                   <label>Country</label>
                   <select
                     name="businessCountryId"
@@ -783,7 +783,7 @@ const Overview = ({
                     ))}
                   </select>
                 </div>
-                <div className="form-group88">
+                <div className="account_form_group">
                   <label>State</label>
                   <select
                     name="businessStateId"
@@ -799,8 +799,8 @@ const Overview = ({
                   </select>
                 </div>
               </div>
-              <div className="form-row88">
-                <div className="form-group88">
+              <div className="account_form_row">
+                <div className="account_form_group">
                   <label>Postal Code</label>
                   <input
                     type="text"
@@ -813,10 +813,10 @@ const Overview = ({
               </div>
             </div>
 
-            <div className="details-block88">
+            <div className="account_details_block">
               <h3>Mailing Address</h3>
-              <div className="form-row88">
-                <div className="form-group88">
+              <div className="account_form_row">
+                <div className="account_form_group">
                   <label>Address Line 1</label>
                   <input
                     type="text"
@@ -826,7 +826,7 @@ const Overview = ({
                     placeholder="Enter Address Line 1"
                   />
                 </div>
-                <div className="form-group88">
+                <div className="account_form_group">
                   <label>Address Line 2</label>
                   <input
                     type="text"
@@ -837,8 +837,8 @@ const Overview = ({
                   />
                 </div>
               </div>
-              <div className="form-row88">
-                <div className="form-group88">
+              <div className="account_form_row">
+                <div className="account_form_group">
                   <label>Address Line 3</label>
                   <input
                     type="text"
@@ -848,7 +848,7 @@ const Overview = ({
                     placeholder="Enter Address Line 3"
                   />
                 </div>
-                <div className="form-group88">
+                <div className="account_form_group">
                   <label>City</label>
                   <input
                     type="text"
@@ -859,8 +859,8 @@ const Overview = ({
                   />
                 </div>
               </div>
-              <div className="form-row88">
-                <div className="form-group88">
+              <div className="account_form_row">
+                <div className="account_form_group">
                   <label>Country</label>
                   <select
                     name="mailingCountryId"
@@ -875,7 +875,7 @@ const Overview = ({
                     ))}
                   </select>
                 </div>
-                <div className="form-group88">
+                <div className="account_form_group">
                   <label>State</label>
                   <select
                     name="mailingStateId"
@@ -891,8 +891,8 @@ const Overview = ({
                   </select>
                 </div>
               </div>
-              <div className="form-row88">
-                <div className="form-group88">
+              <div className="account_form_row">
+                <div className="account_form_group">
                   <label>Postal Code</label>
                   <input
                     type="text"
@@ -905,8 +905,8 @@ const Overview = ({
               </div>
             </div>
 
-            <div className="form-buttons88">
-              <button type="submit" className="save88">
+            <div className="account_form_buttons">
+              <button type="submit" className="account_save">
                 Add Account
               </button>
             </div>
@@ -915,20 +915,20 @@ const Overview = ({
       )}
 
       {!isadd && !selectedAccntId ? (
-        <div className="employee-list88">
+        <div className="account_list">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h1 className="title88">Existing Accounts</h1>
-            <button onClick={() => handleaddaccount()} className="save88">Add Account</button>
+            <h1 className="account_title">Existing Accounts</h1>
+            <button onClick={() => handleaddaccount()} className="account_save">Add Account</button>
           </div>
-          <div className="search-filter-container88">
+          <div className="account_search_filter_container">
             <input
               type="text"
               value={searchQuery}
               onChange={handleSearchChange}
-              className="search-input88"
+              className="account_search_input"
               placeholder="Search by account name..."
             />
-            <select value={accountTypeFilter} onChange={handleAccountTypeFilterChange} className="filter-select88">
+            <select value={accountTypeFilter} onChange={handleAccountTypeFilterChange} className="account_filter_select">
               <option value="all">All Account Types</option>
               {accountTypes.map((type) => (
                 <option key={type.id} value={type.id}>
@@ -936,7 +936,7 @@ const Overview = ({
                 </option>
               ))}
             </select>
-            <select value={branchTypeFilter} onChange={handleBranchTypeFilterChange} className="filter-select88">
+            <select value={branchTypeFilter} onChange={handleBranchTypeFilterChange} className="account_filter_select">
               <option value="all">All Branch Types</option>
               {branchTypes.map((type) => (
                 <option key={type.id} value={type.id}>
@@ -946,12 +946,13 @@ const Overview = ({
             </select>
           </div>
           {filteredAccounts.length === 0 && !error ? (
-            <div className="empty-state88">No accounts found.</div>
+            <div className="account_empty_state">No accounts found.</div>
           ) : (
             <>
-              <div className="table-wrapper88">
-                <table className="employee-table88">
+              <div className="account_table_wrapper">
+                <table className="account_table four_column">
                   <colgroup>
+                    <col />
                     <col />
                     <col />
                     <col />
@@ -959,17 +960,20 @@ const Overview = ({
                   </colgroup>
                   <thead>
                     <tr>
-                      <th className={sortConfig.column === 'accntId' ? `sortable88 sort-${sortConfig.direction}88` : 'sortable88'} onClick={() => requestSort('accntId')}>
+                      <th className={sortConfig.column === 'accntId' ? `account_sortable account_sort_${sortConfig.direction}` : 'account_sortable'} onClick={() => requestSort('accntId')}>
                         Account ID
                       </th>
-                      <th className={sortConfig.column === 'aliasName' ? `sortable88 sort-${sortConfig.direction}88` : 'sortable88'} onClick={() => requestSort('aliasName')}>
+                      <th className={sortConfig.column === 'aliasName' ? `account_sortable account_sort_${sortConfig.direction}` : 'account_sortable'} onClick={() => requestSort('aliasName')}>
                         Account Name
                       </th>
-                      <th className={sortConfig.column === 'acctTypeCd' ? `sortable88 sort-${sortConfig.direction}88` : 'sortable88'} onClick={() => requestSort('acctTypeCd')}>
+                      <th className={sortConfig.column === 'acctTypeCd' ? `account_sortable account_sort_${sortConfig.direction}` : 'account_sortable'} onClick={() => requestSort('acctTypeCd')}>
                         Account Type
                       </th>
-                      <th className={sortConfig.column === 'branchType' ? `sortable88 sort-${sortConfig.direction}88` : 'sortable88'} onClick={() => requestSort('branchType')}>
+                      <th className={sortConfig.column === 'branchType' ? `account_sortable account_sort_${sortConfig.direction}` : 'account_sortable'} onClick={() => requestSort('branchType')}>
                         Branch Type
+                      </th>
+                      <th>
+                        Status
                       </th>
                     </tr>
                   </thead>
@@ -978,42 +982,43 @@ const Overview = ({
                       <tr
                         key={account.ACCNT_ID}
                         onClick={() => handleRowClick(account.ACCNT_ID)}
-                        className={selectedAccntId === account.ACCNT_ID ? 'selected-row88' : ''}
+                        className={selectedAccntId === account.ACCNT_ID ? 'account_selected_row' : ''}
                       >
-                        <td className="id-cell88">
-                          <span className="account-indicator88"></span>
+                        <td className="account_id_cell">
+                          <span className={account.ACTIVE_FLAG === 1 ?'account_indicator-active ':'account_indicator-inactive'}></span>
                           Account-{getdisplayprojectid(account.ACCNT_ID)}
                         </td>
                         <td>{account.ALIAS_NAME || '-'}</td>
                         <td>{getAccountTypeName(account.ACCT_TYPE_CD)}</td>
                         <td>{getBranchTypeName(account.BRANCH_TYPE)}</td>
+                        <td className={account.ACTIVE_FLAG === 1 ?'account_status_badge account_actives ':'account_status_badge account_inactive'}>{account.ACTIVE_FLAG === 1 ?'Active':'Inactive'}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
               {filteredAccounts.length > accountsPerPage && (
-                <div className="pagination-container88">
+                <div className="account_pagination_container">
                   <button
-                    className="button88"
+                    className="account_button"
                     onClick={handlePrevPage}
                     disabled={currentPage === 1}
                   >
                     ← Previous
                   </button>
-                  <span className="pagination-text88">
+                  <span className="account_pagination_text">
                     Page{' '}
                     <input
                       type="text"
                       value={pageInputValue}
                       onChange={handlePageInputChange}
                       onKeyPress={handlePageInputKeyPress}
-                      className="pagination-input88"
+                      className="account_pagination_input"
                     />{' '}
                     of {totalPages}
                   </span>
                   <button
-                    className="button88"
+                    className="account_button"
                     onClick={handleNextPage}
                     disabled={currentPage === totalPages}
                   >
@@ -1022,14 +1027,14 @@ const Overview = ({
                 </div>
               )}
               {filteredAccounts.length > 0 && (
-                <div className="rows-per-page-container88">
-                  <label className="rows-per-page-label88">Rows/ Page</label>
+                <div className="account_rows_per_page_container">
+                  <label className="account_rows_per_page_label">Rows/ Page</label>
                   <input
                     type="text"
                     value={accountsPerPageInput}
                     onChange={handleAccountsPerPageInputChange}
                     onKeyPress={handleAccountsPerPageInputKeyPress}
-                    className="rows-per-page-input88"
+                    className="account_rows_per_page_input"
                     aria-label="Number of rows per page"
                   />
                 </div>
@@ -1039,22 +1044,22 @@ const Overview = ({
         </div>
       ) : !isadd && (
         accountDetails && (
-          <div className="employee-details-container88">
-            <div className="header-section88">
-              <h1 className="title88">Account Details</h1>
-              <button className="back-button88" onClick={handleBackClick}></button>
+          <div className="account_details_container">
+            <div className="account_header_section">
+              <h1 className="account_title">Account Details</h1>
+              <button className="account_back_button" onClick={handleBackClick}></button>
             </div>
             
             {/* Account Submenu Bar */}
-            <div className="account-submenu-bar">
+            <div className="account_submenu_bar">
               <button 
-                className={activeSubmenuTab === 'basic' ? 'active' : ''}
+                className={activeSubmenuTab === 'basic' ? 'account_active' : ''}
                 onClick={() => handleSubmenuTabClick('basic')}
               >
                 Basic Details
               </button>
               <button 
-                className={activeSubmenuTab === 'address' ? 'active' : ''}
+                className={activeSubmenuTab === 'address' ? 'account_active' : ''}
                 onClick={() => handleSubmenuTabClick('address')}
               >
                 Address Details
@@ -1062,18 +1067,18 @@ const Overview = ({
             </div>
 
             {/* Account Details Content */}
-            <div className="account-details-content">
+            <div className="account_details_content">
               {basicdetailsdisplay && !addressdisplay && (
-                <div className="details-block88">
+                <div className="account_details_block">
                   <h3>Basic Details</h3>
                   {editingBasic && canEditAccounts ? (
                     <form onSubmit={(e) => { e.preventDefault(); handleSave('basic'); }}>
-                      <div className="form-row88">
-                        <div className="form-group88">
+                      <div className="account_form_row">
+                        <div className="account_form_group">
                           <label>Account Name</label>
                           <input type="text" name="aliasName" value={formData.aliasName} onChange={handleFormChange} />
                         </div>
-                        <div className="form-group88">
+                        <div className="account_form_group">
                           <label>Account Type*</label>
                           <select name="acctTypeCd" value={formData.acctTypeCd} onChange={handleFormChange} required>
                             <option value="">Select Account Type</option>
@@ -1085,12 +1090,12 @@ const Overview = ({
                           </select>
                         </div>
                       </div>
-                      <div className="form-row88">
-                        <div className="form-group88">
+                      <div className="account_form_row">
+                        <div className="account_form_group">
                           <label>Email*</label>
                           <input type="email" name="email" value={formData.email} onChange={handleFormChange} required />
                         </div>
-                        <div className="form-group88">
+                        <div className="account_form_group">
                           <label>Active Flag</label>
                           <select name="activeFlag" value={formData.activeFlag} onChange={handleFormChange}>
                             <option value="1">Active</option>
@@ -1098,8 +1103,8 @@ const Overview = ({
                           </select>
                         </div>
                       </div>
-                      <div className="form-row88">
-                        <div className="form-group88">
+                      <div className="account_form_row">
+                        <div className="account_form_group">
                           <label>Branch Type</label>
                           <select name="branchType" value={formData.branchType} onChange={handleFormChange}>
                             <option value="">Select Branch Type</option>
@@ -1110,7 +1115,7 @@ const Overview = ({
                             ))}
                           </select>
                         </div>
-                        <div className="form-group88">
+                        <div className="account_form_group">
                           <label>Organization</label>
                           <select name="suborgid" value={formData.suborgid} disabled>
                             <option value="">Select Organization</option>
@@ -1122,76 +1127,76 @@ const Overview = ({
                           </select>
                         </div>
                       </div>
-                      <div className="form-buttons88">
-                        <button type="submit" className="save88" disabled={isLoading}>
+                      <div className="account_form_buttons">
+                        <button type="submit" className="account_save" disabled={isLoading}>
                           {isLoading ? 'Saving...' : 'Save'}
                         </button>
-                        <button type="button" className="cancel88" onClick={() => setEditingBasic(false)} disabled={isLoading}>
+                        <button type="button" className="account_cancel" onClick={() => setEditingBasic(false)} disabled={isLoading}>
                           Cancel
                         </button>
                       </div>
                     </form>
                   ) : (
-                    <div className="view-details88">
-                      <div className="details-row88">
-                        <div className="details-group88">
+                    <div className="account_view_details">
+                      <div className="account_details_row">
+                        <div className="account_details_group">
                           <label>Account ID</label>
                           <p>Account-{getdisplayprojectid(accountDetails.ACCNT_ID)}</p>
                         </div>
                       </div>
-                      <div className="details-row88">
-                        <div className="details-group88">
+                      <div className="account_details_row">
+                        <div className="account_details_group">
                           <label>Active Flag</label>
                           <p>{accountDetails.ACTIVE_FLAG ? 'Active' : 'Inactive'}</p>
                         </div>
-                        <div className="details-group88">
+                        <div className="account_details_group">
                           <label>Account Type</label>
                           <p>{getAccountTypeName(accountDetails.ACCT_TYPE_CD)}</p>
                         </div>
                       </div>
-                      <div className="details-row88">
-                        <div className="details-group88">
+                      <div className="account_details_row">
+                        <div className="account_details_group">
                           <label>Email</label>
                           <p>{accountDetails.EMAIL || '-'}</p>
                         </div>
-                        <div className="details-group88">
+                        <div className="account_details_group">
                           <label>Account Name</label>
                           <p>{accountDetails.ALIAS_NAME || '-'}</p>
                         </div>
                       </div>
-                      <div className="details-row88">
-                        <div className="details-group88">
+                      <div className="account_details_row">
+                        <div className="account_details_group">
                           <label>Branch Type</label>
                           <p>{getBranchTypeName(accountDetails.BRANCH_TYPE)}</p>
                         </div>
-                        <div className="details-group88">
+                        <div className="account_details_group">
                           <label>Organization</label>
                           <p>{getSubOrgName(accountDetails.suborgid)}</p>
                         </div>
                       </div>
-                      <div className="details-row88">
-                        <div className="details-group88">
+                      <div className="account_details_row">
+                        <div className="account_details_group">
                           <label>Last Login Date</label>
                           <p>{accountDetails.LAST_LOGIN_DATE ? formatDate(accountDetails.LAST_LOGIN_DATE) : '-'}</p>
                         </div>
-                        <div className="details-group88">
+                        <div className="account_details_group">
                           <label>Created By</label>
                           <p>{accountDetails.CREATED_BY || '-'}</p>
                         </div>
                       </div>
-                      <div className="details-row88">
-                        <div className="details-group88">
+                      <div className="account_details_row">
+                        <div className="account_details_group">
                           <label>Last Updated By</label>
                           <p>{accountDetails.LAST_UPDATED_BY || '-'}</p>
                         </div>
-                        <div className="details-group88">
+                        <div className="account_details_group">
                           <label>Last Updated Date</label>
                           <p>{formatDate(accountDetails.LAST_UPDATED_DATE) || '-'}</p>
                         </div>
                       </div>
                       {canEditAccounts && (
-                        <div className="details-buttons88">
-                          <button className="button88" onClick={() => handleEdit('basic')}>Edit</button>
+                        <div className="account_details_buttons">
+                          <button className="account_button" onClick={() => handleEdit('basic')}>Edit</button>
                         </div>
                       )}
                     </div>
@@ -1201,32 +1206,32 @@ const Overview = ({
 
               {addressdisplay && (
                 <>
-                  <div className="details-block88">
+                  <div className="account_details_block">
                     <h3>Business Address</h3>
                     {editingBusinessAddress && canEditAccounts ? (
                       <form onSubmit={(e) => { e.preventDefault(); handleSave('businessAddress'); }}>
-                        <div className="form-row88">
-                          <div className="form-group88">
+                        <div className="account_form_row">
+                          <div className="account_form_group">
                             <label>Address Line 1</label>
                             <input type="text" name="businessAddrLine1" value={formData.businessAddrLine1} onChange={handleFormChange} />
                           </div>
-                          <div className="form-group88">
+                          <div className="account_form_group">
                             <label>Address Line 2</label>
                             <input type="text" name="businessAddrLine2" value={formData.businessAddrLine2} onChange={handleFormChange} />
                           </div>
                         </div>
-                        <div className="form-row88">
-                          <div className="form-group88">
+                        <div className="account_form_row">
+                          <div className="account_form_group">
                             <label>Address Line 3</label>
                             <input type="text" name="businessAddrLine3" value={formData.businessAddrLine3} onChange={handleFormChange} />
                           </div>
-                          <div className="form-group88">
+                          <div className="account_form_group">
                             <label>City</label>
                             <input type="text" name="businessCity" value={formData.businessCity} onChange={handleFormChange} />
                           </div>
                         </div>
-                        <div className="form-row88">
-                          <div className="form-group88">
+                        <div className="account_form_row">
+                          <div className="account_form_group">
                             <label>Country</label>
                             <select name="businessCountryId" value={formData.businessCountryId} onChange={handleFormChange}>
                               <option value="">Select Country</option>
@@ -1237,7 +1242,7 @@ const Overview = ({
                               ))}
                             </select>
                           </div>
-                          <div className="form-group88">
+                          <div className="account_form_group">
                             <label>State</label>
                             <select name="businessStateId" value={formData.businessStateId} onChange={handleFormChange}>
                               <option value="">Select State</option>
@@ -1249,94 +1254,94 @@ const Overview = ({
                             </select>
                           </div>
                         </div>
-                        <div className="form-row88">
-                          <div className="form-group88">
+                        <div className="account_form_row">
+                          <div className="account_form_group">
                             <label>Postal Code</label>
                             <input type="text" name="businessPostalCode" value={formData.businessPostalCode} onChange={handleFormChange} />
                           </div>
                         </div>
-                        <div className="form-buttons88">
-                          <button type="submit" className="save88" disabled={isLoading}>
+                        <div className="account_form_buttons">
+                          <button type="submit" className="account_save" disabled={isLoading}>
                             {isLoading ? 'Saving...' : 'Save'}
                           </button>
-                          <button type="button" className="cancel88" onClick={() => setEditingBusinessAddress(false)} disabled={isLoading}>
+                          <button type="button" className="account_cancel" onClick={() => setEditingBusinessAddress(false)} disabled={isLoading}>
                             Cancel
                           </button>
                         </div>
                       </form>
                     ) : (
-                      <div className="view-details88">
-                        <div className="details-row88">
-                          <div className="details-group88">
+                      <div className="account_view_details">
+                        <div className="account_details_row">
+                          <div className="account_details_group">
                             <label>Address Line 1</label>
                             <p>{accountDetails.BUSINESS_ADDR_LINE1 || '-'}</p>
                           </div>
-                          <div className="details-group88">
+                          <div className="account_details_group">
                             <label>Address Line 2</label>
                             <p>{accountDetails.BUSINESS_ADDR_LINE2 || '-'}</p>
                           </div>
                         </div>
-                        <div className="details-row88">
-                          <div className="details-group88">
+                        <div className="account_details_row">
+                          <div className="account_details_group">
                             <label>Address Line 3</label>
                             <p>{accountDetails.BUSINESS_ADDR_LINE3 || '-'}</p>
                           </div>
-                          <div className="details-group88">
+                          <div className="account_details_group">
                             <label>City</label>
                             <p>{accountDetails.BUSINESS_CITY || '-'}</p>
                           </div>
                         </div>
-                        <div className="details-row88">
-                          <div className="details-group88">
+                        <div className="account_details_row">
+                          <div className="account_details_group">
                             <label>Country</label>
                             <p>{getCountryName(accountDetails.BUSINESS_COUNTRY_ID)}</p>
                           </div>
-                          <div className="details-group88">
+                          <div className="account_details_group">
                             <label>State</label>
                             <p>{accountDetails.BUSINESS_STATE_ID ? getStateName(accountDetails.BUSINESS_STATE_ID) : '-'}</p>
                           </div>
                         </div>
-                        <div className="details-row88">
-                          <div className="details-group88">
+                        <div className="account_details_row">
+                          <div className="account_details_group">
                             <label>Postal Code</label>
                             <p>{accountDetails.BUSINESS_POSTAL_CODE || '-'}</p>
                           </div>
                         </div>
                         {canEditAccounts && (
-                          <div className="details-buttons88">
-                            <button className="button88" onClick={() => handleEdit('businessAddress')}>Edit</button>
+                          <div className="account_details_buttons">
+                            <button className="account_button" onClick={() => handleEdit('businessAddress')}>Edit</button>
                           </div>
                         )}
                       </div>
                     )}
                   </div>
 
-                  <div className="details-block88">
+                  <div className="account_details_block">
                     <h3>Mailing Address</h3>
                     {editingMailingAddress && canEditAccounts ? (
                       <form onSubmit={(e) => { e.preventDefault(); handleSave('mailingAddress'); }}>
-                        <div className="form-row88">
-                          <div className="form-group88">
+                        <div className="account_form_row">
+                          <div className="account_form_group">
                             <label>Address Line 1</label>
                             <input type="text" name="mailingAddrLine1" value={formData.mailingAddrLine1} onChange={handleFormChange} />
                           </div>
-                          <div className="form-group88">
+                          <div className="account_form_group">
                             <label>Address Line 2</label>
                             <input type="text" name="mailingAddrLine2" value={formData.mailingAddrLine2} onChange={handleFormChange} />
                           </div>
                         </div>
-                        <div className="form-row88">
-                          <div className="form-group88">
+                        <div className="account_form_row">
+                          <div className="account_form_group">
                             <label>Address Line 3</label>
                             <input type="text" name="mailingAddrLine3" value={formData.mailingAddrLine3} onChange={handleFormChange} />
                           </div>
-                          <div className="form-group88">
+                          <div className="account_form_group">
                             <label>City</label>
                             <input type="text" name="mailingCity" value={formData.mailingCity} onChange={handleFormChange} />
                           </div>
                         </div>
-                        <div className="form-row88">
-                          <div className="form-group88">
+                        <div className="account_form_row">
+                          <div className="account_form_group">
                             <label>Country</label>
                             <select name="mailingCountryId" value={formData.mailingCountryId} onChange={handleFormChange}>
                               <option value="">Select Country</option>
@@ -1347,7 +1352,7 @@ const Overview = ({
                               ))}
                             </select>
                           </div>
-                          <div className="form-group88">
+                          <div className="account_form_group">
                             <label>State</label>
                             <select name="mailingStateId" value={formData.mailingStateId} onChange={handleFormChange}>
                               <option value="">Select State</option>
@@ -1359,62 +1364,62 @@ const Overview = ({
                             </select>
                           </div>
                         </div>
-                        <div className="form-row88">
-                          <div className="form-group88">
+                        <div className="account_form_row">
+                          <div className="account_form_group">
                             <label>Postal Code</label>
                             <input type="text" name="mailingPostalCode" value={formData.mailingPostalCode} onChange={handleFormChange} />
                           </div>
                         </div>
-                        <div className="form-buttons88">
-                          <button type="submit" className="save88" disabled={isLoading}>
+                        <div className="account_form_buttons">
+                          <button type="submit" className="account_save" disabled={isLoading}>
                             {isLoading ? 'Saving...' : 'Save'}
                           </button>
-                          <button type="button" className="cancel88" onClick={() => setEditingMailingAddress(false)} disabled={isLoading}>
+                          <button type="button" className="account_cancel" onClick={() => setEditingMailingAddress(false)} disabled={isLoading}>
                             Cancel
                           </button>
                         </div>
                       </form>
                     ) : (
-                      <div className="view-details88">
-                        <div className="details-row88">
-                          <div className="details-group88">
+                      <div className="account_view_details">
+                        <div className="account_details_row">
+                          <div className="account_details_group">
                             <label>Address Line 1</label>
                             <p>{accountDetails.MAILING_ADDR_LINE1 || '-'}</p>
                           </div>
-                          <div className="details-group88">
+                          <div className="account_details_group">
                             <label>Address Line 2</label>
                             <p>{accountDetails.MAILING_ADDR_LINE2 || '-'}</p>
                           </div>
                         </div>
-                        <div className="details-row88">
-                          <div className="details-group88">
+                        <div className="account_details_row">
+                          <div className="account_details_group">
                             <label>Address Line 3</label>
                             <p>{accountDetails.MAILING_ADDR_LINE3 || '-'}</p>
                           </div>
-                          <div className="details-group88">
+                          <div className="account_details_group">
                             <label>City</label>
                             <p>{accountDetails.MAILING_CITY || '-'}</p>
                           </div>
                         </div>
-                        <div className="details-row88">
-                          <div className="details-group88">
+                        <div className="account_details_row">
+                          <div className="account_details_group">
                             <label>Country</label>
                             <p>{getCountryName(accountDetails.MAILING_COUNTRY_ID)}</p>
                           </div>
-                          <div className="details-group88">
+                          <div className="account_details_group">
                             <label>State</label>
                             <p>{accountDetails.MAILING_STATE_ID ? getStateName(accountDetails.MAILING_STATE_ID) : '-'}</p>
                           </div>
                         </div>
-                        <div className="details-row88">
-                          <div className="details-group88">
+                        <div className="account_details_row">
+                          <div className="account_details_group">
                             <label>Postal Code</label>
                             <p>{accountDetails.MAILING_POSTAL_CODE || '-'}</p>
                           </div>
                         </div>
                         {canEditAccounts && (
-                          <div className="details-buttons88">
-                            <button className="button88" onClick={() => handleEdit('mailingAddress')}>Edit</button>
+                          <div className="account_details_buttons">
+                            <button className="account_button" onClick={() => handleEdit('mailingAddress')}>Edit</button>
                           </div>
                         )}
                       </div>
