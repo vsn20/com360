@@ -795,9 +795,7 @@
   padding-top: 24px;
 }
 
-.account_view_details {
-  /* Styles for view mode */
-}
+
 
 @media (max-width: 768px) {
   .account_select_items,
