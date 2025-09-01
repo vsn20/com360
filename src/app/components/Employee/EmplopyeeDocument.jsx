@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { addDocument, updateDocument, deleteDocument } from '@/app/serverActions/Employee/employeedocuments';
+import styles from './document.module.css';
 
 const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate }) => {
   const [editing, setEditing] = useState(false);
@@ -21,8 +22,6 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
   const [documentsPerPageInput, setDocumentsPerPageInput] = useState('5');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('all');
-  const [openDropdownId, setOpenDropdownId] = useState(null); // Track open dropdown
-  const dropdownRef = useRef(null); // Ref for handling outside clicks
 
   useEffect(() => {
     setAllDocuments(Array.isArray(initialDocuments) ? initialDocuments : []);
@@ -31,19 +30,6 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
   useEffect(() => {
     setPageInputValue(currentPage.toString());
   }, [currentPage]);
-
-  // Handle clicks outside the dropdown to close it
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setOpenDropdownId(null);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -76,6 +62,7 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
     try {
       const result = await addDocument(formData);
       setNewDocument({ documentName: '', documentType: '', documentPurpose: '', file: null });
+      setEditing(false); // Redirect back to list view
       if (onDocumentsUpdate) onDocumentsUpdate();
       setError(null);
     } catch (err) {
@@ -108,7 +95,6 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
       await deleteDocument(docId);
       if (onDocumentsUpdate) onDocumentsUpdate();
       setError(null);
-      setOpenDropdownId(null); // Close dropdown after delete
     } catch (err) {
       setError(`Failed to delete document: ${err.message}`);
     }
@@ -118,10 +104,6 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
     if (path && path.toLowerCase().endsWith('.pdf')) {
       window.open(path, '_blank');
     }
-  };
-
-  const toggleDropdown = (docId) => {
-    setOpenDropdownId((prev) => (prev === docId ? null : docId));
   };
 
   const sortDocuments = (a, b, column, direction) => {
@@ -229,14 +211,25 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
   const currentDocuments = sortedDocuments.slice(indexOfFirstDocument, indexOfLastDocument);
 
   return (
-    <div className="relative">
-      <h2>Employee Documents</h2>
-      {error && <div className="text-red-500 mb-4">{error}</div>}
+    <div className={styles.container}>
+      <div className={styles.titleContainer}>
+        <h3 className={styles.title}>Employee Documents</h3>
+        {!editing && (
+          <button
+            className={`${styles.button} ${styles.addButton}`}
+            onClick={() => setEditing(true)}
+          >
+            Add Document
+          </button>
+        )}
+      </div>
+      {error && <div className={styles.errorMessage}>{error}</div>}
+      
       {editing ? (
-        <form onSubmit={editDocument ? handleUpdateDocument : handleAddDocument} className="space-y-4">
-          <div className="flex space-x-4">
-            <div className="flex-1">
-              <label className="block text-sm font-medium">Name*</label>
+        <form onSubmit={editDocument ? handleUpdateDocument : handleAddDocument} className={styles.form}>
+          <div className={styles.formRow}>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Name*</label>
               <input
                 type="text"
                 value={editDocument ? editDocument.document_name : newDocument.documentName}
@@ -246,22 +239,22 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
                     : setNewDocument({ ...newDocument, documentName: e.target.value })
                 }
                 required
-                className="w-full border rounded p-2"
+                className={styles.formInput}
               />
             </div>
-            <div className="flex-1">
-              <label className="block text-sm font-medium">Type*</label>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Type*</label>
               <input
                 type="text"
                 value={editDocument ? editDocument.document_type : newDocument.documentType}
                 disabled
-                className="w-full border rounded p-2 bg-gray-100"
+                className={`${styles.formInput} ${styles.formInput}:disabled`}
               />
             </div>
           </div>
-          <div className="flex space-x-4">
-            <div className="flex-1">
-              <label className="block text-sm font-medium">Purpose*</label>
+          <div className={styles.formRow}>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Purpose*</label>
               <input
                 type="text"
                 value={editDocument ? editDocument.document_purpose : newDocument.documentPurpose}
@@ -271,31 +264,31 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
                     : setNewDocument({ ...newDocument, documentPurpose: e.target.value })
                 }
                 required
-                className="w-full border rounded p-2"
+                className={styles.formInput}
               />
             </div>
-            <div className="flex-1">
-              <label className="block text-sm font-medium">File</label>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>File</label>
               {editDocument && editDocument.document_path ? (
-                <div className="text-sm">{editDocument.document_path.split('/').pop()}</div>
+                <div className={styles.fileName}>{editDocument.document_path.split('/').pop()}</div>
               ) : (
                 <input
                   type="file"
                   accept=".pdf,.jpg,.jpeg"
                   onChange={handleFileChange}
                   disabled={!!editDocument}
-                  className="w-full border rounded p-2"
+                  className={styles.fileInput}
                 />
               )}
             </div>
           </div>
-          <div className="flex space-x-2">
-            <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+          <div className={styles.formButtons}>
+            <button type="submit" className={`${styles.button} ${styles.saveButton}`}>
               {editDocument ? 'Save' : 'Add Document'}
             </button>
             <button
               type="button"
-              className="bg-gray-300 text-black px-4 py-2 rounded hover:bg-gray-400"
+              className={`${styles.button} ${styles.cancelButton}`}
               onClick={() => {
                 setEditing(false);
                 setEditDocument(null);
@@ -308,18 +301,18 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
         </form>
       ) : (
         <>
-          <div className="flex space-x-4 mb-4">
+          <div className={styles.searchFilterContainer}>
             <input
               type="text"
               value={searchQuery}
               onChange={handleSearchChange}
-              className="border rounded p-2 flex-1"
+              className={styles.searchInput}
               placeholder="Search by name..."
             />
             <select
               value={filterType}
               onChange={handleFilterChange}
-              className="border rounded p-2"
+              className={styles.filterSelect}
             >
               <option value="all">All Types</option>
               <option value="pdf">PDF</option>
@@ -328,108 +321,110 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
               <option value="unknown">Unknown</option>
             </select>
           </div>
+          
           {filteredDocuments.length === 0 ? (
-            <p>No documents available.</p>
+            <p className={styles.emptyState}>No documents available.</p>
           ) : (
             <>
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
+              <div className={styles.tableWrapper}>
+                <table className={styles.table}>
                   <thead>
-                    <tr className="bg-gray-100">
+                    <tr>
                       <th
-                        className={`p-2 text-left cursor-pointer ${sortConfig.column === 'document_name' ? `sort-${sortConfig.direction}` : ''}`}
+                        className={`${styles.tableHeader} ${styles.sortable} ${
+                          sortConfig.column === 'document_name' 
+                            ? sortConfig.direction === 'asc' ? styles.sortAsc : styles.sortDesc
+                            : ''
+                        }`}
                         onClick={() => requestSort('document_name')}
                       >
                         Name
                       </th>
                       <th
-                        className={`p-2 text-left cursor-pointer ${sortConfig.column === 'document_type' ? `sort-${sortConfig.direction}` : ''}`}
+                        className={`${styles.tableHeader} ${styles.sortable} ${
+                          sortConfig.column === 'document_type' 
+                            ? sortConfig.direction === 'asc' ? styles.sortAsc : styles.sortDesc
+                            : ''
+                        }`}
                         onClick={() => requestSort('document_type')}
                       >
                         Type
                       </th>
                       <th
-                        className={`p-2 text-left cursor-pointer ${sortConfig.column === 'last_updated_date' ? `sort-${sortConfig.direction}` : ''}`}
+                        className={`${styles.tableHeader} ${styles.sortable} ${
+                          sortConfig.column === 'last_updated_date' 
+                            ? sortConfig.direction === 'asc' ? styles.sortAsc : styles.sortDesc
+                            : ''
+                        }`}
                         onClick={() => requestSort('last_updated_date')}
                       >
                         Last Updated
                       </th>
-                      <th className="p-2 text-left">Purpose</th>
-                      <th className="p-2 text-left">Actions</th>
+                      <th className={styles.tableHeader}>Purpose</th>
+                      <th className={styles.tableHeader}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {currentDocuments.map((d) => (
-                      <tr key={d.id} className="border-b">
+                      <tr key={d.id} className={styles.tableRow}>
                         <td
-                          className="p-2"
-                          style={{ cursor: d.document_path && d.document_path.toLowerCase().endsWith('.pdf') ? 'pointer' : 'default' }}
+                          className={`${styles.tableCell} ${
+                            d.document_path && d.document_path.toLowerCase().endsWith('.pdf') 
+                              ? styles.clickableCell 
+                              : ''
+                          }`}
                           onClick={() => handleDocumentClick(d.document_path)}
                         >
                           {d.document_name || 'N/A'}
                         </td>
-                        <td className="p-2">{d.document_type || 'N/A'}</td>
-                        <td className="p-2">{d.last_updated_date || 'N/A'}</td>
-                        <td className="p-2">{d.document_purpose || 'N/A'}</td>
-                        <td className="p-2 relative">
+                        <td className={styles.tableCell}>{d.document_type || 'N/A'}</td>
+                        <td className={styles.tableCell}>{d.last_updated_date || 'N/A'}</td>
+                        <td className={styles.tableCell}>{d.document_purpose || 'N/A'}</td>
+                        <td className={`${styles.tableCell} ${styles.actionsCell}`}>
                           <button
-                            className="text-gray-600 hover:text-gray-800"
-                            onClick={() => toggleDropdown(d.id)}
-                            aria-label="More options"
+                            className={styles.editButton}
+                            onClick={() => {
+                              setEditing(true);
+                              setEditDocument({ ...d });
+                            }}
                           >
-                            ⋮
+                            Edit
                           </button>
-                          {openDropdownId === d.id && (
-                            <div
-                              ref={dropdownRef}
-                              className="absolute right-0 mt-2 w-32 bg-white border rounded shadow-lg z-10"
-                            >
-                              <button
-                                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                onClick={() => {
-                                  setEditing(true);
-                                  setEditDocument({ ...d });
-                                  setOpenDropdownId(null);
-                                }}
-                              >
-                                Edit
-                              </button>
-                              <button
-                                className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
-                                onClick={() => handleDeleteDocument(d.id)}
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          )}
+                          <button
+                            className={styles.deleteButton}
+                            onClick={() => handleDeleteDocument(d.id)}
+                          >
+                            Delete
+                          </button>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+              
               {filteredDocuments.length > documentsPerPage && (
-                <div className="flex items-center space-x-4 mt-4">
+                <div className={styles.paginationContainer}>
                   <button
-                    className="bg-gray-300 text-black px-4 py-2 rounded disabled:opacity-50"
+                    className={styles.paginationButton}
                     onClick={handlePrevPage}
                     disabled={currentPage === 1}
                   >
                     ← Previous
                   </button>
-                  <span>
+                  <span className={styles.paginationText}>
                     Page{' '}
                     <input
                       type="text"
                       value={pageInputValue}
                       onChange={handlePageInputChange}
                       onKeyPress={handlePageInputKeyPress}
-                      className="w-12 border rounded p-1 text-center"
+                      className={styles.paginationInput}
                     />{' '}
                     of {totalPages}
                   </span>
                   <button
-                    className="bg-gray-300 text-black px-4 py-2 rounded disabled:opacity-50"
+                    className={styles.paginationButton}
                     onClick={handleNextPage}
                     disabled={currentPage === totalPages}
                   >
@@ -437,27 +432,22 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
                   </button>
                 </div>
               )}
+              
               {filteredDocuments.length > 0 && (
-                <div className="flex items-center space-x-2 mt-4">
-                  <label className="text-sm">Rows/ Page</label>
+                <div className={styles.rowsPerPageContainer}>
+                  <label className={styles.rowsPerPageLabel}>Rows/ Page</label>
                   <input
                     type="text"
                     value={documentsPerPageInput}
                     onChange={handleDocumentsPerPageInputChange}
                     onKeyPress={handleDocumentsPerPageInputKeyPress}
-                    className="w-12 border rounded p-1 text-center"
+                    className={styles.rowsPerPageInput}
                     aria-label="Number of rows per page"
                   />
                 </div>
               )}
             </>
           )}
-          <button
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 mt-4"
-            onClick={() => setEditing(true)}
-          >
-            Add Document
-          </button>
         </>
       )}
     </div>
