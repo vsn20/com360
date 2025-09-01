@@ -216,7 +216,7 @@ tbody tr:hover {
 }
 
 .status-badge {
-  display: inline-flex;
+  /* display: inline-flex; */
   align-items: center;
   padding: 4px 12px;
   border-radius: 9999px;
@@ -630,7 +630,7 @@ tbody tr:hover {
 
 /* Status badges */
 .status-badge1 {
-  display: inline-flex;
+  /* display: inline-flex; */
   align-items: center;
   padding: 4px 12px;
   border-radius: 9999px;
