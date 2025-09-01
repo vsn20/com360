@@ -172,84 +172,80 @@ const Overview = ({ orgid, empid, organizations, countries, states }) => {
   const currentOrganizations = filteredOrganizations.slice(indexOfFirstOrg, indexOfLastOrg);
 
   return (
-    <div className="organization-overview-container89">
+    <div className="organization_overview_container">
       {add && (
-        <div className="organization-details-container89">
-          <div className="header-section89">
-            <h1 className="title89">Add Organization</h1>
-            <button className="back-button89" onClick={handleBackClick}></button>
+        <div className="organization_details_container">
+          <div className="organization_header_section">
+            <h1 className="organization_title">Add Organization</h1>
+            <button className="organization_back_button" onClick={handleBackClick}></button>
           </div>
           <AddOrganization orgid={orgid} empid={empid} countries={countries} states={states} />
         </div>
       )}
       {!add && selectedorgid ? (
-        <div className="organization-details-container89">
-          <div className="header-section89">
-            <h1 className="title89">Edit Organization</h1>
-            <button className="back-button89" onClick={handleBackClick}></button>
+        <div className="organization_details_container">
+          <div className="organization_header_section">
+            <h1 className="organization_title">Edit Organization</h1>
+            <button className="organization_back_button" onClick={handleBackClick}></button>
           </div>
           <EditOrganization selectedorgid={selectedorgid} orgid={orgid} empid={empid} countries={countries} states={states} />
         </div>
       ) : (
         !add && (
-          <div className="organization-list89">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h1 className="title89">Existing Organizations</h1>
-              <button onClick={handleAdd} className="button89">Add Organization</button>
+          <div>
+            <div className="organization_header_section">
+              <h1 className="organization_title">Existing Organizations</h1>
+              <button onClick={handleAdd} className="organization_button">Add Organization</button>
             </div>
-            <div className="search-filter-container89">
+            <div className="organization_search_filter_container">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={handleSearchChange}
-                className="search-input89"
+                className="organization_search_input"
                 placeholder="Search by organization name..."
               />
-              <select value={isActiveFilter} onChange={handleStatusFilterChange} className="filter-select89">
+              <select value={isActiveFilter} onChange={handleStatusFilterChange} className="organization_filter_select">
                 <option value="all">All Statuses</option>
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
               </select>
             </div>
             {filteredOrganizations.length === 0 ? (
-              <div className="empty-state89">No organizations found.</div>
+              <div className="organization_empty_state">No organizations found.</div>
             ) : (
               <>
-                <div className="table-wrapper89">
-                  <table className="four-column89">
-                    <colgroup>
-                      <col />
-                      <col />
-                      <col />
-                      <col />
-                    </colgroup>
+                <div className="organization_table_wrapper">
+                  <table className="organization_table">
                     <thead>
                       <tr>
-                        <th className={sortConfig.column === 'suborgid' ? `sortable89 sort-${sortConfig.direction}89` : 'sortable89'} onClick={() => requestSort('suborgid')}>
+                        <th className={`organization_sortable ${sortConfig.column === 'suborgid' ? `organization_sort_${sortConfig.direction}` : ''}`} onClick={() => requestSort('suborgid')}>
                           Organization ID
                         </th>
-                        <th className={sortConfig.column === 'suborgname' ? `sortable89 sort-${sortConfig.direction}89` : 'sortable89'} onClick={() => requestSort('suborgname')}>
+                        <th className={`organization_sortable ${sortConfig.column === 'suborgname' ? `organization_sort_${sortConfig.direction}` : ''}`} onClick={() => requestSort('suborgname')}>
                           Organization Name
                         </th>
-                        <th className={sortConfig.column === 'country' ? `sortable89 sort-${sortConfig.direction}89` : 'sortable89'} onClick={() => requestSort('country')}>
+                        <th className={`organization_sortable ${sortConfig.column === 'country' ? `organization_sort_${sortConfig.direction}` : ''}`} onClick={() => requestSort('country')}>
                           Country
                         </th>
-                        <th className={sortConfig.column === 'isstatus' ? `sortable89 sort-${sortConfig.direction}89` : 'sortable89'} onClick={() => requestSort('isstatus')}>
+                        <th className={`organization_sortable ${sortConfig.column === 'isstatus' ? `organization_sort_${sortConfig.direction}` : ''}`} onClick={() => requestSort('isstatus')}>
                           Status
                         </th>
                       </tr>
                     </thead>
                     <tbody>
                       {currentOrganizations.map((org) => (
-                        <tr key={org.suborgid} onClick={() => handleRowClick(org.suborgid)}>
-                          <td className="id-cell89">
-                            <span className={org.isstatus ? 'org-indicator-active' : 'org-indicator-inactive'}></span>
+                        <tr key={org.suborgid} onClick={() => handleRowClick(org.suborgid)} className="organization_clickable_row">
+                          <td className="organization_id_cell">
+                            <span className={org.isstatus ? 'organization_indicator_active' : 'organization_indicator_inactive'}></span>
                             {org.suborgid.split('-')[1] || org.suborgid}
                           </td>
                           <td>{org.suborgname || '-'}</td>
                           <td>{org.country ? (countries.find(c => String(c.ID) === org.country)?.VALUE || 'Unknown Country') : '-'}</td>
-                          <td className={org.isstatus ? 'status-badge89 active89' : 'status-badge89 inactive89'}>
-                            {org.isstatus ? 'Active' : 'Inactive'}
+                          <td>
+                            <span className={`organization_status_badge ${org.isstatus ? 'organization_active' : 'organization_inactive'}`}>
+                              {org.isstatus ? 'Active' : 'Inactive'}
+                            </span>
                           </td>
                         </tr>
                       ))}
@@ -257,27 +253,27 @@ const Overview = ({ orgid, empid, organizations, countries, states }) => {
                   </table>
                 </div>
                 {filteredOrganizations.length > orgsPerPage && (
-                  <div className="pagination-container89">
+                  <div className="organization_pagination_container">
                     <button
-                      className="button89"
+                      className="organization_button"
                       onClick={handlePrevPage}
                       disabled={currentPage === 1}
                     >
                       ← Previous
                     </button>
-                    <span className="pagination-text89">
+                    <span className="organization_pagination_text">
                       Page{' '}
                       <input
                         type="text"
                         value={pageInputValue}
                         onChange={handlePageInputChange}
                         onKeyPress={handlePageInputKeyPress}
-                        className="pagination-input89"
+                        className="organization_pagination_input"
                       />{' '}
                       of {totalPages}
                     </span>
                     <button
-                      className="button89"
+                      className="organization_button"
                       onClick={handleNextPage}
                       disabled={currentPage === totalPages}
                     >
@@ -286,14 +282,14 @@ const Overview = ({ orgid, empid, organizations, countries, states }) => {
                   </div>
                 )}
                 {filteredOrganizations.length > 0 && (
-                  <div className="rows-per-page-container89">
-                    <label className="rows-per-page-label89">Rows/ Page</label>
+                  <div className="organization_rows_per_page_container">
+                    <label className="organization_rows_per_page_label">Rows/ Page</label>
                     <input
                       type="text"
                       value={orgsPerPageInput}
                       onChange={handleOrgsPerPageInputChange}
                       onKeyPress={handleOrgsPerPageInputKeyPress}
-                      className="rows-per-page-input89"
+                      className="organization_rows_per_page_input"
                       aria-label="Number of rows per page"
                     />
                   </div>

@@ -84,19 +84,17 @@ const AddOrganization = ({ orgid, empid, countries, states }) => {
   const isUSA = form.country === usaCountryId;
 
   return (
-    <div className="organization-details-container89">
-      {success && <div className="success-message89">{success}</div>}
-      {error && <div className="error-message89">{error}</div>}
-      {isLoading && <div className="loading-message89">Saving...</div>}
+    <div>
+      {success && <div className="organization_success_message">{success}</div>}
+      {error && <div className="organization_error_message">{error}</div>}
+      {isLoading && <div className="organization_loading_message">Saving...</div>}
       
-      <div className="details-block89">
-        <div className="orgdetails-header89">
-          <div>Add Organization</div>
-        </div>
+      <div className="organization_details_block">
+        <h3 className="organization_details_header_title">Add Organization</h3>
         
         <form onSubmit={handleSubmit}>
-          <div className="form-row89">
-            <div className="form-group89">
+          <div className="organization_form_row">
+            <div className="organization_form_group">
               <label>Organization Name*</label>
               <input
                 type="text"
@@ -107,17 +105,17 @@ const AddOrganization = ({ orgid, empid, countries, states }) => {
                 required
               />
             </div>
-            <div className="form-group89">
+            <div className="organization_form_group">
               <label>Status</label>
               <select name="isstatus" value={form.isstatus} onChange={handleChange}>
-                <option value="Active">Yes</option>
-                <option value="Inactive">No</option>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
               </select>
             </div>
           </div>
           
-          <div className="form-row89">
-            <div className="form-group89">
+          <div className="organization_form_row">
+            <div className="organization_form_group">
               <label>Address Line 1</label>
               <input
                 type="text"
@@ -127,7 +125,7 @@ const AddOrganization = ({ orgid, empid, countries, states }) => {
                 placeholder="Enter Address Line 1"
               />
             </div>
-            <div className="form-group89">
+            <div className="organization_form_group">
               <label>Address Line 2</label>
               <input
                 type="text"
@@ -139,8 +137,8 @@ const AddOrganization = ({ orgid, empid, countries, states }) => {
             </div>
           </div>
           
-          <div className="form-row89">
-            <div className="form-group89">
+          <div className="organization_form_row">
+            <div className="organization_form_group">
               <label>Country</label>
               <select name="country" value={form.country} onChange={handleChange}>
                 <option value="">Select Country</option>
@@ -151,7 +149,7 @@ const AddOrganization = ({ orgid, empid, countries, states }) => {
                 ))}
               </select>
             </div>
-            <div className="form-group89">
+            <div className="organization_form_group">
               <label>State</label>
               <select name="state" value={form.state} onChange={handleChange} disabled={!isUSA}>
                 <option value="">Select State</option>
@@ -164,8 +162,8 @@ const AddOrganization = ({ orgid, empid, countries, states }) => {
             </div>
           </div>
           
-          <div className="form-row89">
-            <div className="form-group89">
+          <div className="organization_form_row">
+            <div className="organization_form_group">
               <label>Custom State Name</label>
               <input
                 type="text"
@@ -176,7 +174,7 @@ const AddOrganization = ({ orgid, empid, countries, states }) => {
                 placeholder="Enter Custom State Name"
               />
             </div>
-            <div className="form-group89">
+            <div className="organization_form_group">
               <label>Postal Code</label>
               <input
                 type="text"
@@ -188,8 +186,8 @@ const AddOrganization = ({ orgid, empid, countries, states }) => {
             </div>
           </div>
           
-          <div className="form-buttons89">
-            <button type="submit" className="save89" disabled={isLoading}>
+          <div className="organization_form_buttons">
+            <button type="submit" className="organization_submit_button" disabled={isLoading}>
               {isLoading ? 'Saving...' : 'Add Organization'}
             </button>
           </div>

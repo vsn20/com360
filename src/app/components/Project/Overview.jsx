@@ -505,8 +505,8 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
           </div>
           {addformsuccess && <div className="project_success_message">{addformsuccess}</div>}
           {state.error && <div className="project_error_message">{state.error}</div>}
-          <form action={addform_enhancedFormAction} className="project_form_container">
-            <div className="project_form_section">
+          <form action={addform_enhancedFormAction}>
+            <div className="project_details_block">
               <h3>Basic Details</h3>
               <div className="project_form_row">
                 <div className="project_form_group">
@@ -558,7 +558,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
               </div>
             </div>
 
-            <div className="project_form_section">
+            <div className="project_details_block">
               <h3>Additional Details</h3>
               <div className="project_form_row">
                 <div className="project_form_group">
@@ -734,9 +734,9 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
 
       {!isadd && !selectedProject ? (
         <div className="project_list">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <div className="project_header_section">
             <h1 className="project_title">Existing Projects</h1>
-            <button onClick={() => handleaddproject()} className="project_submit_button">Add Project</button>
+            <button onClick={() => handleaddproject()} className="project_button">Add Project</button>
           </div>
           <div className="project_search_filter_container">
             <input
@@ -783,7 +783,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                       <tr
                         key={project.PRJ_ID}
                         onClick={() => handleRowClick(project)}
-                        className={selectedProject && selectedProject.PRJ_ID === project.PRJ_ID ? 'project_selected_row' : 'project_clickable_row'}
+                        className="project_clickable_row"
                       >
                         <td className='project_id_cell'>
                           <span className='project_indicator'></span>
@@ -854,9 +854,11 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
           </div>
           {basicdetailsdisplay && !additionaldetailsdisplay && (
             <div className="project_details_block">
-              <h3>Basic Details</h3>
               {editingBasic && canEditProjects ? (
-                <form onSubmit={(e) => { e.preventDefault(); handleSave('basic'); }} className="project_form">
+                <form onSubmit={(e) => { e.preventDefault(); handleSave('basic'); }}>
+                  <div className="project_details_header">
+                    <h3 className="project_details_header_title">Basic Details</h3>
+                  </div>
                   <div className="project_form_row">
                     <div className="project_form_group">
                       <label>Project Name*:</label>
@@ -916,47 +918,54 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                   </div>
                 </form>
               ) : (
-                <div className="project_view_details">
-                  <div className="project_details_row">
-                    <div className="project_details_group">
-                      <label>Project ID:</label>
-                      <p>Project-{getdisplayprojectid(selectedProject.PRJ_ID)}</p>
+                <>
+                  <div className="project_details_header">
+                    <h3 className="project_details_header_title">Basic Details</h3>
+                    {canEditProjects && (
+                      <div className="project_details_buttons">
+                        <button className="project_edit_button" onClick={() => handleEdit('basic')}>Edit</button>
+                      </div>
+                    )}
+                  </div>
+                  <div className="project_view_details">
+                    <div className="project_details_row">
+                      <div className="project_details_group">
+                        <label>Project ID:</label>
+                        <p>Project-{getdisplayprojectid(selectedProject.PRJ_ID)}</p>
+                      </div>
+                      <div className="project_details_group">
+                        <label>Project Name:</label>
+                        <p>{selectedProject.PRJ_NAME || '-'}</p>
+                      </div>
                     </div>
-                    <div className="project_details_group">
-                      <label>Project Name:</label>
-                      <p>{selectedProject.PRJ_NAME || '-'}</p>
+                    <div className="project_details_row">
+                      <div className="project_details_group">
+                        <label>Description:</label>
+                        <p>{selectedProject.PRS_DESC || '-'}</p>
+                      </div>
+                      <div className="project_details_group">
+                        <label>Account:</label>
+                        <p>{getAccountName(selectedProject.ACCNT_ID)}</p>
+                      </div>
+                    </div>
+                    <div className="project_details_row">
+                      <div className="project_details_group">
+                        <label>Organization:</label>
+                        <p>{selectedProject.suborgname || '---'}</p>
+                      </div>
                     </div>
                   </div>
-                  <div className="project_details_row">
-                    <div className="project_details_group">
-                      <label>Description:</label>
-                      <p>{selectedProject.PRS_DESC || '-'}</p>
-                    </div>
-                    <div className="project_details_group">
-                      <label>Account:</label>
-                      <p>{getAccountName(selectedProject.ACCNT_ID)}</p>
-                    </div>
-                  </div>
-                  <div className="project_details_row">
-                    <div className="project_details_group">
-                      <label>Organization:</label>
-                      <p>{selectedProject.suborgname || '---'}</p>
-                    </div>
-                  </div>
-                  {canEditProjects && (
-                    <div className="project_details_buttons">
-                      <button className="project_edit_button" onClick={() => handleEdit('basic')}>Edit</button>
-                    </div>
-                  )}
-                </div>
+                </>
               )}
             </div>
           )}
           {additionaldetailsdisplay && (
             <div className="project_details_block">
-              <h3>Additional Details</h3>
               {editingAdditional && canEditProjects ? (
-                <form onSubmit={(e) => { e.preventDefault(); handleSave('additional'); }} className="project_form">
+                <form onSubmit={(e) => { e.preventDefault(); handleSave('additional'); }}>
+                  <div className="project_details_header">
+                    <h3 className="project_details_header_title">Additional Details</h3>
+                  </div>
                   <div className="project_form_row">
                     <div className="project_form_group">
                       <label>Bill Rate:</label>
@@ -1125,89 +1134,94 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                   </div>
                 </form>
               ) : (
-                <div className="project_view_details">
-                  <div className="project_details_row">
-                    <div className="project_details_group">
-                      <label>Bill Rate:</label>
-                      <p>{selectedProject.BILL_RATE || '-'}</p>
+                <>
+                  <div className="project_details_header">
+                    <h3 className="project_details_header_title">Additional Details</h3>
+                    {canEditProjects && (
+                      <div className="project_details_buttons">
+                        <button className="project_edit_button" onClick={() => handleEdit('additional')}>Edit</button>
+                      </div>
+                    )}
+                  </div>
+                  <div className="project_view_details">
+                    <div className="project_details_row">
+                      <div className="project_details_group">
+                        <label>Bill Rate:</label>
+                        <p>{selectedProject.BILL_RATE || '-'}</p>
+                      </div>
+                      <div className="project_details_group">
+                        <label>Bill Type:</label>
+                        <p>{getDisplayValue(selectedProject.BILL_TYPE, billTypes)}</p>
+                      </div>
                     </div>
-                    <div className="project_details_group">
-                      <label>Bill Type:</label>
-                      <p>{getDisplayValue(selectedProject.BILL_TYPE, billTypes)}</p>
+                    <div className="project_details_row">
+                      <div className="project_details_group">
+                        <label>OT Bill Rate:</label>
+                        <p>{selectedProject.OT_BILL_RATE || '-'}</p>
+                      </div>
+                      <div className="project_details_group">
+                        <label>OT Bill Type:</label>
+                        <p>{getDisplayValue(selectedProject.OT_BILL_TYPE, otBillTypes)}</p>
+                      </div>
+                    </div>
+                    <div className="project_details_row">
+                      <div className="project_details_group">
+                        <label>Billable:</label>
+                        <p>{selectedProject.BILLABLE_FLAG ? 'Yes' : 'No'}</p>
+                      </div>
+                      <div className="project_details_group">
+                        <label>Start Date:</label>
+                        <p>{formatDate(selectedProject.START_DT) || '-'}</p>
+                      </div>
+                    </div>
+                    <div className="project_details_row">
+                      <div className="project_details_group">
+                        <label>End Date:</label>
+                        <p>{formatDate(selectedProject.END_DT) || '-'}</p>
+                      </div>
+                      <div className="project_details_group">
+                        <label>Client:</label>
+                        <p>{getAccountName(selectedProject.CLIENT_ID)}</p>
+                      </div>
+                    </div>
+                    <div className="project_details_row">
+                      <div className="project_details_group">
+                        <label>Payment Term:</label>
+                        <p>{getDisplayValue(selectedProject.PAY_TERM, payTerms)}</p>
+                      </div>
+                      <div className="project_details_group">
+                        <label>Invoice Email:</label>
+                        <p>{selectedProject.INVOICE_EMAIL || '-'}</p>
+                      </div>
+                    </div>
+                    <div className="project_details_row">
+                      <div className="project_details_group">
+                        <label>Invoice Fax:</label>
+                        <p>{selectedProject.INVOICE_FAX || '-'}</p>
+                      </div>
+                      <div className="project_details_group">
+                        <label>Invoice Phone:</label>
+                        <p>{selectedProject.INVOICE_PHONE || '-'}</p>
+                      </div>
+                    </div>
+                    <div className="project_details_row">
+                      <div className="project_details_group">
+                        <label>Created By:</label>
+                        <p>{selectedProject.Createdby || '-'}</p>
+                      </div>
+                      <div className="project_details_group">
+                        <label>Updated By:</label>
+                        <p>{selectedProject.Updatedby || '-'}</p>
+                      </div>
+                    </div>
+                    <div className="project_details_row">
+                      <div className="project_details_group">
+                        <label>Last Updated Date:</label>
+                        <p>{formatDate(selectedProject.last_updated_date) || '-'}</p>
+                      </div>
                     </div>
                   </div>
-                  <div className="project_details_row">
-                    <div className="project_details_group">
-                      <label>OT Bill Rate:</label>
-                      <p>{selectedProject.OT_BILL_RATE || '-'}</p>
-                    </div>
-                    <div className="project_details_group">
-                      <label>OT Bill Type:</label>
-                      <p>{getDisplayValue(selectedProject.OT_BILL_TYPE, otBillTypes)}</p>
-                    </div>
-                  </div>
-                  <div className="project_details_row">
-                    <div className="project_details_group">
-                      <label>Billable:</label>
-                      <p>{selectedProject.BILLABLE_FLAG ? 'Yes' : 'No'}</p>
-                    </div>
-                    <div className="project_details_group">
-                      <label>Start Date:</label>
-                      <p>{formatDate(selectedProject.START_DT) || '-'}</p>
-                    </div>
-                  </div>
-                  <div className="project_details_row">
-                    <div className="project_details_group">
-                      <label>End Date:</label>
-                      <p>{formatDate(selectedProject.END_DT) || '-'}</p>
-                    </div>
-                    <div className="project_details_group">
-                      <label>Client:</label>
-                      <p>{getAccountName(selectedProject.CLIENT_ID)}</p>
-                    </div>
-                  </div>
-                  <div className="project_details_row">
-                    <div className="project_details_group">
-                      <label>Payment Term:</label>
-                      <p>{getDisplayValue(selectedProject.PAY_TERM, payTerms)}</p>
-                    </div>
-                    <div className="project_details_group">
-                      <label>Invoice Email:</label>
-                      <p>{selectedProject.INVOICE_EMAIL || '-'}</p>
-                    </div>
-                  </div>
-                  <div className="project_details_row">
-                    <div className="project_details_group">
-                      <label>Invoice Fax:</label>
-                      <p>{selectedProject.INVOICE_FAX || '-'}</p>
-                    </div>
-                    <div className="project_details_group">
-                      <label>Invoice Phone:</label>
-                      <p>{selectedProject.INVOICE_PHONE || '-'}</p>
-                    </div>
-                  </div>
-                  <div className="project_details_row">
-                    <div className="project_details_group">
-                      <label>Created By:</label>
-                      <p>{selectedProject.Createdby || '-'}</p>
-                    </div>
-                    <div className="project_details_group">
-                      <label>Updated By:</label>
-                      <p>{selectedProject.Updatedby || '-'}</p>
-                    </div>
-                  </div>
-                  <div className="project_details_row">
-                    <div className="project_details_group">
-                      <label>Last Updated Date:</label>
-                      <p>{formatDate(selectedProject.last_updated_date) || '-'}</p>
-                    </div>
-                  </div>
-                  {canEditProjects && (
-                    <div className="project_details_buttons">
-                      <button className="project_edit_button" onClick={() => handleEdit('additional')}>Edit</button>
-                    </div>
-                  )}
-                </div>
+                </>
               )}
             </div>
           )}
