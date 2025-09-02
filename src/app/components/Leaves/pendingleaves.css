@@ -18,6 +18,29 @@
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   font-family: Arial, sans-serif;
+  overflow-x: hidden; /* Prevent horizontal overflow */
+}
+
+/* === Controls Header (Search) === */
+.leaves_pending_controls_header {
+  margin-bottom: 20px;
+}
+
+.leaves_pending_search-input {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  width: 250px;
+  max-width: 100%; /* Prevent overflow on small screens */
+  box-sizing: border-box;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.leaves_pending_search-input:focus {
+  outline: none;
+  border-color: #0fd46c;
+  box-shadow: 0 0 0 2px rgba(15, 212, 108, 0.25);
 }
 
 /* === Messages === */
@@ -38,50 +61,118 @@
 
 /* === Table Styling === */
 .leaves_pending_table_wrapper {
-  overflow-x: auto;
+  overflow-x: hidden; /* Remove horizontal scroll */
+  width: 100%;
 }
+
 .leaves_pending_table {
   width: 100%;
   border-collapse: collapse;
-  white-space: nowrap;
+  table-layout: fixed; /* Fixed layout to control column widths */
+  /* Remove white-space: nowrap to allow text wrapping */
 }
+
 .leaves_pending_table th,
 .leaves_pending_table td {
-  padding: 16px 20px;
+  padding: 12px 8px; /* Reduced padding to save space */
   text-align: left;
   border-bottom: 1px solid #f3f4f6;
-  font-size: 14px;
+  font-size: 13px; /* Slightly smaller font */
   color: #374151;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  vertical-align: top;
 }
+
 .leaves_pending_table th {
   background-color: #f8fafc;
   font-weight: 600;
   border-bottom: 2px solid #e5e7eb;
+  white-space: nowrap; /* Keep headers single line */
 }
+
 .leaves_pending_table tbody tr:hover {
   background-color: #f8fafc;
 }
 
+/* === Specific Column Widths === */
+.leaves_pending_table th:nth-child(1),
+.leaves_pending_table td:nth-child(1) { /* Employee Name */
+  width: 18%;
+  min-width: 120px;
+}
+
+.leaves_pending_table th:nth-child(2),
+.leaves_pending_table td:nth-child(2) { /* Leave Name */
+  width: 15%;
+  min-width: 100px;
+}
+
+.leaves_pending_table th:nth-child(3),
+.leaves_pending_table td:nth-child(3) { /* Start Date */
+  width: 12%;
+  min-width: 90px;
+}
+
+.leaves_pending_table th:nth-child(4),
+.leaves_pending_table td:nth-child(4) { /* End Date */
+  width: 12%;
+  min-width: 90px;
+}
+
+.leaves_pending_table th:nth-child(5),
+.leaves_pending_table td:nth-child(5) { /* No. of Noons */
+  width: 10%;
+  min-width: 70px;
+  text-align: center;
+}
+
+.leaves_pending_table th:nth-child(6),
+.leaves_pending_table td:nth-child(6) { /* AM/PM */
+  width: 8%;
+  min-width: 60px;
+  text-align: center;
+}
+
+.leaves_pending_table th:nth-child(7),
+.leaves_pending_table td:nth-child(7) { /* Reason */
+  width: 15%;
+  min-width: 80px;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.leaves_pending_table th:nth-child(8),
+.leaves_pending_table td:nth-child(8) { /* Action */
+  width: 15%;
+  min-width: 100px;
+}
+
 /* === Action Select Dropdown === */
 .leaves_pending_action_select {
-  padding: 8px;
+  padding: 6px 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
-  font-size: 13px;
+  font-size: 12px;
   background-color: #fff;
+  width: 100%;
+  max-width: 100px;
+  box-sizing: border-box;
   transition: all 0.2s ease;
 }
+
 .leaves_pending_action_select:focus {
   outline: none;
   border-color: #0fd46c;
   box-shadow: 0 0 0 2px rgba(15, 212, 108, 0.25);
 }
 
-/* === Back Button (CORRECTED: Positioned top-right) === */
+/* === Back Button === */
 .leaves_back_button {
-  position: absolute;
+  position: absolute !important;
   top: 5px;
-  right: 0; /* This moves the button to the right */
+  right: 0;
   padding: 8px 12px 8px 8px !important;
   background-color: transparent !important;
   color: #6c757d !important;
@@ -102,3 +193,104 @@
 .leaves_back_button::after { content: 'Back' !important; font-size: 13px !important; }
 .leaves_back_button:hover { background-color: #f8f9fa !important; border-color: #6c757d !important; color: #495057 !important; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important; transform: translateX(-2px) !important; }
 .leaves_back_button:hover::before { color: #495057 !important; }
+
+/* === Pagination Controls === */
+.leaves_pending_pagination_container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 24px;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.leaves_pending_pagination_input {
+  width: 40px;
+  text-align: center;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 6px;
+  font-size: 14px;
+}
+.leaves_pending_pagination_text { font-size: 14px; color: #333; }
+.leaves_pending_button {
+  background-color: #26dd0e;
+  border: 1px solid #ccc;
+  color: black !important;
+  padding: 5px 16px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+.leaves_pending_button:hover:not(:disabled) { background-color: #17da21; border-color: #9ca3af; }
+.leaves_pending_button:disabled { background-color: #cccccc; cursor: not-allowed; }
+
+/* === Rows Per Page Input === */
+.leaves_pending_rows-per-page-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+.leaves_pending_rows-per-page-label {
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+}
+.leaves_pending_rows-per-page-input {
+  width: 60px;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  text-align: center;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.leaves_pending_rows-per-page-input:focus {
+  outline: none;
+  border-color: #0fd46c;
+  box-shadow: 0 0 0 2px rgba(15, 212, 108, 0.25);
+}
+
+/* === Responsive Design === */
+@media (max-width: 768px) {
+  .leaves_pending_container {
+    padding: 16px;
+  }
+  
+  .leaves_pending_search-input {
+    width: 100%;
+  }
+  
+  .leaves_pending_table th,
+  .leaves_pending_table td {
+    padding: 8px 4px;
+    font-size: 12px;
+  }
+  
+  /* Stack headers vertically on very small screens */
+  .leaves_pending_table th:nth-child(7),
+  .leaves_pending_table td:nth-child(7) { /* Reason column gets more space on mobile */
+    max-width: none;
+    white-space: normal;
+  }
+}
+
+@media (max-width: 480px) {
+  .leaves_pending_table {
+    font-size: 11px;
+  }
+  
+  .leaves_pending_table th,
+  .leaves_pending_table td {
+    padding: 6px 2px;
+  }
+  
+  .leaves_pending_action_select {
+    font-size: 11px;
+    padding: 4px 6px;
+    max-width: 80px;
+  }
+}

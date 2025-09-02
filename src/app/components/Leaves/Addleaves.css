@@ -115,7 +115,7 @@
 
 /* === Back Button (CORRECTED: Positioned top-right) === */
 .leaves_back_button {
-  position: absolute;
+  position: absolute !important;
   top: 5px;
   right: 0; /* This moves the button to the right */
   padding: 8px 12px 8px 8px !important;
