@@ -198,24 +198,26 @@ const EditOrganization = ({ selectedorgid, orgid, empid, countries, states }) =>
   const isUSA = form.country === usaCountryId;
 
   return (
-    <div className="organization-details-container89">
-      {isLoading && <div className="loading-message89">Loading...</div>}
-      {error && <div className="error-message89">{error}</div>}
-      {success && <div className="success-message89">{success}</div>}
+    <div className="organization_details_container">
+      {isLoading && <div className="organization_loading_message">Loading...</div>}
+      {error && <div className="organization_error_message">{error}</div>}
+      {success && <div className="organization_success_message">{success}</div>}
       {orgDetails && (
-        <div className="details-block89">
-          <div className="orgdetails-header89">
-            <div>Organization Details</div>
+        <div className="organization_details_block">
+          <div className="organization_details_header">
+            <h3 className="organization_details_header_title">Organization Details</h3>
             {!isEditing && (
-              <button className="button89" onClick={handleEdit}>
-                Edit
-              </button>
+              <div className="organization_details_buttons">
+                <button className="organization_edit_button" onClick={handleEdit}>
+                  Edit
+                </button>
+              </div>
             )}
           </div>
           {isEditing ? (
             <form onSubmit={handleSave}>
-              <div className="form-row89">
-                <div className="form-group89">
+              <div className="organization_form_row">
+                <div className="organization_form_group">
                   <label>Organization Name*</label>
                   <input
                     type="text"
@@ -225,16 +227,16 @@ const EditOrganization = ({ selectedorgid, orgid, empid, countries, states }) =>
                     required
                   />
                 </div>
-                <div className="form-group89">
+                <div className="organization_form_group">
                   <label>Status</label>
                   <select name="isstatus" value={form.isstatus} onChange={handleFormChange}>
-                    <option value="Active">Yes</option>
-                    <option value="Inactive">No</option>
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
                   </select>
                 </div>
               </div>
-              <div className="form-row89">
-                <div className="form-group89">
+              <div className="organization_form_row">
+                <div className="organization_form_group">
                   <label>Address Line 1</label>
                   <input
                     type="text"
@@ -243,7 +245,7 @@ const EditOrganization = ({ selectedorgid, orgid, empid, countries, states }) =>
                     onChange={handleFormChange}
                   />
                 </div>
-                <div className="form-group89">
+                <div className="organization_form_group">
                   <label>Address Line 2</label>
                   <input
                     type="text"
@@ -253,8 +255,8 @@ const EditOrganization = ({ selectedorgid, orgid, empid, countries, states }) =>
                   />
                 </div>
               </div>
-              <div className="form-row89">
-                <div className="form-group89">
+              <div className="organization_form_row">
+                <div className="organization_form_group">
                   <label>Country</label>
                   <select name="country" value={form.country} onChange={handleFormChange}>
                     <option value="">Select Country</option>
@@ -265,7 +267,7 @@ const EditOrganization = ({ selectedorgid, orgid, empid, countries, states }) =>
                     ))}
                   </select>
                 </div>
-                <div className="form-group89">
+                <div className="organization_form_group">
                   <label>State</label>
                   <select name="state" value={form.state} onChange={handleFormChange} disabled={!isUSA}>
                     <option value="">Select State</option>
@@ -277,8 +279,8 @@ const EditOrganization = ({ selectedorgid, orgid, empid, countries, states }) =>
                   </select>
                 </div>
               </div>
-              <div className="form-row89">
-                <div className="form-group89">
+              <div className="organization_form_row">
+                <div className="organization_form_group">
                   <label>Custom State Name</label>
                   <input
                     type="text"
@@ -288,7 +290,7 @@ const EditOrganization = ({ selectedorgid, orgid, empid, countries, states }) =>
                     disabled={isUSA}
                   />
                 </div>
-                <div className="form-group89">
+                <div className="organization_form_group">
                   <label>Postal Code</label>
                   <input
                     type="text"
@@ -298,73 +300,73 @@ const EditOrganization = ({ selectedorgid, orgid, empid, countries, states }) =>
                   />
                 </div>
               </div>
-              <div className="form-buttons89">
-                <button type="submit" className="save89" disabled={isLoading}>
+              <div className="organization_form_buttons">
+                <button type="submit" className="organization_submit_button" disabled={isLoading}>
                   {isLoading ? 'Saving...' : 'Save'}
                 </button>
-                <button type="button" className="cancel89" onClick={handleCancel} disabled={isLoading}>
+                <button type="button" className="organization_cancel_button" onClick={handleCancel} disabled={isLoading}>
                   Cancel
                 </button>
               </div>
             </form>
           ) : (
-            <div className="view-details89">
-              <div className="details-row89">
-                <div className="details-g89">
+            <div className="organization_view_details">
+              <div className="organization_details_row">
+                <div className="organization_details_group">
                   <label>Organization ID</label>
                   <p>{getdisplayorgid(form.suborgid)}</p>
                 </div>
-                <div className="details-g89">
+                <div className="organization_details_group">
                   <label>Organization Name</label>
                   <p>{form.suborgname || '-'}</p>
                 </div>
               </div>
-              <div className="details-row89">
-                <div className="details-g89">
+              <div className="organization_details_row">
+                <div className="organization_details_group">
                   <label>Status</label>
                   <p>{form.isstatus}</p>
                 </div>
-                <div className="details-g89">
+                <div className="organization_details_group">
                   <label>Address Line 1</label>
                   <p>{form.addresslane1 || '-'}</p>
                 </div>
               </div>
-              <div className="details-row89">
-                <div className="details-g89">
+              <div className="organization_details_row">
+                <div className="organization_details_group">
                   <label>Address Line 2</label>
                   <p>{form.addresslane2 || '-'}</p>
                 </div>
-                <div className="details-g89">
+                <div className="organization_details_group">
                   <label>Country</label>
                   <p>{form.country ? (countries.find(c => String(c.ID) === form.country)?.VALUE || 'Unknown Country') : '-'}</p>
                 </div>
               </div>
-              <div className="details-row89">
-                <div className="details-g89">
+              <div className="organization_details_row">
+                <div className="organization_details_group">
                   <label>State</label>
                   <p>{isUSA && form.state ? (states.find(s => String(s.ID) === form.state)?.VALUE || 'Unknown State') : form.customStateName || '-'}</p>
                 </div>
-                <div className="details-g89">
+                <div className="organization_details_group">
                   <label>Postal Code</label>
                   <p>{form.postalcode || '-'}</p>
                 </div>
               </div>
-              <div className="details-row89">
-                <div className="details-g89">
+              <div className="organization_details_row">
+                <div className="organization_details_group">
                   <label>Created By</label>
                   <p>{form.createdby || '-'}</p>
                 </div>
-                <div className="details-g89">
+                <div className="organization_details_group">
                   <label>Created Date</label>
                   <p>{formatDate(form.createddate) || '-'}</p>
                 </div>
               </div>
-              <div className="details-row89">
-                <div className="details-g89">
+              <div className="organization_details_row">
+                <div className="organization_details_group">
                   <label>Updated By</label>
                   <p>{form.updatedby || '-'}</p>
                 </div>
-                <div className="details-g89">
+                <div className="organization_details_group">
                   <label>Updated Date</label>
                   <p>{formatDate(form.updateddate) || '-'}</p>
                 </div>
