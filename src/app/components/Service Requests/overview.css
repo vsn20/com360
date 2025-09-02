@@ -543,9 +543,11 @@ tbody tr:hover {
   background-color: #0fd46c;
 }
 
+/* overview.css */
+
 .service-request-indicator-inactive {
   display: inline-block;
-  width: 0px;
+  width: 8px; /* Corrected from 0px to 8px */
   height: 8px;
   background-color: #dc2626;
   border-radius: 50%;
