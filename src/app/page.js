@@ -15,16 +15,18 @@ const useInView = (options) => {
       }
     }, options);
 
-    if (ref.current) {
-      observer.observe(ref.current);
+    const currentRef = ref.current; // Capture ref value
+
+    if (currentRef) {
+      observer.observe(currentRef);
     }
 
     return () => {
-      if (ref.current) {
-        observer.unobserve(ref.current);
+      if (currentRef) {
+        observer.unobserve(currentRef);
       }
     };
-  }, [ref, options]);
+  }, [options]); // Remove 'ref' from dependencies
 
   return [ref, isInView];
 };
@@ -98,7 +100,7 @@ const Home = () => {
         </div>
         <div className={styles.heroContent}>
           <div className={styles.heroText}>
-            <h1>Streamline Your Workflow, Unleash Your Team's Potential.</h1>
+            <h1>Streamline Your Workflow, Unleash Your Team&apos;s Potential.</h1>
             <p>
               Com360View is the all-in-one platform that empowers consultancies and startups to manage their entire operation—from onboarding to payroll—effortlessly.
             </p>
@@ -194,7 +196,7 @@ const Home = () => {
           <h2 className={styles.sectionTitle}>What Our Users Say</h2>
           <div className={styles.testimonialsGrid}>
             {[
-              { quote: 'Com360View has transformed how we manage employees and projects. It\'s intuitive, powerful, and has saved us countless hours.', author: 'Alex Carter, Founder at Innovate Co.' },
+              { quote: 'Com360View has transformed how we manage employees and projects. It&apos;s intuitive, powerful, and has saved us countless hours.', author: 'Alex Carter, Founder at Innovate Co.' },
               { quote: 'Payroll and leave management are now completely automated. What used to take days now takes minutes. A total game-changer for our HR team.', author: 'Maria Garcia, HR Manager' },
               { quote: 'The role-based access and customization features make this tool perfect for our complex operational needs. Highly recommended!', author: 'David Chen, Operations Lead' },
             ].map((testimonial, index) => (
