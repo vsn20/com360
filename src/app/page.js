@@ -1,150 +1,139 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import styles from './page.module.css';
 
-const Home = () => {
-  const [countersVisible, setCountersVisible] = useState(false);
+// A modern, performant hook for detecting when an element is in the viewport
+const useInView = (options) => {
+  const ref = useRef(null);
+  const [isInView, setIsInView] = useState(false);
 
   useEffect(() => {
-    // Add global styles
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setIsInView(true);
+        observer.disconnect();
+      }
+    }, options);
+
+    if (ref.current) {
+      observer.observe(ref.current);
+    }
+
+    return () => {
+      if (ref.current) {
+        observer.unobserve(ref.current);
+      }
+    };
+  }, [ref, options]);
+
+  return [ref, isInView];
+};
+
+const Counter = ({ value, text, duration = 2000, startCounting }) => {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    if (startCounting) {
+      let start = 0;
+      const end = parseInt(value, 10);
+      if (start === end) return;
+
+      const incrementTime = 16;
+      const totalIncrements = duration / incrementTime;
+      const increment = end / totalIncrements;
+
+      const timer = setInterval(() => {
+        start += increment;
+        if (start >= end) {
+          setCount(end);
+          clearInterval(timer);
+        } else {
+          setCount(Math.ceil(start));
+        }
+      }, incrementTime);
+
+      return () => clearInterval(timer);
+    }
+  }, [startCounting, value, duration]);
+
+  return (
+    <div className={styles.counter}>
+      <h3>{count.toLocaleString()}+</h3>
+      <p>{text}</p>
+    </div>
+  );
+};
+
+// A reusable component for animated sections
+const AnimatedSection = ({ children, className }) => {
+  const [ref, isInView] = useInView({ threshold: 0.1 });
+  return (
+    <section ref={ref} className={`${className} ${styles.animateOnScroll} ${isInView ? styles.animateIn : ''}`}>
+      {children}
+    </section>
+  );
+};
+
+
+const Home = () => {
+  const [showcaseRef, showcaseInView] = useInView({ threshold: 0.2 });
+
+  useEffect(() => {
     document.body.style.fontFamily = "'Inter', 'Helvetica Neue', Arial, sans-serif";
     document.body.style.lineHeight = '1.6';
     document.body.style.color = '#333';
     document.body.style.margin = '0';
     document.body.style.padding = '0';
     document.body.style.overflowX = 'hidden';
-    
-    const handleScroll = () => {
-      // Counter animation trigger
-      const showcaseSection = document.querySelector(`.${styles.showcaseSection}`);
-      if (showcaseSection) {
-        const rect = showcaseSection.getBoundingClientRect();
-        if (rect.top < window.innerHeight * 0.8 && !countersVisible) {
-          setCountersVisible(true);
-        }
-      }
-
-      // Animate sections on scroll
-      const sections = document.querySelectorAll(`.${styles.animateOnScroll}`);
-      sections.forEach(section => {
-        const rect = section.getBoundingClientRect();
-        if (rect.top < window.innerHeight * 0.8) {
-          section.classList.add(styles.animateIn);
-        }
-      });
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [countersVisible]);
-
-  const Counter = ({ value, text, duration = 2000 }) => {
-    const [count, setCount] = useState(0);
-
-    useEffect(() => {
-      if (countersVisible) {
-        let start = 0;
-        const increment = value / (duration / 16);
-        const timer = setInterval(() => {
-          start += increment;
-          if (start >= value) {
-            setCount(value);
-            clearInterval(timer);
-          } else {
-            setCount(Math.floor(start));
-          }
-        }, 16);
-        return () => clearInterval(timer);
-      }
-    }, [countersVisible, value, duration]);
-
-    return (
-      <div className={styles.counter}>
-        <h3>{count}+</h3>
-        <p>{text}</p>
-      </div>
-    );
-  };
-
+  }, []);
+  
   return (
     <div className={styles.homepageContainer}>
       {/* Hero Section */}
       <section className={styles.heroSection}>
         <div className={styles.heroBackground}>
-          <div className={styles.floatingShapes}>
-            <div className={`${styles.shape} ${styles.shape1}`}></div>
-            <div className={`${styles.shape} ${styles.shape2}`}></div>
-            <div className={`${styles.shape} ${styles.shape3}`}></div>
-          </div>
+          <div className={`${styles.shape} ${styles.shape1}`}></div>
+          <div className={`${styles.shape} ${styles.shape2}`}></div>
+          <div className={`${styles.shape} ${styles.shape3}`}></div>
         </div>
-        <div className={`${styles.heroContent} ${styles.animateOnScroll}`}>
+        <div className={styles.heroContent}>
           <div className={styles.heroText}>
-            <h1>Manage Your People, Projects, and Processes – All in One Place.</h1>
+            <h1>Streamline Your Workflow, Unleash Your Team's Potential.</h1>
             <p>
-              Com360View helps consultancies, startups, and companies manage employees, post jobs,
-              assign interviews, send offer letters, track leaves, timesheets, projects, payroll, and much more.
+              Com360View is the all-in-one platform that empowers consultancies and startups to manage their entire operation—from onboarding to payroll—effortlessly.
             </p>
             <div className={styles.heroButtons}>
-              <a href="/signup" className={styles.btnPrimary}>Get Started</a>
-              <a href="/demo" className={styles.btnSecondary}>Watch Demo</a>
+              <a href="/signup" className={styles.btnPrimary}>Start Your Free Trial</a>
+              <a href="/demo" className={styles.btnSecondary}>Watch a Demo</a>
             </div>
           </div>
           <div className={styles.heroImage}>
-            <div className={styles.dashboardPreview}>
-              <div className={styles.dashboardHeader}></div>
-              <div className={styles.dashboardContent}>
-                <div className={styles.dashboardCard}></div>
-                <div className={styles.dashboardCard}></div>
-                <div className={styles.dashboardChart}></div>
-              </div>
-            </div>
-          </div>
+             <div className={styles.dashboardPreview}>
+               <div className={styles.dashboardHeader}></div>
+               <div className={styles.dashboardContent}>
+                 <div className={styles.dashboardCard}></div>
+                 <div className={styles.dashboardCard}></div>
+                 <div className={styles.dashboardChart}></div>
+               </div>
+             </div>
+           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className={`${styles.featuresSection} ${styles.animateOnScroll}`}>
+      <AnimatedSection className={styles.featuresSection}>
         <div className={styles.container}>
-          <h2 className={styles.sectionTitle}>Powerful Features</h2>
+          <h2 className={styles.sectionTitle}>Everything You Need, All in One Place</h2>
           <div className={styles.featuresGrid}>
             {[
-              {
-                title: 'Employee & Role Management',
-                desc: 'Add, manage, and track employee records. Define custom roles, configure leave types, and set role-based access to screens and actions.',
-                icon: '👥',
-              },
-              {
-                title: 'Jobs & Recruitment',
-                desc: 'Post jobs, assign interviews, and send offer letters digitally for seamless onboarding.',
-                icon: '💼',
-              },
-              {
-                title: 'Projects & Timesheets',
-                desc: 'Assign projects, track progress, and monitor timesheets for real-time productivity insights.',
-                icon: '📊',
-              },
-              {
-                title: 'Leave & Attendance Management',
-                desc: 'Track leaves, holidays, and attendance. Customize policies and generate leave reports automatically.',
-                icon: '📅',
-              },
-              {
-                title: 'Payroll & Finance',
-                desc: 'Calculate salaries, deductions, and bonuses automatically. Generate pay slips and integrate payroll with timesheets and leaves.',
-                icon: '💸',
-              },
-              {
-                title: 'Service Requests & Support',
-                desc: 'Employees can raise service requests (IT, HR, Admin). Track, prioritize, and resolve requests with customizable workflows.',
-                icon: '🛠️',
-              },
-              {
-                title: 'Configuration & Customization',
-                desc: 'Tailor the platform to your needs. Create custom modules, forms, workflows, and role-based rules.',
-                icon: '⚙️',
-              },
+              { title: 'People Management', desc: 'Define custom roles, manage employee records, and configure role-based access to screens and actions.', icon: '👥' },
+              { title: 'Recruitment Lifecycle', desc: 'Post jobs, schedule interviews, and send digital offer letters for a seamless onboarding experience.', icon: '💼' },
+              { title: 'Project Tracking', desc: 'Assign projects, monitor progress with detailed timesheets, and gain real-time productivity insights.', icon: '📊' },
+              { title: 'Automated Leave & Attendance', desc: 'Track leaves, holidays, and attendance with customized policies and automated report generation.', icon: '📅' },
+              { title: 'Effortless Payroll', desc: 'Automatically calculate salaries, deductions, and bonuses. Generate pay slips in just a few clicks.', icon: '💸' },
+              { title: 'Integrated Service Desk', desc: 'Allow employees to raise IT, HR, or Admin requests. Track, prioritize, and resolve issues with custom workflows.', icon: '🛠️' },
             ].map((feature, index) => (
-              <div key={index} className={styles.featureCard} style={{ animationDelay: `${index * 0.1}s` }}>
+              <div key={index} className={styles.featureCard} style={{ transitionDelay: `${index * 0.1}s` }}>
                 <div className={styles.featureIcon}>{feature.icon}</div>
                 <h3>{feature.title}</h3>
                 <p>{feature.desc}</p>
@@ -152,12 +141,12 @@ const Home = () => {
             ))}
           </div>
         </div>
-      </section>
+      </AnimatedSection>
 
       {/* Showcase Section */}
-      <section className={`${styles.showcaseSection} ${styles.animateOnScroll}`}>
+      <section ref={showcaseRef} className={`${styles.showcaseSection} ${styles.animateOnScroll} ${showcaseInView ? styles.animateIn : ''}`}>
         <div className={styles.container}>
-          <h2 className={styles.sectionTitle}>Our Impact</h2>
+          <h2 className={styles.sectionTitle}>Trusted by Growing Businesses</h2>
           <div className={styles.showcaseContent}>
             <div className={styles.showcaseImage}>
               <div className={styles.showcaseDashboard}>
@@ -170,26 +159,26 @@ const Home = () => {
               </div>
             </div>
             <div className={styles.counters}>
-              <Counter value={500} text="Employees Managed" />
-              <Counter value={300} text="Projects Delivered" />
-              <Counter value={1000} text="Payrolls Processed" />
+              <Counter value={500} text="Happy Employees" startCounting={showcaseInView} />
+              <Counter value={300} text="Projects Delivered" startCounting={showcaseInView} />
+              <Counter value={10000} text="Tasks Managed" startCounting={showcaseInView} />
             </div>
           </div>
         </div>
       </section>
 
       {/* Benefits Section */}
-      <section className={`${styles.benefitsSection} ${styles.animateOnScroll}`}>
+      <AnimatedSection className={styles.benefitsSection}>
         <div className={styles.container}>
-          <h2 className={styles.sectionTitle}>Why Choose Com360View</h2>
+          <h2 className={styles.sectionTitle}>Why Choose Com360View?</h2>
           <div className={styles.benefitsGrid}>
             {[
-              { title: 'Collaboration', desc: 'Enhance teamwork with centralized communication and task assignment.', icon: '🤝' },
-              { title: 'Accuracy', desc: 'Reduce errors with automated payroll, leaves, and reporting.', icon: '✅' },
-              { title: 'Easy Setup', desc: 'Get started quickly with simple onboarding and configuration.', icon: '🚀' },
-              { title: '24/7 Support', desc: 'Our support team is always available to help.', icon: '🧑‍💼' },
+              { title: 'Unified Platform', desc: 'Eliminate app-switching with a single source of truth for all your operations.', icon: '🤝' },
+              { title: 'Data-Driven Accuracy', desc: 'Reduce human error with automated payroll, leave tracking, and financial reporting.', icon: '✅' },
+              { title: 'Rapid Setup', desc: 'Get your team onboarded and running in minutes, not weeks, with our intuitive interface.', icon: '🚀' },
+              { title: 'Dedicated Support', desc: 'Our expert support team is always available to help you succeed.', icon: '🧑‍💼' },
             ].map((benefit, index) => (
-              <div key={index} className={styles.benefitCard} style={{ animationDelay: `${index * 0.1}s` }}>
+              <div key={index} className={styles.benefitCard} style={{ transitionDelay: `${index * 0.1}s` }}>
                 <div className={styles.benefitIcon}>{benefit.icon}</div>
                 <h3>{benefit.title}</h3>
                 <p>{benefit.desc}</p>
@@ -197,54 +186,40 @@ const Home = () => {
             ))}
           </div>
         </div>
-      </section>
+      </AnimatedSection>
 
       {/* Testimonials Section */}
-      <section className={`${styles.testimonialsSection} ${styles.animateOnScroll}`}>
+      <AnimatedSection className={styles.testimonialsSection}>
         <div className={styles.container}>
           <h2 className={styles.sectionTitle}>What Our Users Say</h2>
           <div className={styles.testimonialsGrid}>
             {[
-              {
-                quote: 'Com360View has transformed how we manage employees and projects.',
-                author: 'Startup Founder',
-              },
-              {
-                quote: 'Payroll and leave management are now completely automated.',
-                author: 'HR Manager',
-              },
-              {
-                quote: 'The role-based access and customization make this tool perfect for us.',
-                author: 'Operations Lead',
-              },
+              { quote: 'Com360View has transformed how we manage employees and projects. It\'s intuitive, powerful, and has saved us countless hours.', author: 'Alex Carter, Founder at Innovate Co.' },
+              { quote: 'Payroll and leave management are now completely automated. What used to take days now takes minutes. A total game-changer for our HR team.', author: 'Maria Garcia, HR Manager' },
+              { quote: 'The role-based access and customization features make this tool perfect for our complex operational needs. Highly recommended!', author: 'David Chen, Operations Lead' },
             ].map((testimonial, index) => (
-              <div key={index} className={styles.testimonialCard} style={{ animationDelay: `${index * 0.1}s` }}>
-                <div className={styles.testimonialQuote}>
-                  <p>&ldquo;{testimonial.quote}&rdquo;</p>
-                </div>
-                <div className={styles.testimonialAuthor}>
-                  <h4>— {testimonial.author}</h4>
-                </div>
+              <div key={index} className={styles.testimonialCard} style={{ transitionDelay: `${index * 0.1}s` }}>
+                <div className={styles.testimonialQuote}><p>&ldquo;{testimonial.quote}&rdquo;</p></div>
+                <div className={styles.testimonialAuthor}><h4>— {testimonial.author}</h4></div>
               </div>
-              
             ))}
           </div>
         </div>
-      </section>
+      </AnimatedSection>
 
       {/* Call-to-Action Section */}
-      <section className={`${styles.ctaSection} ${styles.animateOnScroll}`}>
+      <AnimatedSection className={styles.ctaSection}>
         <div className={styles.container}>
           <div className={styles.ctaContent}>
             <h2>Ready to Transform How You Work?</h2>
-            <p>Start using Com360View today and streamline your business operations.</p>
+            <p>Join hundreds of successful companies. Start your 14-day free trial today.</p>
             <div className={styles.ctaButtons}>
-              <a href="/signup" className={styles.btnPrimary}>Start Free Trial</a>
-              <a href="/demo" className={styles.btnSecondary}>Request Demo</a>
+              <a href="/signup" className={styles.btnPrimary}>Sign Up for Free</a>
+              <a href="/demo" className={styles.btnSecondary}>Request a Demo</a>
             </div>
           </div>
         </div>
-      </section>
+      </AnimatedSection>
 
       {/* Footer Section */}
       <footer className={styles.footerSection}>
