@@ -1295,3 +1295,154 @@ tbody tr:hover {
   color: #ccc;
   cursor: not-allowed;
 }
+
+
+/* overview.css */
+
+/* Make the circular profile picture clickable */
+.profile-photo .profile-photo-button {
+  background: none;
+  border: none;
+  padding: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  display: inline-block; /* Helps with alignment */
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.profile-photo .profile-photo-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.profile-photo .profile-photo-button img {
+  border-radius: 50%;
+  object-fit: cover;
+  display: block; /* Removes bottom space under the image */
+}
+
+
+/* --- Photo Modal Styles --- */
+.photo-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1050;
+  animation: fadeIn 0.3s;
+}
+
+.photo-modal-content {
+  background-color: #fff;
+  padding: 25px;
+  border-radius: 8px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  position: relative;
+  width: 90%;
+  max-width: 500px;
+  animation: slideIn 0.3s;
+}
+
+.modal-close-button {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 28px;
+  line-height: 1;
+  color: #6c757d;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.modal-close-button:hover {
+  color: #343a40;
+}
+
+.cropper-container {
+  text-align: center;
+}
+
+.cropper-container h3 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-size: 20px;
+  color: #333;
+}
+
+/* Style for the square image in the modal */
+.modal-square-image {
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid #eee;
+}
+
+.modal-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+
+/* react-image-crop specific styles */
+.ReactCrop__crop-selection {
+  border: 2px dashed #0fd46c;
+}
+
+/* Animations for Modal */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from { transform: translateY(-30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+/* In overview.css */
+
+.cropper-image-wrapper {
+  max-height: 60vh; /* Set a max height relative to the viewport height */
+  overflow-y: auto; /* Add a scrollbar if the image is taller than the max-height */
+  margin-bottom: 15px; /* Add some space between the image area and the buttons */
+  border: 1px solid #e9ecef;
+  background-color: #f8f9fa;
+}
+
+/* In overview.css */
+
+.modal-error-message {
+  color: #dc3545; /* Red color for errors */
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+  padding: 8px 12px;
+  margin-top: 15px;
+  margin-bottom: 0;
+  font-size: 14px;
+  text-align: center;
+}
+
+/* In overview.css */
+
+/* Target the main container for the photo and name */
+.profile-photo {
+  display: flex; /* Aligns children (image and name) in a row */
+  align-items: center; /* Vertically centers the name with the image */
+  gap: 16px; /* Creates space between the image and the name */
+  margin-bottom: 20px; /* Keeps space below the element */
+}
+
+/* Optional: Style the name text for better appearance */
+.profile-photo p {
+  margin: 0; /* Removes default paragraph margins */
+  font-size: 1.25rem; /* Makes the name larger */
+  font-weight: 600; /* Makes the font semi-bold */
+  color: #1f2937; /* A modern, dark gray color for the text */
+}

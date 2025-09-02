@@ -15,113 +15,118 @@ import { addemployee } from '@/app/serverActions/addemployee';
 import styles from '../../(routes)/userscreens/userscreens.module.css';
 import EmplopyeeDocument from './EmplopyeeDocument';
 import Image from 'next/image';
+import ReactCrop, { centerCrop, makeAspectCrop } from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
+
+// Your CustomSelect and MultiSelectRoles components remain the same...
 const CustomSelect = ({ name, value, onChange, options, placeholder, disabled }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
 
-  const handleSelect = (optionValue, optionLabel) => {
-    onChange({ target: { name, value: optionValue } });
-    setIsOpen(false);
-  };
+  const handleSelect = (optionValue, optionLabel) => {
+    onChange({ target: { name, value: optionValue } });
+    setIsOpen(false);
+  };
 
-  const handleClickOutside = (event) => {
-    if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-      setIsOpen(false);
-    }
-  };
+  const handleClickOutside = (event) => {
+    if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+      setIsOpen(false);
+    }
+  };
 
-  useEffect(() => {
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
+  useEffect(() => {
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
-  const selectedOption = options.find(opt => opt.value === value);
+  const selectedOption = options.find(opt => opt.value === value);
 
-  return (
-    <div className={`custom-select ${disabled ? 'disabled' : ''}`} ref={dropdownRef}>
-      <div className="select-selected" onClick={() => !disabled && setIsOpen(!isOpen)}>
-        {selectedOption ? selectedOption.label : placeholder}
-      </div>
-      {isOpen && (
-        <div className="select-items">
-          {options.map((option) => (
-            <div
-              key={option.value}
-              className={`select-option ${value === option.value ? 'selected' : ''}`}
-              onClick={() => handleSelect(option.value, option.label)}
-            >
-              {option.label}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  return (
+    <div className={`custom-select ${disabled ? 'disabled' : ''}`} ref={dropdownRef}>
+      <div className="select-selected" onClick={() => !disabled && setIsOpen(!isOpen)}>
+        {selectedOption ? selectedOption.label : placeholder}
+      </div>
+      {isOpen && (
+        <div className="select-items">
+          {options.map((option) => (
+            <div
+              key={option.value}
+              className={`select-option ${value === option.value ? 'selected' : ''}`}
+              onClick={() => handleSelect(option.value, option.label)}
+            >
+              {option.label}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 };
 
 const MultiSelectRoles = ({ selectedRoles, setSelectedRoles, roles, disabled }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
 
-  const handleRoleToggle = (roleid) => {
-    setSelectedRoles((prev) =>
-      prev.includes(roleid)
-        ? prev.filter((id) => id !== roleid)
-        : [...prev, roleid]
-    );
-  };
+  const handleRoleToggle = (roleid) => {
+    setSelectedRoles((prev) =>
+      prev.includes(roleid)
+        ? prev.filter((id) => id !== roleid)
+        : [...prev, roleid]
+    );
+  };
 
-  const toggleDropdown = () => {
-    setIsOpen((prev) => !prev);
-  };
+  const toggleDropdown = () => {
+    setIsOpen((prev) => !prev);
+  };
 
-  const handleClickOutside = (event) => {
-    if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-      setIsOpen(false);
-    }
-  };
+  const handleClickOutside = (event) => {
+    if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+      setIsOpen(false);
+    }
+  };
 
-  useEffect(() => {
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
+  useEffect(() => {
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
-  const getSelectedRoleNames = () => {
-    return selectedRoles
-      .map((roleid) => roles.find((r) => r.roleid === roleid)?.rolename || 'Unknown Role')
-      .join(', ') || 'Select Roles';
-  };
+  const getSelectedRoleNames = () => {
+    return selectedRoles
+      .map((roleid) => roles.find((r) => r.roleid === roleid)?.rolename || 'Unknown Role')
+      .join(', ') || 'Select Roles';
+  };
 
-  return (
-    <div className={`custom-select-container ${disabled ? 'disabled' : ''}`} ref={dropdownRef}>
-      <div className="select-selected" onClick={() => !disabled && toggleDropdown()}>
-        {getSelectedRoleNames()}
-      </div>
-      {isOpen && (
-        <div className="select-items">
-          {roles.map((role) => (
-            <div
-              key={role.roleid}
-              className={`select-option ${selectedRoles.includes(role.roleid) ? 'selected' : ''}`}
-              onClick={() => handleRoleToggle(role.roleid)}
-            >
-              <input
-                type="checkbox"
-                checked={selectedRoles.includes(role.roleid)}
-                readOnly
-              />
-              {role.rolename}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  return (
+    <div className={`custom-select-container ${disabled ? 'disabled' : ''}`} ref={dropdownRef}>
+      <div className="select-selected" onClick={() => !disabled && toggleDropdown()}>
+        {getSelectedRoleNames()}
+      </div>
+      {isOpen && (
+        <div className="select-items">
+          {roles.map((role) => (
+            <div
+              key={role.roleid}
+              className={`select-option ${selectedRoles.includes(role.roleid) ? 'selected' : ''}`}
+              onClick={() => handleRoleToggle(role.roleid)}
+            >
+              <input
+                type="checkbox"
+                checked={selectedRoles.includes(role.roleid)}
+                readOnly
+              />
+              {role.rolename}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 };
+
 
 const Overview = ({
   roles,
@@ -150,6 +155,11 @@ const Overview = ({
   const router = useRouter();
   const searchparams = useSearchParams();
   const [imgSrc, setImgSrc] = useState();
+  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
+  const [imageToCrop, setImageToCrop] = useState(null);
+  const [crop, setCrop] = useState();
+  const imgRef = useRef(null);
+  const [photoModalError, setPhotoModalError] = useState(null);
 
   let ts = timestamp;
   
@@ -227,10 +237,8 @@ const Overview = ({
   const [employeesPerPageInput, setEmployeesPerPageInput] = useState('10');
   const [employeedocuments,setemployeedocuments]=useState({});
   
-  // Add state for sorting configuration
   const [sortConfig, setSortConfig] = useState({ column: 'empid', direction: 'asc' });
 
-  // Update useEffect for sorting
   useEffect(() => {
     const sortedEmployees = [...employees].sort((a, b) => sortEmployees(a, b, sortConfig.column, sortConfig.direction));
     setAllEmployees(sortedEmployees);
@@ -418,12 +426,13 @@ const Overview = ({
     setError(null);
     setisadd(false);
     setselecteddocument(null);
-    setActiveTab('personal')
+    setActiveTab('personal');
     setpersonaldetails(empid);
     setworkdetails(null);
     setemployementdetails(null);
     console.log('Selected employee:', empid);
-    setImgSrc(`/uploads/profile_photos/${empid}.png`);
+    // --- FIX 2: Added Cache Buster ---
+    setImgSrc(`/uploads/profile_photos/${empid}.png?${new Date().getTime()}`);
   };
 
   const handleBackClick = () => {
@@ -468,7 +477,7 @@ const Overview = ({
     setselecteddocument(id);
     setpersonaldetails(null);
     setemployementdetails(null);
-    setActiveTab('documents')
+    setActiveTab('documents');
     setworkdetails(null);
     router.refresh();
     setEditingPersonal(false);
@@ -486,7 +495,7 @@ const Overview = ({
   const  personaldetailsselecting=(id)=>{
     setselecteddocument(null);
     setpersonaldetails(id);
-    setActiveTab('personal')
+    setActiveTab('personal');
     setemployementdetails(null);
     setworkdetails(null);
     router.refresh();
@@ -505,7 +514,7 @@ const [employementdetails,setemployementdetails]=useState(null);
    const employementdetailselecting=(id)=>{
     setselecteddocument(null);
     setpersonaldetails(null);
-    setActiveTab('employment')
+    setActiveTab('employment');
     setemployementdetails(id);
     setworkdetails(null);
     router.refresh();
@@ -540,23 +549,120 @@ const [employementdetails,setemployementdetails]=useState(null);
     router.refresh();
    }
 
-   const handleProfilePhotoUpload = async (e, empId) => {
-  const file = e.target.files[0];
-  if (file && empId) {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('empId', empId);
-    try {
-      await uploadProfilePhoto(formData); // Server action
-      setImgSrc(`/uploads/profile_photos/${empId}.png?${new Date().getTime()}`); // Force refresh
-      setError(null);
-      console.log('Profile photo uploaded successfully for empid:', empId);
-    } catch (err) {
-      console.error('Error uploading profile photo:', err);
-      setError('Failed to upload profile photo.');
+    // In Overview.jsx
+
+const handleProfilePhotoUpload = (e) => {
+  setPhotoModalError(null); // Clear previous errors
+
+  if (e.target.files && e.target.files.length > 0) {
+    const file = e.target.files[0];
+    
+    if (file.size > 1 * 1024 * 1024) {
+      // Use the new state to set the error
+      setPhotoModalError('File is too large. Please select an image under 1MB.');
+      e.target.value = null; // Clear the file input
+      return;
     }
+
+    setCrop(undefined);
+    const reader = new FileReader();
+    reader.addEventListener('load', () => {
+      setImageToCrop(reader.result?.toString() || '');
+    });
+    reader.readAsDataURL(file);
   }
 };
+
+    // --- FIX 1: Corrected Cropping Logic ---
+    // In Overview.jsx
+
+// --- THIS IS THE CORRECTED FUNCTION ---
+    const handleSaveCroppedPhoto = async () => {
+        // 1. Guard Clause: Ensure the image ref and crop area are valid.
+        if (!imgRef.current || !crop || !crop.width || !crop.height) {
+          setError('Please select an area to crop.');
+          return;
+        }
+
+        const image = imgRef.current;
+        const canvas = document.createElement('canvas');
+
+        // 2. Calculate the scaling ratio between the original image and the displayed image.
+        // This is the most critical step.
+        const scaleX = image.naturalWidth / image.width;
+        const scaleY = image.naturalHeight / image.height;
+
+        // 3. Set the canvas size to the *actual pixel dimensions* of the selected crop area.
+        // This ensures the final saved image is not low quality.
+        canvas.width = Math.floor(crop.width * scaleX);
+        canvas.height = Math.floor(crop.height * scaleY);
+
+        const ctx = canvas.getContext('2d');
+
+        // 4. Draw the correctly scaled and positioned section of the original image onto the canvas.
+        ctx.drawImage(
+          image,                // The source image
+          crop.x * scaleX,      // The X coordinate of the crop on the original image
+          crop.y * scaleY,      // The Y coordinate of the crop on the original image
+          crop.width * scaleX,  // The width of the crop on the original image
+          crop.height * scaleY, // The height of the crop on the original image
+          0,                    // Destination X on the canvas (start from the corner)
+          0,                    // Destination Y on the canvas
+          canvas.width,         // Fill the entire canvas width
+          canvas.height         // Fill the entire canvas height
+        );
+
+        // 5. Convert the canvas to a file (blob) and upload it.
+        canvas.toBlob(async (blob) => {
+          if (blob) {
+            const formData = new FormData();
+            formData.append('file', blob, `${employeeDetails.empid}.png`);
+            formData.append('empId', employeeDetails.empid);
+
+            try {
+              await uploadProfilePhoto(formData);
+              // Use the cache-busting timestamp to ensure the new image loads
+              setImgSrc(`/uploads/profile_photos/${employeeDetails.empid}.png?${new Date().getTime()}`);
+              setError(null);
+              setIsPhotoModalOpen(false);
+              setImageToCrop(null);
+            } catch (err) {
+              console.error('Error uploading profile photo:', err);
+              setError('Failed to upload profile photo.');
+            }
+          }
+        }, 'image/png', 1); // Use quality '1' for best results
+    };
+    const handleDeleteProfilePhoto = async (empId) => {
+        if (!empId || imgSrc.includes("default.png")) return;
+        try {
+            await deleteProfilePhoto(empId);
+            setImgSrc("/uploads/profile_photos/default.png");
+            setError(null);
+            console.log('Profile photo deleted successfully for empid:', empId);
+        } catch (err) {
+            console.error('Error deleting profile photo:', err);
+            setError('Failed to delete profile photo.');
+        }
+        setIsPhotoModalOpen(false);
+        setImageToCrop(null);
+    };
+
+    // In Overview.jsx
+
+function onImageLoad(e) {
+  const { width, height } = e.currentTarget;
+  // Create a centered, square crop area in PIXELS
+  const cropWidth = Math.min(width, height) * 0.9; // 90% of the smaller dimension
+  setCrop({
+    unit: 'px', // Explicitly set the unit to pixels
+    x: (width - cropWidth) / 2,
+    y: (height - cropWidth) / 2,
+    width: cropWidth,
+    height: cropWidth,
+  });
+}
+
   const handleEdit = (section) => {
     if (section === 'personal') setEditingPersonal(true);
     if (section === 'employment') 
@@ -839,19 +945,6 @@ const handleRoleToggle = (roleid) => {
     addform_setIsDropdownOpen((prev) => !prev);
   };
 
-  const handleDeleteProfilePhoto = async (empId) => {
-  if (!empId || imgSrc === "/uploads/profile_photos/default.png") return;
-  try {
-    await deleteProfilePhoto(empId); // Server action
-    setImgSrc("/uploads/profile_photos/default.png"); // Revert to default
-    setError(null);
-    console.log('Profile photo deleted successfully for empid:', empId);
-  } catch (err) {
-    console.error('Error deleting profile photo:', err);
-    setError('Failed to delete profile photo.');
-  }
-};
-
  const addform_handleSubmit = async (formData) => {
   if (addform_isSubmitting) return;
   addform_setIsSubmitting(true);
@@ -874,11 +967,9 @@ const handleRoleToggle = (roleid) => {
       addform_setsuccess("Employee added Successfully!");
       setTimeout(() => addform_setsuccess(null), 4000);
       
-      // ADD THIS BLOCK TO RESET THE ROLES AND OTHER FORM FIELDS
       addform_setSelectedRoles([]);
       addform_setLeaves({});
       addform_setIsDropdownOpen(false);
-      // Reset the form if needed
       document.querySelector('form').reset();
     }
   } catch (error) {
@@ -1028,17 +1119,6 @@ const handleRoleToggle = (roleid) => {
               <div className="role-details-block93">
                 <h3>Personal Details</h3>
                 <div className="form-row">
-                  {/* <div className="form-group">
-                    <label htmlFor="orgid">Organization ID:</label>
-                    <input
-                      type="text"
-                      id="orgid"
-                      name="orgid"
-                      value={orgid || ''}
-                      className="bg-gray-100"
-                      disabled
-                    />
-                  </div> */}
                   <div className="form-group">
                     <label htmlFor="empFstName">First Name: *</label>
                     <input
@@ -1652,10 +1732,6 @@ const handleRoleToggle = (roleid) => {
         </div>
       )}
 
-      {/* {!issadd && !selectedEmpId&&selecteddocument&&(
-        <>{selecteddocument}</>
-      )} */}
-      
       {!issadd && !selectedEmpId&&!selecteddocument ? 
       (
         <div className="roles-list">
@@ -1742,7 +1818,6 @@ const handleRoleToggle = (roleid) => {
                       <td>{employee.HIRE ? new Date(employee.HIRE).toLocaleDateString('en-US') : '-'}</td>
                       <td>{employee.MOBILE_NUMBER || '-'}</td>
                       <td>
-                        {/* {employee.STATUS || '-'} */}
                         {employee.STATUS && (
                           <span className={`status-badge ${employee.STATUS.toLowerCase() === 'active' ? 'active' : 'inactive'}`}>
                             {employee.STATUS}
@@ -1807,35 +1882,89 @@ const handleRoleToggle = (roleid) => {
              <div className="roledetails-header"> 
               </div>
               <div className="profile-photo">
-                <Image
-                  src={imgSrc}
-                  alt="Profile Photo"
-                  width={75}
-                  height={75}
-                  onError={() => setImgSrc("/uploads/profile_photos/default.png")}
-               />
-                <input
-                  type="file"
-                  id="profilePhotoUpload"
-                  style={{ display: 'none' }}
-                  accept="image/*"
-                  onChange={(e) => handleProfilePhotoUpload(e, employeeDetails?.empid)}
-               />
-               <button
-                  className="edit-photo-button"
-                  onClick={() => document.getElementById('profilePhotoUpload').click()}
-                >
-                  ✎
+                <button className="profile-photo-button" onClick={() => setIsPhotoModalOpen(true)}>
+                  <Image
+                    src={imgSrc}
+                    alt="Profile Photo"
+                    width={75}
+                    height={75}
+                    onError={() => setImgSrc("/uploads/profile_photos/default.png")}
+                  />
                 </button>
-                <button
-                 className="delete-photo-button"
-                 onClick={() => handleDeleteProfilePhoto(employeeDetails?.empid)}
-                 disabled={imgSrc === "/uploads/profile_photos/default.png"}
-               >
-                 🗑️
-                </button>
-                 <p>{employeeDetails.EMP_FST_NAME} {employeeDetails.EMP_LAST_NAME}</p>
+                <p>{employeeDetails.EMP_FST_NAME} {employeeDetails.EMP_LAST_NAME}</p>
               </div>
+
+              {isPhotoModalOpen && (
+                <div className="photo-modal-overlay">
+                  <div className="photo-modal-content">
+                    <button className="modal-close-button" onClick={() => {
+                      setIsPhotoModalOpen(false);
+                      setImageToCrop(null); 
+                      setPhotoModalError(null);
+                    }}>
+                      &times;
+                    </button>
+
+                    {imageToCrop ? (
+                      <div className="cropper-container">
+                        <h3>Crop Your Photo</h3>
+                        <div className="cropper-image-wrapper">
+                           <ReactCrop
+                            crop={crop}
+                            // --- CHANGE THIS LINE ---
+                            // Ensure we are using the pixelCrop object (the first argument)
+                            onChange={(pixelCrop) => setCrop(pixelCrop)} 
+                            aspect={1}
+                            minWidth={100}
+                          >
+                            <img ref={imgRef} alt="Crop me" src={imageToCrop} onLoad={onImageLoad} />
+                          </ReactCrop>
+                        </div> 
+                       
+                        <div className="modal-actions">
+                          <button className="button save" onClick={handleSaveCroppedPhoto}>Save Photo</button>
+                          <button className="button cancel" onClick={() => setImageToCrop(null)}>Cancel</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="cropper-container">
+                        <h3>Profile Photo</h3>
+                        <Image
+                          src={imgSrc}
+                          alt="Profile Photo"
+                          width={250}
+                          height={250}
+                          className="modal-square-image"
+                          onError={() => setImgSrc("/uploads/profile_photos/default.png")}
+                        />
+                        {photoModalError && <p className="modal-error-message">{photoModalError}</p>}
+                        <div className="modal-actions">
+                          <input
+                            type="file"
+                            id="profilePhotoUpload"
+                            style={{ display: 'none' }}
+                            accept="image/png, image/jpeg"
+                            onChange={handleProfilePhotoUpload}
+                          />
+                          <button
+                            className="button"
+                            onClick={() => document.getElementById('profilePhotoUpload').click()}
+                          >
+                            Update
+                          </button>
+                          <button
+                            className="button cancel"
+                            onClick={() => handleDeleteProfilePhoto(employeeDetails?.empid)}
+                            disabled={!imgSrc || imgSrc.includes("default.png")}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               <div className="roledetails-header">                          
                 <h2 className="title">Employee Details</h2>            
@@ -1954,10 +2083,6 @@ const handleRoleToggle = (roleid) => {
                       <label>Employee ID</label>
                       <p>Employee-{getdisplayprojectid(employeeDetails.empid)}</p>
                     </div>
-                    {/* <div className="details-g">
-                      <label>Organization ID</label>
-                      <p>{employeeDetails.orgid}</p>
-                    </div> */}
                   </div>
                   <div className="details-row">
                     <div className="details-g">
@@ -2025,7 +2150,6 @@ const handleRoleToggle = (roleid) => {
             </div>
             )}
             
-
             {/* Employment Details Section */}
             {employementdetails&&!workdetails&&(
               <>
@@ -2034,15 +2158,6 @@ const handleRoleToggle = (roleid) => {
               {editingEmployment && canEditEmployees ? (
                 <form onSubmit={(e) => { e.preventDefault(); handleSave('employment'); }}>
                   <div className="form-row">
-                    {/* <div className="form-group">
-                      <label>Roles*</label>
-                      <MultiSelectRoles
-                        selectedRoles={selectedRoles}
-                        setSelectedRoles={setSelectedRoles}
-                        roles={roles}
-                        disabled={false}
-                      />
-                    </div> */}
                     <div className="form-group">
   <label htmlFor="roleids">Roles: * (Click to select/deselect)</label>
   <div className="custom-select-container">
@@ -2057,7 +2172,7 @@ const handleRoleToggle = (roleid) => {
   {selectedRoles.length > 0
     ? selectedRoles
         .map((id) => roles.find((r) => String(r.roleid) === String(id))?.rolename)
-        .filter(name => name) // Filter out undefined names
+        .filter(name => name)
         .join(', ')
     : 'Select Roles'}
 </div>
@@ -2085,11 +2200,6 @@ const handleRoleToggle = (roleid) => {
       <input key={roleid} type="hidden" name="roleids" value={roleid} />
     ))}
   </div>
-                    {/* {selectedRoles.length > 0 && (
-                          <div className="selected-roles">
-                         <p>Selected Roles: {selectedRoles.map((id) => roles.find((r) => r.roleid === id)?.rolename).join(', ')}</p>
-                     </div>
-                    )} */}
                    </div>
                     <div className="form-group">
                       <label>Hire Date*</label>
@@ -2274,7 +2384,6 @@ const handleRoleToggle = (roleid) => {
                 </div>
               )}
               </div>
-
                           
             <div className="role-details-block96">
               <h3>Leave Assignments</h3>
