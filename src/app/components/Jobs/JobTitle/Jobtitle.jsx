@@ -172,51 +172,51 @@ const Jobtitle = ({ orgid, empid, jobtitles }) => {
   const currentJobTitles = filteredJobTitles.slice(indexOfFirstJob, indexOfLastJob);
 
   return (
-    <div className="employee-overview-container">
+    <div className="jobtitles_employee-overview-container">
       {add && (
-        <div className="employee-details-container">
-          <div className="header-section">
-            <h1 className="title">Add Job Title</h1>
-            <button className="back-button" onClick={handleBackClick}></button>
+        <div className="jobtitles_employee-details-container">
+          <div className="jobtitles_header-section">
+            <h1 className="jobtitles_title">Add Job Title</h1>
+            <button className="jobtitles_back-button" onClick={handleBackClick}></button>
           </div>
           <AddjobTitle orgid={orgid} empid={empid} />
         </div>
       )}
       {!add && selectedjobid ? (
-        <div className="employee-details-container">
-          <div className="header-section">
-            <h1 className="title">Edit Job Title</h1>
-            <button className="back-button" onClick={handleBackClick}></button>
+        <div className="jobtitles_employee-details-container">
+          <div className="jobtitles_header-section">
+            <h1 className="jobtitles_title">Edit Job Title</h1>
+            <button className="jobtitles_back-button" onClick={handleBackClick}></button>
           </div>
           <EditJobTitle selectedjobid={selectedjobid} orgid={orgid} empid={empid} />
         </div>
       ) : (
         !add && (
-          <div className="employee-list">
+          <div className="jobtitles_employee-list">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h1 className="title">Existing Job Titles</h1>
-              <button onClick={handleAdd} className="button">Add Job Title</button>
+              <h1 className="jobtitles_title">Existing Job Titles</h1>
+              <button onClick={handleAdd} className="jobtitles_button">Add Job Title</button>
             </div>
-            <div className="search-filter-container">
+            <div className="jobtitles_search-filter-container">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={handleSearchChange}
-                className="search-input"
+                className="jobtitles_search-input"
                 placeholder="Search by job title..."
               />
-              <select value={isActiveFilter} onChange={handleStatusFilterChange} className="filter-select">
+              <select value={isActiveFilter} onChange={handleStatusFilterChange} className="jobtitles_filter-select">
                 <option value="all">All Statuses</option>
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
               </select>
             </div>
             {filteredJobTitles.length === 0 ? (
-              <div className="empty-state">No job titles found.</div>
+              <div className="jobtitles_empty-state">No job titles found.</div>
             ) : (
               <>
-                <div className="table-wrapper">
-                  <table className="four-column">
+                <div className="jobtitles_table-wrapper">
+                  <table className="jobtitles_four-column">
                     <colgroup>
                       <col />
                       <col />
@@ -225,16 +225,16 @@ const Jobtitle = ({ orgid, empid, jobtitles }) => {
                     </colgroup>
                     <thead>
                       <tr>
-                        <th className={sortConfig.column === 'job_title_id' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('job_title_id')}>
+                        <th className={sortConfig.column === 'job_title_id' ? `jobtitles_sortable jobtitles_sort-${sortConfig.direction}` : 'jobtitles_sortable'} onClick={() => requestSort('job_title_id')}>
                           Job ID
                         </th>
-                        <th className={sortConfig.column === 'job_title' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('job_title')}>
+                        <th className={sortConfig.column === 'job_title' ? `jobtitles_sortable jobtitles_sort-${sortConfig.direction}` : 'jobtitles_sortable'} onClick={() => requestSort('job_title')}>
                           Job Title
                         </th>
-                        <th className={sortConfig.column === 'level' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('level')}>
+                        <th className={sortConfig.column === 'level' ? `jobtitles_sortable jobtitles_sort-${sortConfig.direction}` : 'jobtitles_sortable'} onClick={() => requestSort('level')}>
                           Level
                         </th>
-                        <th className={sortConfig.column === 'is_active' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('is_active')}>
+                        <th className={sortConfig.column === 'is_active' ? `jobtitles_sortable jobtitles_sort-${sortConfig.direction}` : 'jobtitles_sortable'} onClick={() => requestSort('is_active')}>
                           Status
                         </th>
                       </tr>
@@ -242,13 +242,13 @@ const Jobtitle = ({ orgid, empid, jobtitles }) => {
                     <tbody>
                       {currentJobTitles.map((job) => (
                         <tr key={job.job_title_id} onClick={() => handleRowClick(job.job_title_id)}>
-                          <td className="id-cell">
-                            <span className={job.is_active ? 'role-indicator' : 'role-indicatorinactiver'}></span>
+                          <td className="jobtitles_id-cell">
+                            <span className={job.is_active ? 'jobtitles_role-indicator' : 'jobtitles_role-indicatorinactiver'}></span>
                             {job.job_title_id.split('-')[1] || job.job_title_id}
                           </td>
                           <td>{job.job_title || '-'}</td>
                           <td>{job.level || '-'}</td>
-                          <td className={job.is_active ? 'status-badge active' : 'status-badge inactive'}>
+                          <td className={job.is_active ? 'jobtitles_status-badge jobtitles_active' : 'jobtitles_status-badge jobtitles_inactive'}>
                             {job.is_active ? 'Active' : 'Inactive'}
                           </td>
                         </tr>
@@ -257,27 +257,27 @@ const Jobtitle = ({ orgid, empid, jobtitles }) => {
                   </table>
                 </div>
                 {filteredJobTitles.length > jobsPerPage && (
-                  <div className="pagination-container">
+                  <div className="jobtitles_pagination-container">
                     <button
-                      className="button"
+                      className="jobtitles_button"
                       onClick={handlePrevPage}
                       disabled={currentPage === 1}
                     >
                       ← Previous
                     </button>
-                    <span className="pagination-text">
+                    <span className="jobtitles_pagination-text">
                       Page{' '}
                       <input
                         type="text"
                         value={pageInputValue}
                         onChange={handlePageInputChange}
                         onKeyPress={handlePageInputKeyPress}
-                        className="pagination-input"
+                        className="jobtitles_pagination-input"
                       />{' '}
                       of {totalPages}
                     </span>
                     <button
-                      className="button"
+                      className="jobtitles_button"
                       onClick={handleNextPage}
                       disabled={currentPage === totalPages}
                     >
@@ -286,14 +286,14 @@ const Jobtitle = ({ orgid, empid, jobtitles }) => {
                   </div>
                 )}
                 {filteredJobTitles.length > 0 && (
-                  <div className="rows-per-page-container">
-                    <label className="rows-per-page-label">Rows/ Page</label>
+                  <div className="jobtitles_rows-per-page-container">
+                    <label className="jobtitles_rows-per-page-label">Rows/ Page</label>
                     <input
                       type="text"
                       value={jobsPerPageInput}
                       onChange={handleJobsPerPageInputChange}
                       onKeyPress={handleJobsPerPageInputKeyPress}
-                      className="rows-per-page-input"
+                      className="jobtitles_rows-per-page-input"
                       aria-label="Number of rows per page"
                     />
                   </div>

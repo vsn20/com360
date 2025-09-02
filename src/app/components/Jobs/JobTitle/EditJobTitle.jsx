@@ -178,24 +178,24 @@ const EditJobTitle = ({ selectedjobid, orgid, empid }) => {
   };
 
   return (
-    <div className="employee-details-container">
-      {isLoading && <div className="loading-message">Loading...</div>}
-      {error && <div className="error-message">{error}</div>}
-      {success && <div className="success-message">{success}</div>}
+    <div className="jobtitles_employee-details-container">
+      {isLoading && <div className="jobtitles_loading-message">Loading...</div>}
+      {error && <div className="jobtitles_error-message">{error}</div>}
+      {success && <div className="jobtitles_success-message">{success}</div>}
       {jobDetails && (
-        <div className="details-block">
-          <div className="roledetails-header">
+        <div className="jobtitles_details-block">
+          <div className="jobtitles_roledetails-header">
             <div>Job Title Details</div>
             {!isEditing && (
-              <button className="button" onClick={handleEdit}>
+              <button className="jobtitles_button" onClick={handleEdit}>
                 Edit
               </button>
             )}
           </div>
           {isEditing ? (
             <form onSubmit={handleSave}>
-              <div className="form-row">
-                <div className="form-group">
+              <div className="jobtitles_form-row">
+                <div className="jobtitles_form-group">
                   <label>Job Title*</label>
                   <input
                     type="text"
@@ -205,7 +205,7 @@ const EditJobTitle = ({ selectedjobid, orgid, empid }) => {
                     required
                   />
                 </div>
-                <div className="form-group">
+                <div className="jobtitles_form-group">
                   <label>Status</label>
                   <select name="status" value={form.status} onChange={handleFormChange}>
                     <option value="Active">Yes</option>
@@ -213,8 +213,8 @@ const EditJobTitle = ({ selectedjobid, orgid, empid }) => {
                   </select>
                 </div>
               </div>
-              <div className="form-row">
-                <div className="form-group">
+              <div className="jobtitles_form-row">
+                <div className="jobtitles_form-group">
                   <label>Minimum Salary</label>
                   <input
                     type="number"
@@ -223,7 +223,7 @@ const EditJobTitle = ({ selectedjobid, orgid, empid }) => {
                     onChange={handleFormChange}
                   />
                 </div>
-                <div className="form-group">
+                <div className="jobtitles_form-group">
                   <label>Maximum Salary</label>
                   <input
                     type="number"
@@ -233,8 +233,8 @@ const EditJobTitle = ({ selectedjobid, orgid, empid }) => {
                   />
                 </div>
               </div>
-              <div className="form-row">
-                <div className="form-group">
+              <div className="jobtitles_form-row">
+                <div className="jobtitles_form-group">
                   <label>Level</label>
                   <input
                     type="text"
@@ -244,63 +244,63 @@ const EditJobTitle = ({ selectedjobid, orgid, empid }) => {
                   />
                 </div>
               </div>
-              <div className="form-buttons">
-                <button type="submit" className="save" disabled={isLoading}>
+              <div className="jobtitles_form-buttons">
+                <button type="submit" className="jobtitles_save" disabled={isLoading}>
                   {isLoading ? 'Saving...' : 'Save'}
                 </button>
-                <button type="button" className="cancel" onClick={handleCancel} disabled={isLoading}>
+                <button type="button" className="jobtitles_cancel" onClick={handleCancel} disabled={isLoading}>
                   Cancel
                 </button>
               </div>
             </form>
           ) : (
-            <div className="view-details">
-              <div className="details-row">
-                <div className="details-g">
+            <div className="jobtitles_view-details">
+              <div className="jobtitles_details-row">
+                <div className="jobtitles_details-g">
                   <label>Job ID</label>
                   <p>{getdisplayprojectid(form.jobid)}</p>
                 </div>
-                <div className="details-g">
+                <div className="jobtitles_details-g">
                   <label>Job Title</label>
                   <p>{form.jobtitle || '-'}</p>
                 </div>
               </div>
-              <div className="details-row">
-                <div className="details-g">
+              <div className="jobtitles_details-row">
+                <div className="jobtitles_details-g">
                   <label>Status</label>
                   <p>{form.status}</p>
                 </div>
-                <div className="details-g">
+                <div className="jobtitles_details-g">
                   <label>Minimum Salary</label>
                   <p>{form.minsalary || '-'}</p>
                 </div>
               </div>
-              <div className="details-row">
-                <div className="details-g">
+              <div className="jobtitles_details-row">
+                <div className="jobtitles_details-g">
                   <label>Maximum Salary</label>
                   <p>{form.maxsalary || '-'}</p>
                 </div>
-                <div className="details-g">
+                <div className="jobtitles_details-g">
                   <label>Level</label>
                   <p>{form.level || '-'}</p>
                 </div>
               </div>
-              <div className="details-row">
-                <div className="details-g">
+              <div className="jobtitles_details-row">
+                <div className="jobtitles_details-g">
                   <label>Created By</label>
                   <p>{form.createdby || '-'}</p>
                 </div>
-                <div className="details-g">
+                <div className="jobtitles_details-g">
                   <label>Created Date</label>
                   <p>{formatDate(form.createddate) || '-'}</p>
                 </div>
               </div>
-              <div className="details-row">
-                <div className="details-g">
+              <div className="jobtitles_details-row">
+                <div className="jobtitles_details-g">
                   <label>Updated By</label>
                   <p>{form.updatedby || '-'}</p>
                 </div>
-                <div className="details-g">
+                <div className="jobtitles_details-g">
                   <label>Updated Date</label>
                   <p>{formatDate(form.updateddate) || '-'}</p>
                 </div>

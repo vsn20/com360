@@ -359,12 +359,12 @@ const Edit = ({ id, orgid, empid, handleback, time, status }) => {
     const panelMemberForm = panelMemberForms[roundIndex] || getInitialPanelMemberForm();
     
     return (
-      <div key={roundIndex} className="round-edit-block">
-        <div className="round-edit-header">
+      <div key={roundIndex} className="schedule_interview_round-edit-block">
+        <div className="schedule_interview_round-edit-header">
           <div>{round.name || `Round ${roundIndex + 1}`}</div>
           <button
             type="button"
-            className="cancel-button"
+            className="schedule_interview_cancel-button"
             onClick={() => handleDeleteRound(roundIndex)}
             disabled={isLoading}
           >
@@ -372,50 +372,50 @@ const Edit = ({ id, orgid, empid, handleback, time, status }) => {
           </button>
         </div>
         
-        <div className="round-edit-content">
-          <div className="edit-details-row">
-            <div className="edit-details-g">
+        <div className="schedule_interview_round-edit-content">
+          <div className="schedule_interview_edit-details-row">
+            <div className="schedule_interview_edit-details-g">
               <label>Round Name*</label>
               <input
                 type="text"
                 name="name"
                 value={round.name || ''}
                 onChange={(e) => handleRoundChange(e, roundIndex)}
-                className="form-input-edit"
+                className="schedule_interview_form-input-edit"
                 required
               />
             </div>
           </div>
           
-          <div className="edit-details-row">
-            <div className="edit-details-g">
+          <div className="schedule_interview_edit-details-row">
+            <div className="schedule_interview_edit-details-g">
               <label>Start Date*</label>
               <input
                 type="date"
                 name="start_date"
                 value={round.start_date || ''}
                 onChange={(e) => handleRoundChange(e, roundIndex)}
-                className="form-input-edit"
+                className="schedule_interview_form-input-edit"
                 required
               />
             </div>
-            <div className="edit-details-g time-edit-group">
+            <div className="schedule_interview_edit-details-g schedule_interview_time-edit-group">
               <label>Start Time*</label>
-              <div className="time-edit-inputs">
+              <div className="schedule_interview_time-edit-inputs">
                 <input
                   type="text"
                   name="start_time"
                   value={round.start_time || ''}
                   onChange={(e) => handleRoundChange(e, roundIndex)}
                   placeholder="HH:mm"
-                  className="time-edit-text-input"
+                  className="schedule_interview_time-edit-text-input"
                   required
                 />
                 <select
                   name="startHours"
                   value={round.startHours || ''}
                   onChange={(e) => handleTimeDropdownChange(e, roundIndex)}
-                  className="time-edit-select"
+                  className="schedule_interview_time-edit-select"
                 >
                   <option value="">HH</option>
                   {hourOptions.map((h) => (
@@ -427,7 +427,7 @@ const Edit = ({ id, orgid, empid, handleback, time, status }) => {
                   name="startMinutes"
                   value={round.startMinutes || ''}
                   onChange={(e) => handleTimeDropdownChange(e, roundIndex)}
-                  className="time-edit-select"
+                  className="schedule_interview_time-edit-select"
                 >
                   <option value="">MM</option>
                   {minuteOptions.map((m) => (
@@ -436,13 +436,13 @@ const Edit = ({ id, orgid, empid, handleback, time, status }) => {
                 </select>
               </div>
             </div>
-            <div className="edit-details-g">
+            <div className="schedule_interview_edit-details-g">
               <label>AM/PM</label>
               <select
                 name="start_am_pm"
                 value={round.start_am_pm || 'AM'}
                 onChange={(e) => handleRoundChange(e, roundIndex)}
-                className="form-input-edit"
+                className="schedule_interview_form-input-edit"
               >
                 <option value="AM">AM</option>
                 <option value="PM">PM</option>
@@ -450,33 +450,33 @@ const Edit = ({ id, orgid, empid, handleback, time, status }) => {
             </div>
           </div>
           
-          <div className="edit-details-row">
-            <div className="edit-details-g">
+          <div className="schedule_interview_edit-details-row">
+            <div className="schedule_interview_edit-details-g">
               <label>End Date</label>
               <input
                 type="date"
                 name="end_date"
                 value={round.end_date || ''}
                 onChange={(e) => handleRoundChange(e, roundIndex)}
-                className="form-input-edit"
+                className="schedule_interview_form-input-edit"
               />
             </div>
-            <div className="edit-details-g time-edit-group">
+            <div className="schedule_interview_edit-details-g schedule_interview_time-edit-group">
               <label>End Time</label>
-              <div className="time-edit-inputs">
+              <div className="schedule_interview_time-edit-inputs">
                 <input
                   type="text"
                   name="end_time"
                   value={round.end_time || ''}
                   onChange={(e) => handleRoundChange(e, roundIndex)}
                   placeholder="HH:mm"
-                  className="time-edit-text-input"
+                  className="schedule_interview_time-edit-text-input"
                 />
                 <select
                   name="endHours"
                   value={round.endHours || ''}
                   onChange={(e) => handleTimeDropdownChange(e, roundIndex)}
-                  className="time-edit-select"
+                  className="schedule_interview_time-edit-select"
                 >
                   <option value="">HH</option>
                   {hourOptions.map((h) => (
@@ -488,7 +488,7 @@ const Edit = ({ id, orgid, empid, handleback, time, status }) => {
                   name="endMinutes"
                   value={round.endMinutes || ''}
                   onChange={(e) => handleTimeDropdownChange(e, roundIndex)}
-                  className="time-edit-select"
+                  className="schedule_interview_time-edit-select"
                 >
                   <option value="">MM</option>
                   {minuteOptions.map((m) => (
@@ -497,13 +497,13 @@ const Edit = ({ id, orgid, empid, handleback, time, status }) => {
                 </select>
               </div>
             </div>
-            <div className="edit-details-g">
+            <div className="schedule_interview_edit-details-g">
               <label>AM/PM</label>
               <select
                 name="end_am_pm"
                 value={round.end_am_pm || 'AM'}
                 onChange={(e) => handleRoundChange(e, roundIndex)}
-                className="form-input-edit"
+                className="schedule_interview_form-input-edit"
               >
                 <option value="AM">AM</option>
                 <option value="PM">PM</option>
@@ -511,39 +511,39 @@ const Edit = ({ id, orgid, empid, handleback, time, status }) => {
             </div>
           </div>
           
-          <div className="edit-details-row">
-            <div className="edit-details-g">
+          <div className="schedule_interview_edit-details-row">
+            <div className="schedule_interview_edit-details-g">
               <label>Meeting Link</label>
               <input
                 type="url"
                 name="meeting_link"
                 value={round.meeting_link || ''}
                 onChange={(e) => handleRoundChange(e, roundIndex)}
-                className="form-input-edit"
+                className="schedule_interview_form-input-edit"
                 placeholder="Enter meeting link"
               />
             </div>
           </div>
           
-          <div className="edit-details-row">
-            <div className="edit-details-g">
+          <div className="schedule_interview_edit-details-row">
+            <div className="schedule_interview_edit-details-g">
               <label>Marks</label>
               <input
                 type="number"
                 name="marks"
                 value={round.marks || ''}
                 onChange={(e) => handleRoundChange(e, roundIndex)}
-                className="form-input-edit"
+                className="schedule_interview_form-input-edit"
                 placeholder="Enter marks"
               />
             </div>
-            <div className="edit-details-g">
+            <div className="schedule_interview_edit-details-g">
               <label>Round Status</label>
               <select
                 name="status"
                 value={round.status || 'scheduled'}
                 onChange={(e) => handleRoundChange(e, roundIndex)}
-                className="form-input-edit"
+                className="schedule_interview_form-input-edit"
               >
                 <option value="scheduled">Scheduled</option>
                 <option value="Accepted">Accepted</option>
@@ -552,30 +552,30 @@ const Edit = ({ id, orgid, empid, handleback, time, status }) => {
             </div>
           </div>
           
-          <div className="edit-details-row">
-            <div className="edit-details-g">
+          <div className="schedule_interview_edit-details-row">
+            <div className="schedule_interview_edit-details-g">
               <label>Comments</label>
               <textarea
                 name="comments"
                 value={round.comments || ''}
                 onChange={(e) => handleRoundChange(e, roundIndex)}
-                className="form-input-edit form-textarea-edit"
+                className="schedule_interview_form-input-edit schedule_interview_form-textarea-edit"
                 placeholder="Enter comments"
                 rows={3}
               />
             </div>
           </div>
           
-          <div className="panel-members-edit-section">
+          <div className="schedule_interview_panel-members-edit-section">
             <h4>Interview Panel</h4>
-            <div className="edit-details-row">
-              <div className="edit-details-g">
+            <div className="schedule_interview_edit-details-row">
+              <div className="schedule_interview_edit-details-g">
                 <label>Is Panel Member an Employee?</label>
                 <select
                   name="is_he_employee"
                   value={panelMemberForm.is_he_employee || '1'}
                   onChange={(e) => handlePanelFormChange(e, roundIndex)}
-                  className="form-input-edit"
+                  className="schedule_interview_form-input-edit"
                 >
                   <option value="1">Yes</option>
                   <option value="0">No</option>
@@ -583,13 +583,13 @@ const Edit = ({ id, orgid, empid, handleback, time, status }) => {
               </div>
               {panelMemberForm.is_he_employee === '1' ? (
                 <>
-                  <div className="edit-details-g">
+                  <div className="schedule_interview_edit-details-g">
                     <label>Select Employee</label>
                     <select
                       name="empid"
                       value={panelMemberForm.empid || ''}
                       onChange={(e) => handlePanelFormChange(e, roundIndex)}
-                      className="form-input-edit"
+                      className="schedule_interview_form-input-edit"
                     >
                       <option value="">Select an employee</option>
                       {employees.map((emp) => (
@@ -599,35 +599,35 @@ const Edit = ({ id, orgid, empid, handleback, time, status }) => {
                       ))}
                     </select>
                   </div>
-                  <div className="edit-details-g">
+                  <div className="schedule_interview_edit-details-g">
                     <label>Email</label>
                     <input
                       type="email"
                       name="email"
                       value={panelMemberForm.email || ''}
                       readOnly
-                      className="form-input-edit bg-gray-100"
+                      className="schedule_interview_form-input-edit schedule_interview_bg-gray-100"
                       placeholder="Employee email"
                     />
                   </div>
                 </>
               ) : (
-                <div className="edit-details-g">
+                <div className="schedule_interview_edit-details-g">
                   <label>Email</label>
                   <input
                     type="email"
                     name="email"
                     value={panelMemberForm.email || ''}
                     onChange={(e) => handlePanelFormChange(e, roundIndex)}
-                    className="form-input-edit"
+                    className="schedule_interview_form-input-edit"
                     placeholder="Enter email"
                   />
                 </div>
               )}
-              <div className="edit-details-g">
+              <div className="schedule_interview_edit-details-g">
                 <button
                   type="button"
-                  className="save-button"
+                  className="schedule_interview_save-button"
                   onClick={() => handleAddPanelMember(roundIndex)}
                 >
                   Add Panel Member
@@ -636,9 +636,9 @@ const Edit = ({ id, orgid, empid, handleback, time, status }) => {
             </div>
             
             {round.panelMembers.length > 0 && (
-              <div className="panel-members-edit-table-wrapper">
+              <div className="schedule_interview_panel-members-edit-table-wrapper">
                 <h5>Added Panel Members</h5>
-                <table className="panel-members-edit-table">
+                <table className="schedule_interview_panel-members-edit-table">
                   <thead>
                     <tr>
                       <th>Employee ID</th>
@@ -658,7 +658,7 @@ const Edit = ({ id, orgid, empid, handleback, time, status }) => {
                           <td>
                             <button
                               type="button"
-                              className="cancel-button"
+                              className="schedule_interview_cancel-button"
                               onClick={() => handleRemovePanelMember(roundIndex, index)}
                             >
                               Remove
@@ -679,22 +679,22 @@ const Edit = ({ id, orgid, empid, handleback, time, status }) => {
 
   const renderViewMode = () => (
     <div>
-      <div className="header-edit-section">
-        <h1 className="title">Interview Details</h1>
-        <button className="back-button" onClick={handleback}></button>
+      <div className="schedule_interview_header-edit-section">
+        <h1 className="schedule_interview_title">Interview Details</h1>
+        <button className="schedule_interview_back-button" onClick={handleback}></button>
       </div>
       
-      <div className="interview-edit-details-block">
-        <div className="interview-edit-details-header">
+      <div className="schedule_interview_interview-edit-details-block">
+        <div className="schedule_interview_interview-edit-details-header">
           <div>Interview Information (Application ID: {getdisplayprojectid(id)})</div>
-          <button className="edit-button" onClick={handleEdit}>
+          <button className="schedule_interview_edit-button" onClick={handleEdit}>
             Edit
           </button>
         </div>
         
-        <div className="view-edit-details">
-          <div className="edit-details-row">
-            <div className="edit-details-g">
+        <div className="schedule_interview_view-edit-details">
+          <div className="schedule_interview_edit-details-row">
+            <div className="schedule_interview_edit-details-g">
               <label>Status</label>
               <p>{interviewDetails.status || '-'}</p>
             </div>
@@ -703,67 +703,67 @@ const Edit = ({ id, orgid, empid, handleback, time, status }) => {
       </div>
       
       {rounds.length > 0 && (
-        <div className="rounds-edit-container">
+        <div className="schedule_interview_rounds-edit-container">
           {rounds.map((round, index) => (
-            <div key={`${round.Roundid}-${index}`} className="round-edit-block">
-              <div className="round-edit-header">
+            <div key={`${round.Roundid}-${index}`} className="schedule_interview_round-edit-block">
+              <div className="schedule_interview_round-edit-header">
                 <div>Round {round.RoundNo || index + 1}: {round.name || `Round ${index + 1}`}</div>
               </div>
               
-              <div className="round-edit-content">
-                <div className="view-edit-details">
-                  <div className="edit-details-row">
-                    <div className="edit-details-g">
+              <div className="schedule_interview_round-edit-content">
+                <div className="schedule_interview_view-edit-details">
+                  <div className="schedule_interview_edit-details-row">
+                    <div className="schedule_interview_edit-details-g">
                       <label>Round Name</label>
                       <p>{round.name || '-'}</p>
                     </div>
                   </div>
-                  <div className="edit-details-row">
-                    <div className="edit-details-g">
+                  <div className="schedule_interview_edit-details-row">
+                    <div className="schedule_interview_edit-details-g">
                       <label>Start Date</label>
                       <p>{formatDate(round.start_date) || '-'}</p>
                     </div>
-                    <div className="edit-details-g">
+                    <div className="schedule_interview_edit-details-g">
                       <label>Start Time</label>
                       <p>{formatTime(round.start_time, round.start_am_pm) || '-'}</p>
                     </div>
                   </div>
-                  <div className="edit-details-row">
-                    <div className="edit-details-g">
+                  <div className="schedule_interview_edit-details-row">
+                    <div className="schedule_interview_edit-details-g">
                       <label>End Date</label>
                       <p>{formatDate(round.end_date) || '-'}</p>
                     </div>
-                    <div className="edit-details-g">
+                    <div className="schedule_interview_edit-details-g">
                       <label>End Time</label>
                       <p>{formatTime(round.end_time, round.end_am_pm) || '-'}</p>
                     </div>
                   </div>
-                  <div className="edit-details-row">
-                    <div className="edit-details-g">
+                  <div className="schedule_interview_edit-details-row">
+                    <div className="schedule_interview_edit-details-g">
                       <label>Meeting Link</label>
                       <p>{round.meeting_link || '-'}</p>
                     </div>
                   </div>
-                  <div className="edit-details-row">
-                    <div className="edit-details-g">
+                  <div className="schedule_interview_edit-details-row">
+                    <div className="schedule_interview_edit-details-g">
                       <label>Marks</label>
                       <p>{round.marks || '-'}</p>
                     </div>
-                    <div className="edit-details-g">
+                    <div className="schedule_interview_edit-details-g">
                       <label>Round Status</label>
                       <p>{round.status || '-'}</p>
                     </div>
                   </div>
-                  <div className="edit-details-row">
-                    <div className="edit-details-g">
+                  <div className="schedule_interview_edit-details-row">
+                    <div className="schedule_interview_edit-details-g">
                       <label>Comments</label>
                       <p>{round.comments || '-'}</p>
                     </div>
                   </div>
                   {round.panelMembers.length > 0 && (
-                    <div className="panel-members-edit-section">
+                    <div className="schedule_interview_panel-members-edit-section">
                       <h5>Panel Members</h5>
-                      <table className="panel-members-edit-table">
+                      <table className="schedule_interview_panel-members-edit-table">
                         <thead>
                           <tr>
                             <th>Employee ID</th>
@@ -797,28 +797,28 @@ const Edit = ({ id, orgid, empid, handleback, time, status }) => {
 
   const renderEditMode = () => (
     <div>
-      <div className="header-edit-section">
-        <h1 className="title">
+      <div className="schedule_interview_header-edit-section">
+        <h1 className="schedule_interview_title">
           {!interviewDetails ? 'Create New Interview' : 'Edit Interview'} 
           (Application ID: {getdisplayprojectid(id)})
         </h1>
-        <button className="back-button" onClick={handleback}></button>
+        <button className="schedule_interview_back-button" onClick={handleback}></button>
       </div>
       
       <form onSubmit={handleSubmit}>
-        <div className="interview-edit-details-block">
-          <div className="interview-edit-details-header">
+        <div className="schedule_interview_interview-edit-details-block">
+          <div className="schedule_interview_interview-edit-details-header">
             <div>Interview Information</div>
           </div>
           
-          <div className="edit-details-row">
-            <div className="edit-details-g">
+          <div className="schedule_interview_edit-details-row">
+            <div className="schedule_interview_edit-details-g">
               <label>Status*</label>
               <select
                 name="applicationStatus"
                 value={applicationStatus || 'scheduled'}
                 onChange={handleStatusChange}
-                className="form-input-edit"
+                className="schedule_interview_form-input-edit"
                 required
               >
                 <option value="scheduled">Scheduled</option>
@@ -830,29 +830,29 @@ const Edit = ({ id, orgid, empid, handleback, time, status }) => {
         </div>
         
         {rounds.length > 0 && (
-          <div className="rounds-edit-container">
+          <div className="schedule_interview_rounds-edit-container">
             {rounds.map((round, index) => renderRoundForm(round, index))}
           </div>
         )}
         
-        <div className="add-round-edit-section">
+        <div className="schedule_interview_add-round-edit-section">
           {showRoundNameForm ? (
-            <div className="edit-details-row">
-              <div className="edit-details-g">
+            <div className="schedule_interview_edit-details-row">
+              <div className="schedule_interview_edit-details-g">
                 <label>Round Name*</label>
                 <input
                   type="text"
                   value={newRoundName || ''}
                   onChange={(e) => setNewRoundName(e.target.value)}
-                  className="form-input-edit"
+                  className="schedule_interview_form-input-edit"
                   placeholder="Enter round name"
                   required
                 />
               </div>
-              <div className="form-buttons-edit">
+              <div className="schedule_interview_form-buttons-edit">
                 <button
                   type="button"
-                  className="save-button"
+                  className="schedule_interview_save-button"
                   onClick={handleRoundNameSubmit}
                   disabled={isLoading}
                 >
@@ -860,7 +860,7 @@ const Edit = ({ id, orgid, empid, handleback, time, status }) => {
                 </button>
                 <button
                   type="button"
-                  className="cancel-button"
+                  className="schedule_interview_cancel-button"
                   onClick={handleRoundNameCancel}
                   disabled={isLoading}
                 >
@@ -871,7 +871,7 @@ const Edit = ({ id, orgid, empid, handleback, time, status }) => {
           ) : (
             <button
               type="button"
-              className="save-button"
+              className="schedule_interview_save-button"
               onClick={handleAddRound}
               disabled={isLoading}
             >
@@ -880,14 +880,14 @@ const Edit = ({ id, orgid, empid, handleback, time, status }) => {
           )}
         </div>
         
-        <div className="main-form-edit-actions">
-          <div className="form-buttons-edit">
-            <button type="submit" className="save-button" disabled={isLoading}>
+        <div className="schedule_interview_main-form-edit-actions">
+          <div className="schedule_interview_form-buttons-edit">
+            <button type="submit" className="schedule_interview_save-button" disabled={isLoading}>
               {isLoading ? 'Saving...' : 'Save'}
             </button>
             <button
               type="button"
-              className="cancel-button"
+              className="schedule_interview_cancel-button"
               onClick={() => setIsEditing(false)}
               disabled={isLoading}
             >
@@ -900,13 +900,13 @@ const Edit = ({ id, orgid, empid, handleback, time, status }) => {
   );
 
   return (
-    <div className="employee-details-container">
+    <div className="schedule_interview_employee-details-container">
       {isLoading ? (
         <Loading />
       ) : (
         <>
-          {error && <div className="error-edit-message">{error}</div>}
-          {success && <div className="success-edit-message">{success}</div>}
+          {error && <div className="schedule_interview_error-edit-message">{error}</div>}
+          {success && <div className="schedule_interview_success-edit-message">{success}</div>}
           
           {!interviewDetails && isEditing && renderEditMode()}
           {interviewDetails && !isEditing && renderViewMode()}

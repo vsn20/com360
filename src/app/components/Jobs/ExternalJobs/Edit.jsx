@@ -258,32 +258,32 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
   };
 
   return (
-    <div className="employee-details-container">
-      {isLoading && <div className="loading-message">Loading...</div>}
-      {error && <div className="error-message">{error}</div>}
-      {successMessage && <div className="success-message">{successMessage}</div>}
+    <div className="externaljobs_employee-details-container">
+      {isLoading && <div className="externaljobs_loading-message">Loading...</div>}
+      {error && <div className="externaljobs_error-message">{error}</div>}
+      {successMessage && <div className="externaljobs_success-message">{successMessage}</div>}
       {jobDetails && (
         <>
-        <div className='employee-submenu-bar'> 
-           <button onClick={handlebasicdetails} className={activetab==='basic'?'active':''}>Basic Details</button>
-        <button onClick={handleadditionaldetails} className={activetab==='additional'?'active':''}>Additional Details</button>
+        <div className='externaljobs_employee-submenu-bar'> 
+           <button onClick={handlebasicdetails} className={activetab==='basic'?'externaljobs_active':''}>Basic Details</button>
+        <button onClick={handleadditionaldetails} className={activetab==='additional'?'externaljobs_active':''}>Additional Details</button>
         </div>
        
         {basicdetailsdisplay &&!additionaldetailsdisplay &&(
           <>
-          <div className="details-block">
-            <div className="roledetails-header">
+          <div className="externaljobs_details-block">
+            <div className="externaljobs_roledetails-header">
               <div>Basic Details</div>
               {!editingBasic && (
-                <button className="button" onClick={() => handleEdit('basic')}>
+                <button className="externaljobs_button" onClick={() => handleEdit('basic')}>
                   Edit
                 </button>
               )}
             </div>
             {editingBasic ? (
               <form onSubmit={(e) => { e.preventDefault(); handleSave('basic'); }}>
-                <div className="form-row">
-                  <div className="form-group">
+                <div className="externaljobs_form-row">
+                  <div className="externaljobs_form-group">
                     <label>Display Job Name*:</label>
                     <input
                       type="text"
@@ -293,7 +293,7 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
                       required
                     />
                   </div>
-                  <div className="form-group">
+                  <div className="externaljobs_form-group">
                     <label>Expected Job Title*:</label>
                     <select
                       name="expectedJobTitle"
@@ -310,8 +310,8 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
                     </select>
                   </div>
                 </div>
-                <div className="form-row">
-                  <div className="form-group">
+                <div className="externaljobs_form-row">
+                  <div className="externaljobs_form-group">
                     <label>Expected Role*:</label>
                     <select
                       name="expectedRole"
@@ -327,7 +327,7 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
                       ))}
                     </select>
                   </div>
-                  <div className="form-group">
+                  <div className="externaljobs_form-group">
                     <label>Expected Department*:</label>
                     <select
                       name="expectedDepartment"
@@ -344,8 +344,8 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
                     </select>
                   </div>
                 </div>
-                <div className="form-row">
-                  <div className="form-group">
+                <div className="externaljobs_form-row">
+                  <div className="externaljobs_form-group">
                     <label>Job Type*:</label>
                     <select
                       name="jobType"
@@ -361,7 +361,7 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
                       ))}
                     </select>
                   </div>
-                  <div className="form-group">
+                  <div className="externaljobs_form-group">
                     <label>Number of Vacancies*:</label>
                     <input
                       type="number"
@@ -372,8 +372,8 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
                     />
                   </div>
                 </div>
-                <div className="form-row">
-                  <div className="form-group full-width">
+                <div className="externaljobs_form-row">
+                  <div className="externaljobs_form-group full-width">
                     <label>Description*:</label>
                     <textarea
                       name="description"
@@ -384,53 +384,53 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
                     />
                   </div>
                 </div>
-                <div className="form-buttons">
-                  <button type="submit" className="save" disabled={isLoading}>
+                <div className="externaljobs_form-buttons">
+                  <button type="submit" className="externaljobs_save" disabled={isLoading}>
                     {isLoading ? 'Saving...' : 'Save'}
                   </button>
-                  <button type="button" className="cancel" onClick={() => handleCancel('basic')} disabled={isLoading}>
+                  <button type="button" className="externaljobs_cancel" onClick={() => handleCancel('basic')} disabled={isLoading}>
                     Cancel
                   </button>
                 </div>
               </form>
             ) : (
               <div className="view-details">
-                <div className="details-row">
-                  <div className="details-group">
+                <div className="externaljobs_details-row">
+                  <div className="externaljobs_details-group">
                     <label>Job ID:</label>
                     <p>{getdisplayprojectid(jobDetails.jobid)}</p>
                   </div>
-                  <div className="details-group">
+                  <div className="externaljobs_details-group">
                     <label>Display Job Name:</label>
                     <p>{jobDetails.display_job_name || '-'}</p>
                   </div>
                 </div>
-                <div className="details-row">
-                  <div className="details-group">
+                <div className="externaljobs_details-row">
+                  <div className="externaljobs_details-group">
                     <label>Expected Job Title:</label>
                     <p>{expectedjobtitles.find((title) => title.job_title_id === jobDetails.expected_job_title)?.job_title || '-'}</p>
                   </div>
-                  <div className="details-group">
+                  <div className="externaljobs_details-group">
                     <label>Expected Role:</label>
                     <p>{expectedrole.find((role) => role.roleid === jobDetails.expected_role)?.rolename || '-'}</p>
                   </div>
                 </div>
-                <div className="details-row">
-                  <div className="details-group">
+                <div className="externaljobs_details-row">
+                  <div className="externaljobs_details-group">
                     <label>Expected Department:</label>
                     <p>{expectedepartment.find((dept) => dept.id === jobDetails.expected_department)?.name || '-'}</p>
                   </div>
-                  <div className="details-group">
+                  <div className="externaljobs_details-group">
                     <label>Job Type:</label>
                     <p>{jobtype.find((type) => type.id === jobDetails.job_type)?.Name || '-'}</p>
                   </div>
                 </div>
-                <div className="details-row">
-                  <div className="details-group">
+                <div className="externaljobs_details-row">
+                  <div className="externaljobs_details-group">
                     <label>Number of Vacancies:</label>
                     <p>{jobDetails.no_of_vacancies || '-'}</p>
                   </div>
-                  <div className="details-group">
+                  <div className="externaljobs_details-group">
                     <label>Description:</label>
                     <p>{jobDetails.description || '-'}</p>
                   </div>
@@ -442,19 +442,19 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
         )}
         {additionaldetailsdisplay && !basicdetailsdisplay &&(
           <>
-          <div className="details-block">
-            <div className="roledetails-header">
+          <div className="externaljobs_details-block">
+            <div className="externaljobs_roledetails-header">
               <div>Additional Details</div>
               {!editingAdditional && (
-                <button className="button" onClick={() => handleEdit('additional')}>
+                <button className="externaljobs_button" onClick={() => handleEdit('additional')}>
                   Edit
                 </button>
               )}
             </div>
             {editingAdditional ? (
               <form onSubmit={(e) => { e.preventDefault(); handleSave('additional'); }}>
-                <div className="form-row">
-                  <div className="form-group">
+                <div className="externaljobs_form-row">
+                  <div className="externaljobs_form-group">
                     <label>Address Lane 1:</label>
                     <input
                       type="text"
@@ -463,7 +463,7 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
                       onChange={handleChange}
                     />
                   </div>
-                  <div className="form-group">
+                  <div className="externaljobs_form-group">
                     <label>Address Lane 2:</label>
                     <input
                       type="text"
@@ -473,8 +473,8 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
                     />
                   </div>
                 </div>
-                <div className="form-row">
-                  <div className="form-group">
+                <div className="externaljobs_form-row">
+                  <div className="externaljobs_form-group">
                     <label>Zipcode:</label>
                     <input
                       type="text"
@@ -484,7 +484,7 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
                       maxLength="20"
                     />
                   </div>
-                  <div className="form-group">
+                  <div className="externaljobs_form-group">
                     <label>Country:</label>
                     <select
                       name="countryId"
@@ -500,8 +500,8 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
                     </select>
                   </div>
                 </div>
-                <div className="form-row">
-                  <div className="form-group">
+                <div className="externaljobs_form-row">
+                  <div className="externaljobs_form-group">
                     <label>State:</label>
                     <select
                       name="stateId"
@@ -517,7 +517,7 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
                       ))}
                     </select>
                   </div>
-                  <div className="form-group">
+                  <div className="externaljobs_form-group">
                     <label>Custom State Name:</label>
                     <input
                       type="text"
@@ -528,8 +528,8 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
                     />
                   </div>
                 </div>
-                <div className="form-row">
-                  <div className="form-group">
+                <div className="externaljobs_form-row">
+                  <div className="externaljobs_form-group">
                     <label>Last Date for Application:</label>
                     <input
                       type="date"
@@ -538,7 +538,7 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
                       onChange={handleChange}
                     />
                   </div>
-                  <div className="form-group">
+                  <div className="externaljobs_form-group">
                     <label>Active:</label>
                     <select
                       name="active"
@@ -550,103 +550,103 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
                     </select>
                   </div>
                 </div>
-                <div className="form-row">
-                  <div className="form-group">
+                <div className="externaljobs_form-row">
+                  <div className="externaljobs_form-group">
                     <label>Created By:</label>
                     <input
                       type="text"
                       name="createdBy"
                       value={formData.createdBy}
                       readOnly
-                      className="bg-gray-100"
+                      className="externaljobs_bg-gray-100"
                     />
                   </div>
-                  <div className="form-group">
+                  <div className="externaljobs_form-group">
                     <label>Posted Date:</label>
                     <input
                       type="text"
                       name="postedDate"
                       value={formatDate(formData.postedDate)}
                       readOnly
-                      className="bg-gray-100"
+                      className="externaljobs_bg-gray-100"
                     />
                   </div>
                 </div>
-                <div className="form-row">
-                  <div className="form-group">
+                <div className="externaljobs_form-row">
+                  <div className="externaljobs_form-group">
                     <label>Last Updated By:</label>
                     <input
                       type="text"
                       name="lastUpdatedBy"
                       value={formData.lastUpdatedBy}
                       readOnly
-                      className="bg-gray-100"
+                      className="externaljobs_bg-gray-100"
                     />
                   </div>
                 </div>
-                <div className="form-buttons">
-                  <button type="submit" className="save" disabled={isLoading}>
+                <div className="externaljobs_form-buttons">
+                  <button type="submit" className="externaljobs_save" disabled={isLoading}>
                     {isLoading ? 'Saving...' : 'Save'}
                   </button>
-                  <button type="button" className="cancel" onClick={() => handleCancel('additional')} disabled={isLoading}>
+                  <button type="button" className="externaljobs_cancel" onClick={() => handleCancel('additional')} disabled={isLoading}>
                     Cancel
                   </button>
                 </div>
               </form>
             ) : (
               <div className="view-details">
-                <div className="details-row">
-                  <div className="details-group">
+                <div className="externaljobs_details-row">
+                  <div className="externaljobs_details-group">
                     <label>Address Lane 1:</label>
                     <p>{jobDetails.addresslane1 || '-'}</p>
                   </div>
-                  <div className="details-group">
+                  <div className="externaljobs_details-group">
                     <label>Address Lane 2:</label>
                     <p>{jobDetails.addresslane2 || '-'}</p>
                   </div>
                 </div>
-                <div className="details-row">
-                  <div className="details-group">
+                <div className="externaljobs_details-row">
+                  <div className="externaljobs_details-group">
                     <label>Zipcode:</label>
                     <p>{jobDetails.zipcode || '-'}</p>
                   </div>
-                  <div className="details-group">
+                  <div className="externaljobs_details-group">
                     <label>Country:</label>
                     <p>{getCountryName(jobDetails.countryid)}</p>
                   </div>
                 </div>
-                <div className="details-row">
-                  <div className="details-group">
+                <div className="externaljobs_details-row">
+                  <div className="externaljobs_details-group">
                     <label>State:</label>
                     <p>{getStateName(jobDetails.stateid)}</p>
                   </div>
-                  <div className="details-group">
+                  <div className="externaljobs_details-group">
                     <label>Custom State Name:</label>
                     <p>{jobDetails.custom_state_name || '-'}</p>
                   </div>
                 </div>
-                <div className="details-row">
-                  <div className="details-group">
+                <div className="externaljobs_details-row">
+                  <div className="externaljobs_details-group">
                     <label>Posted Date:</label>
                     <p>{formatDate(jobDetails.posteddate) || '-'}</p>
                   </div>
-                  <div className="details-group">
+                  <div className="externaljobs_details-group">
                     <label>Last Date for Application:</label>
                     <p>{formatDate(jobDetails.lastdate_for_application) || '-'}</p>
                   </div>
                 </div>
-                <div className="details-row">
-                  <div className="details-group">
+                <div className="externaljobs_details-row">
+                  <div className="externaljobs_details-group">
                     <label>Active:</label>
                     <p>{jobDetails.active ? 'Active' : 'Inactive'}</p>
                   </div>
-                  <div className="details-group">
+                  <div className="externaljobs_details-group">
                     <label>Created By:</label>
                     <p>{jobDetails.created_by || '-'}</p>
                   </div>
                 </div>
-                <div className="details-row">
-                  <div className="details-group">
+                <div className="externaljobs_details-row">
+                  <div className="externaljobs_details-group">
                     <label>Last Updated By:</label>
                     <p>{jobDetails.last_updated_by || '-'}</p>
                   </div>

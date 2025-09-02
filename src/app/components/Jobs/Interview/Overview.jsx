@@ -359,16 +359,16 @@ const Overview = ({ orgid, empid, interviewdetails, time, acceptingtime, editing
 
   if (isLoading) {
     return (
-      <div className="interview-overview-container">
-        <div className="loading-message">Loading...</div>
+      <div className="interview_interview-overview-container">
+        <div className="interview_loading-message">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="interview-overview-container">
-      {error && <div className="error-message">{error}</div>}
-      {success && <div className="success-message">{success}</div>}
+    <div className="interview_interview-overview-container">
+      {error && <div className="interview_error-message">{error}</div>}
+      {success && <div className="interview_success-message">{success}</div>}
       
       {!remaining && confirm && (
         <Confirm
@@ -392,25 +392,25 @@ const Overview = ({ orgid, empid, interviewdetails, time, acceptingtime, editing
       )}
       
       {!remaining && !confirm && !selected && (
-        <div className="interviews-list">
-          <div className="title">{editing ? 'All Interviews' : 'My Interviews'}</div>
+        <div className="interview_interviews-list">
+          <div className="interview_title">{editing ? 'All Interviews' : 'My Interviews'}</div>
           
-          <div className="search-container">
+          <div className="interview_search-container">
             <input
               type="text"
               placeholder="Search by Name, Job, Interview ID, Application ID"
               value={searchQuery}
               onChange={handleSearchChange}
-              className="search-input-interview"
+              className="interview_search-input-interview"
             />
           </div>
           
           {filteredInterviews.length === 0 ? (
-            <p className="empty-state">No interviews found.</p>
+            <p className="interview_empty-state">No interviews found.</p>
           ) : (
             <>
-              <div className="table-wrapper">
-                <table className="interview-table five-column">
+              <div className="interview_table-wrapper">
+                <table className="interview_interview-table interview_five-column">
                   <colgroup>
                     <col />
                     <col />
@@ -420,19 +420,19 @@ const Overview = ({ orgid, empid, interviewdetails, time, acceptingtime, editing
                   </colgroup>
                   <thead>
                     <tr>
-                      <th className={sortConfig.column === 'applicationid' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('applicationid')}>
+                      <th className={sortConfig.column === 'applicationid' ? `interview_sortable interview_sort-${sortConfig.direction}` : 'interview_sortable'} onClick={() => requestSort('applicationid')}>
                         Application ID
                       </th>
-                      <th className={sortConfig.column === 'interview_id' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('interview_id')}>
+                      <th className={sortConfig.column === 'interview_id' ? `interview_sortable interview_sort-${sortConfig.direction}` : 'interview_sortable'} onClick={() => requestSort('interview_id')}>
                         Interview ID
                       </th>
-                      <th className={sortConfig.column === 'applicant_name' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('applicant_name')}>
+                      <th className={sortConfig.column === 'applicant_name' ? `interview_sortable interview_sort-${sortConfig.direction}` : 'interview_sortable'} onClick={() => requestSort('applicant_name')}>
                         Applicant Name
                       </th>
-                      <th className={sortConfig.column === 'job_name' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('job_name')}>
+                      <th className={sortConfig.column === 'job_name' ? `interview_sortable interview_sort-${sortConfig.direction}` : 'interview_sortable'} onClick={() => requestSort('job_name')}>
                         JobID-Job Name
                       </th>
-                      <th className={sortConfig.column === 'status' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('status')}>
+                      <th className={sortConfig.column === 'status' ? `interview_sortable interview_sort-${sortConfig.direction}` : 'interview_sortable'} onClick={() => requestSort('status')}>
                         Status
                       </th>
                     </tr>
@@ -443,10 +443,10 @@ const Overview = ({ orgid, empid, interviewdetails, time, acceptingtime, editing
                         <td>
                           <span className={
                               detail.status === 'offerletter-generated'
-                              ? 'role-indicator2'
+                              ? 'interview_role-indicator2'
                               : detail.status === 'scheduled'
-                              ? 'role-indicator'
-                              : 'role-indicator1'
+                              ? 'interview_role-indicator'
+                              : 'interview_role-indicator1'
                             }></span>App-{getdisplayprojectid(detail.applicationid)}
                         </td>
                         <td>Interview-{getdisplayprojectid(detail.interview_id)}</td>
@@ -456,10 +456,10 @@ const Overview = ({ orgid, empid, interviewdetails, time, acceptingtime, editing
                           <span
                              className={
                               detail.status === 'offerletter-generated'
-                              ? 'status-badge actives'
+                              ? 'interview_status-badge interview_actives'
                               : detail.status === 'scheduled'
-                              ? 'status-badge active'
-                              : 'status-badge inactive'
+                              ? 'interview_status-badge interview_active'
+                              : 'interview_status-badge interview_inactive'
                             }
                            >
                             {detail.status}
@@ -472,27 +472,27 @@ const Overview = ({ orgid, empid, interviewdetails, time, acceptingtime, editing
               </div>
               
               {filteredInterviews.length > interviewsPerPage && (
-                <div className="pagination-container">
+                <div className="interview_pagination-container">
                   <button
-                    className="button"
+                    className="interview_button"
                     onClick={handlePrevPage}
                     disabled={currentPage === 1}
                   >
                     ← Previous
                   </button>
-                  <span className="pagination-text">
+                  <span className="interview_pagination-text">
                     Page{' '}
                     <input
                       type="text"
                       value={pageInputValue}
                       onChange={handlePageInputChange}
                       onKeyPress={handlePageInputKeyPress}
-                      className="pagination-input"
+                      className="interview_pagination-input"
                     />{' '}
                     of {totalPages}
                   </span>
                   <button
-                    className="button"
+                    className="interview_button"
                     onClick={handleNextPage}
                     disabled={currentPage === totalPages}
                   >
@@ -502,14 +502,14 @@ const Overview = ({ orgid, empid, interviewdetails, time, acceptingtime, editing
               )}
               
               {filteredInterviews.length > 0 && (
-                <div className="rows-per-page-container">
-                  <label className="rows-per-page-label">Rows/ Page</label>
+                <div className="interview_rows-per-page-container">
+                  <label className="interview_rows-per-page-label">Rows/ Page</label>
                   <input
                     type="text"
                     value={duplicate}
                     onChange={pagechanging}
                     onKeyPress={handleInterviewsInputKeyPress}
-                    className="rows-per-page-input"
+                    className="interview_rows-per-page-input"
                     aria-label="Number of rows per page"
                   />
                 </div>
@@ -520,84 +520,84 @@ const Overview = ({ orgid, empid, interviewdetails, time, acceptingtime, editing
       )}
       
       {!remaining && !confirm && selected && iddetails && (
-        <div className="interview-details-container">
-          <div className="header-section">
-            <h1 className="title">Interview Details</h1>
-            <button className="back-button" onClick={handleback}></button>
+        <div className="interview_interview-details-container">
+          <div className="interview_header-section">
+            <h1 className="interview_title">Interview Details</h1>
+            <button className="interview_back-button" onClick={handleback}></button>
           </div>
 
-          <div className="interview-submenu-bar">
+          <div className="interview_interview-submenu-bar">
             <button
               onClick={handleInterviewInformation}
-              className={activetab === 'interviewinformation' ? 'active' : ''}
+              className={activetab === 'interviewinformation' ? 'interview_active' : ''}
             >
               Interview Information
             </button>
             <button
               onClick={handleRounds}
-              className={activetab === 'rounds' ? 'active' : ''}
+              className={activetab === 'rounds' ? 'interview_active' : ''}
             >
               Rounds
             </button>
           </div>
           
           {displayinterviewinformation && !displayrounds && (
-            <div className="interview-details-block">
-              <div className="interview-details-header">
+            <div className="interview_interview-details-block">
+              <div className="interview_interview-details-header">
                 <div>Interview Information</div>
               </div>
               
-              <div className="view-details">
-                <div className="details-row">
-                  <div className="details-g">
+              <div className="interview_view-details">
+                <div className="interview_details-row">
+                  <div className="interview_details-g">
                     <label>Application ID</label>
                     <p>App-{getdisplayprojectid(iddetails.applicationid || '-')}</p>
                   </div>
-                  <div className="details-g">
+                  <div className="interview_details-g">
                     <label>Interview ID</label>
                     <p>Interview-{getdisplayprojectid(iddetails.interview_id || '-')}</p>
                   </div>
                 </div>
                 
-                <div className="details-row">
-                  <div className="details-g">
+                <div className="interview_details-row">
+                  <div className="interview_details-g">
                     <label>Applicant Name</label>
                     <p>{`${iddetails.first_name || ''} ${iddetails.last_name || ''}`}</p>
                   </div>
-                  <div className="details-g">
+                  <div className="interview_details-g">
                     <label>Job Title</label>
                     <p>{iddetails.display_job_name || '-'}</p>
                   </div>
                 </div>
                 
-                <div className="details-row">
-                  <div className="details-g">
+                <div className="interview_details-row">
+                  <div className="interview_details-g">
                     <label>Email</label>
                     <p>{iddetails.email || '-'}</p>
                   </div>
-                  <div className="details-g">
+                  <div className="interview_details-g">
                     <label>Application Status</label>
-                    <p className="application-status-text">
+                    <p className="interview_application-status-text">
                       {iddetails.status || '-'}
                     </p>
                   </div>
                 </div>
                 
-                <div className="details-row">
-                  <div className="details-g">
+                <div className="interview_details-row">
+                  <div className="interview_details-g">
                     <label>Resume</label>
                     {iddetails.resumepath ? (
                       <a
                         href={iddetails.resumepath}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="view-resume-link"
+                        className="interview_view-resume-link"
                         onClick={handleViewResume}
                       >
                         View Resume
                       </a>
                     ) : (
-                      <span className="no-resume-text">No resume available</span>
+                      <span className="interview_no-resume-text">No resume available</span>
                     )}
                   </div>
                 </div>
@@ -606,14 +606,14 @@ const Overview = ({ orgid, empid, interviewdetails, time, acceptingtime, editing
           )}
           
           {displayrounds && !displayinterviewinformation && rounds.length > 0 && (
-            <div className="rounds-container">
+            <div className="interview_rounds-container">
               {rounds.map((round, index) => (
-                <div key={`${round.Roundid}-${index}`} className="round-block">
-                  <div className="round-header">
+                <div key={`${round.Roundid}-${index}`} className="interview_round-block">
+                  <div className="interview_round-header">
                     <div>Round {round.RoundNo || index + 1}</div>
                     {canEditRound(round) && !round.isEditing && (
                       <button
-                        className="button"
+                        className="interview_button"
                         onClick={() => handleEdit(index)}
                         disabled={!canEdit}
                       >
@@ -622,29 +622,29 @@ const Overview = ({ orgid, empid, interviewdetails, time, acceptingtime, editing
                     )}
                   </div>
                   
-                  <div className="round-content">
-                    <div className="details-row">
-                      <div className="details-g">
+                  <div className="interview_round-content">
+                    <div className="interview_details-row">
+                      <div className="interview_details-g">
                         <label>Start Date</label>
                         {round.isEditing ? (
                           <input
                             type="date"
                             value={formatDate(round.start_date)}
                             onChange={(e) => handleRoundChange(index, 'start_date', e.target.value)}
-                            className="form-input"
+                            className="interview_form-input"
                           />
                         ) : (
                           <p>{formatDate(round.start_date) || '-'}</p>
                         )}
                       </div>
-                      <div className="details-g">
+                      <div className="interview_details-g">
                         <label>Start Time</label>
                         {round.isEditing ? (
                           <input
                             type="text"
                             value={round.start_time || ''}
                             onChange={(e) => handleRoundChange(index, 'start_time', e.target.value)}
-                            className="form-input"
+                            className="interview_form-input"
                             placeholder="HH:MM"
                           />
                         ) : (
@@ -653,28 +653,28 @@ const Overview = ({ orgid, empid, interviewdetails, time, acceptingtime, editing
                       </div>
                     </div>
                     
-                    <div className="details-row">
-                      <div className="details-g">
+                    <div className="interview_details-row">
+                      <div className="interview_details-g">
                         <label>End Date</label>
                         {round.isEditing ? (
                           <input
                             type="date"
                             value={formatDate(round.end_date)}
                             onChange={(e) => handleRoundChange(index, 'end_date', e.target.value)}
-                            className="form-input"
+                            className="interview_form-input"
                           />
                         ) : (
                           <p>{formatDate(round.end_date) || '-'}</p>
                         )}
                       </div>
-                      <div className="details-g">
+                      <div className="interview_details-g">
                         <label>End Time</label>
                         {round.isEditing ? (
                           <input
                             type="text"
                             value={round.end_time || ''}
                             onChange={(e) => handleRoundChange(index, 'end_time', e.target.value)}
-                            className="form-input"
+                            className="interview_form-input"
                             placeholder="HH:MM"
                           />
                         ) : (
@@ -683,28 +683,28 @@ const Overview = ({ orgid, empid, interviewdetails, time, acceptingtime, editing
                       </div>
                     </div>
                     
-                    <div className="details-row">
-                      <div className="details-g">
+                    <div className="interview_details-row">
+                      <div className="interview_details-g">
                         <label>Meeting Link</label>
                         {round.isEditing ? (
                           <input
                             type="url"
                             value={round.meeting_link || ''}
                             onChange={(e) => handleRoundChange(index, 'meeting_link', e.target.value)}
-                            className="form-input"
+                            className="interview_form-input"
                             placeholder="https://..."
                           />
                         ) : (
                           <p>{formatMeetingLink(round.meeting_link) || "-"}</p>
                         )}
                       </div>
-                      <div className="details-g">
+                      <div className="interview_details-g">
                         <label>Round Status</label>
                         {round.isEditing ? (
                           <select
                             value={round.status || ''}
                             onChange={(e) => handleRoundChange(index, 'status', e.target.value)}
-                            className="form-input"
+                            className="interview_form-input"
                           >
                             <option value="">Select Status</option>
                             <option value="Accepted">Accepted</option>
@@ -713,12 +713,12 @@ const Overview = ({ orgid, empid, interviewdetails, time, acceptingtime, editing
                         ) : (
                           <p>
                             {round.status === 'Accepted' && (
-                              <span className="round-status-badge accepted">
+                              <span className="interview_round-status-badge interview_accepted">
                                 {round.status}
                               </span>
                             )}
                             {round.status === 'Rejected' && (
-                              <span className="round-status-badge rejected">
+                              <span className="interview_round-status-badge interview_rejected">
                                 {round.status}
                               </span>
                             )}
@@ -728,28 +728,28 @@ const Overview = ({ orgid, empid, interviewdetails, time, acceptingtime, editing
                       </div>
                     </div>
                     
-                    <div className="details-row">
-                      <div className="details-g">
+                    <div className="interview_details-row">
+                      <div className="interview_details-g">
                         <label>Marks</label>
                         {round.isEditing ? (
                           <input
                             type="number"
                             value={round.marks || ''}
                             onChange={(e) => handleRoundChange(index, 'marks', e.target.value)}
-                            className="form-input"
+                            className="interview_form-input"
                             placeholder="0-100"
                           />
                         ) : (
                           <p>{round.marks || '-'}</p>
                         )}
                       </div>
-                      <div className="details-g">
+                      <div className="interview_details-g">
                         <label>Comments</label>
                         {round.isEditing ? (
                           <textarea
                             value={round.comments || ''}
                             onChange={(e) => handleRoundChange(index, 'comments', e.target.value)}
-                            className="form-input form-textarea"
+                            className="interview_form-input interview_form-textarea"
                             placeholder="Add your comments..."
                             rows={3}
                           />
@@ -760,16 +760,16 @@ const Overview = ({ orgid, empid, interviewdetails, time, acceptingtime, editing
                     </div>
                     
                     {round.isEditing && (
-                      <div className="form-buttons">
+                      <div className="interview_form-buttons">
                         <button
-                          className="save"
+                          className="interview_save"
                           onClick={() => handleSaveRound(index)}
                           disabled={isLoading}
                         >
                           {isLoading ? 'Saving...' : 'Save'}
                         </button>
                         <button
-                          className="cancel"
+                          className="interview_cancel"
                           onClick={() => handleCancelRound(index)}
                           disabled={isLoading}
                         >
@@ -789,3 +789,4 @@ const Overview = ({ orgid, empid, interviewdetails, time, acceptingtime, editing
 };
 
 export default Overview;
+

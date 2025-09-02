@@ -185,7 +185,7 @@ const Overview = ({ scheduledetails, applieddetails, orgid, empid, time }) => {
             status={selectedstatus}
           />
     </>)}
-    <div className="employee-overview-container">
+    <div className="schedule_interview_employee-overview-container">
       {applyinterview &&!selectedid && (
         <>
           <SubmittingApplication
@@ -198,24 +198,24 @@ const Overview = ({ scheduledetails, applieddetails, orgid, empid, time }) => {
       )}
       {!applyinterview && !selectedid ? (
         <>
-          <div className="employee-list">
-            <div className="header-section">
-              <div className="title">Application Management</div>
-              <button className="button" onClick={handleSchedule}>Schedule Interview</button>
+          <div className="schedule_interview_employee-list">
+            <div className="schedule_interview_header-section">
+              <div className="schedule_interview_title">Application Management</div>
+              <button className="schedule_interview_button" onClick={handleSchedule}>Schedule Interview</button>
             </div>
             
-            <div className="search-filter-container">
+            <div className="schedule_interview_search-filter-container">
               <input
                 type="text"
                 placeholder="Search by Name, Job, or Application ID"
                 value={searchQuery}
                 onChange={handleSearchChange}
-                className="search-input"
+                className="schedule_interview_search-input"
               />
               <select
                 value={statusFilter}
                 onChange={handleStatusFilterChange}
-                className="filter-select"
+                className="schedule_interview_filter-select"
               >
                 <option value="all">All Status</option>
                 {uniqueStatuses.map(status => (
@@ -225,34 +225,34 @@ const Overview = ({ scheduledetails, applieddetails, orgid, empid, time }) => {
             </div>
 
             {filteredApplications.length === 0 ? (
-              <p className="empty-state">No C_APPLICATIONS found.</p>
+              <p className="schedule_interview_empty-state">No Applications found.</p>
             ) : (
               <>
-                <div className="C_APPLICATIONS-table-wrapper">
-                  <table className="C_APPLICATIONS-table">
+                <div className="schedule_interview_C_APPLICATIONS-table-wrapper">
+                  <table className="schedule_interview_C_APPLICATIONS-table">
                     <thead>
                       <tr>
                         <th 
-                          className={sortConfig.column === 'applicationid' ? `sortable sort-${sortConfig.direction}` : 'sortable'}
+                          className={sortConfig.column === 'applicationid' ? `schedule_interview_sortable schedule_interview_sort-${sortConfig.direction}` : 'schedule_interview_sortable'}
                           onClick={() => requestSort('applicationid')}
                         >
                           Application ID
                         </th>
                         <th 
-                          className={sortConfig.column === 'name' ? `sortable sort-${sortConfig.direction}` : 'sortable'}
+                          className={sortConfig.column === 'name' ? `schedule_interview_sortable schedule_interview_sort-${sortConfig.direction}` : 'schedule_interview_sortable'}
                           onClick={() => requestSort('name')}
                         >
                           Candidate Name
                         </th>
                         <th 
-                          className={sortConfig.column === 'jobname' ? `sortable sort-${sortConfig.direction}` : 'sortable'}
+                          className={sortConfig.column === 'jobname' ? `schedule_interview_sortable schedule_interview_sort-${sortConfig.direction}` : 'schedule_interview_sortable'}
                           onClick={() => requestSort('jobname')}
                         >
                           Job Name-Job ID
                         </th>
                         <th>Resume</th>
                         <th 
-                          className={sortConfig.column === 'status' ? `sortable sort-${sortConfig.direction}` : 'sortable'}
+                          className={sortConfig.column === 'status' ? `schedule_interview_sortable schedule_interview_sort-${sortConfig.direction}` : 'schedule_interview_sortable'}
                           onClick={() => requestSort('status')}
                         >
                           Status
@@ -262,13 +262,13 @@ const Overview = ({ scheduledetails, applieddetails, orgid, empid, time }) => {
                     <tbody>
                       {currentApplications.map((details) => (
                         <tr key={details.applicationid} onClick={() => handlerowclick(details.applicationid, details.status)}>
-                          <td className="id-cell">
+                          <td className="schedule_interview_id-cell">
                             <span  className={
                                 details.status === 'offerletter-generated'
-                                  ? 'roleindicatorsemiinactive'
+                                  ? 'schedule_interview_roleindicatorsemiinactive'
                                   : details.status === 'scheduled'
-                                  ? 'role-indicator'
-                                  : 'role-indicatorinactiver'
+                                  ? 'schedule_interview_role-indicator'
+                                  : 'schedule_interview_role-indicatorinactiver'
                               }></span>
                             {getdisplayprojectid(details.applicationid)}
                           </td>
@@ -281,13 +281,13 @@ const Overview = ({ scheduledetails, applieddetails, orgid, empid, time }) => {
                           </td>
                           <td>
                             <span
-                              className={
+                              className={`schedule_interview_status-badge ${
                                 details.status === 'offerletter-generated'
-                                  ? 'status-badge actives'
+                                  ? 'schedule_interview_actives'
                                   : details.status === 'scheduled'
-                                  ? 'status-badge active'
-                                  : 'status-badge inactive'
-                              }
+                                  ? 'schedule_interview_active'
+                                  : 'schedule_interview_inactive'
+                              }`}
                             >
                               {details.status}
                             </span>
@@ -299,27 +299,27 @@ const Overview = ({ scheduledetails, applieddetails, orgid, empid, time }) => {
                 </div>
 
                 {filteredApplications.length > applicationsPerPage && (
-                  <div className="pagination-container">
+                  <div className="schedule_interview_pagination-container">
                     <button
-                      className="button"
+                      className="schedule_interview_button"
                       onClick={handlePrevPage}
                       disabled={currentPage === 1}
                     >
                       ← Previous
                     </button>
-                    <span className="pagination-text">
+                    <span className="schedule_interview_pagination-text">
                       Page{' '}
                       <input
                         type="text"
                         value={pageInputValue}
                         onChange={handlePageInputChange}
                         onKeyPress={handlePageInputKeyPress}
-                        className="pagination-input"
+                        className="schedule_interview_pagination-input"
                       />{' '}
                       of {totalPages}
                     </span>
                     <button
-                      className="button"
+                      className="schedule_interview_button"
                       onClick={handleNextPage}
                       disabled={currentPage === totalPages}
                     >
@@ -329,14 +329,14 @@ const Overview = ({ scheduledetails, applieddetails, orgid, empid, time }) => {
                 )}
 
                 {filteredApplications.length > 0 && (
-                  <div className="rows-per-page-container">
-                    <label className="rows-per-page-label">Rows/ Page</label>
+                  <div className="schedule_interview_rows-per-page-container">
+                    <label className="schedule_interview_rows-per-page-label">Rows/ Page</label>
                     <input
                       type="text"
                       value={duplicate}
                       onChange={pageChanging}
                       onKeyPress={handleApplicationsInputKeyPress}
-                      className="rows-per-page-input"
+                      className="schedule_interview_rows-per-page-input"
                       aria-label="Number of rows per page"
                     />
                   </div>

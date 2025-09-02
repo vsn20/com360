@@ -810,15 +810,15 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
     return (
       <>
         {isEditing && (
-          <div className="permissions-header">
-            <div className="permissions-title">Select Features:</div>
-            <div className="permissions-toggle-buttons">
-              <label className="permissions-toggle-checkbox-label">
+          <div className="roles_permissions-header">
+            <div className="roles_permissions-title">Select Features:</div>
+            <div className="roles_permissions-toggle-buttons">
+              <label className="roles_permissions-toggle-checkbox-label">
                 <input
                   type="checkbox"
                   checked={isAllPermissionsSelected()}
                   onChange={handleAllPermissionsToggle}
-                  className="permissions-toggle-checkbox"
+                  className="roles_permissions-toggle-checkbox"
                 />
               </label>
             </div>
@@ -826,45 +826,45 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
         )}
 
         {menusWithoutSubmenus.length > 0 && (
-          <div className="permissions-menus-without-submenus">
-            <div className="permissions-menu-category-header">
-              <div className="permissions-menu-category-title">Standalone Features</div>
+          <div className="roles_permissions-menus-without-submenus">
+            <div className="roles_permissions-menu-category-header">
+              <div className="roles_permissions-menu-category-title">Standalone Features</div>
               {isEditing && (
-                <label className="permissions-category-toggle-label">
+                <label className="roles_permissions-category-toggle-label">
                   <input
                     type="checkbox"
                     checked={menusWithoutSubmenus.every(C_MENU => 
                       permissionsToUse.some(p => p.menuid === C_MENU.menuid && !p.submenuid)
                     )}
                     onChange={handleStandardPermissionsToggle}
-                    className="permissions-category-toggle-checkbox"
+                    className="roles_permissions-category-toggle-checkbox"
                   />
                 </label>
               )}
             </div>
-            <div className="permissions-grid">
+            <div className="roles_permissions-grid">
               {Array.from({ length: Math.ceil(menusWithoutSubmenus.length / 5) }, (_, row) => (
-                <div key={`no-submenu-row-${row}`} className="permissions-row">
+                <div key={`no-submenu-row-${row}`} className="roles_permissions-row">
                   {menusWithoutSubmenus.slice(row * 5, (row * 5) + 5).map((C_MENU) => (
-                    <div key={`menu-${C_MENU.menuid}`} className="permission-item">
-                      <label className="menu-label">
-                        <span className="permission-name">{C_MENU.menuname}</span>
+                    <div key={`menu-${C_MENU.menuid}`} className="roles_permission-item">
+                      <label className="roles_menu-label">
+                        <span className="roles_permission-name">{C_MENU.menuname}</span>
                         <input
                           type="checkbox"
                           checked={permissionsToUse.some((p) => p.menuid === C_MENU.menuid && !p.submenuid)}
                           onChange={isEditing ? () => handlePermissionToggle(C_MENU.menuid) : undefined}
-                          className="permission-checkbox"
+                          className="roles_permission-checkbox"
                           disabled={!isEditing}
                         />
                       </label>
                       {C_MENU.menuid === 11 && permissionsToUse.some(p => p.menuid === 11 && !p.submenuid) && (
-                        <label className="menu-label" style={{ marginLeft: '20px' }}>
-                          <span className="permission-name">All Data</span>
+                        <label className="roles_menu-label" style={{ marginLeft: '20px' }}>
+                          <span className="roles_permission-name">All Data</span>
                           <input
                             type="checkbox"
                             checked={permissionsToUse.find(p => p.menuid === 11 && !p.submenuid)?.alldata === 1}
                             onChange={isEditing ? () => handleAllDataToggle(C_MENU.menuid) : undefined}
-                            className="permission-checkbox"
+                            className="roles_permission-checkbox"
                             disabled={!isEditing}
                           />
                         </label>
@@ -878,11 +878,11 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
         )}
 
         {menusWithSubmenus.length > 0 && (
-          <div className="permissions-menus-with-submenus">
-            <div className="permissions-menu-category-header">
-              <div className="permissions-menu-category-title">Expandable Features</div>
+          <div className="roles_permissions-menus-with-submenus">
+            <div className="roles_permissions-menu-category-header">
+              <div className="roles_permissions-menu-category-title">Expandable Features</div>
               {isEditing && (
-                <label className="permissions-category-toggle-label">
+                <label className="roles_permissions-category-toggle-label">
                   <input
                     type="checkbox"
                     checked={(() => {
@@ -900,51 +900,51 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
                       );
                     })()}
                     onChange={handleAdvancedPermissionsToggle}
-                    className="permissions-category-toggle-checkbox"
+                    className="roles_permissions-category-toggle-checkbox"
                   />
                 </label>
               )}
             </div>
-            <div className="permissions-grid">
+            <div className="roles_permissions-grid">
               {Array.from({ length: Math.ceil(menusWithSubmenus.length / 5) }, (_, row) => (
-                <div key={`submenu-row-${row}`} className="permissions-row">
+                <div key={`submenu-row-${row}`} className="roles_permissions-row">
                   {menusWithSubmenus.slice(row * 5, (row * 5) + 5).map((C_MENU) => (
-                    <div key={`menu-${C_MENU.menuid}`} className="permission-item-with-submenus">
-                      <label className="menu-label main-permission-feature">
-                        <span className="permission-name">{C_MENU.menuname}</span>
+                    <div key={`menu-${C_MENU.menuid}`} className="roles_permission-item-with-submenus">
+                      <label className="roles_menu-label roles_main-permission-feature">
+                        <span className="roles_permission-name">{C_MENU.menuname}</span>
                         <input
                           type="checkbox"
                           checked={permissionsToUse.some((p) => p.menuid === C_MENU.menuid && !p.submenuid)}
                           onChange={isEditing ? () => handlePermissionToggle(C_MENU.menuid) : undefined}
-                          className="permission-checkbox"
+                          className="roles_permission-checkbox"
                           disabled={!isEditing}
                         />
                       </label>
-                      <div className="permission-submenus-container">
+                      <div className="roles_permission-submenus-container">
                         {availableSubmenus
                           .filter((sm) => sm.menuid === C_MENU.menuid)
                           .map((C_SUBMENU) => (
-                            <div key={`submenu-${C_SUBMENU.submenuid}`} className="permission-subitem">
-                              <label className="submenu-label">
-                                <span className="submenu-name">{C_SUBMENU.submenuname}</span>
+                            <div key={`submenu-${C_SUBMENU.submenuid}`} className="roles_permission-subitem">
+                              <label className="roles_submenu-label">
+                                <span className="roles_submenu-name">{C_SUBMENU.submenuname}</span>
                                 <input
                                   type="checkbox"
                                   checked={permissionsToUse.some(
                                     (p) => p.menuid === C_MENU.menuid && p.submenuid === C_SUBMENU.submenuid
                                   )}
                                   onChange={isEditing ? () => handlePermissionToggle(C_MENU.menuid, C_SUBMENU.submenuid) : undefined}
-                                  className="permission-checkbox"
+                                  className="roles_permission-checkbox"
                                   disabled={!isEditing}
                                 />
                               </label>
                               {C_SUBMENU.submenuid === 17 && permissionsToUse.some(p => p.menuid === 12 && p.submenuid === 17) && (
-                                <label className="submenu-label" style={{ marginLeft: '20px' }}>
-                                  <span className="submenu-name">All Data</span>
+                                <label className="roles_submenu-label" style={{ marginLeft: '20px' }}>
+                                  <span className="roles_submenu-name">All Data</span>
                                   <input
                                     type="checkbox"
                                     checked={permissionsToUse.find(p => p.menuid === 12 && p.submenuid === 17)?.alldata === 1}
                                     onChange={isEditing ? () => handleAllDataToggle(C_MENU.menuid, C_SUBMENU.submenuid) : undefined}
-                                    className="permission-checkbox"
+                                    className="roles_permission-checkbox"
                                     disabled={!isEditing}
                                   />
                                 </label>
@@ -964,20 +964,20 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
   };
 
   return (
-    <div className="roles-overview-container">
-      {detailsError && <div className="error-message">{detailsError}</div>}
+    <div className="roles_roles-overview-container">
+      {detailsError && <div className="roles_error-message">{detailsError}</div>}
       {isadd && (
-        <div className="add-role-container">
-          <div className="header-section">
-            <h1 className="title">Add Role</h1>
-            <button className="back-button" onClick={handleBackClick}></button>
+        <div className="roles_add-role-container">
+          <div className="roles_header-section">
+            <h1 className="roles_title">Add Role</h1>
+            <button className="roles_back-button" onClick={handleBackClick}></button>
           </div>
           {addform_formerror && <p style={{ color: "red" }}>{addform_formerror}</p>}
           {addform_success && <p style={{ color: "green" }}>{addform_success}</p>}
-          <form action={addform_handleSubmit} ref={formRef} className="add-role-form">
-            <div className="form-section">
-              <div className="role-name-section">
-                <label htmlFor="roleName" className="role-name-label">
+          <form action={addform_handleSubmit} ref={formRef} className="roles_add-role-form">
+            <div className="roles_form-section">
+              <div className="roles_role-name-section">
+                <label htmlFor="roleName" className="roles_role-name-label">
                   Role Name: *
                 </label>
                 <input
@@ -985,20 +985,20 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
                   id="roleName"
                   name="roleName"
                   placeholder="Enter role name (e.g., Manager)"
-                  className="role-name-input"
+                  className="roles_role-name-input"
                   required
                 />
               </div>
-              <div className="features-section">
-                <div className="features-header">
-                  <div className="features-title">Select Features: *</div>
-                  <div className="toggle-buttons">
-                    <label className="toggle-checkbox-label">
+              <div className="roles_features-section">
+                <div className="roles_features-header">
+                  <div className="roles_features-title">Select Features: *</div>
+                  <div className="roles_toggle-buttons">
+                    <label className="roles_toggle-checkbox-label">
                       <input
                         type="checkbox"
                         checked={isAllSelected()}
                         onChange={handleSelectAllToggle}
-                        className="toggle-checkbox"
+                        className="roles_toggle-checkbox"
                       />
                     </label>
                   </div>
@@ -1009,42 +1009,42 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
                   return (
                     <>
                       {menusWithoutSubmenus_addform.length > 0 && (
-                        <div className="menus-without-submenus">
-                          <div className="menu-category-header">
-                            <div className="menu-category-title">Standalone Features</div>
-                            <label className="category-toggle-label">
+                        <div className="roles_menus-without-submenus">
+                          <div className="roles_menu-category-header">
+                            <div className="roles_menu-category-title">Standalone Features</div>
+                            <label className="roles_category-toggle-label">
                               <input
                                 type="checkbox"
                                 checked={menusWithoutSubmenus_addform.every(C_MENU => 
                                   addform_permissions.some(p => p.menuid === C_MENU.menuid && !p.submenuid)
                                 )}
                                 onChange={handleStandardFeaturesToggle}
-                                className="category-toggle-checkbox"
+                                className="roles_category-toggle-checkbox"
                               />
                             </label>
                           </div>
-                          <div className="features-grid">
+                          <div className="roles_features-grid">
                             {Array.from({ length: Math.ceil(menusWithoutSubmenus_addform.length / 5) }, (_, row) => (
-                              <div key={`no-submenu-row-${row}`} className="features-row">
+                              <div key={`no-submenu-row-${row}`} className="roles_features-row">
                                 {menusWithoutSubmenus_addform.slice(row * 5, (row * 5) + 5).map((C_MENU) => (
-                                  <div key={`menu-${C_MENU.menuid}`} className="feature-item">
-                                    <label className="feature-label">
-                                      <span className="feature-name">{C_MENU.menuname}</span>
+                                  <div key={`menu-${C_MENU.menuid}`} className="roles_feature-item">
+                                    <label className="roles_feature-label">
+                                      <span className="roles_feature-name">{C_MENU.menuname}</span>
                                       <input
                                         type="checkbox"
                                         checked={addform_permissions.some((p) => p.menuid === C_MENU.menuid && !p.submenuid)}
                                         onChange={() => addform_handlePermissionToggle(C_MENU.menuid)}
-                                        className="feature-checkbox"
+                                        className="roles_feature-checkbox"
                                       />
                                     </label>
                                     {C_MENU.menuid === 11 && addform_permissions.some(p => p.menuid === 11 && !p.submenuid) && (
-                                      <label className="feature-label" style={{ marginLeft: '20px' }}>
-                                        <span className="feature-name">All Data</span>
+                                      <label className="roles_feature-label" style={{ marginLeft: '20px' }}>
+                                        <span className="roles_feature-name">All Data</span>
                                         <input
                                           type="checkbox"
                                           checked={addform_permissions.find(p => p.menuid === 11 && !p.submenuid)?.alldata === 1}
                                           onChange={() => addform_handleAllDataToggle(C_MENU.menuid)}
-                                          className="feature-checkbox"
+                                          className="roles_feature-checkbox"
                                         />
                                       </label>
                                     )}
@@ -1056,10 +1056,10 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
                         </div>
                       )}
                       {menusWithSubmenus_addform.length > 0 && (
-                        <div className="menus-with-submenus">
-                          <div className="menu-category-header">
-                            <div className="menu-category-title">Expandable Features</div>
-                            <label className="category-toggle-label">
+                        <div className="roles_menus-with-submenus">
+                          <div className="roles_menu-category-header">
+                            <div className="roles_menu-category-title">Expandable Features</div>
+                            <label className="roles_category-toggle-label">
                               <input
                                 type="checkbox"
                                 checked={(() => {
@@ -1077,46 +1077,46 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
                                   );
                                 })()}
                                 onChange={handleAdvancedFeaturesToggle}
-                                className="category-toggle-checkbox"
+                                className="roles_category-toggle-checkbox"
                               />
                             </label>
                           </div>
-                          <div className="features-grid">
+                          <div className="roles_features-grid">
                             {Array.from({ length: Math.ceil(menusWithSubmenus_addform.length / 5) }, (_, row) => (
-                              <div key={`submenu-row-${row}`} className="features-row">
+                              <div key={`submenu-row-${row}`} className="roles_features-row">
                                 {menusWithSubmenus_addform.slice(row * 5, (row * 5) + 5).map((C_MENU) => (
-                                  <div key={`menu-${C_MENU.menuid}`} className="feature-item-with-submenus">
-                                    <label className="feature-label main-feature">
-                                      <span className="feature-name">{C_MENU.menuname}</span>
+                                  <div key={`menu-${C_MENU.menuid}`} className="roles_feature-item-with-submenus">
+                                    <label className="roles_feature-label roles_main-feature">
+                                      <span className="roles_feature-name">{C_MENU.menuname}</span>
                                       <input
                                         type="checkbox"
                                         checked={addform_permissions.some((p) => p.menuid === C_MENU.menuid && !p.submenuid)}
                                         onChange={() => addform_handlePermissionToggle(C_MENU.menuid)}
-                                        className="feature-checkbox"
+                                        className="roles_feature-checkbox"
                                       />
                                     </label>
-                                    <div className="submenus-container">
+                                    <div className="roles_submenus-container">
                                       {addform_availableSubmenus
                                         .filter((sm) => sm.menuid === C_MENU.menuid)
                                         .map((C_SUBMENU) => (
-                                          <label key={`submenu-${C_SUBMENU.submenuid}`} className="feature-label submenu-label">
-                                            <span className="submenu-name">{C_SUBMENU.submenuname}</span>
+                                          <label key={`submenu-${C_SUBMENU.submenuid}`} className="roles_feature-label roles_submenu-label">
+                                            <span className="roles_submenu-name">{C_SUBMENU.submenuname}</span>
                                             <input
                                               type="checkbox"
                                               checked={addform_permissions.some(
                                                 (p) => p.menuid === C_MENU.menuid && p.submenuid === C_SUBMENU.submenuid
                                               )}
                                               onChange={() => addform_handlePermissionToggle(C_MENU.menuid, C_SUBMENU.submenuid)}
-                                              className="feature-checkbox"
+                                              className="roles_feature-checkbox"
                                               />
                                             {C_SUBMENU.submenuid === 17 && addform_permissions.some(p => p.menuid === 12 && p.submenuid === 17) && (
-                                              <label className="feature-label submenu-label" style={{ marginLeft: '20px' }}>
-                                                <span className="submenu-name">All Data</span>
+                                              <label className="roles_feature-label roles_submenu-label" style={{ marginLeft: '20px' }}>
+                                                <span className="roles_submenu-name">All Data</span>
                                                 <input
                                                   type="checkbox"
                                                   checked={addform_permissions.find(p => p.menuid === 12 && p.submenuid === 17)?.alldata === 1}
                                                   onChange={() => addform_handleAllDataToggle(C_MENU.menuid, C_SUBMENU.submenuid)}
-                                                  className="feature-checkbox"
+                                                  className="roles_feature-checkbox"
                                                 />
                                               </label>
                                             )}
@@ -1135,11 +1135,11 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
                 })()}
               </div>
             </div>
-            <div className="submit-section">
+            <div className="roles_submit-section">
               <button
                 type="submit"
                 disabled={addform_loading}
-                className="button"
+                className="roles_button"
               >
                 Add Role
               </button>
@@ -1148,11 +1148,11 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
         </div>
       )}
       {!isadd && !selectedRole && (
-        <div className="roles-list" style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
+        <div className="roles_roles-list" style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <div className="title">Existing Roles</div>
+            <div className="roles_title">Existing Roles</div>
             <button
-              className="button"
+              className="roles_button"
               onClick={() => handleaddrole()}
               style={{
                 cursor: "pointer",
@@ -1162,46 +1162,46 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
               Add Role
             </button>
           </div>
-          <div className="search-filter-container">
+          <div className="roles_search-filter-container">
             <input
               type="text"
               placeholder="Search by Role Name"
               value={searchQuery}
               onChange={handleSearchChange}
-              className="search-input"
+              className="roles_search-input"
             />
             <select
               value={isActiveFilter}
               onChange={handleIsActiveFilterChange}
-              className="filter-select"
+              className="roles_filter-select"
             >
               <option value="all">All Status</option>
               <option value="yes">Active (Yes)</option>
               <option value="no">Inactive (No)</option>
             </select>
-            <div className="date-filter-container">
+            <div className="roles_date-filter-container">
               <input
                 type="date"
                 value={startDate}
                 onChange={handleStartDateChange}
-                className="date-input"
+                className="roles_date-input"
                 placeholder="Start Date"
               />
               <input
                 type="date"
                 value={endDate}
                 onChange={handleEndDateChange}
-                className="date-input"
+                className="roles_date-input"
                 placeholder="End Date"
               />
             </div>
           </div>
           {filteredRoles.length === 0 && !detailsError ? (
-            <p className="empty-state">No roles found.</p>
+            <p className="roles_empty-state">No roles found.</p>
           ) : (
             <>
-              <div className="table-wrapper">
-                <table className="roles-table four-column">
+              <div className="roles_table-wrapper">
+                <table className="roles_roles-table roles_four-column">
                   <colgroup>
                     <col />
                     <col />
@@ -1210,16 +1210,16 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
                   </colgroup>
                   <thead>
                     <tr>
-                      <th className={sortConfig.column === 'roleid' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('roleid')}>
+                      <th className={sortConfig.column === 'roleid' ? `roles_sortable roles_sort-${sortConfig.direction}` : 'roles_sortable'} onClick={() => requestSort('roleid')}>
                         Role ID
                       </th>
-                      <th className={sortConfig.column === 'rolename' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('rolename')}>
+                      <th className={sortConfig.column === 'rolename' ? `roles_sortable roles_sort-${sortConfig.direction}` : 'roles_sortable'} onClick={() => requestSort('rolename')}>
                         Role Name
                       </th>
-                      <th className={sortConfig.column === 'is_active' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('is_active')}>
+                      <th className={sortConfig.column === 'is_active' ? `roles_sortable roles_sort-${sortConfig.direction}` : 'roles_sortable'} onClick={() => requestSort('is_active')}>
                         Is Active
                       </th>
-                      <th className={sortConfig.column === 'created_date' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('created_date')}>
+                      <th className={sortConfig.column === 'created_date' ? `roles_sortable roles_sort-${sortConfig.direction}` : 'roles_sortable'} onClick={() => requestSort('created_date')}>
                         Created Date
                       </th>
                     </tr>
@@ -1227,14 +1227,14 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
                   <tbody>
                     {currentRoles.map((role) => (
                       <tr key={`${role.roleid}-${role.orgid}`} onClick={() => handleRoleClick(role)} style={{ cursor: 'pointer' }}>
-                        <td className="id-cell">
-                          <span className={role.is_active ? 'role-indicator-active' : 'role-indicator-inactive'}></span>Role-{getDisplayRoleId(role.roleid)}
+                        <td className="roles_id-cell">
+                          <span className={role.is_active ? 'roles_role-indicator-active' : 'roles_role-indicator-inactive'}></span>Role-{getDisplayRoleId(role.roleid)}
                         </td>
-                        <td className="name-cell">{role.rolename}</td>
-                        <td className={role.is_active ? 'status-badge active' : 'status-badge inactive'}>
+                        <td className="roles_name-cell">{role.rolename}</td>
+                        <td className={role.is_active ? 'roles_status-badge roles_active' : 'roles_status-badge roles_inactive'}>
                           {role.is_active ? 'Yes' : 'No'}
                         </td>
-                        <td className="date-cell">
+                        <td className="roles_date-cell">
                           {role.CREATED_DATE ? new Date(role.CREATED_DATE).toLocaleDateString() : 'N/A'}
                         </td>
                       </tr>
@@ -1244,27 +1244,27 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
                 
               </div>
               {filteredRoles.length > rolesPerPage && (
-                <div className="pagination-container">
+                <div className="roles_pagination-container">
                   <button
-                    className="button"
+                    className="roles_button"
                     onClick={handlePrevPage}
                     disabled={currentPage === 1}
                   >
                     ← Previous
                   </button>
-                  <span className="pagination-text">
+                  <span className="roles_pagination-text">
                     Page{' '}
                     <input
                       type="text"
                       value={pageInputValue}
                       onChange={handlePageInputChange}
                       onKeyPress={handlePageInputKeyPress}
-                      className="pagination-input"
+                      className="roles_pagination-input"
                     />{' '}
                     of {totalPages}
                   </span>
                   <button
-                    className="button"
+                    className="roles_button"
                     onClick={handleNextPage}
                     disabled={currentPage === totalPages}
                   >
@@ -1277,14 +1277,14 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
             </>
           )}
               {filteredRoles.length > 0 && (
-                <div className="rows-per-page-container">
-                  <label className="rows-per-page-label">Rows/ Page</label>
+                <div className="roles_rows-per-page-container">
+                  <label className="roles_rows-per-page-label">Rows/ Page</label>
                   <input
                     type="text"
                     value={duplicate}
                     onChange={pagechanging}
                     onKeyPress={handlerolesInputKeyPress}
-                    className="rows-per-page-input"
+                    className="roles_rows-per-page-input"
                     aria-label="Number of rows per page"
                   />
                 </div>
@@ -1292,27 +1292,27 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
         </div>
       )}
       {selectedRole && roleDetails && !isadd && (
-        <div className="role-details-container">
-          <div className="header-section">
-            <h1 className="title">Edit Role</h1>
-            <button className="back-button" onClick={handleBackClick}></button>
+        <div className="roles_role-details-container">
+          <div className="roles_header-section">
+            <h1 className="roles_title">Edit Role</h1>
+            <button className="roles_back-button" onClick={handleBackClick}></button>
           </div>
-          <div className="role-details-block">
-            <div className="roledetails-header">
+          <div className="roles_role-details-block">
+            <div className="roles_roledetails-header">
               <div>Role Details</div>
               {canEditRoles && !roleDetails.isadmin && !editingDetails && (
-                <button className="button" onClick={handleDetailsEdit}>Edit</button>
+                <button className="roles_button" onClick={handleDetailsEdit}>Edit</button>
               )}
             </div>
-            {detailsError && <div className="error-message">{detailsError}</div>}
+            {detailsError && <div className="roles_error-message">{detailsError}</div>}
             {editingDetails ? (
               <form onSubmit={(e) => { e.preventDefault(); handleDetailsSave(); }}>
-                <div className="form-row">
-                  <div className="form-group">
+                <div className="roles_form-row">
+                  <div className="roles_form-group">
                     <label>Role Name</label>
                     <input type="text" name="rolename" value={formData.rolename} onChange={handleDetailsChange} required />
                   </div>
-                  <div className="form-group">
+                  <div className="roles_form-group">
                     <label>Is Active</label>
                     <select name="is_active" value={formData.is_active} onChange={handleDetailsChange}>
                       <option value="1">Yes</option>
@@ -1320,25 +1320,25 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
                     </select>
                   </div>
                 </div>
-                <div className="form-buttons">
-                  <button type="submit" className="save">Save</button>
-                  <button type="button" className="cancel" onClick={handleDetailsCancel}>Cancel</button>
+                <div className="roles_form-buttons">
+                  <button type="submit" className="roles_save">Save</button>
+                  <button type="button" className="roles_cancel" onClick={handleDetailsCancel}>Cancel</button>
                 </div>
               </form>
             ) : (
-              <div className="view-details">
-                <div className="details-row">
-                  <div className="details-g">
+              <div className="roles_view-details">
+                <div className="roles_details-row">
+                  <div className="roles_details-g">
                     <label>Role ID</label>
                     <p>Role-{getDisplayRoleId(formData.roleid)}</p>
                   </div>
-                  <div className="details-g">
+                  <div className="roles_details-g">
                     <label>Role Name</label>
                     <p>{formData.rolename}</p>
                   </div>
                 </div>
-                <div className="details-row">
-                  <div className="details-g">
+                <div className="roles_details-row">
+                  <div className="roles_details-g">
                     <label>Is Active</label>
                     <p>{formData.is_active === '1' ? 'Yes' : 'No'}</p>
                   </div>
@@ -1346,20 +1346,20 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
               </div>
             )}
           </div>
-          <div className="features-block">
-            <div className="features-header-block">
+          <div className="roles_features-block">
+            <div className="roles_features-header-block">
               <div>Features</div>
               {canEditRoles && !roleDetails.isadmin && !editingFeatures && (
-                <button className="button" onClick={handleFeatureEdit}>Edit</button>
+                <button className="roles_button" onClick={handleFeatureEdit}>Edit</button>
               )}
             </div>
-            {featuresError && <div className="error-message">{featuresError}</div>}
-            <div className="permissions-container">
+            {featuresError && <div className="roles_error-message">{featuresError}</div>}
+            <div className="roles_permissions-container">
               {renderPermissionsGrid(editingFeatures, editingFeatures ? tempPermissions : permissions)}
               {editingFeatures && (
-                <div className="form-buttons">
-                  <button className="save" onClick={handleFeatureSave}>Save</button>
-                  <button className="cancel" onClick={handleFeatureCancel}>Cancel</button>
+                <div className="roles_form-buttons">
+                  <button className="roles_save" onClick={handleFeatureSave}>Save</button>
+                  <button className="roles_cancel" onClick={handleFeatureCancel}>Cancel</button>
                 </div>
               )}
             </div>

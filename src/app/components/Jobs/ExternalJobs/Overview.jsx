@@ -174,13 +174,13 @@ const Overview = ({ orgid, empid, expectedjobtitles, expectedepartment, expected
   const currentJobs = filteredJobs.slice(indexOfFirstJob, indexOfLastJob);
 
   return (
-    <div className="employee-overview-container">
-      {error && <div className="error-message">{error}</div>}
+    <div className="externaljobs_employee-overview-container">
+      {error && <div className="externaljobs_error-message">{error}</div>}
       {isadd ? (
-        <div className="employee-details-container">
-          <div className="header-section">
-            <h1 className="title">Add External Job</h1>
-            <button className="back-button" onClick={handleBack}></button>
+        <div className="externaljobs_employee-details-container">
+          <div className="externaljobs_header-section">
+            <h1 className="externaljobs_title">Add External Job</h1>
+            <button className="externaljobs_back-button" onClick={handleBack}></button>
           </div>
           <AddExternal
             orgid={orgid}
@@ -194,10 +194,10 @@ const Overview = ({ orgid, empid, expectedjobtitles, expectedepartment, expected
           />
         </div>
       ) : selectedJob ? (
-        <div className="employee-details-container">
-          <div className="header-section">
-            <h1 className="title">External Job Details</h1>
-            <button className="back-button" onClick={handleBack}></button>
+        <div className="externaljobs_employee-details-container">
+          <div className="externaljobs_header-section">
+            <h1 className="externaljobs_title">External Job Details</h1>
+            <button className="externaljobs_back-button" onClick={handleBack}></button>
           </div>
           <Edit
             job={selectedJob}
@@ -211,23 +211,23 @@ const Overview = ({ orgid, empid, expectedjobtitles, expectedepartment, expected
           />
         </div>
       ) : (
-        <div className="employee-list">
-          <div className="header-section">
-            <h1 className="title">Existing External Jobs</h1>
-            <button onClick={handleAdd} className="button">Post External Job</button>
+        <div className="externaljobs_employee-list">
+          <div className="externaljobs_header-section">
+            <h1 className="externaljobs_title">Existing External Jobs</h1>
+            <button onClick={handleAdd} className="externaljobs_button">Post External Job</button>
           </div>
-          <div className="search-filter-container">
+          <div className="externaljobs_search-filter-container">
             <input
               type="text"
               value={searchQuery}
               onChange={handleSearchChange}
-              className="search-input"
+              className="externaljobs_search-input"
               placeholder="Search by job name..."
             />
             <select
               value={statusFilter}
               onChange={handleStatusFilterChange}
-              className="filter-select90"
+              className="externaljobs_filter-select90"
             >
               <option value="all">All Statuses</option>
               <option value="active">Active</option>
@@ -235,11 +235,11 @@ const Overview = ({ orgid, empid, expectedjobtitles, expectedepartment, expected
             </select>
           </div>
           {filteredJobs.length === 0 ? (
-            <div className="empty-state">No external jobs found.</div>
+            <div className="externaljobs_empty-state">No external jobs found.</div>
           ) : (
             <>
-              <div className="table-wrapper">
-                <table className="three-column">
+              <div className="externaljobs_table-wrapper">
+                <table className="externaljobs_three-column">
                   <colgroup>
                     <col />
                     <col />
@@ -248,13 +248,13 @@ const Overview = ({ orgid, empid, expectedjobtitles, expectedepartment, expected
                   </colgroup>
                   <thead>
                     <tr>
-                      <th className={sortConfig.column === 'jobid' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('jobid')}>
+                      <th className={sortConfig.column === 'jobid' ? `externaljobs_sortable externaljobs_sort-${sortConfig.direction}` : 'externaljobs_sortable'} onClick={() => requestSort('jobid')}>
                         Job ID
                       </th>
-                      <th className={sortConfig.column === 'display_job_name' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('display_job_name')}>
+                      <th className={sortConfig.column === 'display_job_name' ? `externaljobs_sortable externaljobs_sort-${sortConfig.direction}` : 'externaljobs_sortable'} onClick={() => requestSort('display_job_name')}>
                         Job Name
                       </th>
-                      <th className={sortConfig.column === 'no_of_vacancies' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('no_of_vacancies')}>
+                      <th className={sortConfig.column === 'no_of_vacancies' ? `externaljobs_sortable externaljobs_sort-${sortConfig.direction}` : 'externaljobs_sortable'} onClick={() => requestSort('no_of_vacancies')}>
                         Vacancies
                       </th>
                       <th>
@@ -264,41 +264,41 @@ const Overview = ({ orgid, empid, expectedjobtitles, expectedepartment, expected
                   </thead>
                   <tbody>
                     {currentJobs.map((job) => (
-                      <tr key={job.jobid} onClick={() => handleRowClick(job)} className={selectedJob && selectedJob.jobid === job.jobid ? 'selected-row' : ''}>
-                        <td className="id-cell">
-                         <span className={job.active==1 ? 'role-indicator' : 'role-indicatorinactiver'}></span>
+                      <tr key={job.jobid} onClick={() => handleRowClick(job)} className={selectedJob && selectedJob.jobid === job.jobid ? 'externaljobs_selected-row' : ''}>
+                        <td className="externaljobs_id-cell">
+                         <span className={job.active==1 ? 'externaljobs_role-indicator' : 'externaljobs_role-indicatorinactiver'}></span>
                           {getdisplayprojectid(job.jobid)}
                         </td>
                         <td>{job.display_job_name || '-'}</td>
                         <td>{job.no_of_vacancies || '-'}</td>
-                        <td className={job.active==1 ? 'status-badge active' : 'status-badge inactive'}>{job.active==1?'Active':"Inactive"||'-'}</td>
+                        <td className={job.active==1 ? 'externaljobs_status-badge externaljobs_active' : 'externaljobs_status-badge externaljobs_inactive'}>{job.active==1?'Active':"Inactive"||'-'}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
               {filteredJobs.length > jobsPerPage && (
-                <div className="pagination-container">
+                <div className="externaljobs_pagination-container">
                   <button
-                    className="button"
+                    className="externaljobs_button"
                     onClick={handlePrevPage}
                     disabled={currentPage === 1}
                   >
                     ← Previous
                   </button>
-                  <span className="pagination-text">
+                  <span className="externaljobs_pagination-text">
                     Page{' '}
                     <input
                       type="text"
                       value={pageInputValue}
                       onChange={handlePageInputChange}
                       onKeyPress={handlePageInputKeyPress}
-                      className="pagination-input"
+                      className="externaljobs_pagination-input"
                     />{' '}
                     of {totalPages}
                   </span>
                   <button
-                    className="button"
+                    className="externaljobs_button"
                     onClick={handleNextPage}
                     disabled={currentPage === totalPages}
                   >
@@ -307,14 +307,14 @@ const Overview = ({ orgid, empid, expectedjobtitles, expectedepartment, expected
                 </div>
               )}
               {filteredJobs.length > 0 && (
-                <div className="rows-per-page-container">
-                  <label className="rows-per-page-label">Rows/ Page</label>
+                <div className="externaljobs_rows-per-page-container">
+                  <label className="externaljobs_rows-per-page-label">Rows/ Page</label>
                   <input
                     type="text"
                     value={jobsPerPageInput}
                     onChange={handleJobsPerPageInputChange}
                     onKeyPress={handleJobsPerPageInputKeyPress}
-                    className="rows-per-page-input"
+                    className="externaljobs_rows-per-page-input"
                     aria-label="Number of rows per page"
                   />
                 </div>

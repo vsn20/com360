@@ -61,16 +61,16 @@ const AddExternal = ({ orgid, empid, expectedjobtitles, expectedepartment, expec
   }, [state.success]);
 
   return (
-    <div className="employee-details-container">
-      {state.error && <div className="error-message">{state.error}</div>}
-      {successMessage && <div className="success-message">{successMessage}</div>}
-      <div className="details-block">
-        <div className="roledetails-header">
+    <div className="externaljobs_employee-details-container">
+      {state.error && <div className="externaljobs_error-message">{state.error}</div>}
+      {successMessage && <div className="externaljobs_success-message">{successMessage}</div>}
+      <div className="externaljobs_details-block">
+        <div className="externaljobs_roledetails-header">
           <div>Add External Job</div>
         </div>
-        <form action={formAction} className="external-jobs-form">
-          <div className="form-row">
-            <div className="form-group">
+        <form action={formAction} className="externaljobs_external-jobs-form">
+          <div className="externaljobs_form-row">
+            <div className="externaljobs_form-group">
               <label>Display Job Name*:</label>
               <input
                 type="text"
@@ -80,7 +80,7 @@ const AddExternal = ({ orgid, empid, expectedjobtitles, expectedepartment, expec
                 required
               />
             </div>
-            <div className="form-group">
+            <div className="externaljobs_form-group">
               <label>Expected Job Title*:</label>
               <select
                 name="expectedJobTitle"
@@ -97,8 +97,8 @@ const AddExternal = ({ orgid, empid, expectedjobtitles, expectedepartment, expec
               </select>
             </div>
           </div>
-          <div className="form-row">
-            <div className="form-group">
+          <div className="externaljobs_form-row">
+            <div className="externaljobs_form-group">
               <label>Expected Role*:</label>
               <select
                 name="expectedRole"
@@ -114,7 +114,7 @@ const AddExternal = ({ orgid, empid, expectedjobtitles, expectedepartment, expec
                 ))}
               </select>
             </div>
-            <div className="form-group">
+            <div className="externaljobs_form-group">
               <label>Expected Department*:</label>
               <select
                 name="expectedDepartment"
@@ -131,8 +131,8 @@ const AddExternal = ({ orgid, empid, expectedjobtitles, expectedepartment, expec
               </select>
             </div>
           </div>
-          <div className="form-row">
-            <div className="form-group">
+          <div className="externaljobs_form-row">
+            <div className="externaljobs_form-group">
               <label>Job Type*:</label>
               <select
                 name="jobType"
@@ -148,7 +148,7 @@ const AddExternal = ({ orgid, empid, expectedjobtitles, expectedepartment, expec
                 ))}
               </select>
             </div>
-            <div className="form-group">
+            <div className="externaljobs_form-group">
               <label>Number of Vacancies*:</label>
               <input
                 type="number"
@@ -159,8 +159,8 @@ const AddExternal = ({ orgid, empid, expectedjobtitles, expectedepartment, expec
               />
             </div>
           </div>
-          <div className="form-row">
-            <div className="form-group full-width">
+          <div className="externaljobs_form-row">
+            <div className="externaljobs_form-group full-width">
               <label>Description*:</label>
               <textarea
                 name="description"
@@ -171,8 +171,8 @@ const AddExternal = ({ orgid, empid, expectedjobtitles, expectedepartment, expec
               />
             </div>
           </div>
-          <div className="form-row">
-            <div className="form-group">
+          <div className="externaljobs_form-row">
+            <div className="externaljobs_form-group">
               <label>Address Lane 1:</label>
               <input
                 type="text"
@@ -181,7 +181,7 @@ const AddExternal = ({ orgid, empid, expectedjobtitles, expectedepartment, expec
                 onChange={handleChange}
               />
             </div>
-            <div className="form-group">
+            <div className="externaljobs_form-group">
               <label>Address Lane 2:</label>
               <input
                 type="text"
@@ -191,8 +191,8 @@ const AddExternal = ({ orgid, empid, expectedjobtitles, expectedepartment, expec
               />
             </div>
           </div>
-          <div className="form-row">
-            <div className="form-group">
+          <div className="externaljobs_form-row">
+            <div className="externaljobs_form-group">
               <label>Zipcode:</label>
               <input
                 type="text"
@@ -202,7 +202,7 @@ const AddExternal = ({ orgid, empid, expectedjobtitles, expectedepartment, expec
                 maxLength="20"
               />
             </div>
-            <div className="form-group">
+            <div className="externaljobs_form-group">
               <label>Country:</label>
               <select
                 name="countryId"
@@ -218,8 +218,8 @@ const AddExternal = ({ orgid, empid, expectedjobtitles, expectedepartment, expec
               </select>
             </div>
           </div>
-          <div className="form-row">
-            <div className="form-group">
+          <div className="externaljobs_form-row">
+            <div className="externaljobs_form-group">
               <label>State:</label>
               <select
                 name="stateId"
@@ -235,7 +235,7 @@ const AddExternal = ({ orgid, empid, expectedjobtitles, expectedepartment, expec
                 ))}
               </select>
             </div>
-            <div className="form-group">
+            <div className="externaljobs_form-group">
               <label>Custom State Name:</label>
               <input
                 type="text"
@@ -246,8 +246,8 @@ const AddExternal = ({ orgid, empid, expectedjobtitles, expectedepartment, expec
               />
             </div>
           </div>
-          <div className="form-row">
-            <div className="form-group">
+          <div className="externaljobs_form-row">
+            <div className="externaljobs_form-group">
               <label>Last Date for Application:</label>
               <input
                 type="date"
@@ -256,7 +256,7 @@ const AddExternal = ({ orgid, empid, expectedjobtitles, expectedepartment, expec
                 onChange={handleChange}
               />
             </div>
-            <div className="form-group">
+            <div className="externaljobs_form-group">
               <label>Active:</label>
               <select
                 name="active"
@@ -268,8 +268,8 @@ const AddExternal = ({ orgid, empid, expectedjobtitles, expectedepartment, expec
               </select>
             </div>
           </div>
-          <div className="form-buttons">
-            <button type="submit" className="save" disabled={!orgid}>
+          <div className="externaljobs_form-buttons">
+            <button type="submit" className="externaljobs_save" disabled={!orgid}>
               Add External Job
             </button>
           </div>

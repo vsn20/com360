@@ -76,19 +76,19 @@ const AddjobTitle = ({ orgid, empid }) => {
   };
 
   return (
-    <div className="employee-details-container">
-      {success && <div className="success-message">{success}</div>}
-      {error && <div className="error-message">{error}</div>}
-      {isLoading && <div className="loading-message">Saving...</div>}
+    <div className="jobtitles_employee-details-container">
+      {success && <div className="jobtitles_success-message">{success}</div>}
+      {error && <div className="jobtitles_error-message">{error}</div>}
+      {isLoading && <div className="jobtitles_loading-message">Saving...</div>}
       
-      <div className="details-block">
-        <div className="roledetails-header">
+      <div className="jobtitles_details-block">
+        <div className="jobtitles_roledetails-header">
           <div>Add Job Title</div>
         </div>
         
         <form onSubmit={handleSubmit}>
-          <div className="form-row">
-            <div className="form-group">
+          <div className="jobtitles_form-row">
+            <div className="jobtitles_form-group">
               <label>Job Title*</label>
               <input
                 type="text"
@@ -99,7 +99,7 @@ const AddjobTitle = ({ orgid, empid }) => {
                 required
               />
             </div>
-            <div className="form-group">
+            <div className="jobtitles_form-group">
               <label>Status</label>
               <select name="status" value={form.status} onChange={handleChange}>
                 <option value="Active">Yes</option>
@@ -108,8 +108,8 @@ const AddjobTitle = ({ orgid, empid }) => {
             </div>
           </div>
           
-          <div className="form-row">
-            <div className="form-group">
+          <div className="jobtitles_form-row">
+            <div className="jobtitles_form-group">
               <label>Level</label>
               <input
                 type="text"
@@ -119,7 +119,7 @@ const AddjobTitle = ({ orgid, empid }) => {
                 placeholder="Enter Level"
               />
             </div>
-            <div className="form-group">
+            <div className="jobtitles_form-group">
               <label>Minimum Salary</label>
               <input
                 type="number"
@@ -131,8 +131,8 @@ const AddjobTitle = ({ orgid, empid }) => {
             </div>
           </div>
           
-          <div className="form-row">
-            <div className="form-group">
+          <div className="jobtitles_form-row">
+            <div className="jobtitles_form-group">
               <label>Maximum Salary</label>
               <input
                 type="number"
@@ -142,14 +142,14 @@ const AddjobTitle = ({ orgid, empid }) => {
                 placeholder="Enter Maximum Salary"
               />
             </div>
-            <div className="form-group">
+            <div className="jobtitles_form-group">
               <label>Organization ID</label>
-              <input type="text" value={orgid || ''} readOnly className="bg-gray-100" />
+              <input type="text" value={orgid || ''} readOnly className="jobtitles_bg-gray-100" />
             </div>
           </div>
           
-          <div className="form-buttons">
-            <button type="submit" className="save" disabled={isLoading}>
+          <div className="jobtitles_form-buttons">
+            <button type="submit" className="jobtitles_save" disabled={isLoading}>
               {isLoading ? 'Saving...' : 'Add Job Title'}
             </button>
           </div>

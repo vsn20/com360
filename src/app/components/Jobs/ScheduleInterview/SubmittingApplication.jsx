@@ -187,10 +187,10 @@ const SubmittingApplication = ({ applieddetails, orgid, empid, handlesback }) =>
   const uniqueStatuses = [...new Set(applieddetails.map(app => app.status))];
 
   return (
-    <div className="employee-overview-container">
+    <div className="schedule_interview_employee-overview-container">
       {selectedid ? (
         <>
-          <button className="back-button" onClick={handleback}></button>
+          <button className="schedule_interview_back-button" onClick={handleback}></button>
           <Scheduling
             id={selectedid}
             name={selectedname}
@@ -201,25 +201,25 @@ const SubmittingApplication = ({ applieddetails, orgid, empid, handlesback }) =>
         </>
       ) : (
         <>
-          <div className="employee-list">
-            <div className="header-section">
-              <div className="title">Schedule Interview</div>
-              <button onClick={backingoption} className="back-button"></button>
+          <div className="schedule_interview_employee-list">
+            <div className="schedule_interview_header-section">
+              <div className="schedule_interview_title">Schedule Interview</div>
+              <button onClick={backingoption} className="schedule_interview_back-button"></button>
             </div>
             
             {/* Search and Filter Section */}
-            <div className="search-filter-container">
+            <div className="schedule_interview_search-filter-container">
               <input
                 type="text"
                 placeholder="Search by Name, Job, Application ID, or Candidate ID"
                 value={searchQuery}
                 onChange={handleSearchChange}
-                className="search-input"
+                className="schedule_interview_search-input"
               />
               <select
                 value={statusFilter}
                 onChange={handleStatusFilterChange}
-                className="filter-select"
+                className="schedule_interview_filter-select"
               >
                 <option value="all">All Status</option>
                 {uniqueStatuses.map(status => (
@@ -229,45 +229,45 @@ const SubmittingApplication = ({ applieddetails, orgid, empid, handlesback }) =>
             </div>
 
             {filteredApplications.length === 0 ? (
-              <p className="empty-state">No C_APPLICATIONS found.</p>
+              <p className="schedule_interview_empty-state">No Applications found.</p>
             ) : (
               <>
-                <div className="C_APPLICATIONS-table-wrapper">
-                  <table className="C_APPLICATIONS-table">
+                <div className="schedule_interview_C_APPLICATIONS-table-wrapper">
+                  <table className="schedule_interview_C_APPLICATIONS-table">
                     <thead>
                       <tr>
                         <th 
-                          className={sortConfig.column === 'applicationid' ? `sortable sort-${sortConfig.direction}` : 'sortable'}
+                          className={sortConfig.column === 'applicationid' ? `schedule_interview_sortable schedule_interview_sort-${sortConfig.direction}` : 'schedule_interview_sortable'}
                           onClick={() => requestSort('applicationid')}
                         >
                           Application ID
                         </th>
                         <th 
-                          className={sortConfig.column === 'C_CANDIDATEid' ? `sortable sort-${sortConfig.direction}` : 'sortable'}
+                          className={sortConfig.column === 'C_CANDIDATEid' ? `schedule_interview_sortable schedule_interview_sort-${sortConfig.direction}` : 'schedule_interview_sortable'}
                           onClick={() => requestSort('C_CANDIDATEid')}
                         >
                           Candidate ID
                         </th>
                         <th 
-                          className={sortConfig.column === 'name' ? `sortable sort-${sortConfig.direction}` : 'sortable'}
+                          className={sortConfig.column === 'name' ? `schedule_interview_sortable schedule_interview_sort-${sortConfig.direction}` : 'schedule_interview_sortable'}
                           onClick={() => requestSort('name')}
                         >
                           Candidate Name
                         </th>
                         <th 
-                          className={sortConfig.column === 'jobname' ? `sortable sort-${sortConfig.direction}` : 'sortable'}
+                          className={sortConfig.column === 'jobname' ? `schedule_interview_sortable schedule_interview_sort-${sortConfig.direction}` : 'schedule_interview_sortable'}
                           onClick={() => requestSort('jobname')}
                         >
                           Job Name-Job ID
                         </th>
                         <th 
-                          className={sortConfig.column === 'applieddate' ? `sortable sort-${sortConfig.direction}` : 'sortable'}
+                          className={sortConfig.column === 'applieddate' ? `schedule_interview_sortable schedule_interview_sort-${sortConfig.direction}` : 'schedule_interview_sortable'}
                           onClick={() => requestSort('applieddate')}
                         >
                           Applied Date
                         </th>
                         <th 
-                          className={sortConfig.column === 'status' ? `sortable sort-${sortConfig.direction}` : 'sortable'}
+                          className={sortConfig.column === 'status' ? `schedule_interview_sortable schedule_interview_sort-${sortConfig.direction}` : 'schedule_interview_sortable'}
                           onClick={() => requestSort('status')}
                         >
                           Status
@@ -279,8 +279,8 @@ const SubmittingApplication = ({ applieddetails, orgid, empid, handlesback }) =>
                     <tbody>
                       {currentApplications.map((detail) => (
                         <tr key={detail.applicationid}>
-                          <td className="id-cell">
-                            <span className="application-indicator"></span>
+                          <td className="schedule_interview_id-cell">
+                            <span className="schedule_interview_application-indicator"></span>
                             {getdisplayprojectid(detail.applicationid)}
                           </td>
                           <td>{detail.candidate_id}</td>
@@ -289,7 +289,7 @@ const SubmittingApplication = ({ applieddetails, orgid, empid, handlesback }) =>
                           <td>{formatDate(detail.applieddate)}</td>
                           <td>
                              <span
-                             className='status-badge.applied'
+                             className='schedule_interview_status-badge schedule_interview_applied'
                            >
                             {detail.status}
                             </span>
@@ -301,7 +301,7 @@ const SubmittingApplication = ({ applieddetails, orgid, empid, handlesback }) =>
                           </td>
                           <td>
                             <button 
-                              className="button"
+                              className="schedule_interview_button"
                               onClick={() => handlesubmit(detail.applicationid, detail.first_name, detail.last_name)}
                             >
                               Schedule
@@ -315,27 +315,27 @@ const SubmittingApplication = ({ applieddetails, orgid, empid, handlesback }) =>
 
                 {/* Pagination */}
                 {sortedApplications.length > applicationsPerPage && (
-                  <div className="pagination-container">
+                  <div className="schedule_interview_pagination-container">
                     <button
-                      className="button"
+                      className="schedule_interview_button"
                       onClick={handlePrevPage}
                       disabled={currentPage === 1}
                     >
                       ← Previous
                     </button>
-                    <span className="pagination-text">
+                    <span className="schedule_interview_pagination-text">
                       Page{' '}
                       <input
                         type="text"
                         value={pageInputValue}
                         onChange={handlePageInputChange}
                         onKeyPress={handlePageInputKeyPress}
-                        className="pagination-input"
+                        className="schedule_interview_pagination-input"
                       />{' '}
                       of {totalPages}
                     </span>
                     <button
-                      className="button"
+                      className="schedule_interview_button"
                       onClick={handleNextPage}
                       disabled={currentPage === totalPages}
                     >
@@ -346,14 +346,14 @@ const SubmittingApplication = ({ applieddetails, orgid, empid, handlesback }) =>
 
                 {/* Rows per Page */}
                 {sortedApplications.length > 0 && (
-                  <div className="rows-per-page-container">
-                    <label className="rows-per-page-label">Rows/ Page</label>
+                  <div className="schedule_interview_rows-per-page-container">
+                    <label className="schedule_interview_rows-per-page-label">Rows/ Page</label>
                     <input
                       type="text"
                       value={duplicate}
                       onChange={pageChanging}
                       onKeyPress={handleApplicationsInputKeyPress}
-                      className="rows-per-page-input"
+                      className="schedule_interview_rows-per-page-input"
                       aria-label="Number of rows per page"
                     />
                   </div>
