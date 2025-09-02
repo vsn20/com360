@@ -239,36 +239,6 @@
 }
 
 
-.account_status_badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 10px;
-  border-radius: 9999px;
-  margin-left: 0;
-  font-size: 12px;
-}
-
-.account_status_badge.account_active {
-  background-color: #dcfce7;
-  color: #166534;
-}
-
-.account_status_badge.account_actives {
-  background-color:#0fd46c;
-  color: #166534;
-  font-size: 12px;
-}
-
-.account_status_badge.account_applied {
-  background-color: #dcfce7;
-  color: #166534;
-}
-
-.account_status_badge.account_inactive {
-  background-color: #fee2e2;
-  color: #dc2626;
-}
-
 .account_id_cell {
   display: flex;
   align-items: center;
@@ -566,4 +536,36 @@
   margin-bottom: 15px;
   text-align: center;
   font-weight: bold;
+}
+
+
+.account_status_badge {
+  display: inline-block; /* Changed from inline-flex */
+  align-items: center;
+  padding: 4px 12px !important; /* Adjusted padding to match */
+  border-radius: 9999px;
+  margin-left: 0;
+  font-size: 12px;
+}
+
+.account_status_badge.account_active {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+/* This is the class used in your table for active status */
+.account_status_badge.account_actives {
+  background-color: #dcfce7; /* Changed background to match jobtitles.css */
+  color: #166534;
+  font-size: 12px;
+}
+
+.account_status_badge.account_applied {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.account_status_badge.account_inactive {
+  background-color: #fee2e2; /* This style already matches */
+  color: #dc2626;
 }

@@ -874,7 +874,8 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
                         className={selectedSrNum === req.SR_NUM ? 'selected-row' : ''}
                       >
                         <td className="id-cell">
-                             <span className={`status-badge ${req.STATUS_CD?.toLowerCase() === 'resolved' ? 'service-request-indicator-active' : 'service-request-indicator-inactive'}`}></span>SR-{getdisplayprojectid(req.SR_NUM)}
+                              <span className={req.STATUS_CD?.toLowerCase() === 'resolved' ? 'service-request-indicator-active' : 'service-request-indicator-inactive'}></span>
+                               {req.SR_NUM ? `SR-${getdisplayprojectid(req.SR_NUM)}` : '-'}
                         </td>
                         <td className="name-cell">{req.SERVICE_NAME || '-'}</td>
                         <td className="status-cell">
