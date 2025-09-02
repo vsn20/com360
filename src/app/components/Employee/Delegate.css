@@ -1,137 +1,224 @@
-.delegate-container {
-  max-width: 600px;
+/* === Main Container & Layout === */
+.delegation_container {
+  max-width: 900px;
   margin: 24px auto;
   padding: 24px;
-  background-color: #ffffff;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  background-color: #fff;
   border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  font-family: Arial, sans-serif;
 }
 
-.delegate-container h2 {
-  font-size: 24px;
+/* === Typography (Inspired by projectoverview.css) === */
+.delegation_title {
+  font-size: 18px; /* Matching .project_title */
+  color: #0fd46c; /* Green accent color as requested */
+  margin: 0 0 24px 0;
+  padding-bottom: 16px;
   font-weight: bold;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.delegation_section_title {
+  font-size: 16px;
+  font-weight: 600;
   margin-bottom: 16px;
-  color: #333333;
+  color: #374151;
 }
 
-.delegate-container h3 {
-  font-size: 18px;
-  font-weight: bold;
-  margin-bottom: 12px;
-  color: #333333;
-}
-
-.error-message {
-  color: #d32f2f;
-  background-color: #ffebee;
-  padding: 12px;
+/* === Alert Messages === */
+.delegation_error_message {
+  color: #dc3545;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  padding: 12px 16px;
   border-radius: 4px;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
-.success-message {
-  color: #2e7d32;
-  background-color: #e8f5e9;
-  padding: 12px;
+.delegation_success_message {
+  color: #155724;
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  padding: 12px 16px;
   border-radius: 4px;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
-.delegate-form {
+/* === Submenu Bar === */
+.delegation_submenu_bar {
   display: flex;
-  flex-direction: column;
-  gap: 16px;
+  gap: 24px;
+  border-bottom: 1px solid #e5e7eb;
   margin-bottom: 24px;
+  padding: 0 4px;
 }
 
-.delegate-form label {
-  display: flex;
-  flex-direction: column;
-  color: #333333;
-  font-size: 16px;
-}
-
-.delegate-form select,
-.delegate-form input[type="checkbox"] {
-  margin-top: 4px;
-  padding: 8px;
-  border: 1px solid #cccccc;
-  border-radius: 4px;
-  font-size: 16px;
-}
-
-.delegate-form select:focus,
-.delegate-form input[type="checkbox"]:focus {
-  outline: none;
-  border-color: #1976d2;
-  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2);
-}
-
-.delegate-form select:disabled {
-  background-color: #f5f5f5;
-  cursor: not-allowed;
-}
-
-.delegate-form button {
-  background-color: #1976d2;
-  color: #ffffff;
-  padding: 10px 16px;
+.delegation_submenu_bar button {
+  background: none;
   border: none;
-  border-radius: 4px;
-  font-size: 16px;
   cursor: pointer;
+  padding: 12px 4px;
+  margin-bottom: -1px;
+  font-size: 14px;
+  font-family: Arial, sans-serif;
+  color: #6b7280;
+  transition: all 0.2s ease;
 }
 
-.delegate-form button:hover:not(:disabled) {
-  background-color: #1565c0;
+.delegation_submenu_bar button.delegation_active {
+  color: #1f2937;
+  font-weight: 600;
+  border-bottom: 2px solid #0fd46c;
 }
 
-.delegate-form button:disabled {
-  background-color: #bdbdbd;
-  cursor: not-allowed;
-}
-
-.active-delegations {
+/* === Form Styling === */
+.delegation_form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
+  margin-bottom: 32px;
 }
 
-.active-delegations ul {
+.delegation_form_group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.delegation_form_group label {
+  font-weight: 500;
+  color: #374151;
+  font-size: 14px;
+}
+
+.delegation_form_group select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.delegation_form_group select:focus {
+  outline: none;
+  border-color: #0fd46c;
+  box-shadow: 0 0 0 2px rgba(15, 212, 108, 0.25);
+}
+
+.delegation_form_group p {
+  color: #6b7280;
+  font-style: italic;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+/* === Custom Checkbox === */
+.delegation_checkbox_label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-size: 14px;
+  gap: 10px;
+  user-select: none;
+}
+
+.delegation_checkbox_label input[type="checkbox"] {
+  display: none;
+}
+
+.delegation_custom_checkbox {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #ccc;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.delegation_custom_checkbox::after {
+  content: '';
+  display: block;
+  width: 5px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 3px 3px 0;
+  transform: rotate(45deg) translateY(-1px);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.delegation_checkbox_label input[type="checkbox"]:checked + .delegation_custom_checkbox {
+  background-color: #0fd46c;
+  border-color: #0fd46c;
+}
+
+.delegation_checkbox_label input[type="checkbox"]:checked + .delegation_custom_checkbox::after {
+  opacity: 1;
+}
+
+/* === Button (Matching projectoverview.css) === */
+.delegation_button {
+  color: black !important;
+  padding: 8px 18px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: Arial, sans-serif;
+  transition: background-color 0.3s ease, box-shadow 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  text-decoration: none !important;
+  border-radius: 5px;
+  background-color: #0FD46C;
+  align-self: flex-start; /* Aligns button to the left */
+}
+
+.delegation_button:hover:not(:disabled) {
+  background-color: #0CB25A;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.delegation_button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* === Active Delegations Section (SCALABLE GRID) === */
+.delegation_active_delegations {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-top: 24px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.delegation_active_grid {
   list-style: none;
   padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
 }
 
-.active-delegations li {
-  display: flex;
-  align-items: center;
-  padding: 8px 0;
+.delegation_item {
+  background-color: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 12px;
+  transition: all 0.2s ease;
 }
 
-.active-delegations label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #333333;
-  font-size: 16px;
+.delegation_item:hover {
+  border-color: #9ca3af;
+  background-color: #f1f5f9;
 }
 
-.active-delegations button {
-  background-color: #1976d2;
-  color: #ffffff;
-  padding: 10px 16px;
-  border: none;
-  border-radius: 4px;
-  font-size: 16px;
-  cursor: pointer;
-}
-
-.active-delegations button:hover:not(:disabled) {
-  background-color: #1565c0;
-}
-
-.delegate-form p {
-  color: #666666;
-  font-style: italic;
-  font-size: 14px;
+.delegation_item .delegation_checkbox_label {
+  font-weight: normal;
+  color: #374151;
 }

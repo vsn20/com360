@@ -5,7 +5,7 @@ import { approveEmployeeLeave, fetchLeaveTypes } from '@/app/serverActions/Leave
 import './pendingleaves.css';
 import { useRouter } from 'next/navigation';
 
-const PendingLeaveApprovals = () => {
+const PendingLeaveApprovals = ({ onBack }) => { // Accept onBack as a prop
   const router = useRouter();
   const [pendingLeaves, setPendingLeaves] = useState([]);
   const [employees, setEmployees] = useState([]);
@@ -77,15 +77,17 @@ const PendingLeaveApprovals = () => {
   if (error) return <div className="error">{error}</div>;
 
   return (
-    <div className="leave-container">
-      <div className="content-wrapper">
-        <h2 className="leave-title">Pending Leave Approvals</h2>
-        {success && <p className="success-message">Leave action successful!</p>}
+    <div className="leaves_pending_page_container">
+      <h2 className="leaves_pending_page_title">Pending Leave Approvals</h2>
+      <button onClick={onBack} className="leaves_back_button"></button>
+
+      <div className="leaves_pending_container">
+        {success && <p className="leaves_pending_message_success">Leave action successful!</p>}
         {pendingLeaves.length === 0 ? (
-          <p className="no-leaves-message">No pending leave requests.</p>
+          <p className="leaves_pending_message_info">No pending leave requests.</p>
         ) : (
-          <div className="table-wrapper">
-            <table className="leave-table">
+          <div className="leaves_pending_table_wrapper">
+            <table className="leaves_pending_table">
               <thead>
                 <tr>
                   <th>Employee Name</th>
@@ -110,6 +112,7 @@ const PendingLeaveApprovals = () => {
                     <td>{leave.description || 'No reason provided'}</td>
                     <td>
                       <select
+                        className="leaves_pending_action_select"
                         onChange={(e) => handleApproveChange(leave.id, leave.empid, e.target.value)}
                         defaultValue=""
                       >

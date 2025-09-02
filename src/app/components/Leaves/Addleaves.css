@@ -1,70 +1,140 @@
-.container {
-  max-width: 1200px;
+/* === Page Layout & Title === */
+.leaves_add_page_container {
+  position: relative; /* Establishes positioning context for the back button */
+  padding-bottom: 20px;
+  max-width: 800px;
   margin: 0 auto;
-  padding: 24px;
 }
-.heading {
-  font-size: 24px;
+
+.leaves_add_page_title {
+  font-size: 18px;
+  color: #1f2937;
+  margin: 0 0 24px 0;
   font-weight: bold;
-  color: #333;
-  margin-bottom: 24px;
 }
-.leave-form {
-  max-width: 600px;
+
+/* === Main Form Container (The Card) === */
+.leaves_add_container {
+  padding: 30px;
   background-color: #fff;
-  padding: 24px;
   border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  font-family: Arial, sans-serif;
 }
-.form-group {
-  margin-bottom: 16px;
+
+/* === Form Grid & Groups === */
+.leaves_add_form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
-.form-group label {
-  display: block;
-  font-size: 14px;
+.addleaves_form_grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+.addleaves_full_width {
+  grid-column: 1 / -1;
+}
+.leaves_add_form_group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* === Form Labels & Inputs === */
+.addleaves_form_label {
   font-weight: 600;
-  color: #444;
-  margin-bottom: 8px;
+  color: #374151;
+  font-size: 14px;
 }
-.form-group input,
-.form-group select {
+.addleaves_required {
+  color: #dc2626;
+}
+.addleaves_select_input,
+.addleaves_date_input,
+.addleaves_textarea_input {
   width: 100%;
-  padding: 10px;
+  padding: 12px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
   font-size: 14px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
   box-sizing: border-box;
+  transition: all 0.2s ease;
 }
-.form-group input:focus,
-.form-group select:focus {
+.addleaves_select_input:focus,
+.addleaves_date_input:focus,
+.addleaves_textarea_input:focus {
   outline: none;
-  border-color: #2e7d32;
-  box-shadow: 0 0 5px rgba(46, 125, 50, 0.3);
+  border-color: #0fd46c;
+  box-shadow: 0 0 0 2px rgba(15, 212, 108, 0.25);
 }
-.submit-button {
-  display: inline-block;
-  padding: 12px 24px;
-  font-size: 16px;
-  font-weight: 600;
-  color: #fff;
-  background-color: #2e7d32;
-  border: none;
-  border-radius: 4px;
+.addleaves_textarea_input {
+  resize: vertical;
+  min-height: 100px;
+}
+.addleaves_select_input {
   cursor: pointer;
-  transition: background-color 0.2s;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  padding-right: 40px;
 }
-.submit-button:hover {
-  background-color: #27692b;
+
+/* === Form Actions & Submit Button === */
+.addleaves_form_actions {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 24px;
 }
-.loading {
-  text-align: center;
-  font-size: 18px;
-  color: #666;
-  padding: 32px;
+.leaves_add_button_submit {
+  color: black !important;
+  padding: 12px 24px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  background-color: #0FD46C;
 }
-.error {
-  text-align: center;
-  font-size: 18px;
-  color: #d32f2f;
-  padding: 32px;
+.leaves_add_button_submit:hover:not(:disabled) {
+  background-color: #0CB25A;
+  box-shadow: 0 4px 12px rgba(15, 212, 108, 0.3);
+  transform: translateY(-1px);
 }
+
+/* === Loading State === */
+.addleaves_loading_container { display: flex; justify-content: center; align-items: center; min-height: 400px; }
+.addleaves_loading_spinner { display: flex; align-items: center; color: #6b7280; font-size: 16px; }
+.addleaves_loading_spinner::after { content: ''; width: 20px; height: 20px; margin-left: 12px; border: 2px solid #e5e7eb; border-top: 2px solid #0fd46c; border-radius: 50%; animation: addleaves-spin 1s linear infinite; }
+@keyframes addleaves-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+/* === Back Button (CORRECTED: Positioned top-right) === */
+.leaves_back_button {
+  position: absolute;
+  top: 5px;
+  right: 0; /* This moves the button to the right */
+  padding: 8px 12px 8px 8px !important;
+  background-color: transparent !important;
+  color: #6c757d !important;
+  border: 1px solid #dee2e6 !important;
+  border-radius: 20px !important;
+  cursor: pointer !important;
+  font-size: 14px !important;
+  font-family: Arial, sans-serif !important;
+  font-weight: 500 !important;
+  text-decoration: none !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+.leaves_back_button::before { content: '‹' !important; font-size: 18px  !important; font-weight: bold !important; color: #6c757d !important; transition: color 0.3s ease !important; }
+.leaves_back_button::after { content: 'Back' !important; font-size: 13px !important; }
+.leaves_back_button:hover { background-color: #f8f9fa !important; border-color: #6c757d !important; color: #495057 !important; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important; transform: translateX(-2px) !important; }
+.leaves_back_button:hover::before { color: #495057 !important; }
