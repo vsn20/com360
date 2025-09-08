@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { addDocument, updateDocument, deleteDocument } from '@/app/serverActions/Employee/employeedocuments';
-import styles from './document.module.css';
+import { addSubOrgDocument, updateSubOrgDocument, deleteSubOrgDocument } from '@/app/serverActions/Organizations/documents';
+import styles from './suborgdocument.module.css'; // Reusing the employee document styles
 
-const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate }) => {
+const SubOrgDocument = ({ suborgid, documents: initialDocuments, onDocumentsUpdate }) => {
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState(null);
   const [newDocument, setNewDocument] = useState({
@@ -24,7 +24,6 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('all');
 
-  // <-- ADDED: Define max file size for reuse
   const MAX_FILE_SIZE_BYTES = 1 * 1024 * 1024; // 1 MB
 
   useEffect(() => {
@@ -38,38 +37,30 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // <-- ADDED: File size validation
       if (file.size > MAX_FILE_SIZE_BYTES) {
         setError('File size cannot exceed 1 MB.');
-        e.target.value = null; // Clear the invalid file from input
+        e.target.value = null;
         return;
       }
-      setError(null); // Clear any previous errors
-
+      setError(null);
       const extension = file.name.split('.').pop().toLowerCase();
-      const type = extension === 'pdf' ? 'pdf' : extension === 'jpg' ? 'jpg' : extension === 'jpeg' ? 'jpeg' : 'unknown';
-      setNewDocument({
-        ...newDocument,
-        file,
-        documentType: type,
-      });
+      const type = extension === 'pdf' ? 'pdf' : ['jpg', 'jpeg'].includes(extension) ? extension : 'unknown';
+      setNewDocument({ ...newDocument, file, documentType: type });
     }
   };
 
   const handleEditFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // <-- ADDED: File size validation
       if (file.size > MAX_FILE_SIZE_BYTES) {
         setError('File size cannot exceed 1 MB.');
-        e.target.value = null; // Clear the invalid file from input
+        e.target.value = null;
         return;
       }
-      setError(null); // Clear any previous errors
-
+      setError(null);
       setEditFile(file);
       const extension = file.name.split('.').pop().toLowerCase();
-      const type = extension === 'pdf' ? 'pdf' : extension === 'jpg' ? 'jpg' : extension === 'jpeg' ? 'jpeg' : 'unknown';
+      const type = extension === 'pdf' ? 'pdf' : ['jpg', 'jpeg'].includes(extension) ? extension : 'unknown';
       setEditDocument({ ...editDocument, document_type: type });
     }
   };
@@ -81,13 +72,13 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
       return;
     }
     const formData = new FormData();
-    formData.append('empid', id);
+    formData.append('suborgid', suborgid);
     formData.append('documentName', newDocument.documentName || newDocument.file.name.replace(/\.[^/.]+$/, ''));
     formData.append('documentPurpose', newDocument.documentPurpose);
     formData.append('file', newDocument.file);
 
     try {
-      await addDocument(formData);
+      await addSubOrgDocument(formData);
       setNewDocument({ documentName: '', documentType: '', documentPurpose: '', file: null });
       setEditing(false);
       if (onDocumentsUpdate) onDocumentsUpdate();
@@ -102,7 +93,7 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
     if (!editDocument) return;
     const formData = new FormData();
     formData.append('id', editDocument.id);
-    formData.append('empid', id);
+    formData.append('suborgid', suborgid);
     formData.append('documentName', editDocument.document_name);
     formData.append('documentPurpose', editDocument.document_purpose);
 
@@ -112,7 +103,7 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
     }
 
     try {
-      await updateDocument(formData);
+      await updateSubOrgDocument(formData);
       setEditDocument(null);
       setEditFile(null);
       setEditing(false);
@@ -125,7 +116,7 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
 
   const handleDeleteDocument = async (docId) => {
     try {
-      await deleteDocument(docId);
+      await deleteSubOrgDocument(docId);
       if (onDocumentsUpdate) onDocumentsUpdate();
       setError(null);
     } catch (err) {
@@ -134,7 +125,7 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
   };
 
   const handleDocumentClick = (path) => {
-    if (path && path.toLowerCase().endsWith('.pdf')) {
+    if (path) {
       window.open(path, '_blank');
     }
   };
@@ -166,62 +157,10 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
     }));
   };
 
-  const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage((prev) => prev + 1);
-    }
-  };
-
-  const handlePrevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage((prev) => prev - 1);
-    }
-  };
-
-  const handlePageInputChange = (e) => {
-    setPageInputValue(e.target.value);
-  };
-
-  const handlePageInputKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      const value = parseInt(pageInputValue, 10);
-      if (!isNaN(value) && value >= 1 && value <= totalPages) {
-        setCurrentPage(value);
-      } else {
-        setPageInputValue(currentPage.toString());
-      }
-    }
-  };
-
-  const handleDocumentsPerPageInputChange = (e) => {
-    setDocumentsPerPageInput(e.target.value);
-  };
-
-  const handleDocumentsPerPageInputKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      const value = parseInt(e.target.value, 10);
-      if (!isNaN(value) && value >= 1) {
-        setDocumentsPerPage(value);
-        setCurrentPage(1);
-      } else {
-        setDocumentsPerPageInput(documentsPerPage.toString());
-      }
-    }
-  };
-
-  const handleSearchChange = (e) => {
-    setSearchQuery(e.target.value);
-    setCurrentPage(1);
-  };
-
-  const handleFilterChange = (e) => {
-    setFilterType(e.target.value);
-    setCurrentPage(1);
-  };
-
   const filteredDocuments = useMemo(() => {
     return (Array.isArray(allDocuments) ? allDocuments : []).filter((doc) => {
-      const matchesSearch = doc.document_name?.toLowerCase().includes(searchQuery.toLowerCase());
+      const docName = doc.document_name || '';
+      const matchesSearch = docName.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesType = filterType === 'all' || doc.document_type === filterType;
       return matchesSearch && matchesType;
     });
@@ -230,16 +169,14 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
   const sortedDocuments = useMemo(() => {
     return [...filteredDocuments].sort((a, b) => sortDocuments(a, b, sortConfig.column, sortConfig.direction));
   }, [filteredDocuments, sortConfig]);
-
+  
   const totalPages = Math.ceil(sortedDocuments.length / documentsPerPage);
-  const indexOfLastDocument = currentPage * documentsPerPage;
-  const indexOfFirstDocument = indexOfLastDocument - documentsPerPage;
-  const currentDocuments = sortedDocuments.slice(indexOfFirstDocument, indexOfLastDocument);
+  const currentDocuments = sortedDocuments.slice((currentPage - 1) * documentsPerPage, currentPage * documentsPerPage);
 
   return (
-    <div >
+    <div className={styles.container}>
       <div className={styles.titleContainer}>
-        <h3 className={styles.title}>Employee Documents</h3>
+        <h3 className={styles.title}>Sub-Organization Documents</h3>
         {!editing && (
           <button className={`${styles.button} ${styles.addButton}`} onClick={() => setEditing(true)}>
             Add Document
@@ -250,7 +187,7 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
 
       {editing ? (
         <form onSubmit={editDocument ? handleUpdateDocument : handleAddDocument} className={styles.form}>
-          <div className={styles.formRow}>
+           <div className={styles.formRow}>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Name*</label>
               <input
@@ -304,8 +241,6 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
                     className={styles.fileInput}
                   />
                   {editFile && <div className={styles.fileName}>New: {editFile.name}</div>}
-
-                  {/* <-- ADDED: Overwrite warning message --> */}
                   {editFile && (
                     <p className={styles.warningMessage}>
                       ⚠️ Warning: Saving will permanently replace the original file.
@@ -343,15 +278,15 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
         </form>
       ) : (
         <>
-          <div className={styles.searchFilterContainer}>
+        <div className={styles.searchFilterContainer}>
             <input
               type="text"
               value={searchQuery}
-              onChange={handleSearchChange}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className={styles.searchInput}
               placeholder="Search by name..."
             />
-            <select value={filterType} onChange={handleFilterChange} className={styles.filterSelect}>
+            <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className={styles.filterSelect}>
               <option value="all">All Types</option>
               <option value="pdf">PDF</option>
               <option value="jpg">JPG</option>
@@ -359,33 +294,16 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
               <option value="unknown">Unknown</option>
             </select>
           </div>
-
           {filteredDocuments.length === 0 ? (
             <p className={styles.emptyState}>No documents available.</p>
           ) : (
-            <>
-              <div className={styles.tableWrapper}>
+            <div className={styles.tableWrapper}>
                 <table className={styles.table}>
                   <thead>
                     <tr>
-                      <th
-                        className={`${styles.tableHeader} ${styles.sortable} ${sortConfig.column === 'document_name' ? (sortConfig.direction === 'asc' ? styles.sortAsc : styles.sortDesc) : ''}`}
-                        onClick={() => requestSort('document_name')}
-                      >
-                        Name
-                      </th>
-                      <th
-                        className={`${styles.tableHeader} ${styles.sortable} ${sortConfig.column === 'document_type' ? (sortConfig.direction === 'asc' ? styles.sortAsc : styles.sortDesc) : ''}`}
-                        onClick={() => requestSort('document_type')}
-                      >
-                        Type
-                      </th>
-                      <th
-                        className={`${styles.tableHeader} ${styles.sortable} ${sortConfig.column === 'last_updated_date' ? (sortConfig.direction === 'asc' ? styles.sortAsc : styles.sortDesc) : ''}`}
-                        onClick={() => requestSort('last_updated_date')}
-                      >
-                        Last Updated
-                      </th>
+                      <th className={styles.tableHeader} onClick={() => requestSort('document_name')}>Name</th>
+                      <th className={styles.tableHeader} onClick={() => requestSort('document_type')}>Type</th>
+                      <th className={styles.tableHeader} onClick={() => requestSort('last_updated_date')}>Last Updated</th>
                       <th className={styles.tableHeader}>Purpose</th>
                       <th className={styles.tableHeader}>Actions</th>
                     </tr>
@@ -393,10 +311,7 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
                   <tbody>
                     {currentDocuments.map((d) => (
                       <tr key={d.id} className={styles.tableRow}>
-                        <td
-                          className={`${styles.tableCell} ${d.document_path && d.document_path.toLowerCase().endsWith('.pdf') ? styles.clickableCell : ''}`}
-                          onClick={() => handleDocumentClick(d.document_path)}
-                        >
+                        <td className={`${styles.tableCell} ${styles.clickableCell}`} onClick={() => handleDocumentClick(d.document_path)}>
                           {d.document_name || 'N/A'}
                         </td>
                         <td className={styles.tableCell}>{d.document_type || 'N/A'}</td>
@@ -421,43 +336,6 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
                   </tbody>
                 </table>
               </div>
-
-              {filteredDocuments.length > documentsPerPage && (
-                <div className={styles.paginationContainer}>
-                  <button className={styles.paginationButton} onClick={handlePrevPage} disabled={currentPage === 1}>
-                    ← Previous
-                  </button>
-                  <span className={styles.paginationText}>
-                    Page{' '}
-                    <input
-                      type="text"
-                      value={pageInputValue}
-                      onChange={handlePageInputChange}
-                      onKeyPress={handlePageInputKeyPress}
-                      className={styles.paginationInput}
-                    />{' '}
-                    of {totalPages}
-                  </span>
-                  <button className={styles.paginationButton} onClick={handleNextPage} disabled={currentPage === totalPages}>
-                    Next →
-                  </button>
-                </div>
-              )}
-
-              {filteredDocuments.length > 0 && (
-                <div className={styles.rowsPerPageContainer}>
-                  <label className={styles.rowsPerPageLabel}>Rows/ Page</label>
-                  <input
-                    type="text"
-                    value={documentsPerPageInput}
-                    onChange={handleDocumentsPerPageInputChange}
-                    onKeyPress={handleDocumentsPerPageInputKeyPress}
-                    className={styles.rowsPerPageInput}
-                    aria-label="Number of rows per page"
-                  />
-                </div>
-              )}
-            </>
           )}
         </>
       )}
@@ -465,4 +343,5 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
   );
 };
 
-export default EmplopyeeDocument;
+export default SubOrgDocument;
+
