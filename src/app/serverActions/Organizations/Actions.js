@@ -14,6 +14,14 @@ const decodeJwt = (token) => {
   }
 };
 
+const formatDate = (date) => {
+    if (!date || isNaN(new Date(date))) return '';
+    const d = new Date(date);
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${month}/${day}/${d.getFullYear()}`;
+};
+
 const getCurrentUserEmpIdName = async (pool, userId, orgId) => {
   try {
     const [userRows] = await pool.execute(
@@ -46,7 +54,7 @@ export async function addorganization(formData) {
   let pool;
   let retryCount = 0;
   const maxRetries = 2;
-  const usaCountryId = '185'; // USA country ID as per Overview.jsx
+  const usaCountryId = '185';
 
   while (retryCount <= maxRetries) {
     try {
@@ -54,13 +62,11 @@ export async function addorganization(formData) {
       const token = cookieStore.get('jwt_token')?.value;
 
       if (!token) {
-        console.log('No token found');
         return { error: 'No token found. Please log in.' };
       }
 
       const decoded = decodeJwt(token);
       if (!decoded || !decoded.orgid || !decoded.userId) {
-        console.log('Invalid token or orgid/userId not found');
         return { error: 'Invalid token or orgid/userId not found.' };
       }
 
@@ -77,7 +83,6 @@ export async function addorganization(formData) {
       const postalcode = formData.get('postalcode')?.trim() || null;
 
       if (!suborgname) {
-        console.log('Organization name is required');
         return { error: 'Organization name is required.' };
       }
 
@@ -114,12 +119,10 @@ export async function addorganization(formData) {
         ]
       );
 
-      console.log(`Organization added with suborgid: ${suborgid}`);
       return { success: true };
     } catch (error) {
       console.error('Error adding organization:', error.message);
       if (error.message.includes('Pool is closed') && retryCount < maxRetries) {
-        console.log('Pool is closed, retrying connection...');
         retryCount++;
         continue;
       }
@@ -147,7 +150,6 @@ export async function getorgdetailsbyid(suborgid) {
     } catch (error) {
       console.error('Error fetching organization details:', error.message);
       if (error.message.includes('Pool is closed') && retryCount < maxRetries) {
-        console.log('Pool is closed, retrying connection...');
         retryCount++;
         continue;
       }
@@ -161,7 +163,7 @@ export async function updateorganization(formData) {
   let pool;
   let retryCount = 0;
   const maxRetries = 2;
-  const usaCountryId = '185'; // USA country ID as per Overview.jsx
+  const usaCountryId = '185';
 
   while (retryCount <= maxRetries) {
     try {
@@ -169,13 +171,11 @@ export async function updateorganization(formData) {
       const token = cookieStore.get('jwt_token')?.value;
 
       if (!token) {
-        console.log('No token found');
         return { error: 'No token found. Please log in.' };
       }
 
       const decoded = decodeJwt(token);
       if (!decoded || !decoded.orgid || !decoded.userId) {
-        console.log('Invalid token or orgid/userId not found');
         return { error: 'Invalid token or orgid/userId not found.' };
       }
 
@@ -193,7 +193,6 @@ export async function updateorganization(formData) {
       const suborgid = formData.get('suborgid')?.trim();
 
       if (!suborgname) {
-        console.log('Organization name is required');
         return { error: 'Organization name is required.' };
       }
 
@@ -202,48 +201,29 @@ export async function updateorganization(formData) {
       const custom_val = !isUSA ? customStateName : null;
 
       pool = await DBconnection();
-
       const isActive = isstatus === 'Active' ? 1 : 0;
       const updatedBy = await getCurrentUserEmpIdName(pool, userId, orgId);
 
       const [result] = await pool.query(
         `UPDATE C_SUB_ORG SET 
-          suborgname = ?, 
-          isstatus = ?, 
-          addresslane1 = ?, 
-          addresslane2 = ?, 
-          country = ?, 
-          state = ?, 
-          CUSTOME_STATE_NAME = ?,
-          postalcode = ?, 
-          updated_by = ?, 
-          updated_date = NOW() 
+          suborgname = ?, isstatus = ?, addresslane1 = ?, addresslane2 = ?, 
+          country = ?, state = ?, CUSTOME_STATE_NAME = ?, postalcode = ?, 
+          updated_by = ?, updated_date = NOW() 
          WHERE suborgid = ?`,
         [
-          suborgname,
-          isActive,
-          addresslane1,
-          addresslane2,
-          country,
-          state_val,
-          custom_val,
-          postalcode,
-          updatedBy,
-          suborgid,
+          suborgname, isActive, addresslane1, addresslane2, country,
+          state_val, custom_val, postalcode, updatedBy, suborgid,
         ]
       );
 
       if (result.affectedRows > 0) {
-        console.log(`Organization updated with suborgid: ${suborgid}`);
         return { success: true };
       } else {
-        console.log('No organization found to update');
         return { error: 'No organization found to update' };
       }
     } catch (error) {
       console.error('Error updating organization:', error.message);
       if (error.message.includes('Pool is closed') && retryCount < maxRetries) {
-        console.log('Pool is closed, retrying connection...');
         retryCount++;
         continue;
       }
@@ -252,3 +232,37 @@ export async function updateorganization(formData) {
   }
   return { error: 'Failed to update organization after multiple retries: Pool is closed' };
 }
+
+export async function fetchSubOrgDocumentsById(suborgid) {
+  try {
+    const cookieStore = cookies();
+    const token = cookieStore.get('jwt_token')?.value;
+    if (!token) throw new Error('No token found. Please log in.');
+
+    const decoded = decodeJwt(token);
+    if (!decoded || !decoded.orgid) throw new Error('Invalid token or orgid not found.');
+
+    const orgId = decoded.orgid;
+    if (!suborgid) throw new Error('Sub-Organization ID is required.');
+
+    const pool = await DBconnection();
+    const [rows] = await pool.query(
+      `SELECT id, suborgid, orgid, document_name, document_type, document_path, document_purpose, 
+              created_by, updated_by, created_date, last_updated_date 
+       FROM C_SUB_ORG_DOCUMENTS 
+       WHERE suborgid = ? AND orgid = ?`,
+      [suborgid, orgId]
+    );
+
+    if (rows.length === 0) return [];
+    
+    return rows.map((doc) => ({
+      ...doc,
+      last_updated_date: formatDate(doc.last_updated_date),
+    }));
+  } catch (error) {
+    console.error('Error fetching sub-organization documents:', error.message);
+    throw new Error(`Failed to fetch sub-organization documents: ${error.message}`);
+  }
+}
+
