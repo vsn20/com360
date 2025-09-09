@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { MdApps } from 'react-icons/md';
 import { getUserFromCookie } from '../serverActions/getUserFromCookie';
 import { job_logoutaction } from '../serverActions/job_logoutaction';
-
+import Link from 'next/link';
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
@@ -21,7 +21,7 @@ export default function Navbar() {
       setIsLoading(false);
     }
     fetchUser();
-  }, [pathname]); // Re-fetch on route changes to handle cookie updates
+  }, []); // Re-fetch on route changes to handle cookie updates
 
   const handleLogout = async () => {
     const result = await job_logoutaction();
@@ -40,11 +40,11 @@ export default function Navbar() {
 
   return (
     <nav id="navid" style={{ position: 'relative' }}>
-      <a href="/jobs">COM@360 jobs</a>
-      <a href="/" className={pathname === '/' ? 'active' : ''}>Home</a>
-      <a href="/jobs" className={pathname === '/jobs' ? 'active' : ''}>Jobs</a>
-      <a href="/jobs/jobapplications" className={pathname === '/jobs/jobapplications' ? 'active' : ''}>Applications</a>
-      <a href="#"><MdApps className="menu-icon" /></a>
+      <Link href="/jobs">COM@360 jobs</Link>
+      <Link href="/" className={pathname === '/' ? 'active' : ''}>Home</Link>
+      <Link href="/jobs" className={pathname === '/jobs' ? 'active' : ''}>Jobs</Link>
+      <Link href="/jobs/jobapplications" className={pathname === '/jobs/jobapplications' ? 'active' : ''}>Applications</Link>
+      <Link href="#"><MdApps className="menu-icon" /></Link>
       {user ? (
         <div
           className="profile-container"
@@ -104,9 +104,9 @@ export default function Navbar() {
           )}
         </div>
       ) : (
-        <a href="/jobs/jobslogin" className={`button ${pathname === '/jobs/jobslogin' ? 'active' : ''}`}>
+        <Link href="/jobs/jobslogin" className={`button ${pathname === '/jobs/jobslogin' ? 'active' : ''}`}>
           jobsLogin
-        </a>
+        </Link>
       )}
     </nav>
   );

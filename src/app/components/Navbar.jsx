@@ -2,7 +2,7 @@
 import { usePathname } from 'next/navigation';
 import { MdApps } from 'react-icons/md';
 import { useState } from 'react';
-
+import Link from 'next/link';
 function Navbar() {
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -12,18 +12,19 @@ function Navbar() {
   };
 
   return (
+    <>
     <nav id="navid" className={isMenuOpen ? 'menu-open' : ''}>
-      <a href="/">COM@360</a>
-      <a href="/" className={pathname === '/' ? 'active' : ''}>Home</a>
-      <a href="/about" className={pathname === '/about' ? 'active' : ''}>About</a>
-      <a href="/jobs" className={pathname === '/jobs' ? 'active' : ''}>Jobs</a>
-      <a href="/features" className={pathname === '/features' ? 'active' : ''}>Top features</a>
-      <a href="/pricing" className={pathname === '/pricing' ? 'active' : ''}>Plans and pricing</a>
-      <a href="/contact" className={pathname === '/contact' ? 'active' : ''}>Contact Us</a>
-      <a href="/support" className={pathname === '/support' ? 'active' : ''}>Support</a>
-      <a href="/docs" className={pathname === '/docs' ? 'active' : ''}>Documentation / tutorials</a>
-      <a href="#"><MdApps className="menu-icon" /></a>
-      <a href="/login" className={`button ${pathname === '/login' ? 'active' : ''}`}>Login</a>
+      <Link href="/">COM@360</Link>
+      <Link href="/" className={pathname === '/' ? 'active' : ''}>Home</Link>
+      <Link href="/about" className={pathname === '/about' ? 'active' : ''}>About</Link>
+      <Link href="/jobs" className={pathname === '/jobs' ? 'active' : ''}>Jobs</Link>
+      <Link href="/features" className={pathname === '/features' ? 'active' : ''}>Top features</Link>
+      <Link href="/pricing" className={pathname === '/pricing' ? 'active' : ''}>Plans and pricing</Link>
+      <Link href="/contact" className={pathname === '/contact' ? 'active' : ''}>Contact Us</Link>
+      <Link href="/support" className={pathname === '/support' ? 'active' : ''}>Support</Link>
+      <Link href="/docs" className={pathname === '/docs' ? 'active' : ''}>Documentation / tutorials</Link>
+      <Link href="#"><MdApps className="menu-icon" /></Link>
+      <Link href="/login" className={`button ${pathname === '/login' ? 'active' : ''}`}>Login</Link>
       
       {/* Hamburger menu button for mobile */}
       <button 
@@ -36,6 +37,8 @@ function Navbar() {
         <span></span>
       </button>
     </nav>
+  
+    </>
   );
 }
 
