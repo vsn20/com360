@@ -4,17 +4,131 @@ import { useState, useEffect, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import styles from './logn.module.css';
 import { loginaction } from '../serverActions/loginAction';
+import { sendOTP, verifyOTP, finalSignup } from '../serverActions/SignupAction';
+import { sendForgotOTP, verifyForgotOTP, resetPassword } from '../serverActions/ForgotPasswordAction';
+import { sign } from 'jsonwebtoken';
 
 export default function LoginPage() {
   const [isSignup, setIsSignup] = useState(false);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const [error, setError] = useState(null);
+  const [signupError, setSignupError] = useState(null);
+  const [signupSuccess, setSignupSuccess] = useState(null);
+  const [forgotError, setForgotError] = useState(null);
+  const [forgotSuccess, setForgotSuccess] = useState(null);
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [signupStep, setSignupStep] = useState('email'); // 'email', 'otp', 'details'
+  const [signupEmail, setSignupEmail] = useState('');
+  const [forgotStep, setForgotStep] = useState('identifier'); // 'identifier', 'otp', 'reset'
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [identifierType, setIdentifierType] = useState('email');
 
   useEffect(() => setIsClient(true), []);
 
   if (!isClient) return null;
+
+  const isAuthMode = isSignup || isForgotPassword;
+
+  const handleSendOTP = async (formData) => {
+    setSignupError(null);
+    startTransition(async () => {
+      const email = formData.get('email');
+      const { success, error } = await sendOTP(formData);
+      if (success) {
+        setSignupEmail(email);
+        setSignupStep('otp');
+        setSignupSuccess('OTP sent to your email. Please check your inbox.');
+      } else {
+        setSignupError(error || 'Failed to send OTP. Please try again.');
+      }
+    });
+  };
+
+  const handleVerifyOTP = async (formData) => {
+    setSignupError(null);
+    startTransition(async () => {
+      formData.append('email', signupEmail); // Pass email along
+      const { success, error } = await verifyOTP(formData);
+      if (success) {
+        setSignupStep('details');
+        setSignupSuccess('OTP verified successfully.');
+      } else {
+        setSignupError(error || 'Invalid or expired OTP. Please try again.');
+      }
+    });
+  };
+
+  const handleFinalSignup = async (formData) => {
+    setSignupError(null);
+    startTransition(async () => {
+      formData.append('email', signupEmail); // Pass email along
+      const { success, error } = await finalSignup(formData);
+      if (success) {
+        setSignupError(null);
+        setSignupSuccess("Signup successful! Please log in.");
+        setTimeout(() => {
+          setIsSignup(false);
+          setSignupSuccess(null);
+          setSignupStep('email');
+          setSignupEmail('');
+        }, 1000);
+      } else {
+        setSignupError(error || 'Signup failed. Please try again.');
+      }
+    });
+  };
+
+  const handleSendForgotOTP = async (formData) => {
+    setForgotError(null);
+    startTransition(async () => {
+      formData.append('type', identifierType);
+      const { success, error, email } = await sendForgotOTP(formData);
+      if (success) {
+        setForgotEmail(email);
+        setForgotStep('otp');
+        setForgotSuccess('OTP sent to your email. Please check your inbox.');
+      } else {
+        setForgotError(error || 'Failed to send OTP. Please try again.');
+      }
+    });
+  };
+
+  const handleVerifyForgotOTP = async (formData) => {
+    setForgotError(null);
+    startTransition(async () => {
+      formData.append('email', forgotEmail); // Pass email along
+      const { success, error } = await verifyForgotOTP(formData);
+      if (success) {
+        setForgotStep('reset');
+        setForgotSuccess('OTP verified successfully.');
+      } else {
+        setForgotError(error || 'Invalid or expired OTP. Please try again.');
+      }
+    });
+  };
+
+  const handleResetPassword = async (formData) => {
+    setForgotError(null);
+    startTransition(async () => {
+      formData.append('email', forgotEmail); // Pass email along
+      const { success, error } = await resetPassword(formData);
+      if (success) {
+        setForgotError(null);
+        setForgotSuccess("Password reset successful! Please log in.");
+        setTimeout(() => {
+          setIsForgotPassword(false);
+          setForgotSuccess(null);
+          setForgotStep('identifier');
+          setForgotEmail('');
+          setIdentifierType('email');
+        }, 1000);
+      } else {
+        setForgotError(error || 'Password reset failed. Please try again.');
+      }
+    });
+  };
 
   const handleSubmit = async (formData) => {
     setError(null);
@@ -22,7 +136,7 @@ export default function LoginPage() {
       try {
         const logindetails = { username: formData.get('identifier'), password: formData.get('password') };
         console.log('Form data sent to loginaction:', logindetails);
-        const { success, roleid, orgid, rolename, token } = await loginaction(logindetails);
+        const { success, roleid, orgid, rolename, token, error: loginError } = await loginaction(logindetails);
         console.log('Login response - orgid:', orgid, 'type:', typeof orgid);
 
         if (success) {
@@ -69,7 +183,7 @@ export default function LoginPage() {
 
           router.push(redirectPath);
         } else {
-          setError(result.error || 'Login failed. Please try again.');
+          setError(loginError || 'Login failed. Please try again.');
         }
       } catch (err) {
         setError('An unexpected error occurred. Please try again.');
@@ -78,31 +192,168 @@ export default function LoginPage() {
     });
   };
 
+  const handleTryAnotherEmail = () => {
+    setSignupStep('email');
+    setSignupEmail('');
+    setSignupError(null);
+    setSignupSuccess(null);
+  };
+
+  const handleTryAnotherIdentifier = () => {
+    setForgotStep('identifier');
+    setForgotEmail('');
+    setForgotError(null);
+    setForgotSuccess(null);
+    setIdentifierType('email');
+  };
+
+  const handleBackToLogin = () => {
+    setIsForgotPassword(false);
+    setForgotStep('identifier');
+    setForgotEmail('');
+    setForgotError(null);
+    setForgotSuccess(null);
+    setIdentifierType('email');
+  };
+
   return (
     <div className={styles.contentWrapper} suppressHydrationWarning>
       <div className={styles.mainContainer}>
-        <div className={`${styles.textSection} ${isSignup ? styles.order2 : ''}`}>
+        <div className={`${styles.textSection} ${isAuthMode ? styles.order2 : ''}`}>
           <div className={styles.textContent}>
-            <h2>{isSignup ? 'Welcome Back!' : 'New Here?'}</h2>
-            <p>{isSignup ? 'Log in to access your dashboard.' : 'Sign up to get started.'}</p>
-            <button className={styles.switchBtn} onClick={() => setIsSignup(!isSignup)}>
-              {isSignup ? 'Go to Login' : 'Go to Sign Up'}
+            <h2>{isSignup ? 'Welcome Back!' : isForgotPassword ? 'Reset Your Password' : 'New Here?'}</h2>
+            <p>
+              {isSignup ? 'Log in to access your dashboard.' : isForgotPassword ? 'Reset your password to regain access.' : 'Sign up to get started.'}
+            </p>
+            <button className={styles.switchBtn} onClick={() => {
+              if (isSignup) setIsSignup(false);
+              else if (isForgotPassword) setIsForgotPassword(false);
+              else setIsSignup(true);
+            }}>
+              {isAuthMode ? 'Go to Login' : 'Go to Sign Up'}
             </button>
           </div>
         </div>
-        <div className={`${styles.authContainer} ${isSignup ? styles.order1 : ''}`}>
+        <div className={`${styles.authContainer} ${isAuthMode ? styles.order1 : ''}`}>
           {isSignup ? (
             <div id="signupForm" className={styles.formWrapper}>
               <h2>Sign Up</h2>
-              <form action="/api/signup" method="POST">
-                <input className={styles.input} type="text" name="user_id" placeholder="User ID" required />
-                <input className={styles.input} type="email" name="email" placeholder="Email" required />
-                <input className={styles.input} type="password" name="password" placeholder="Password" required />
-                <input className={styles.input} type="password" name="confirm_password" placeholder="Confirm Password" required />
-                <button className={`${styles.button} button`} type="submit" disabled={isPending}>
-                  Sign Up
-                </button>
-              </form>
+              {signupError && <p style={{ color: 'red' }}>{signupError}</p>}
+              {signupSuccess && <p style={{ color: 'green' }}>{signupSuccess}</p>}
+              {signupStep === 'email' && (
+                <form action={handleSendOTP}>
+                  <input className={styles.input} type="email" name="email" placeholder="Email" required />
+                  <button className={`${styles.button} button`} type="submit" disabled={isPending}>
+                    Send OTP
+                  </button>
+                </form>
+              )}
+              {signupStep === 'otp' && (
+                <div>
+                  <form action={handleVerifyOTP}>
+                    <input className={styles.input} type="text" name="otp" placeholder="Enter OTP" required />
+                    <button className={`${styles.button} button`} type="submit" disabled={isPending}>
+                      Verify OTP
+                    </button>
+                  </form>
+                  <p style={{ marginTop: '10px' }}>
+                    <a href="#" onClick={handleTryAnotherEmail} className={styles.link}>
+                      Try using another email?
+                    </a>
+                  </p>
+                </div>
+              )}
+              {signupStep === 'details' && (
+                <div>
+                  <form action={handleFinalSignup}>
+                    <input className={styles.input} type="text" name="user_id" placeholder="User ID" required />
+                    <input className={styles.input} type="password" name="password" placeholder="Password" required />
+                    <input className={styles.input} type="password" name="confirm_password" placeholder="Confirm Password" required />
+                    <button className={`${styles.button} button`} type="submit" disabled={isPending}>
+                      Complete Signup
+                    </button>
+                  </form>
+                  <p style={{ marginTop: '10px' }}>
+                    <a href="#" onClick={handleTryAnotherEmail} className={styles.link}>
+                      Try using another email?
+                    </a>
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : isForgotPassword ? (
+            <div id="forgotForm" className={styles.formWrapper}>
+              <h2>Forgot Password</h2>
+              {forgotError && <p style={{ color: 'red' }}>{forgotError}</p>}
+              {forgotSuccess && <p style={{ color: 'green' }}>{forgotSuccess}</p>}
+              {forgotStep === 'identifier' && (
+                <form action={handleSendForgotOTP}>
+                  <select
+                    className={styles.input}
+                    value={identifierType}
+                    onChange={(e) => setIdentifierType(e.target.value)}
+                  >
+                    <option value="email">Email</option>
+                    <option value="username">Username</option>
+                  </select>
+                  <input
+                    className={styles.input}
+                    type={identifierType === 'email' ? 'email' : 'text'}
+                    name="identifier"
+                    placeholder={identifierType === 'email' ? 'Email' : 'Username'}
+                    required
+                  />
+                  <button className={`${styles.button} button`} type="submit" disabled={isPending}>
+                    Send OTP
+                  </button>
+                  {/* <p style={{ marginTop: '10px' }}>
+                    <a href="#" onClick={handleBackToLogin} className={styles.link}>
+                      Back to Login
+                    </a>
+                  </p> */}
+                </form>
+              )}
+              {forgotStep === 'otp' && (
+                <div>
+                  <form action={handleVerifyForgotOTP}>
+                    <input className={styles.input} type="text" name="otp" placeholder="Enter OTP" required />
+                    <button className={`${styles.button} button`} type="submit" disabled={isPending}>
+                      Verify OTP
+                    </button>
+                  </form>
+                  <p style={{ marginTop: '10px' }}>
+                    <a href="#" onClick={handleTryAnotherIdentifier} className={styles.link}>
+                      Try using another identifier?
+                    </a>
+                  </p>
+                  {/* <p>
+                    <a href="#" onClick={handleBackToLogin} className={styles.link}>
+                      Back to Login
+                    </a>
+                  </p> */}
+                </div>
+              )}
+              {forgotStep === 'reset' && (
+                <div>
+                  <form action={handleResetPassword}>
+                    <input className={styles.input} type="password" name="password" placeholder="New Password" required />
+                    <input className={styles.input} type="password" name="confirm_password" placeholder="Confirm New Password" required />
+                    <button className={`${styles.button} button`} type="submit" disabled={isPending}>
+                      Reset Password
+                    </button>
+                  </form>
+                  <p style={{ marginTop: '10px' }}>
+                    <a href="#" onClick={handleTryAnotherIdentifier} className={styles.link}>
+                      Try using another identifier?
+                    </a>
+                  </p>
+                  {/* <p>
+                    <a href="#" onClick={handleBackToLogin} className={styles.link}>
+                      Back to Login
+                    </a>
+                  </p> */}
+                </div>
+              )}
             </div>
           ) : (
             <div id="loginForm" className={styles.formWrapper}>
@@ -115,7 +366,7 @@ export default function LoginPage() {
                   Login
                 </button>
                 <div className={styles.linkContainer}>
-                  <a href="/forgot-password">Forgot Password?</a>
+                  <a href="#" onClick={() => setIsForgotPassword(true)}>Forgot Password?</a>
                 </div>
               </form>
             </div>
