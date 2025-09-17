@@ -135,6 +135,12 @@ export async function resetPassword(formData) {
   const confirm_password = formData.get('confirm_password');
   const pool = await DBconnection();
 
+  // Validate password strength
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{6,}$/;
+  if (!passwordRegex.test(password)) {
+    return { success: false, error: "Password must be at least 6 characters long and include at least one letter, one capital letter, one number, and one special character (!@#$%^&*)." };
+  }
+
   if (password !== confirm_password) {
     return { success: false, error: "Password and Confirm Password do not match." };
   }

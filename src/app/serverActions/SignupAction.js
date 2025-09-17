@@ -94,13 +94,25 @@ export async function finalSignup(formData) {
   const confirm_password = formData.get('confirm_password');
   const pool = await DBconnection();
 
-  const [countUsername] = await pool.query(`SELECT COUNT(*) AS count FROM C_USER WHERE username=?`, [user_id]);
-  if (countUsername[0].count !== 0) {
-    return { success: false, error: "Username is already in use. Please select another username." };
+  // Validate username (only letters and numbers)
+  const usernameRegex = /^[a-zA-Z0-9]+$/;
+  if (!usernameRegex.test(user_id)) {
+    return { success: false, error: "Username must contain only letters and numbers." };
+  }
+
+  // Validate password strength
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{6,}$/;
+  if (!passwordRegex.test(password)) {
+    return { success: false, error: "Password must be at least 6 characters long and include at least one letter, one capital letter, one number, and one special character (!@#$%^&*)." };
   }
 
   if (password !== confirm_password) {
     return { success: false, error: "Password and Confirm Password do not match." };
+  }
+
+  const [countUsername] = await pool.query(`SELECT COUNT(*) AS count FROM C_USER WHERE username=?`, [user_id]);
+  if (countUsername[0].count !== 0) {
+    return { success: false, error: "Username is already in use. Please select another username." };
   }
 
   const [empidRows] = await pool.query(`SELECT empid, orgid FROM C_EMP WHERE email=?`, [email]);

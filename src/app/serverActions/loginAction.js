@@ -11,13 +11,19 @@ const generateToken = (userId, empid, username, rolename, orgid, orgname) => {
 };
 
 export async function loginaction(logindetails) {
-  const { username, password } = logindetails;
+  let { username, password } = logindetails;
   console.log("Login attempt for username:", username);
 
   try {
     const pool = await DBconnection();
     console.log("MySQL connection established");
-
+    let usernameemail=[];
+    if(username.includes('@')){
+        [usernameemail]=await pool.query(
+          `select username from C_USER where email=?`,[username]
+        );
+        username=usernameemail[0].username;
+    }
     // Fetch user data from C_USER
     const [userRows] = await pool.query(
       `SELECT 

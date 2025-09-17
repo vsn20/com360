@@ -157,7 +157,9 @@ export async function updateEmployee(prevState, formData) {
           'system', empid, orgid,
         ]
       );
-
+      const [updat_email_in_cusers]=await pool.query(
+        `update C_USER SET email=? where empid=?`,[email,empid]
+      );
       affectedRows += result.affectedRows;
       console.log(`Personal details update result: ${result.affectedRows} rows affected for empid ${empid}`);
     } else if (section === 'employment') {

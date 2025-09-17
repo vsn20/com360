@@ -23,13 +23,17 @@ export default function LoginPage() {
   const [signupEmail, setSignupEmail] = useState('');
   const [forgotStep, setForgotStep] = useState('identifier'); // 'identifier', 'otp', 'reset'
   const [forgotEmail, setForgotEmail] = useState('');
-  const [identifierType, setIdentifierType] = useState('email');
 
   useEffect(() => setIsClient(true), []);
 
   if (!isClient) return null;
 
   const isAuthMode = isSignup || isForgotPassword;
+
+  const validateUsername = (username) => {
+    const usernameRegex = /^[a-zA-Z0-9]+$/;
+    return usernameRegex.test(username);
+  };
 
   const handleSendOTP = async (formData) => {
     setSignupError(null);
@@ -63,6 +67,11 @@ export default function LoginPage() {
   const handleFinalSignup = async (formData) => {
     setSignupError(null);
     startTransition(async () => {
+      const user_id = formData.get('user_id');
+      if (!validateUsername(user_id)) {
+        setSignupError('Username must contain only letters and numbers.');
+        return;
+      }
       formData.append('email', signupEmail); // Pass email along
       const { success, error } = await finalSignup(formData);
       if (success) {
@@ -83,7 +92,9 @@ export default function LoginPage() {
   const handleSendForgotOTP = async (formData) => {
     setForgotError(null);
     startTransition(async () => {
-      formData.append('type', identifierType);
+      const identifier = formData.get('identifier');
+      const isEmail = identifier.includes('@') && (identifier.includes('.com') || identifier.includes('.in'));
+      formData.append('type', isEmail ? 'email' : 'username');
       const { success, error, email } = await sendForgotOTP(formData);
       if (success) {
         setForgotEmail(email);
@@ -122,7 +133,6 @@ export default function LoginPage() {
           setForgotSuccess(null);
           setForgotStep('identifier');
           setForgotEmail('');
-          setIdentifierType('email');
         }, 1000);
       } else {
         setForgotError(error || 'Password reset failed. Please try again.');
@@ -204,7 +214,6 @@ export default function LoginPage() {
     setForgotEmail('');
     setForgotError(null);
     setForgotSuccess(null);
-    setIdentifierType('email');
   };
 
   const handleBackToLogin = () => {
@@ -213,7 +222,6 @@ export default function LoginPage() {
     setForgotEmail('');
     setForgotError(null);
     setForgotSuccess(null);
-    setIdentifierType('email');
   };
 
   return (
@@ -266,8 +274,8 @@ export default function LoginPage() {
               {signupStep === 'details' && (
                 <div>
                   <form action={handleFinalSignup}>
-                    <input className={styles.input} type="text" name="user_id" placeholder="User ID" required />
-                    <input className={styles.input} type="password" name="password" placeholder="Password" required />
+                    <input className={styles.input} type="text" name="user_id" placeholder="User ID (letters and numbers only)" required />
+                    <input className={styles.input} type="password" name="password" placeholder="Password (min 6 chars, 1 letter, 1 number, 1 capital, 1 special)" required />
                     <input className={styles.input} type="password" name="confirm_password" placeholder="Confirm Password" required />
                     <button className={`${styles.button} button`} type="submit" disabled={isPending}>
                       Complete Signup
@@ -288,29 +296,16 @@ export default function LoginPage() {
               {forgotSuccess && <p style={{ color: 'green' }}>{forgotSuccess}</p>}
               {forgotStep === 'identifier' && (
                 <form action={handleSendForgotOTP}>
-                  <select
-                    className={styles.input}
-                    value={identifierType}
-                    onChange={(e) => setIdentifierType(e.target.value)}
-                  >
-                    <option value="email">Email</option>
-                    <option value="username">Username</option>
-                  </select>
                   <input
                     className={styles.input}
-                    type={identifierType === 'email' ? 'email' : 'text'}
+                    type="text"
                     name="identifier"
-                    placeholder={identifierType === 'email' ? 'Email' : 'Username'}
+                    placeholder="Username or Email"
                     required
                   />
                   <button className={`${styles.button} button`} type="submit" disabled={isPending}>
                     Send OTP
                   </button>
-                  {/* <p style={{ marginTop: '10px' }}>
-                    <a href="#" onClick={handleBackToLogin} className={styles.link}>
-                      Back to Login
-                    </a>
-                  </p> */}
                 </form>
               )}
               {forgotStep === 'otp' && (
@@ -326,17 +321,12 @@ export default function LoginPage() {
                       Try using another identifier?
                     </a>
                   </p>
-                  {/* <p>
-                    <a href="#" onClick={handleBackToLogin} className={styles.link}>
-                      Back to Login
-                    </a>
-                  </p> */}
                 </div>
               )}
               {forgotStep === 'reset' && (
                 <div>
                   <form action={handleResetPassword}>
-                    <input className={styles.input} type="password" name="password" placeholder="New Password" required />
+                    <input className={styles.input} type="password" name="password" placeholder="New Password (min 6 chars, 1 letter, 1 number, 1 capital, 1 special)" required />
                     <input className={styles.input} type="password" name="confirm_password" placeholder="Confirm New Password" required />
                     <button className={`${styles.button} button`} type="submit" disabled={isPending}>
                       Reset Password
@@ -347,11 +337,6 @@ export default function LoginPage() {
                       Try using another identifier?
                     </a>
                   </p>
-                  {/* <p>
-                    <a href="#" onClick={handleBackToLogin} className={styles.link}>
-                      Back to Login
-                    </a>
-                  </p> */}
                 </div>
               )}
             </div>
