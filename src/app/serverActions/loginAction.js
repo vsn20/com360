@@ -1,7 +1,8 @@
-"use server";
+'use server';
 
 import DBconnection from "../utils/config/db";
 import jwt from "jsonwebtoken";
+import bcrypt from 'bcrypt';
 import { cookies } from "next/headers";
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -17,13 +18,14 @@ export async function loginaction(logindetails) {
   try {
     const pool = await DBconnection();
     console.log("MySQL connection established");
-    let usernameemail=[];
-    if(username.includes('@')){
-        [usernameemail]=await pool.query(
-          `select username from C_USER where email=?`,[username]
-        );
-        username=usernameemail[0].username;
+    let usernameemail = [];
+    if (username.includes('@')) {
+      [usernameemail] = await pool.query(
+        `SELECT username FROM C_USER WHERE email=?`, [username]
+      );
+      username = usernameemail[0]?.username;
     }
+
     // Fetch user data from C_USER
     const [userRows] = await pool.query(
       `SELECT 
@@ -53,8 +55,8 @@ export async function loginaction(logindetails) {
       return { success: false, error: "Invalid username or password" };
     }
 
-    // Validate password (assuming plain text for now; consider hashing in production)
-    const isPasswordValid = password === user.password;
+    // Validate password using bcrypt
+    const isPasswordValid = await bcrypt.compare(password, user.password);
     console.log("Password comparison result:", isPasswordValid);
 
     if (!isPasswordValid) {
@@ -99,7 +101,6 @@ export async function loginaction(logindetails) {
 
     // Fetch C_MENU items from /api/menu - Use relative URL for internal calls
     try {
-      // For server-side internal calls, use localhost (works within the same server)
       const baseUrl = process.env.NODE_ENV === 'production' 
         ? 'http://localhost' // Internal calls use localhost
         : (process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000');

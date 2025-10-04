@@ -2,6 +2,7 @@
 
 import DBconnection from "../utils/config/db";
 import nodemailer from 'nodemailer';
+import bcrypt from 'bcrypt';
 
 export async function sendForgotOTP(formData) {
   const type = formData.get('type');
@@ -145,7 +146,10 @@ export async function resetPassword(formData) {
     return { success: false, error: "Password and Confirm Password do not match." };
   }
 
-  await pool.query(`UPDATE C_USER SET password=? WHERE email=?`, [password, email]);
+  // Hash the new password
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  await pool.query(`UPDATE C_USER SET password=? WHERE email=?`, [hashedPassword, email]);
 
   return { success: true };
 }

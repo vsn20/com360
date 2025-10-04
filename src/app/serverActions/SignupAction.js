@@ -2,6 +2,7 @@
 
 import DBconnection from "../utils/config/db";
 import nodemailer from 'nodemailer';
+import bcrypt from 'bcrypt';
 
 export async function sendOTP(formData) {
   const email = formData.get('email');
@@ -121,7 +122,14 @@ export async function finalSignup(formData) {
   }
 
   const { empid, orgid } = empidRows[0];
-  await pool.query(`INSERT INTO C_USER (username, email, password, empid, orgid) VALUES (?, ?, ?, ?, ?)`, [user_id, email, password, empid, orgid]);
+
+  // Hash the password
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  await pool.query(
+    `INSERT INTO C_USER (username, email, password, empid, orgid) VALUES (?, ?, ?, ?, ?)`,
+    [user_id, email, hashedPassword, empid, orgid]
+  );
 
   return { success: true };
 }

@@ -1,7 +1,8 @@
-"use server";
+'use server';
 
 import DBconnection from "../utils/config/db";
 import jwt from "jsonwebtoken";
+import bcrypt from 'bcrypt';
 import { cookies } from "next/headers";
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -12,7 +13,7 @@ const generateJobToken = (cid, email, first_name) => {
 
 export async function job_loginaction(logindetails) {
   const { username, password } = logindetails;
-  console.log("Job login details received:", { username, password });
+  console.log("Job login details received:", { username });
 
   try {
     const pool = await DBconnection();
@@ -35,14 +36,14 @@ export async function job_loginaction(logindetails) {
     }
 
     const user = rows[0];
-    console.log("User data retrieved for job login:", user);
+    console.log("User data retrieved for job login:", { cid: user.cid, email: user.email, first_name: user.first_name });
 
     if (!user.password) {
       console.log("Job login failed: Password field is missing or empty for email:", username);
       return { success: false, error: "Invalid email or password" };
     }
 
-    const isPasswordValid = password === user.password;
+    const isPasswordValid = await bcrypt.compare(password, user.password);
     console.log("Password comparison result for job login:", isPasswordValid);
 
     if (!isPasswordValid) {
