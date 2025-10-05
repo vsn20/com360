@@ -1,181 +1,522 @@
-/* Container for the ConfigHub Overview */
+/* ============================================= */
+/* CONFIGHUB CONFIGURATION STYLES                */
+/* ============================================= */
+
+/* Main Container */
 .config-container {
-  padding: 20px;
-  max-width: 1000px;
+  max-width: 1200px;
   margin: 0 auto;
-  font-family: Arial, sans-serif;
+  padding: 24px;
+  font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  background-color: #f8fafc;
+  min-height: 100vh;
 }
 
-/* Heading for category sections */
+/* Category Section */
+.category-section {
+  background-color: #ffffff;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  border: 1px solid #e5e7eb;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.category-section:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border-color: #0fd46c;
+}
+
+/* Category Header */
+.category-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 0;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.category-header-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .category-section h3 {
   font-size: 20px;
-  margin-bottom: 15px;
-  color: #333;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+  font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
 }
 
-/* Add button */
-.add-button {
-  padding: 8px 15px;
+.category-count {
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 500;
+  padding: 4px 12px;
+  background-color: #f3f4f6;
+  border-radius: 12px;
+}
+
+/* Collapse Arrow Button */
+.collapse-arrow {
+  background: none;
   border: none;
-  border-radius: 4px;
-  background-color: #007bff;
-  color: white;
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  color: #0fd46c;
+}
+
+.collapse-arrow:hover {
+  background-color: rgba(15, 212, 108, 0.1);
+}
+
+.collapse-arrow .arrow {
+  display: inline-block;
+  font-size: 14px;
+  transition: transform 0.3s ease;
+  transform: rotate(0deg);
+}
+
+.collapse-arrow .arrow.expanded {
+  transform: rotate(90deg);
+}
+
+/* Category Content */
+.category-content {
+  margin-top: 16px;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+    overflow: hidden;
+  }
+  to {
+    opacity: 1;
+    max-height: 2000px;
+  }
+}
+
+/* ============================================= */
+/* BUTTON STYLES                                 */
+/* ============================================= */
+
+/* Primary Add Button */
+.add-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  background-color: #0fd46c;
+  color: #000000;
   cursor: pointer;
   font-size: 14px;
-  margin-bottom: 10px;
+  font-weight: 600;
+  font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(15, 212, 108, 0.2);
+  margin-bottom: 16px;
 }
 
-.add-button:hover {
-  background-color: #0056b3;
+.add-button:hover:not(:disabled) {
+  background-color: #0bc55a;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(15, 212, 108, 0.3);
+}
+
+.add-button:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .add-button:disabled {
-  background-color: #ccc;
+  background-color: #d1d5db;
+  color: #6b7280;
   cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
 }
 
-/* Edit button */
+/* Edit Button (Icon) */
 .edit-button {
-  padding: 5px 10px;
+  padding: 8px 12px;
   border: none;
-  border-radius: 4px;
-  background-color: #007bff;
-  color: white;
+  border-radius: 6px;
+  background-color: transparent;
+  color: #6b7280;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 16px;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.edit-button:hover {
-  background-color: #0056b3;
+.edit-button:hover:not(:disabled) {
+  background-color: rgba(15, 212, 108, 0.1);
+  color: #0fd46c;
+  transform: scale(1.05);
 }
 
 .edit-button:disabled {
-  background-color: #ccc;
+  opacity: 0.4;
   cursor: not-allowed;
+  transform: none;
 }
 
-/* Error message */
-.error-message {
-  color: red;
-  margin-bottom: 15px;
-  font-size: 16px;
-}
-
-/* Loading or no data message */
-.config-container p {
-  font-size: 16px;
-  color: #666;
-  margin-bottom: 15px;
-}
-
-/* Configuration table */
-.config-table {
-  width: 100%;
-  border-collapse: collapse;
-  background-color: #fff;
-  border: 1px solid #ddd;
-  margin-bottom: 20px;
-}
-
-/* Table headers */
-.config-table th {
-  background-color: #f4f4f4;
-  padding: 12px;
-  text-align: left;
-  font-weight: bold;
-  border-bottom: 2px solid #ddd;
-  color: #333;
-}
-
-/* Table cells */
-.config-table td {
-  padding: 12px;
-  border-bottom: 1px solid #ddd;
-}
-
-/* Table row hover */
-.config-table tr:hover {
-  background-color: #f9f9f9;
-}
-
-/* Input field for new/edit value */
-.value-input {
-  padding: 5px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  width: 100%;
-  box-sizing: border-box;
-  font-size: 14px;
-}
-
-.value-input:disabled {
-  background-color: #f4f4f4;
-  cursor: not-allowed;
-}
-
-/* Select dropdown for active status */
-.active-select {
-  padding: 5px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  width: 100px;
-  font-size: 14px;
-}
-
-.active-select:disabled {
-  background-color: #f4f4f4;
-  cursor: not-allowed;
-}
-
-/* Save button */
+/* Save Button */
 .save-button {
-  padding: 8px 15px;
+  padding: 8px 16px;
   border: none;
-  border-radius: 4px;
-  background-color: #28a745;
-  color: white;
+  border-radius: 6px;
+  background-color: #0fd46c;
+  color: #000000;
   cursor: pointer;
   font-size: 14px;
+  font-weight: 600;
+  font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(15, 212, 108, 0.2);
+  margin-right: 8px;
 }
 
-.save-button:hover {
-  background-color: #218838;
+.save-button:hover:not(:disabled) {
+  background-color: #0bc55a;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(15, 212, 108, 0.3);
 }
 
 .save-button:disabled {
-  background-color: #ccc;
+  background-color: #d1d5db;
+  color: #6b7280;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+/* Cancel Button */
+.cancel-button {
+  padding: 8px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background-color: #ffffff;
+  color: #6b7280;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.cancel-button:hover:not(:disabled) {
+  background-color: #f9fafb;
+  border-color: #d1d5db;
+  color: #111827;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.cancel-button:disabled {
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
-/* Responsive adjustments */
+/* ============================================= */
+/* TABLE STYLES                                  */
+/* ============================================= */
+
+.config-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-top: 16px;
+}
+
+/* Table Headers */
+.config-table thead {
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.config-table th {
+  padding: 14px 16px;
+  text-align: left;
+  font-weight: 700;
+  font-size: 13px;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid #e5e7eb;
+  font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* Table Body */
+.config-table tbody tr {
+  transition: all 0.2s ease;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.config-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.config-table tbody tr:hover {
+  background: linear-gradient(90deg, #f8fafc 0%, #f0f9ff 100%);
+  transform: translateX(2px);
+  box-shadow: 2px 0 8px rgba(15, 212, 108, 0.08);
+}
+
+.config-table td {
+  padding: 14px 16px;
+  color: #374151;
+  font-size: 14px;
+  vertical-align: middle;
+  font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* ============================================= */
+/* FORM INPUTS                                   */
+/* ============================================= */
+
+/* Text Input */
+.value-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  color: #111827;
+  background-color: #ffffff;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.value-input:focus {
+  outline: none;
+  border-color: #0fd46c;
+  box-shadow: 0 0 0 3px rgba(15, 212, 108, 0.1);
+}
+
+.value-input:disabled {
+  background-color: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+  border-color: #e5e7eb;
+}
+
+/* Select Dropdown */
+.active-select {
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  color: #111827;
+  background-color: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 100px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 32px;
+  appearance: none;
+}
+
+.active-select:focus {
+  outline: none;
+  border-color: #0fd46c;
+  box-shadow: 0 0 0 3px rgba(15, 212, 108, 0.1);
+}
+
+.active-select:disabled {
+  background-color: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+  border-color: #e5e7eb;
+}
+
+/* ============================================= */
+/* MESSAGES & ALERTS                             */
+/* ============================================= */
+
+/* Error Message */
+.error-message {
+  padding: 14px 16px;
+  background-color: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-left: 4px solid #dc2626;
+  border-radius: 8px;
+  color: #dc2626;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  box-shadow: 0 1px 3px rgba(220, 38, 38, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.error-message::before {
+  content: '⚠';
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+/* Loading Message */
+.config-container p {
+  font-size: 15px;
+  color: #6b7280;
+  margin: 20px 0;
+  padding: 16px;
+  background-color: #f8fafc;
+  border-radius: 8px;
+  text-align: center;
+  font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* ============================================= */
+/* RESPONSIVE DESIGN                             */
+/* ============================================= */
+
 @media (max-width: 768px) {
   .config-container {
-    padding: 10px;
+    padding: 16px;
+  }
+
+  .category-section {
+    padding: 16px;
+    margin-bottom: 16px;
   }
 
   .category-section h3 {
     font-size: 18px;
+    margin-bottom: 16px;
   }
 
   .config-table th,
   .config-table td {
-    padding: 8px;
-    font-size: 14px;
+    padding: 10px 12px;
+    font-size: 13px;
   }
 
   .add-button,
-  .edit-button,
-  .save-button {
-    padding: 6px 12px;
-    font-size: 12px;
+  .save-button,
+  .cancel-button {
+    padding: 8px 14px;
+    font-size: 13px;
   }
 
-  .value-input {
-    font-size: 12px;
+  .value-input,
+  .active-select {
+    font-size: 13px;
+    padding: 8px 10px;
   }
 
   .active-select {
-    width: 80px;
+    min-width: 80px;
+  }
+
+  .edit-button {
+    padding: 6px 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .config-container {
+    padding: 12px;
+  }
+
+  .category-section {
+    padding: 12px;
+  }
+
+  .category-section h3 {
+    font-size: 16px;
+  }
+
+  .config-table th,
+  .config-table td {
+    padding: 8px 10px;
     font-size: 12px;
+  }
+
+  /* Stack buttons vertically on very small screens */
+  .config-table td button {
+    display: block;
+    width: 100%;
+    margin-bottom: 4px;
+  }
+
+  .config-table td button:last-child {
+    margin-bottom: 0;
+  }
+}
+
+/* ============================================= */
+/* ACCESSIBILITY ENHANCEMENTS                    */
+/* ============================================= */
+
+/* Focus Visible for Keyboard Navigation */
+.add-button:focus-visible,
+.edit-button:focus-visible,
+.save-button:focus-visible,
+.cancel-button:focus-visible {
+  outline: 2px solid #0fd46c;
+  outline-offset: 2px;
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+  .category-section {
+    border-width: 2px;
+  }
+
+  .config-table {
+    border-width: 2px;
+  }
+
+  .value-input:focus,
+  .active-select:focus {
+    outline: 3px solid #0fd46c;
+    outline-offset: 2px;
+  }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .category-section:hover,
+  .config-table tbody tr:hover {
+    transform: none;
+  }
+
+  .add-button:hover,
+  .save-button:hover,
+  .edit-button:hover {
+    transform: none;
   }
 }

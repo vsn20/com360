@@ -2,19 +2,18 @@
 
 import React, { useState, useEffect } from 'react';
 import { fetchConfigData, addConfigValue, updateConfigValue } from '@/app/serverActions/Confighub/Overview';
-import './ConfigHub.css'; // Import the CSS file
+import './ConfigHub.css';
 
 const ConfigHub = () => {
-  console.log('ConfigHub rendering'); // Debug render count
   const [configData, setConfigData] = useState({});
   const [error, setError] = useState(null);
   const [newRow, setNewRow] = useState({});
-  const [editRow, setEditRow] = useState(null); // Track editing row { category, index, value, isactive }
-  const [loading, setLoading] = useState(false); // Add loading state
-  const [refreshKey, setRefreshKey] = useState(0); // Force re-render key
+  const [editRow, setEditRow] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [expandedCategories, setExpandedCategories] = useState(new Set());
 
   useEffect(() => {
-    console.log('useEffect triggered');
     const fetchData = async () => {
       try {
         const rows = await fetchConfigData();
@@ -24,10 +23,16 @@ const ConfigHub = () => {
             configData[row.category] = { g_id: row.g_id, values: [] };
           }
           if (row.value && row.id) {
-            configData[row.category].values.push({ id: row.id, value: row.value, isactive: row.isactive === 1 });
+            configData[row.category].values.push({ 
+              id: row.id, 
+              value: row.value, 
+              isactive: row.isactive === 1 
+            });
           }
         });
         setConfigData(configData);
+        // All categories closed by default
+        setExpandedCategories(new Set());
       } catch (err) {
         setError(err.message);
       }
@@ -35,24 +40,49 @@ const ConfigHub = () => {
     fetchData();
   }, []);
 
+  const toggleCategory = (category) => {
+    setExpandedCategories(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(category)) {
+        newSet.delete(category);
+      } else {
+        newSet.add(category);
+      }
+      return newSet;
+    });
+  };
+
   const handleAddRow = (category) => {
-    console.log(`Adding row for category: ${category}`);
     if (!newRow[category] && !editRow && !loading) {
       setNewRow(prev => ({ ...prev, [category]: { value: '', isactive: true } }));
+      // Auto-expand category when adding
+      if (!expandedCategories.has(category)) {
+        toggleCategory(category);
+      }
     }
+  };
+
+  const handleCancelAdd = (category) => {
+    setNewRow(prev => {
+      const updated = { ...prev };
+      delete updated[category];
+      return updated;
+    });
   };
 
   const handleEditRow = (category, index) => {
-    console.log(`Editing row for category: ${category}, index: ${index}, isactive: ${configData[category].values[index].isactive}`);
     if (!newRow[category] && !editRow && !loading) {
       const { id, value, isactive } = configData[category].values[index];
       setEditRow({ category, index, id, value, isactive });
-      setRefreshKey(prev => prev + 1); // Force re-render
+      setRefreshKey(prev => prev + 1);
     }
   };
 
+  const handleCancelEdit = () => {
+    setEditRow(null);
+  };
+
   const handleSaveRow = async (category, isEdit = false, index = null) => {
-    console.log(`Saving row for category: ${category}, isEdit: ${isEdit}, index: ${index}, isactive: ${isEdit ? editRow?.isactive : newRow[category]?.isactive}`);
     if (loading) return;
     setLoading(true);
     setError(null);
@@ -63,6 +93,7 @@ const ConfigHub = () => {
     } else {
       ({ value, isactive } = newRow[category] || {});
     }
+    
     const g_id = configData[category]?.g_id || '';
     if (!g_id) {
       setError('Category ID not found.');
@@ -93,7 +124,11 @@ const ConfigHub = () => {
             updatedConfigData[row.category] = { g_id: row.g_id, values: [] };
           }
           if (row.value && row.id) {
-            updatedConfigData[row.category].values.push({ id: row.id, value: row.value, isactive: row.isactive === 1 });
+            updatedConfigData[row.category].values.push({ 
+              id: row.id, 
+              value: row.value, 
+              isactive: row.isactive === 1 
+            });
           }
         });
         setConfigData(updatedConfigData);
@@ -117,7 +152,6 @@ const ConfigHub = () => {
   };
 
   const handleInputChange = (category, field, value, isEdit = false) => {
-    console.log(`Input change for ${category}, ${field}: ${value}, isEdit: ${isEdit}`);
     if (isEdit) {
       setEditRow(prev => ({
         ...prev,
@@ -135,107 +169,139 @@ const ConfigHub = () => {
     <div className="config-container">
       {error && <p className="error-message">{error}</p>}
       {Object.keys(configData || {}).length === 0 && !error && <p>Loading configuration data...</p>}
+      
       {Object.entries(configData || {}).map(([category]) => (
         <div key={category} className="category-section">
-          <h3>{category}</h3>
-          <button onClick={() => handleAddRow(category)} disabled={loading || editRow || newRow[category]} className="add-button">
-            {loading ? 'Adding...' : 'Add'}
-          </button>
-          <table className="config-table">
-            <thead>
-              <tr>
-                <th>Value</th>
-                <th>Active</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {configData[category]?.values.length > 0 ? (
-                configData[category].values.map((item, index) => (
-                  <tr key={index}>
-                    {editRow && editRow.category === category && editRow.index === index ? (
-                      <>
-                        <td>
-                          <input
-                            type="text"
-                            value={editRow.value || ''}
-                            onChange={(e) => handleInputChange(category, 'value', e.target.value, true)}
-                            disabled={loading}
-                            className="value-input"
-                          />
-                        </td>
-                        <td>
-                          <select
-                            key={refreshKey} // Force re-render
-                            value={editRow.isactive.toString()} // Ensure boolean is converted to string
-                            onChange={(e) => handleInputChange(category, 'isactive', e.target.value, true)}
-                            disabled={loading}
-                            className="active-select"
-                          >
-                            <option value="true">Yes</option>
-                            <option value="false">No</option>
-                          </select>
-                        </td>
-                        <td>
-                          <button onClick={() => handleSaveRow(category, true, index)} disabled={loading} className="save-button">
-                            {loading ? 'Saving...' : 'Save'}
-                          </button>
-                        </td>
-                      </>
-                    ) : (
-                      <>
-                        <td>{item.value}</td>
-                        <td>{item.isactive ? 'Yes' : 'No'}</td>
-                        <td>
-                          <button
-                            onClick={() => handleEditRow(category, index)}
-                            disabled={loading || editRow || newRow[category]}
-                            className="edit-button"
-                            title="Edit"
-                          >
-                            ✏️
-                          </button>
-                        </td>
-                      </>
-                    )}
+          <div className="category-header">
+            <button 
+              className="collapse-arrow"
+              onClick={() => toggleCategory(category)}
+              aria-label={expandedCategories.has(category) ? "Collapse" : "Expand"}
+            >
+              <span className={`arrow ${expandedCategories.has(category) ? 'expanded' : ''}`}>
+                ▶
+              </span>
+            </button>
+            <div className="category-header-content">
+              <h3>{category}</h3>
+              <span className="category-count">
+                {configData[category]?.values.length || 0} {configData[category]?.values.length === 1 ? 'value' : 'values'}
+              </span>
+            </div>
+            <button 
+              onClick={() => handleAddRow(category)} 
+              disabled={loading || editRow || newRow[category]} 
+              className="add-button"
+            >
+              {loading ? 'Adding...' : 'Add'}
+            </button>
+          </div>
+
+          {expandedCategories.has(category) && (
+            <div className="category-content">
+              <table className="config-table">
+                <thead>
+                  <tr>
+                    <th>Value</th>
+                    <th>Active</th>
+                    <th>Action</th>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="3">No active values available</td>
-                </tr>
-              )}
-              {newRow[category] && (
-                <tr>
-                  <td>
-                    <input
-                      type="text"
-                      value={newRow[category].value || ''}
-                      onChange={(e) => handleInputChange(category, 'value', e.target.value)}
-                      disabled={loading}
-                      className="value-input"
-                    />
-                  </td>
-                  <td>
-                    <select
-                      value={newRow[category].isactive.toString()} // Ensure boolean is converted to string
-                      onChange={(e) => handleInputChange(category, 'isactive', e.target.value)}
-                      disabled={loading}
-                      className="active-select"
-                    >
-                      <option value="true">Yes</option>
-                      <option value="false">No</option>
-                    </select>
-                  </td>
-                  <td>
-                    <button onClick={() => handleSaveRow(category)} disabled={loading} className="save-button">
-                      {loading ? 'Saving...' : 'Save'}
-                    </button>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                </thead>
+                <tbody>
+                  {configData[category]?.values.length > 0 ? (
+                    configData[category].values.map((item, index) => (
+                      <tr key={index}>
+                        {editRow && editRow.category === category && editRow.index === index ? (
+                          <>
+                            <td>
+                              <input
+                                type="text"
+                                value={editRow.value || ''}
+                                onChange={(e) => handleInputChange(category, 'value', e.target.value, true)}
+                                disabled={loading}
+                                className="value-input"
+                              />
+                            </td>
+                            <td>
+                              <select
+                                key={refreshKey}
+                                value={editRow.isactive.toString()}
+                                onChange={(e) => handleInputChange(category, 'isactive', e.target.value, true)}
+                                disabled={loading}
+                                className="active-select"
+                              >
+                                <option value="true">Yes</option>
+                                <option value="false">No</option>
+                              </select>
+                            </td>
+                            <td>
+                              <button onClick={() => handleSaveRow(category, true, index)} disabled={loading} className="save-button">
+                                {loading ? 'Saving...' : 'Save'}
+                              </button>
+                              <button onClick={handleCancelEdit} disabled={loading} className="cancel-button">
+                                Cancel
+                              </button>
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td>{item.value}</td>
+                            <td>{item.isactive ? 'Yes' : 'No'}</td>
+                            <td>
+                              <button
+                                onClick={() => handleEditRow(category, index)}
+                                disabled={loading || editRow || newRow[category]}
+                                className="edit-button"
+                                title="Edit"
+                              >
+                                ✏️
+                              </button>
+                            </td>
+                          </>
+                        )}
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="3">No active values available</td>
+                    </tr>
+                  )}
+                  {newRow[category] && (
+                    <tr>
+                      <td>
+                        <input
+                          type="text"
+                          value={newRow[category].value || ''}
+                          onChange={(e) => handleInputChange(category, 'value', e.target.value)}
+                          disabled={loading}
+                          className="value-input"
+                        />
+                      </td>
+                      <td>
+                        <select
+                          value={newRow[category].isactive.toString()}
+                          onChange={(e) => handleInputChange(category, 'isactive', e.target.value)}
+                          disabled={loading}
+                          className="active-select"
+                        >
+                          <option value="true">Yes</option>
+                          <option value="false">No</option>
+                        </select>
+                      </td>
+                      <td>
+                        <button onClick={() => handleSaveRow(category)} disabled={loading} className="save-button">
+                          {loading ? 'Saving...' : 'Save'}
+                        </button>
+                        <button onClick={() => handleCancelAdd(category)} disabled={loading} className="cancel-button">
+                          Cancel
+                        </button>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       ))}
     </div>

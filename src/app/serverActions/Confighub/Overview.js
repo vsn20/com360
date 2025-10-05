@@ -45,8 +45,8 @@ export async function fetchConfigData() {
     const [rows] = await pool.execute(
       `SELECT gn.g_id, gn.Name AS category, gv.id, gv.Name AS value, gv.isactive
        FROM C_GENERIC_NAMES gn
-       LEFT JOIN C_GENERIC_VALUES gv ON gn.g_id = gv.g_id AND gv.orgid = ?
-       ORDER BY gn.Name, gv.Name`,
+       LEFT JOIN C_GENERIC_VALUES gv ON gn.g_id = gv.g_id AND gv.orgid = ? where gn.g_id != 15 and gn.g_id != 16 and gn.g_id != 17
+       ORDER BY gn.Name, gv.Name `,
       [orgId]
     );
     console.log('Fetched configuration data:', rows);
