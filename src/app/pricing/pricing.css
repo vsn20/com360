@@ -1,0 +1,126 @@
+/* pricing.css */
+
+/* Minimal Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-25px); }
+}
+
+/* Utility Classes */
+.pricingPageContainer { width: 100%; background-color: #f8fcff; }
+.container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+.animateOnScroll { opacity: 0; transform: translateY(40px); transition: opacity 0.8s ease, transform 0.8s ease; }
+.animateIn { animation: fadeIn 0.8s ease-out forwards; }
+
+/* Pricing Section */
+.pricingSection { 
+  padding: 120px 0; 
+  background: linear-gradient(135deg, #e0f8eb 0%, #ffffff 100%); 
+  min-height: 80vh; 
+  display: flex; 
+  align-items: center; 
+}
+.pricingHeroTitle { 
+  font-size: 3.8rem; 
+  font-weight: 800; 
+  margin-bottom: 16px; 
+  color: #1a1a1a; 
+  line-height: 1.15; 
+  letter-spacing: -0.03em; 
+  text-align: center; 
+  animation: fadeIn 1.2s ease-out forwards; 
+}
+.pricingHeroDescription { 
+  font-size: 1.25rem; 
+  color: #555; 
+  line-height: 1.7; 
+  max-width: 600px; 
+  margin: 0 auto 48px; 
+  text-align: center; 
+}
+
+/* Pricing Table */
+.pricingTableContainer { 
+  background: #ffffff; 
+  border-radius: 20px; 
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1); 
+  overflow: hidden; 
+  border: 1px solid #f0f0f0; 
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+.pricingTableContainer.animateIn {
+  opacity: 1;
+  transform: translateY(0);
+}
+.pricingTable { 
+  width: 100%; 
+  border-collapse: collapse; 
+  font-size: 1.1rem; 
+}
+.pricingTable thead { 
+  background: linear-gradient(135deg, #0FD46C, #00C853); 
+  color: #ffffff; 
+}
+.pricingTable th { 
+  padding: 20px; 
+  text-align: left; 
+  font-weight: 600; 
+  font-size: 1.2rem; 
+}
+.pricingTable tbody tr { 
+  transition: all 0.3s ease; 
+  border-bottom: 1px solid #f0f0f0; 
+}
+.pricingTable tbody tr:hover { 
+  background: #f8fcff; 
+  transform: scale(1.01); 
+  box-shadow: 0 10px 30px rgba(15, 212, 108, 0.1); 
+}
+.pricingRow td { 
+  padding: 24px 20px; 
+  vertical-align: middle; 
+}
+.planName { 
+  font-weight: 700; 
+  color: #1a1a1a; 
+  font-size: 1.3rem; 
+}
+.planPrice { 
+  font-size: 1.5rem; 
+  font-weight: 800; 
+  color: #0FD46C; 
+  background: linear-gradient(135deg, #0FD46C, #00C853); 
+  -webkit-background-clip: text; 
+  -webkit-text-fill-color: transparent; 
+  background-clip: text; 
+}
+.planDetails { 
+  color: #666; 
+  font-size: 1rem; 
+  font-style: italic; 
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) { 
+  .pricingHeroTitle { font-size: 2.8rem; } 
+}
+@media (max-width: 768px) {
+  .pricingHeroTitle { font-size: 2.2rem; }
+  .pricingHeroDescription { font-size: 1.1rem; }
+  .pricingTable { font-size: 1rem; }
+  .pricingTable th, .pricingRow td { padding: 16px 12px; }
+  .pricingTable thead { font-size: 1.1rem; }
+}
+@media (max-width: 480px) {
+  .pricingHeroTitle { font-size: 2rem; }
+  .pricingHeroDescription { font-size: 1rem; }
+  .pricingTable { font-size: 0.95rem; }
+  .planPrice { font-size: 1.3rem; }
+}

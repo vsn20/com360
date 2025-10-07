@@ -118,7 +118,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 10px 20px;
+  padding: 5px 17px;
   border: none;
   border-radius: 8px;
   background-color: #0fd46c;
@@ -130,6 +130,8 @@
   transition: all 0.2s ease;
   box-shadow: 0 2px 4px rgba(15, 212, 108, 0.2);
   margin-bottom: 16px;
+
+  
 }
 
 .add-button:hover:not(:disabled) {
@@ -179,7 +181,7 @@
 
 /* Save Button */
 .save-button {
-  padding: 8px 16px;
+  padding: 5px 17px;
   border: none;
   border-radius: 6px;
   background-color: #0fd46c;
@@ -209,11 +211,11 @@
 
 /* Cancel Button */
 .cancel-button {
-  padding: 8px 16px;
+  padding: 5px 17px;
   border: 1px solid #e5e7eb;
   border-radius: 6px;
-  background-color: #ffffff;
-  color: #6b7280;
+  background-color: #ef1414;
+  color: black;
   cursor: pointer;
   font-size: 14px;
   font-weight: 600;
@@ -223,7 +225,7 @@
 }
 
 .cancel-button:hover:not(:disabled) {
-  background-color: #f9fafb;
+  background-color: #d73c3c;
   border-color: #d1d5db;
   color: #111827;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -519,4 +521,10 @@
   .edit-button:hover {
     transform: none;
   }
+}
+
+.paraheading{
+    font-weight: bold;
+    font-size: 13px;
+    font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
 }

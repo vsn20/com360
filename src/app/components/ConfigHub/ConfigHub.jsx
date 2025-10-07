@@ -183,7 +183,7 @@ const ConfigHub = () => {
               </span>
             </button>
             <div className="category-header-content">
-              <h3>{category}</h3>
+              <div className='paraheading'>{category}</div>
               <span className="category-count">
                 {configData[category]?.values.length || 0} {configData[category]?.values.length === 1 ? 'value' : 'values'}
               </span>

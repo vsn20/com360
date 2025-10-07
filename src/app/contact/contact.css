@@ -1,0 +1,88 @@
+/* contact.css */
+
+/* Minimal Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-25px); }
+}
+
+/* Utility Classes */
+.contactPageContainer { width: 100%; background-color: #f8fcff; }
+.container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+
+/* Contact Section */
+.contactSection { 
+  position: relative; 
+  min-height: 80vh; 
+  display: flex; 
+  align-items: center; 
+  background: linear-gradient(135deg, #e0f8eb 0%, #ffffff 100%); 
+  overflow: hidden; 
+}
+.contactBackground { 
+  position: absolute; 
+  top: 0; 
+  left: 0; 
+  right: 0; 
+  bottom: 0; 
+  z-index: 0; 
+}
+.shape { 
+  position: absolute; 
+  border-radius: 50%; 
+  opacity: 0.15; 
+  background: #0FD46C; 
+}
+.shape1 { width: 120px; height: 120px; top: 15%; left: 10%; animation: float 8s ease-in-out infinite; }
+.shape2 { width: 200px; height: 200px; background: linear-gradient(45deg, #0FD46C, #00C853); top: 55%; right: 10%; animation: float 10s ease-in-out infinite reverse; }
+.shape3 { width: 70px; height: 70px; bottom: 20%; left: 25%; animation: float 7s ease-in-out infinite; }
+.contactHeroTitle { 
+  font-size: 3.8rem; 
+  font-weight: 800; 
+  margin-bottom: 24px; 
+  color: #1a1a1a; 
+  line-height: 1.15; 
+  letter-spacing: -0.03em; 
+  text-align: center; 
+  animation: fadeIn 1.2s ease-out forwards; 
+}
+.contactContent { 
+  text-align: center; 
+  animation: fadeIn 1.2s ease-out 0.3s forwards; 
+  opacity: 0; 
+}
+.contactDescription { 
+  font-size: 1.25rem; 
+  color: #555; 
+  line-height: 1.7; 
+  max-width: 800px; 
+  margin: 0 auto; 
+}
+.contactLink { 
+  color: #0FD46C; 
+  text-decoration: none; 
+  font-weight: 600; 
+  transition: color 0.3s ease; 
+}
+.contactLink:hover { 
+  color: #00C853; 
+  text-decoration: underline; 
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) { 
+  .contactHeroTitle { font-size: 2.8rem; } 
+}
+@media (max-width: 768px) {
+  .contactHeroTitle { font-size: 2.2rem; }
+  .contactDescription { font-size: 1.1rem; }
+}
+@media (max-width: 480px) {
+  .contactHeroTitle { font-size: 2rem; }
+  .contactDescription { font-size: 1rem; }
+}

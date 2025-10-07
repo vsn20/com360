@@ -1,0 +1,114 @@
+/* aboutus.css */
+
+/* Minimal Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-25px); }
+}
+
+/* Utility Classes */
+.aboutPageContainer { width: 100%; background-color: #f8fcff; }
+.container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+.animateOnScroll { opacity: 0; transform: translateY(40px); transition: opacity 0.8s ease, transform 0.8s ease; }
+.animateIn { opacity: 1; transform: translateY(0); }
+
+/* Hero Section */
+.aboutHeroSection { 
+  position: relative; 
+  min-height: 80vh; 
+  display: flex; 
+  align-items: center; 
+  background: linear-gradient(135deg, #e0f8eb 0%, #ffffff 100%); 
+  overflow: hidden; 
+}
+.aboutHeroBackground { 
+  position: absolute; 
+  top: 0; 
+  left: 0; 
+  right: 0; 
+  bottom: 0; 
+  z-index: 0; 
+}
+.shape { 
+  position: absolute; 
+  border-radius: 50%; 
+  opacity: 0.15; 
+  background: #0FD46C; 
+}
+.shape1 { width: 120px; height: 120px; top: 15%; left: 10%; animation: float 8s ease-in-out infinite; }
+.shape2 { width: 200px; height: 200px; background: linear-gradient(45deg, #0FD46C, #00C853); top: 55%; right: 10%; animation: float 10s ease-in-out infinite reverse; }
+.shape3 { width: 70px; height: 70px; bottom: 20%; left: 25%; animation: float 7s ease-in-out infinite; }
+.aboutHeroContent { 
+  position: relative; 
+  z-index: 1; 
+  width: 100%; 
+  animation: fadeIn 1.2s ease-out forwards; 
+}
+.aboutHeroTitle { 
+  font-size: 3.8rem; 
+  font-weight: 800; 
+  margin-bottom: 24px; 
+  color: #1a1a1a; 
+  line-height: 1.15; 
+  letter-spacing: -0.03em; 
+  text-align: center; 
+}
+.aboutHeroDescription { 
+  font-size: 1.25rem; 
+  color: #555; 
+  line-height: 1.7; 
+  max-width: 800px; 
+  margin: 0 auto; 
+  text-align: center; 
+}
+
+/* Platform Section */
+.aboutPlatformSection { 
+  padding: 120px 0; 
+  background: #ffffff; 
+}
+.sectionTitle { 
+  text-align: center; 
+  font-size: 3rem; 
+  font-weight: 700; 
+  margin-bottom: 24px; 
+  color: #1a1a1a; 
+  position: relative; 
+}
+.sectionTitle::after { 
+  content: ''; 
+  position: absolute; 
+  bottom: -16px; 
+  left: 50%; 
+  transform: translateX(-50%); 
+  width: 80px; 
+  height: 5px; 
+  background: #0FD46C; 
+  border-radius: 3px; 
+}
+.platformDescription { 
+  font-size: 1.25rem; 
+  color: #555; 
+  line-height: 1.7; 
+  max-width: 800px; 
+  margin: 0 auto; 
+  text-align: center; 
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) { 
+  .aboutHeroTitle, .sectionTitle { font-size: 2.8rem; } 
+}
+@media (max-width: 768px) {
+  .aboutHeroTitle, .sectionTitle { font-size: 2.2rem; }
+  .aboutHeroDescription, .platformDescription { font-size: 1.1rem; }
+}
+@media (max-width: 480px) {
+  .aboutHeroTitle, .sectionTitle { font-size: 2rem; }
+  .aboutHeroDescription, .platformDescription { font-size: 1rem; }
+}
