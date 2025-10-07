@@ -3,15 +3,119 @@
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { 
+  LayoutDashboard, 
+  Users, 
+  FileText, 
+  Settings, 
+  ShoppingCart, 
+  TrendingUp,
+  BarChart3,
+  Package,
+  DollarSign,
+  Calendar,
+  Mail,
+  Phone,
+  Building2,
+  UserCircle,
+  FolderKanban,
+  Clock,
+  Umbrella,
+  Briefcase,
+  Headphones,
+  Wrench,
+  Shield,
+  ListChecks
+} from 'lucide-react';
 import styles from '../(routes)/userscreens/userscreens.module.css';
+
+// Icon mapping for menu items
+const iconMap = {
+  'dashboard': LayoutDashboard,
+  'users': Users,
+  'reports': FileText,
+  'settings': Settings,
+  'sales': ShoppingCart,
+  'analytics': TrendingUp,
+  'statistics': BarChart3,
+  'inventory': Package,
+  'finance': DollarSign,
+  'calendar': Calendar,
+  'messages': Mail,
+  'contacts': Phone,
+};
+
+// Direct icon mapping - Add your exact menu titles here
+const menuIconMap = {
+  'Roles': Shield,
+  'Employees': Users,
+  'Organizations': Building2,
+  'Account': UserCircle,
+  'Projects': FolderKanban,
+  'Timesheets': Clock,
+  'Leaves': Umbrella,
+  'Jobs': Briefcase,
+  'Service Requests': Headphones,
+  'Configuration': Wrench,
+  'Priority Setting': Settings,
+  'Dashboard': LayoutDashboard,
+  'Reports': FileText,
+  'Sales': ShoppingCart,
+  'Analytics': TrendingUp,
+  'Statistics': BarChart3,
+  'Inventory': Package,
+  'Finance': DollarSign,
+  'Calendar': Calendar,
+  'Messages': Mail,
+  'Contacts': Phone,
+  'Tasks': ListChecks,
+};
+
+// Function to get icon based on menu title
+const getIconForTitle = (title) => {
+  // First try exact match
+  if (menuIconMap[title]) {
+    return menuIconMap[title];
+  }
+  
+  // Then try case-insensitive search
+  const lowerTitle = title.toLowerCase();
+  
+  if (lowerTitle.includes('role')) return Shield;
+  if (lowerTitle.includes('employee')) return Users;
+  if (lowerTitle.includes('organization')) return Building2;
+  if (lowerTitle.includes('account')) return UserCircle;
+  if (lowerTitle.includes('project')) return FolderKanban;
+  if (lowerTitle.includes('timesheet')) return Clock;
+  if (lowerTitle.includes('leave')) return Umbrella;
+  if (lowerTitle.includes('job')) return Briefcase;
+  if (lowerTitle.includes('service')) return Headphones;
+  if (lowerTitle.includes('configuration')) return Wrench;
+  if (lowerTitle.includes('priority')) return Settings;
+  if (lowerTitle.includes('dashboard')) return LayoutDashboard;
+  if (lowerTitle.includes('user')) return Users;
+  if (lowerTitle.includes('report')) return FileText;
+  if (lowerTitle.includes('setting')) return Settings;
+  if (lowerTitle.includes('sale')) return ShoppingCart;
+  if (lowerTitle.includes('analytic')) return TrendingUp;
+  if (lowerTitle.includes('stat')) return BarChart3;
+  if (lowerTitle.includes('inventory')) return Package;
+  if (lowerTitle.includes('finance')) return DollarSign;
+  if (lowerTitle.includes('calendar')) return Calendar;
+  if (lowerTitle.includes('message')) return Mail;
+  if (lowerTitle.includes('contact')) return Phone;
+  if (lowerTitle.includes('task')) return ListChecks;
+  
+  return LayoutDashboard; // Default icon
+};
 
 function Sidebar({ isAdmin }) {
   const pathname = usePathname();
   const router = useRouter();
   const [menuItems, setMenuItems] = useState([]);
   const [isFetched, setIsFetched] = useState(false);
-  const [openSubmenuIndex, setOpenSubmenuIndex] = useState(null); // Track open C_SUBMENU
-  const [isSubmenuLocked, setIsSubmenuLocked] = useState(false); // Lock C_SUBMENU after click
+  const [openSubmenuIndex, setOpenSubmenuIndex] = useState(null);
+  const [isSubmenuLocked, setIsSubmenuLocked] = useState(false);
 
   useEffect(() => {
     if (!isFetched) {
@@ -35,29 +139,23 @@ function Sidebar({ isAdmin }) {
 
   const finalMenuItems = [...menuItems];
 
-  // Handle hover to open C_SUBMENU, but only if not locked
   const handleMouseEnter = (index) => {
     if (!isSubmenuLocked) {
       setOpenSubmenuIndex(index);
     }
   };
 
-  // Handle mouse leave to close C_SUBMENU and unlock
   const handleMouseLeave = () => {
     setOpenSubmenuIndex(null);
-    setIsSubmenuLocked(false); // Unlock to allow hover again
+    setIsSubmenuLocked(false);
   };
 
-  // Handle C_MENU/C_SUBMENU click to close C_SUBMENU after 2 seconds, lock it, and navigate
   const handleMenuClick = (e, href, index) => {
-    e.preventDefault(); // Prevent default Link navigation
+    e.preventDefault();
     const timestamp = new Date().getTime();
-    router.push(`${href}?refresh=${timestamp}`); // Navigate immediately
-    // Delay hiding C_SUBMENU and locking for 2 seconds
-   
-      setOpenSubmenuIndex(null); // Close C_SUBMENU after 2 seconds
-      setIsSubmenuLocked(true); // Lock C_SUBMENU to prevent hover
-   
+    router.push(`${href}?refresh=${timestamp}`);
+    setOpenSubmenuIndex(null);
+    setIsSubmenuLocked(true);
   };
 
   return (
@@ -67,6 +165,11 @@ function Sidebar({ isAdmin }) {
         {finalMenuItems.map((item, index) => {
           const safeSubmenu = Array.isArray(item.C_SUBMENU) ? item.C_SUBMENU : [];
           const isActive = pathname === item.href || (safeSubmenu.length > 0 && safeSubmenu.some(sub => pathname === sub.href || pathname.startsWith(sub.href + '?')));
+          const IconComponent = getIconForTitle(item.title);
+          
+          // Debug: Log menu titles to console
+          console.log('Menu Title:', item.title, 'Icon:', IconComponent.name);
+          
           return (
             <li
               key={item.title}
@@ -79,7 +182,10 @@ function Sidebar({ isAdmin }) {
                 className={`${styles.sidebarLink} ${isActive ? styles.active : ''}`}
                 onClick={(e) => handleMenuClick(e, item.href, index)}
               >
-                {item.title}
+                <span className={styles.menuItemContent}>
+                  <IconComponent className={styles.menuIcon} size={18} />
+                  <span>{item.title}</span>
+                </span>
                 {safeSubmenu.length > 0 && <span className={styles.sidebarArrow}></span>}
               </Link>
               {safeSubmenu.length > 0 && (

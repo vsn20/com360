@@ -337,6 +337,18 @@
   background-color: #cc0000 !important;
 }
 
+
+.menuItemContent {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.menuIcon {
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
 @media (max-width: 768px) {
   .navbar {
     left: 0;
