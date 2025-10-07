@@ -12,35 +12,34 @@
 }
 
 /* Utility Classes */
-.contactPageContainer { width: 100%; background-color: #f8fcff; }
-.container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
-
-/* Contact Section */
-.contactSection { 
-  position: relative; 
-  min-height: 80vh; 
-  display: flex; 
-  align-items: center; 
+.contactPageContainer { 
+  width: 100%; 
   background: linear-gradient(135deg, #e0f8eb 0%, #ffffff 100%); 
-  overflow: hidden; 
+  position: relative; 
+  min-height: 100vh;
+  overflow: hidden;
 }
-.contactBackground { 
+.pageBackground { 
   position: absolute; 
   top: 0; 
   left: 0; 
   right: 0; 
   bottom: 0; 
   z-index: 0; 
+  pointer-events: none;
 }
-.shape { 
-  position: absolute; 
-  border-radius: 50%; 
-  opacity: 0.15; 
-  background: #0FD46C; 
+.container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+
+/* Contact Section */
+.contactSection { 
+  position: relative; 
+  z-index: 1;
+  min-height: 80vh; 
+  display: flex; 
+  align-items: center; 
+  background: transparent; 
+  overflow: visible;
 }
-.shape1 { width: 120px; height: 120px; top: 15%; left: 10%; animation: float 8s ease-in-out infinite; }
-.shape2 { width: 200px; height: 200px; background: linear-gradient(45deg, #0FD46C, #00C853); top: 55%; right: 10%; animation: float 10s ease-in-out infinite reverse; }
-.shape3 { width: 70px; height: 70px; bottom: 20%; left: 25%; animation: float 7s ease-in-out infinite; }
 .contactHeroTitle { 
   font-size: 3.8rem; 
   font-weight: 800; 
@@ -73,6 +72,19 @@
   color: #00C853; 
   text-decoration: underline; 
 }
+
+/* Shapes */
+.shape { 
+  position: absolute; 
+  border-radius: 50%; 
+  opacity: 0.15; 
+  background: #0FD46C; 
+}
+.shape1 { width: 120px; height: 120px; top: 15%; left: 10%; animation: float 8s ease-in-out infinite; }
+.shape2 { width: 200px; height: 200px; background: linear-gradient(45deg, #0FD46C, #00C853); top: 55%; right: 10%; animation: float 10s ease-in-out infinite reverse; }
+.shape3 { width: 70px; height: 70px; bottom: 20%; left: 25%; animation: float 7s ease-in-out infinite; }
+.shape4 { width: 150px; height: 150px; top: 70%; left: 20%; animation: float 9s ease-in-out infinite reverse; opacity: 0.1; }
+.shape5 { width: 100px; height: 100px; bottom: 10%; right: 15%; animation: float 6s ease-in-out infinite; opacity: 0.12; }
 
 /* Responsive Design */
 @media (max-width: 1024px) { 

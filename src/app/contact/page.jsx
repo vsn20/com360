@@ -14,13 +14,15 @@ const Page = () => {
 
   return (
     <div className="contactPageContainer">
+      <div className="pageBackground">
+        <div className="shape shape1"></div>
+        <div className="shape shape2"></div>
+        <div className="shape shape3"></div>
+        <div className="shape shape4"></div>
+        <div className="shape shape5"></div>
+      </div>
       {/* Contact Section */}
       <section className="contactSection">
-        <div className="contactBackground">
-          <div className="shape shape1"></div>
-          <div className="shape shape2"></div>
-          <div className="shape shape3"></div>
-        </div>
         <div className="container">
           <h1 className="contactHeroTitle">Contact Us</h1>
           <div className="contactContent">

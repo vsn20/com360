@@ -14,13 +14,15 @@ const Page = () => {
 
   return (
     <div className="aboutPageContainer">
+      <div className="pageBackground">
+        <div className="shape shape1"></div>
+        <div className="shape shape2"></div>
+        <div className="shape shape3"></div>
+        <div className="shape shape4"></div>
+        <div className="shape shape5"></div>
+      </div>
       {/* Hero Section */}
       <section className="aboutHeroSection">
-        <div className="aboutHeroBackground">
-          <div className="shape shape1"></div>
-          <div className="shape shape2"></div>
-          <div className="shape shape3"></div>
-        </div>
         <div className="aboutHeroContent">
           <div className="container">
             <h1 className="aboutHeroTitle">About Us</h1>
