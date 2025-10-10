@@ -122,9 +122,9 @@ const MultiSelectRoles = ({ selectedRoles, setSelectedRoles, roles, disabled }) 
             </div>
           ))}
         </div>
-      )}
-    </div>
-  );
+    )}
+  </div>
+ );
 };
 
 
@@ -144,6 +144,9 @@ const Overview = ({
   workerCompClasses,
   timestamp,
   suborgs,
+  document_types,
+  document_purposes,
+  document_subtypes
 }) => {
   const [selectedEmpId, setSelectedEmpId] = useState(null);
   const [employeeDetails, setEmployeeDetails] = useState(null);
@@ -2001,7 +2004,10 @@ const handleRoleToggle = (roleid) => {
                 {selecteddocument&&!personaldetails&&!employementdetails&&!workdetails&&(
                  <EmplopyeeDocument id={employeeDetails.empid}
                  documents={employeedocuments}
-                 onDocumentsUpdate={handleDocumentsUpdate}/>
+                 onDocumentsUpdate={handleDocumentsUpdate}
+                 document_types={document_types}
+      document_purposes={document_purposes}
+      document_subtypes={document_subtypes}/>
                  )}
 
             {/* Personal Details Section */}
