@@ -20,108 +20,108 @@ import 'react-image-crop/dist/ReactCrop.css';
 
 // Your CustomSelect and MultiSelectRoles components remain the same...
 const CustomSelect = ({ name, value, onChange, options, placeholder, disabled }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
 
-  const handleSelect = (optionValue, optionLabel) => {
-    onChange({ target: { name, value: optionValue } });
-    setIsOpen(false);
-  };
+  const handleSelect = (optionValue, optionLabel) => {
+    onChange({ target: { name, value: optionValue } });
+    setIsOpen(false);
+  };
 
-  const handleClickOutside = (event) => {
-    if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-      setIsOpen(false);
-    }
-  };
+  const handleClickOutside = (event) => {
+    if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+      setIsOpen(false);
+    }
+  };
 
-  useEffect(() => {
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
+  useEffect(() => {
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
-  const selectedOption = options.find(opt => opt.value === value);
+  const selectedOption = options.find(opt => opt.value === value);
 
-  return (
-    <div className={`custom-select ${disabled ? 'disabled' : ''}`} ref={dropdownRef}>
-      <div className="select-selected" onClick={() => !disabled && setIsOpen(!isOpen)}>
-        {selectedOption ? selectedOption.label : placeholder}
-      </div>
-      {isOpen && (
-        <div className="select-items">
-          {options.map((option) => (
-            <div
-              key={option.value}
-              className={`select-option ${value === option.value ? 'selected' : ''}`}
-              onClick={() => handleSelect(option.value, option.label)}
-            >
-              {option.label}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  return (
+    <div className={`custom-select ${disabled ? 'disabled' : ''}`} ref={dropdownRef}>
+      <div className="select-selected" onClick={() => !disabled && setIsOpen(!isOpen)}>
+        {selectedOption ? selectedOption.label : placeholder}
+      </div>
+      {isOpen && (
+        <div className="select-items">
+          {options.map((option) => (
+            <div
+              key={option.value}
+              className={`select-option ${value === option.value ? 'selected' : ''}`}
+              onClick={() => handleSelect(option.value, option.label)}
+            >
+              {option.label}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 };
 
 const MultiSelectRoles = ({ selectedRoles, setSelectedRoles, roles, disabled }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
 
-  const handleRoleToggle = (roleid) => {
-    setSelectedRoles((prev) =>
-      prev.includes(roleid)
-        ? prev.filter((id) => id !== roleid)
-        : [...prev, roleid]
-    );
-  };
+  const handleRoleToggle = (roleid) => {
+    setSelectedRoles((prev) =>
+      prev.includes(roleid)
+        ? prev.filter((id) => id !== roleid)
+        : [...prev, roleid]
+    );
+  };
 
-  const toggleDropdown = () => {
-    setIsOpen((prev) => !prev);
-  };
+  const toggleDropdown = () => {
+    setIsOpen((prev) => !prev);
+  };
 
-  const handleClickOutside = (event) => {
-    if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-      setIsOpen(false);
-    }
-  };
+  const handleClickOutside = (event) => {
+    if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+      setIsOpen(false);
+    }
+  };
 
-  useEffect(() => {
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
+  useEffect(() => {
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
-  const getSelectedRoleNames = () => {
-    return selectedRoles
-      .map((roleid) => roles.find((r) => r.roleid === roleid)?.rolename || 'Unknown Role')
-      .join(', ') || 'Select Roles';
-  };
+  const getSelectedRoleNames = () => {
+    return selectedRoles
+      .map((roleid) => roles.find((r) => r.roleid === roleid)?.rolename || 'Unknown Role')
+      .join(', ') || 'Select Roles';
+  };
 
-  return (
-    <div className={`custom-select-container ${disabled ? 'disabled' : ''}`} ref={dropdownRef}>
-      <div className="select-selected" onClick={() => !disabled && toggleDropdown()}>
-        {getSelectedRoleNames()}
-      </div>
-      {isOpen && (
-        <div className="select-items">
-          {roles.map((role) => (
-            <div
-              key={role.roleid}
-              className={`select-option ${selectedRoles.includes(role.roleid) ? 'selected' : ''}`}
-              onClick={() => handleRoleToggle(role.roleid)}
-            >
-              <input
-                type="checkbox"
-                checked={selectedRoles.includes(role.roleid)}
-                readOnly
-              />
-              {role.rolename}
-            </div>
-          ))}
-        </div>
+  return (
+    <div className={`custom-select-container ${disabled ? 'disabled' : ''}`} ref={dropdownRef}>
+      <div className="select-selected" onClick={() => !disabled && toggleDropdown()}>
+        {getSelectedRoleNames()}
+      </div>
+      {isOpen && (
+        <div className="select-items">
+          {roles.map((role) => (
+            <div
+              key={role.roleid}
+              className={`select-option ${selectedRoles.includes(role.roleid) ? 'selected' : ''}`}
+              onClick={() => handleRoleToggle(role.roleid)}
+            >
+              <input
+                type="checkbox"
+                checked={selectedRoles.includes(role.roleid)}
+                readOnly
+              />
+              {role.rolename}
+            </div>
+          ))}
+        </div>
     )}
   </div>
  );
@@ -166,6 +166,8 @@ const Overview = ({
   const imgRef = useRef(null);
   const [photoModalError, setPhotoModalError] = useState(null);
   
+  const [hasMounted, setHasMounted] = useState(false);
+
   let ts = timestamp;
   
   const [formData, setFormData] = useState({
@@ -243,28 +245,39 @@ const Overview = ({
   
   const [sortConfig, setSortConfig] = useState({ column: 'empid', direction: 'asc' });
 
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
   const canEdit = (section) => {
     if (!selectedEmpId) return false;
 
+    // Define the sections that are restricted for self-editing under team/individual roles
+    const restrictedSections = ['employment', 'leaves'];
+
     if (permissionLevel === 'individual') {
-      return section !== 'employment' && selectedEmpId === loggedInEmpId;
+        // Can edit ONLY if it's their own profile AND the section is NOT restricted
+        return !restrictedSections.includes(section) && selectedEmpId === loggedInEmpId;
     }
     
     if (permissionLevel === 'team') {
-      if (selectedEmpId === loggedInEmpId) {
-        return section !== 'employment';
-      } else {
-        return true;
-      }
+        if (selectedEmpId === loggedInEmpId) {
+            // For themselves, they can edit anything that is NOT a restricted section
+            return !restrictedSections.includes(section);
+        } else {
+            // For subordinates, they can edit everything
+            return true;
+        }
     }
 
     if (permissionLevel === 'all') {
-      return true;
+        // 'all' permission can edit everything for everyone
+        return true;
     }
 
+    // Default to no permission
     return false;
-  };
-
+};
   useEffect(() => {
     const sortedEmployees = [...employees].sort((a, b) => sortEmployees(a, b, sortConfig.column, sortConfig.direction));
     setAllEmployees(sortedEmployees);
@@ -1094,7 +1107,6 @@ const handleRoleToggle = (roleid) => {
   const currentEmployees = filteredEmployees.slice(indexOfFirstEmployee, indexOfLastEmployee);
 
   
-
   return (
     <div className="roles-overview-container">
       {error && <div className="error-message">{error}</div>}
@@ -1756,120 +1768,124 @@ const handleRoleToggle = (roleid) => {
             </select>
           </div>
           
-          {employees.length === 0 && !error ? (
-            <div className="empty-state">
-              <p>No employees found for your permission level.</p>
-            </div>
-          ) : (
-            <div className="table-wrapper">
-              <table className="six-column">
-                <colgroup>
-                  <col />
-                  <col />
-                  <col />
-                  <col />
-                  <col />
-                  <col />
-                </colgroup>
-                <thead>
-                  <tr>
-                    <th 
-                      className={`sortable ${sortConfig.column === 'empid' ? `sort-${sortConfig.direction}` : ''}`}
-                      onClick={() => requestSort('empid')}
-                    >
-                      Employee ID
-                    </th>
-                    <th 
-                      className={`sortable ${sortConfig.column === 'name' ? `sort-${sortConfig.direction}` : ''}`}
-                      onClick={() => requestSort('name')}
-                    >
-                      Name
-                    </th>
-                    <th>Email</th>
-                    <th 
-                      className={`sortable ${sortConfig.column === 'hireDate' ? `sort-${sortConfig.direction}` : ''}`}
-                      onClick={() => requestSort('hireDate')}
-                    >
-                      Hire Date
-                    </th>
-                    <th>Mobile</th>
-                    <th>
-                      Status
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {currentEmployees.map((employee) => (
-                    <tr
-                      key={employee.empid}
-                      onClick={() => handleRowClick(employee.empid)}
-                      className={selectedEmpId === employee.empid ? 'selected-row' : ''}
-                    >
-                      <td className="id-cell">
-                        <span className={employee.STATUS.toLowerCase() === 'active' ? 'role-indicator' : 'role-indicatorinactive '}></span>
-                        Employee-{getdisplayprojectid(employee.empid)}
-                      </td>
-                      <td>{employee.EMP_PREF_NAME || `${employee.EMP_FST_NAME} ${employee.EMP_MID_NAME || ''} ${employee.EMP_LAST_NAME}`.trim()}</td>
-                      <td>{employee.email}</td>
-                      {/* ** FIX: Use the pre-formatted date string from props ** */}
-                      <td>{employee.formattedHireDate}</td>
-                      <td>{employee.MOBILE_NUMBER || '-'}</td>
-                      <td>
-                        {employee.STATUS && (
-                          <span className={`status-badge ${employee.STATUS.toLowerCase() === 'active' ? 'active' : 'inactive'}`}>
-                            {employee.STATUS}
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-          
-          {filteredEmployees.length > employeesPerPage && (
-            <div className="pagination-container">
-              <button
-                className="button"
-                onClick={handlePrevPage}
-                disabled={currentPage === 1}
-              >
-                ← Previous
-              </button>
-              <span className="pagination-text">
-                Page{' '}
+          {hasMounted && (
+            <>
+              {employees.length === 0 && !error ? (
+                <div className="empty-state">
+                  <p>No employees found for your permission level.</p>
+                </div>
+              ) : (
+                <div className="table-wrapper">
+                  <table className="six-column">
+                    <colgroup>
+                      <col />
+                      <col />
+                      <col />
+                      <col />
+                      <col />
+                      <col />
+                    </colgroup>
+                    <thead>
+                      <tr>
+                        <th 
+                          className={`sortable ${sortConfig.column === 'empid' ? `sort-${sortConfig.direction}` : ''}`}
+                          onClick={() => requestSort('empid')}
+                        >
+                          Employee ID
+                        </th>
+                        <th 
+                          className={`sortable ${sortConfig.column === 'name' ? `sort-${sortConfig.direction}` : ''}`}
+                          onClick={() => requestSort('name')}
+                        >
+                          Name
+                        </th>
+                        <th>Email</th>
+                        <th 
+                          className={`sortable ${sortConfig.column === 'hireDate' ? `sort-${sortConfig.direction}` : ''}`}
+                          onClick={() => requestSort('hireDate')}
+                        >
+                          Hire Date
+                        </th>
+                        <th>Mobile</th>
+                        <th>
+                          Status
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {currentEmployees.map((employee) => (
+                        <tr
+                          key={employee.empid}
+                          onClick={() => handleRowClick(employee.empid)}
+                          className={selectedEmpId === employee.empid ? 'selected-row' : ''}
+                        >
+                          <td className="id-cell">
+                            <span className={employee.STATUS.toLowerCase() === 'active' ? 'role-indicator' : 'role-indicatorinactive '}></span>
+                            Employee-{getdisplayprojectid(employee.empid)}
+                          </td>
+                          <td>{employee.EMP_PREF_NAME || `${employee.EMP_FST_NAME} ${employee.EMP_MID_NAME || ''} ${employee.EMP_LAST_NAME}`.trim()}</td>
+                          <td>{employee.email}</td>
+                          <td>{employee.formattedHireDate}</td>
+                          <td>{employee.MOBILE_NUMBER || '-'}</td>
+                          <td>
+                            {employee.STATUS && (
+                              <span className={`status-badge ${employee.STATUS.toLowerCase() === 'active' ? 'active' : 'inactive'}`}>
+                                {employee.STATUS}
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              
+              {filteredEmployees.length > employeesPerPage && (
+                <div className="pagination-container">
+                  <button
+                    className="button"
+                    onClick={handlePrevPage}
+                    disabled={currentPage === 1}
+                  >
+                    ← Previous
+                  </button>
+                  <span className="pagination-text">
+                    Page{' '}
+                    <input
+                      type="text"
+                      value={pageInputValue}
+                      onChange={handlePageInputChange}
+                      onKeyPress={handlePageInputKeyPress}
+                      className="pagination-input"
+                    />{' '}
+                    of {totalPages}
+                  </span>
+                  <button
+                    className="button"
+                    onClick={handleNextPage}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
+              
+              <div className="rows-per-page-container">
+                <label className="rows-per-page-label">Rows per Page:</label>
                 <input
                   type="text"
-                  value={pageInputValue}
-                  onChange={handlePageInputChange}
-                  onKeyPress={handlePageInputKeyPress}
-                  className="pagination-input"
-                />{' '}
-                of {totalPages}
-              </span>
-              <button
-                className="button"
-                onClick={handleNextPage}
-                disabled={currentPage === totalPages}
-              >
-                Next →
-              </button>
-            </div>
+                  value={employeesPerPageInput}
+                  onChange={handleEmployeesPerPageInputChange}
+                  onKeyPress={handleEmployeesPerPageInputKeyPress}
+                  placeholder="Employees per page"
+                  className="rows-per-page-input"
+                  aria-label="Number of rows per page"
+                />
+              </div>
+            </>
           )}
-          
-          <div className="rows-per-page-container">
-            <label className="rows-per-page-label">Rows per Page:</label>
-            <input
-              type="text"
-              value={employeesPerPageInput}
-              onChange={handleEmployeesPerPageInputChange}
-              onKeyPress={handleEmployeesPerPageInputKeyPress}
-              placeholder="Employees per page"
-              className="rows-per-page-input"
-              aria-label="Number of rows per page"
-            />
-          </div>
+
         </div>
       ) :  !issadd&& 
       (
@@ -2417,6 +2433,7 @@ const handleRoleToggle = (roleid) => {
                       )
                     ))
                   )}
+                  {/* ***** THIS IS THE LINE YOU NEED TO CHANGE ***** */}
                   {canEdit('leaves') && (
                       <button className="button" onClick={() => handleEdit('leaves')}>Edit</button>  
                   )}
