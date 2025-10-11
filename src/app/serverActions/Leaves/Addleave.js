@@ -15,6 +15,16 @@ const decodeJwt = (token) => {
   }
 };
 
+const formatDate = (date) => {
+  if (!date || isNaN(new Date(date))) return '';
+  const d = new Date(date);
+  const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  return `${month}/${day}/${d.getUTCFullYear()}`;
+};
+
+
+
 const getAllSubordinates = async (pool, superiorEmpId, visited = new Set()) => {
   if (visited.has(superiorEmpId)) return [];
   visited.add(superiorEmpId);
@@ -388,12 +398,10 @@ export async function fetchEmployeeLeaves(empId) {
       let enddateStr = null;
 
       if (row.startdate) {
-        const startDate = new Date(row.startdate);
-        startdateStr = !isNaN(startDate) ? startDate.toISOString().split('T')[0] : 'Invalid Date';
+        startdateStr = formatDate(startDate);
       }
       if (row.enddate) {
-        const endDate = new Date(row.enddate);
-        enddateStr = !isNaN(endDate) ? endDate.toISOString().split('T')[0] : 'Invalid Date';
+        enddateStr = formatDate(endDate);
       }
 
       return {
