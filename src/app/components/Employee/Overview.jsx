@@ -146,7 +146,9 @@ const Overview = ({
   suborgs,
   document_types,
   document_purposes,
-  document_subtypes
+  document_subtypes,
+  loggedInEmpId,      
+  permissionLevel,    
 }) => {
   const [selectedEmpId, setSelectedEmpId] = useState(null);
   const [employeeDetails, setEmployeeDetails] = useState(null);
@@ -163,7 +165,7 @@ const Overview = ({
   const [crop, setCrop] = useState();
   const imgRef = useRef(null);
   const [photoModalError, setPhotoModalError] = useState(null);
-
+  
   let ts = timestamp;
   
   const [formData, setFormData] = useState({
@@ -224,7 +226,6 @@ const Overview = ({
   
   const [formLeaves, setFormLeaves] = useState({});
   const [error, setError] = useState(initialError);
-  const [canEditEmployees, setCanEditEmployees] = useState(true);
   const [editingPersonal, setEditingPersonal] = useState(false);
   const [editingEmployment, setEditingEmployment] = useState(false);
   const [editingLeaves, setEditingLeaves] = useState(false);
@@ -241,6 +242,28 @@ const Overview = ({
   const [employeedocuments,setemployeedocuments]=useState({});
   
   const [sortConfig, setSortConfig] = useState({ column: 'empid', direction: 'asc' });
+
+  const canEdit = (section) => {
+    if (!selectedEmpId) return false;
+
+    if (permissionLevel === 'individual') {
+      return section !== 'employment' && selectedEmpId === loggedInEmpId;
+    }
+    
+    if (permissionLevel === 'team') {
+      if (selectedEmpId === loggedInEmpId) {
+        return section !== 'employment';
+      } else {
+        return true;
+      }
+    }
+
+    if (permissionLevel === 'all') {
+      return true;
+    }
+
+    return false;
+  };
 
   useEffect(() => {
     const sortedEmployees = [...employees].sort((a, b) => sortEmployees(a, b, sortConfig.column, sortConfig.direction));
@@ -434,7 +457,6 @@ const Overview = ({
     setworkdetails(null);
     setemployementdetails(null);
     console.log('Selected employee:', empid);
-    // --- FIX 2: Added Cache Buster ---
     setImgSrc(`/uploads/profile_photos/${empid}.png?${new Date().getTime()}`);
   };
 
@@ -552,21 +574,15 @@ const [employementdetails,setemployementdetails]=useState(null);
     router.refresh();
    }
 
-    // In Overview.jsx
-
 const handleProfilePhotoUpload = (e) => {
-  setPhotoModalError(null); // Clear previous errors
-
+  setPhotoModalError(null); 
   if (e.target.files && e.target.files.length > 0) {
     const file = e.target.files[0];
-    
     if (file.size > 1 * 1024 * 1024) {
-      // Use the new state to set the error
       setPhotoModalError('File is too large. Please select an image under 1MB.');
-      e.target.value = null; // Clear the file input
+      e.target.value = null;
       return;
     }
-
     setCrop(undefined);
     const reader = new FileReader();
     reader.addEventListener('load', () => {
@@ -576,89 +592,68 @@ const handleProfilePhotoUpload = (e) => {
   }
 };
 
-    // --- FIX 1: Corrected Cropping Logic ---
-    // In Overview.jsx
-
-// --- THIS IS THE CORRECTED FUNCTION ---
-    const handleSaveCroppedPhoto = async () => {
-        // 1. Guard Clause: Ensure the image ref and crop area are valid.
-        if (!imgRef.current || !crop || !crop.width || !crop.height) {
-          setError('Please select an area to crop.');
-          return;
-        }
-
-        const image = imgRef.current;
-        const canvas = document.createElement('canvas');
-
-        // 2. Calculate the scaling ratio between the original image and the displayed image.
-        // This is the most critical step.
-        const scaleX = image.naturalWidth / image.width;
-        const scaleY = image.naturalHeight / image.height;
-
-        // 3. Set the canvas size to the *actual pixel dimensions* of the selected crop area.
-        // This ensures the final saved image is not low quality.
-        canvas.width = Math.floor(crop.width * scaleX);
-        canvas.height = Math.floor(crop.height * scaleY);
-
-        const ctx = canvas.getContext('2d');
-
-        // 4. Draw the correctly scaled and positioned section of the original image onto the canvas.
-        ctx.drawImage(
-          image,                // The source image
-          crop.x * scaleX,      // The X coordinate of the crop on the original image
-          crop.y * scaleY,      // The Y coordinate of the crop on the original image
-          crop.width * scaleX,  // The width of the crop on the original image
-          crop.height * scaleY, // The height of the crop on the original image
-          0,                    // Destination X on the canvas (start from the corner)
-          0,                    // Destination Y on the canvas
-          canvas.width,         // Fill the entire canvas width
-          canvas.height         // Fill the entire canvas height
-        );
-
-        // 5. Convert the canvas to a file (blob) and upload it.
-        canvas.toBlob(async (blob) => {
-          if (blob) {
-            const formData = new FormData();
-            formData.append('file', blob, `${employeeDetails.empid}.png`);
-            formData.append('empId', employeeDetails.empid);
-
-            try {
-              await uploadProfilePhoto(formData);
-              // Use the cache-busting timestamp to ensure the new image loads
-              setImgSrc(`/uploads/profile_photos/${employeeDetails.empid}.png?${new Date().getTime()}`);
-              setError(null);
-              setIsPhotoModalOpen(false);
-              setImageToCrop(null);
-            } catch (err) {
-              console.error('Error uploading profile photo:', err);
-              setError('Failed to upload profile photo.');
-            }
-          }
-        }, 'image/png', 1); // Use quality '1' for best results
-    };
-    const handleDeleteProfilePhoto = async (empId) => {
-        if (!empId || imgSrc.includes("default.png")) return;
+const handleSaveCroppedPhoto = async () => {
+    if (!imgRef.current || !crop || !crop.width || !crop.height) {
+      setError('Please select an area to crop.');
+      return;
+    }
+    const image = imgRef.current;
+    const canvas = document.createElement('canvas');
+    const scaleX = image.naturalWidth / image.width;
+    const scaleY = image.naturalHeight / image.height;
+    canvas.width = Math.floor(crop.width * scaleX);
+    canvas.height = Math.floor(crop.height * scaleY);
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(
+      image,
+      crop.x * scaleX,
+      crop.y * scaleY,
+      crop.width * scaleX,
+      crop.height * scaleY,
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    );
+    canvas.toBlob(async (blob) => {
+      if (blob) {
+        const formData = new FormData();
+        formData.append('file', blob, `${employeeDetails.empid}.png`);
+        formData.append('empId', employeeDetails.empid);
         try {
-            await deleteProfilePhoto(empId);
-            setImgSrc("/uploads/profile_photos/default.png");
-            setError(null);
-            console.log('Profile photo deleted successfully for empid:', empId);
+          await uploadProfilePhoto(formData);
+          setImgSrc(`/uploads/profile_photos/${employeeDetails.empid}.png?${new Date().getTime()}`);
+          setError(null);
+          setIsPhotoModalOpen(false);
+          setImageToCrop(null);
         } catch (err) {
-            console.error('Error deleting profile photo:', err);
-            setError('Failed to delete profile photo.');
+          console.error('Error uploading profile photo:', err);
+          setError('Failed to upload profile photo.');
         }
-        setIsPhotoModalOpen(false);
-        setImageToCrop(null);
-    };
+      }
+    }, 'image/png', 1);
+};
 
-    // In Overview.jsx
+const handleDeleteProfilePhoto = async (empId) => {
+    if (!empId || imgSrc.includes("default.png")) return;
+    try {
+        await deleteProfilePhoto(empId);
+        setImgSrc("/uploads/profile_photos/default.png");
+        setError(null);
+        console.log('Profile photo deleted successfully for empid:', empId);
+    } catch (err) {
+        console.error('Error deleting profile photo:', err);
+        setError('Failed to delete profile photo.');
+    }
+    setIsPhotoModalOpen(false);
+    setImageToCrop(null);
+};
 
 function onImageLoad(e) {
   const { width, height } = e.currentTarget;
-  // Create a centered, square crop area in PIXELS
-  const cropWidth = Math.min(width, height) * 0.9; // 90% of the smaller dimension
+  const cropWidth = Math.min(width, height) * 0.9;
   setCrop({
-    unit: 'px', // Explicitly set the unit to pixels
+    unit: 'px',
     x: (width - cropWidth) / 2,
     y: (height - cropWidth) / 2,
     width: cropWidth,
@@ -822,7 +817,7 @@ function onImageLoad(e) {
       const updatedDocuments = await fetchdocumentsbyid(formData.empid);
       setEmployeeDetails(updatedEmployee);
       setLeaveAssignments(updatedLeaveAssignments);
-      setemployeedocuments(updatedDocuments); // Refresh documents
+      setemployeedocuments(updatedDocuments);
       setSelectedRoles(updatedEmployee.roleids || []);
       if (section === 'personal') setEditingPersonal(false);
       if (section === 'employment') setEditingEmployment(false);
@@ -923,7 +918,6 @@ const handleRoleToggle = (roleid) => {
   });
 };
 
-  // Add employee form states
   const [addform_formError, addform_setFormError] = useState(null);
   const [addform_leaves, addform_setLeaves] = useState({});
   const [addform_workCountryId, addform_setWorkCountryId] = useState('185');
@@ -993,7 +987,6 @@ const handleRoleToggle = (roleid) => {
     return { ...employee, rolename };
   });
 
-  // Sorting functions
   const sortEmployees = (a, b, column, direction) => {
     let aValue, bValue;
     switch (column) {
@@ -1765,7 +1758,7 @@ const handleRoleToggle = (roleid) => {
           
           {employees.length === 0 && !error ? (
             <div className="empty-state">
-              <p>No active employees found.</p>
+              <p>No employees found for your permission level.</p>
             </div>
           ) : (
             <div className="table-wrapper">
@@ -1818,7 +1811,8 @@ const handleRoleToggle = (roleid) => {
                       </td>
                       <td>{employee.EMP_PREF_NAME || `${employee.EMP_FST_NAME} ${employee.EMP_MID_NAME || ''} ${employee.EMP_LAST_NAME}`.trim()}</td>
                       <td>{employee.email}</td>
-                      <td>{employee.HIRE ? new Date(employee.HIRE).toLocaleDateString('en-US') : '-'}</td>
+                      {/* ** FIX: Use the pre-formatted date string from props ** */}
+                      <td>{employee.formattedHireDate}</td>
                       <td>{employee.MOBILE_NUMBER || '-'}</td>
                       <td>
                         {employee.STATUS && (
@@ -1914,8 +1908,6 @@ const handleRoleToggle = (roleid) => {
                         <div className="cropper-image-wrapper">
                            <ReactCrop
                             crop={crop}
-                            // --- CHANGE THIS LINE ---
-                            // Ensure we are using the pixelCrop object (the first argument)
                             onChange={(pixelCrop) => setCrop(pixelCrop)} 
                             aspect={1}
                             minWidth={100}
@@ -2014,7 +2006,7 @@ const handleRoleToggle = (roleid) => {
             {!employementdetails&&personaldetails&&!workdetails&&(
                 <div className="role-details-block96">
               <h3>Personal Details</h3>
-              {editingPersonal && canEditEmployees ? (
+              {editingPersonal ? (
                 <form onSubmit={(e) => { e.preventDefault(); handleSave('personal'); }}>
                   <div className="form-row">
                     <div className="form-group">
@@ -2146,10 +2138,8 @@ const handleRoleToggle = (roleid) => {
                       <p>{employeeDetails.LINKEDIN_URL || '-'}</p>
                     </div>
                   </div>
-                  {canEditEmployees && (
-                   
+                  {canEdit('personal') && (
                       <button className="button" onClick={() => handleEdit('personal')}>Edit</button>
-                    
                   )}
                 </div>
               )}
@@ -2161,7 +2151,7 @@ const handleRoleToggle = (roleid) => {
               <>
                 <div className="role-details-block96">
               <h3>Employment Details</h3>
-              {editingEmployment && canEditEmployees ? (
+              {editingEmployment ? (
                 <form onSubmit={(e) => { e.preventDefault(); handleSave('employment'); }}>
                   <div className="form-row">
                     <div className="form-group">
@@ -2384,7 +2374,7 @@ const handleRoleToggle = (roleid) => {
                     <p>{getSuborgName(employeeDetails.suborgid)}</p>
                     </div>
                   </div>
-                  {canEditEmployees && (                    
+                  {canEdit('employment') && (                    
                     <button className="button" onClick={() => handleEdit('employment')}>Edit</button>
                   )}
                 </div>
@@ -2393,7 +2383,7 @@ const handleRoleToggle = (roleid) => {
                           
             <div className="role-details-block96">
               <h3>Leave Assignments</h3>
-              {editingLeaves && canEditEmployees ? (
+              {editingLeaves ? (
                 <div className="leaves-container">
                   {leaveTypes.map((leave) => (
                     <div key={leave.id} className="form-group">
@@ -2427,7 +2417,7 @@ const handleRoleToggle = (roleid) => {
                       )
                     ))
                   )}
-                  {canEditEmployees && (
+                  {canEdit('leaves') && (
                       <button className="button" onClick={() => handleEdit('leaves')}>Edit</button>  
                   )}
                 </div>
@@ -2442,7 +2432,7 @@ const handleRoleToggle = (roleid) => {
              <>
                <div className="role-details-block96">
               <h3>Work Address</h3>
-              {editingWorkAddress && canEditEmployees ? (
+              {editingWorkAddress ? (
                 <form onSubmit={(e) => { e.preventDefault(); handleSave('workAddress'); }}>
                   <div className="form-row">
                     <div className="form-group">
@@ -2541,10 +2531,8 @@ const handleRoleToggle = (roleid) => {
                       <p>{employeeDetails.WORK_POSTAL_CODE || '-'}</p>
                     </div>
                   </div>
-                  {canEditEmployees && (
-                   
+                  {canEdit('workAddress') && (
                       <button className="button" onClick={() => handleEdit('workAddress')}>Edit</button>
-                   
                   )}
                 </div>
               )}
@@ -2553,7 +2541,7 @@ const handleRoleToggle = (roleid) => {
 
             <div className="role-details-block96">
               <h3>Home Address</h3>
-              {editingHomeAddress && canEditEmployees ? (
+              {editingHomeAddress ? (
                 <form onSubmit={(e) => { e.preventDefault(); handleSave('homeAddress'); }}>
                   <div className="form-row">
                     <div className="form-group">
@@ -2652,10 +2640,8 @@ const handleRoleToggle = (roleid) => {
                       <p>{employeeDetails.HOME_POSTAL_CODE || '-'}</p>
                     </div>
                   </div>
-                  {canEditEmployees && (
-                    
+                  {canEdit('homeAddress') && (
                       <button className="button" onClick={() => handleEdit('homeAddress')}>Edit</button>
-                  
                   )}
                 </div>
               )}
@@ -2665,7 +2651,7 @@ const handleRoleToggle = (roleid) => {
 
              <div className="role-details-block96">
               <h3>Emergency Contact</h3>
-              {editingEmergencyContact && canEditEmployees ? (
+              {editingEmergencyContact ? (
                 <form onSubmit={(e) => { e.preventDefault(); handleSave('emergencyContact'); }}>
                   <div className="form-row">
                     <div className="form-group">
@@ -2794,7 +2780,7 @@ const handleRoleToggle = (roleid) => {
                       <p>{employeeDetails.EMERG_CNCT_POSTAL_CODE || '-'}</p>
                     </div>
                   </div>
-                  {canEditEmployees && (                    
+                  {canEdit('emergencyContact') && (                    
                       <button className="button" onClick={() => handleEdit('emergencyContact')}>Edit</button>                    
                   )}
                 </div>
