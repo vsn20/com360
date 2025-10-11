@@ -90,7 +90,9 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
               return {
                 menuid: parseInt(menuid),
                 submenuid: submenuid === 'null' ? null : parseInt(submenuid),
-                alldata: perm ? perm.alldata : 0, // Include alldata from fetched permissions
+                alldata: perm ? perm.alldata : 0,
+                teamdata: perm ? perm.teamdata : 0,
+                individualdata: perm ? perm.individualdata : 0,
               };
             }
           );
@@ -282,7 +284,9 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
           return {
             menuid: parseInt(menuid),
             submenuid: submenuid === 'null' ? null : parseInt(submenuid),
-            alldata: perm.alldata || 0, // Include alldata in saved permissions
+            alldata: perm.alldata || 0,
+            teamdata: perm.teamdata || 0,
+            individualdata: perm.individualdata || 0,
           };
         }
       );
@@ -321,75 +325,84 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
     if (!C_MENU) return;
 
     setTempPermissions(prev => {
-      const permissionSet = new Set(prev.map(p => `${p.menuid}:${p.submenuid || 'null'}`));
       let updatedPermissions = [...prev];
-
       const permissionKey = `${menuid}:${submenuid || 'null'}`;
-      const exists = permissionSet.has(permissionKey);
+      const exists = prev.some(p => p.menuid === menuid && p.submenuid === submenuid);
 
-      if (submenuid) {
-        if (exists) {
-          updatedPermissions = updatedPermissions.filter(
-            p => !(p.menuid === menuid && p.submenuid === submenuid)
-          );
-        } else {
-          updatedPermissions.push({ menuid, submenuid, alldata: 0 });
-          if (!updatedPermissions.some(p => p.menuid === menuid && !p.submenuid)) {
-            updatedPermissions.push({ menuid, submenuid: null, alldata: 0 });
+      if (exists) {
+        if (submenuid) {
+          updatedPermissions = updatedPermissions.filter(p => !(p.menuid === menuid && p.submenuid === submenuid));
+          const remainingSubmenus = updatedPermissions.filter(p => p.menuid === menuid && p.submenuid);
+          if (remainingSubmenus.length === 0) {
+            updatedPermissions = updatedPermissions.filter(p => !(p.menuid === menuid && p.submenuid === null));
           }
-        }
-        const remainingSubmenus = updatedPermissions.filter(p => p.menuid === menuid && p.submenuid);
-        if (remainingSubmenus.length === 0) {
-          updatedPermissions = updatedPermissions.filter(p => p.menuid !== menuid || p.submenuid !== null);
+        } else {
+          updatedPermissions = updatedPermissions.filter(p => p.menuid !== menuid);
         }
       } else {
-        if (exists) {
-          updatedPermissions = updatedPermissions.filter(p => p.menuid !== menuid);
-        } else {
-          updatedPermissions.push({ menuid, submenuid: null, alldata: menuid === 11 ? prev.find(p => p.menuid === 11 && !p.submenuid)?.alldata || 0 : 0 });
-          if (C_MENU.hassubmenu === 'yes') {
+        const newPerm = { menuid, submenuid, alldata: 0, teamdata: 0, individualdata: 0 };
+        
+        if (menuid === 9 && submenuid === null) newPerm.individualdata = 1;
+        if (menuid === 2 && submenuid === 3) newPerm.individualdata = 1;
+        if (menuid === 15 && submenuid === 20) newPerm.teamdata = 1;
+        if (menuid === 11 && submenuid === null) newPerm.alldata = prev.find(p => p.menuid === 11 && !p.submenuid)?.alldata || 0;
+        if (menuid === 12 && submenuid === 17) newPerm.alldata = prev.find(p => p.menuid === 12 && p.submenuid === 17)?.alldata || 0;
+
+        updatedPermissions.push(newPerm);
+
+        if (submenuid && !prev.some(p => p.menuid === menuid && p.submenuid === null)) {
+          updatedPermissions.push({ menuid, submenuid: null, alldata: 0, teamdata: 0, individualdata: 0 });
+        }
+
+        if (!submenuid && C_MENU.hassubmenu === 'yes') {
             const submenus = availableSubmenus
               .filter(sm => sm.menuid === menuid)
-              .map(sm => ({ menuid, submenuid: sm.submenuid, alldata: sm.submenuid === 17 ? prev.find(p => p.menuid === 12 && p.submenuid === 17)?.alldata || 0 : 0 }))
-              .filter(sm => !permissionSet.has(`${sm.menuid}:${sm.submenuid}`));
+              .map(sm => {
+                const submenuPerm = { menuid, submenuid: sm.submenuid, alldata: 0, teamdata: 0, individualdata: 0 };
+                if (menuid === 2 && sm.submenuid === 3) submenuPerm.individualdata = 1;
+                if (menuid === 15 && sm.submenuid === 20) submenuPerm.teamdata = 1;
+                if (menuid === 12 && sm.submenuid === 17) submenuPerm.alldata = prev.find(p => p.menuid === 12 && p.submenuid === 17)?.alldata || 0;
+                return submenuPerm;
+              })
             updatedPermissions = [...updatedPermissions, ...submenus];
-          }
         }
       }
-
-      const uniquePermissions = Array.from(
-        new Set(updatedPermissions.map(p => `${p.menuid}:${p.submenuid || 'null'}`)),
-        key => {
-          const [menuid, submenuid] = key.split(':');
-          const perm = updatedPermissions.find(
-            p => p.menuid === parseInt(menuid) && (submenuid === 'null' ? p.submenuid === null : p.submenuid === parseInt(submenuid))
-          );
-          return {
-            menuid: parseInt(menuid),
-            submenuid: submenuid === 'null' ? null : parseInt(submenuid),
-            alldata: perm.alldata || 0,
-          };
-        }
-      );
-
+      
+      const uniquePermissions = Array.from(new Map(updatedPermissions.map(p => [`${p.menuid}:${p.submenuid || 'null'}`, p])).values());
       return uniquePermissions;
     });
   };
 
-  const handleAllDataToggle = (menuid, submenuid = null) => {
-    if ((menuid !== 11 && submenuid === null) && (menuid !== 12 || submenuid !== 17)) return; // Only for Service Requests (menuid 11, no C_SUBMENU) and Interview (menuid 12, submenuid 17)
+  const handleDataScopeToggle = (menuid, submenuid = null, scope) => {
+    setTempPermissions(prev => prev.map(p => {
+      if (p.menuid === menuid && p.submenuid === submenuid) {
+        const newPerm = { ...p };
+        if ((menuid === 9 && submenuid === null) || (menuid === 2 && submenuid === 3)) {
+          newPerm.individualdata = scope === 'individual' ? 1 : 0;
+          newPerm.teamdata = scope === 'team' ? 1 : 0;
+          newPerm.alldata = scope === 'all' ? 1 : 0;
+        } else if (menuid === 15 && submenuid === 20) {
+          newPerm.teamdata = scope === 'team' ? 1 : 0;
+          newPerm.alldata = scope === 'all' ? 1 : 0;
+          newPerm.individualdata = 0;
+        }
+        return newPerm;
+      }
+      return p;
+    }));
+  };
 
-    setTempPermissions(prev => {
-      const updatedPermissions = prev.map(p => {
+  const handleAllDataToggle = (menuid, submenuid = null) => {
+    if ((menuid !== 11 && submenuid === null) && (menuid !== 12 || submenuid !== 17)) return; 
+    setTempPermissions(prev => prev.map(p => {
         if (p.menuid === menuid && p.submenuid === submenuid) {
           return { ...p, alldata: p.alldata === 1 ? 0 : 1 };
         }
         return p;
-      });
-      return updatedPermissions;
-    });
+      })
+    );
   };
-
+  
   const addform_handleSubmit = async (formData) => {
     addform_setLoading(true);
     addform_setFormError(null);
@@ -456,66 +469,89 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
   const addform_handlePermissionToggle = (menuid, submenuid = null) => {
     const C_MENU = addform_availableMenus.find(m => m.menuid === menuid);
     if (!C_MENU) return;
-
+    
     addform_setPermissions(prev => {
-      const permissionSet = new Set(prev.map(p => `${p.menuid}:${p.submenuid || 'null'}`));
-      let updatedPermissions = [...prev];
+        let updatedPermissions = [...prev];
+        const exists = prev.some(p => p.menuid === menuid && p.submenuid === submenuid);
 
-      const permissionKey = `${menuid}:${submenuid || 'null'}`;
-      const exists = permissionSet.has(permissionKey);
-
-      if (submenuid) {
         if (exists) {
-          updatedPermissions = updatedPermissions.filter(
-            p => !(p.menuid === menuid && p.submenuid === submenuid)
-          );
+            if (submenuid) {
+                updatedPermissions = updatedPermissions.filter(p => !(p.menuid === menuid && p.submenuid === submenuid));
+                if (!updatedPermissions.some(p => p.menuid === menuid && p.submenuid !== null)) {
+                    updatedPermissions = updatedPermissions.filter(p => p.menuid !== menuid);
+                }
+            } else {
+                updatedPermissions = updatedPermissions.filter(p => p.menuid !== menuid);
+            }
         } else {
-          updatedPermissions.push({ menuid, submenuid, alldata: 0 });
-          if (!updatedPermissions.some(p => p.menuid === menuid && !p.submenuid)) {
-            updatedPermissions.push({ menuid, submenuid: null, alldata: 0 });
-          }
-        }
-        const remainingSubmenus = updatedPermissions.filter(p => p.menuid === menuid && p.submenuid);
-        if (remainingSubmenus.length === 0) {
-          updatedPermissions = updatedPermissions.filter(p => p.menuid !== menuid || p.submenuid !== null);
-        }
-      } else {
-        if (exists) {
-          updatedPermissions = updatedPermissions.filter(p => p.menuid !== menuid);
-        } else {
-          updatedPermissions.push({ menuid, submenuid: null, alldata: menuid === 11 ? prev.find(p => p.menuid === 11 && !p.submenuid)?.alldata || 0 : 0 });
-          if (C_MENU.hassubmenu === 'yes') {
-            const submenus = addform_availableSubmenus
-              .filter(sm => sm.menuid === menuid)
-              .map(sm => ({ menuid, submenuid: sm.submenuid, alldata: sm.submenuid === 17 ? prev.find(p => p.menuid === 12 && p.submenuid === 17)?.alldata || 0 : 0 }))
-              .filter(sm => !permissionSet.has(`${sm.menuid}:${sm.submenuid}`));
-            updatedPermissions = [...updatedPermissions, ...submenus];
-          }
-        }
-      }
+            const newPerm = { menuid, submenuid, alldata: 0, teamdata: 0, individualdata: 0 };
+            
+            if (menuid === 9 && submenuid === null) newPerm.individualdata = 1;
+            if (menuid === 2 && submenuid === 3) newPerm.individualdata = 1;
+            if (menuid === 15 && submenuid === 20) newPerm.teamdata = 1;
+            if (menuid === 11 && submenuid === null) newPerm.alldata = prev.find(p => p.menuid === 11 && !p.submenuid)?.alldata || 0;
+            if (menuid === 12 && submenuid === 17) newPerm.alldata = prev.find(p => p.menuid === 12 && p.submenuid === 17)?.alldata || 0;
 
-      return updatedPermissions;
+            updatedPermissions.push(newPerm);
+
+            if (submenuid && !prev.some(p => p.menuid === menuid && p.submenuid === null)) {
+                updatedPermissions.push({ menuid, submenuid: null, alldata: 0, teamdata: 0, individualdata: 0 });
+            }
+
+            if (!submenuid && C_MENU.hassubmenu === 'yes') {
+                const submenus = addform_availableSubmenus
+                    .filter(sm => sm.menuid === menuid)
+                    .map(sm => {
+                        const submenuPerm = { menuid, submenuid: sm.submenuid, alldata: 0, teamdata: 0, individualdata: 0 };
+                        if (menuid === 2 && sm.submenuid === 3) submenuPerm.individualdata = 1;
+                        if (menuid === 15 && sm.submenuid === 20) submenuPerm.teamdata = 1;
+                        if (menuid === 12 && sm.submenuid === 17) submenuPerm.alldata = prev.find(p => p.menuid === 12 && p.submenuid === 17)?.alldata || 0;
+                        return submenuPerm;
+                    });
+                updatedPermissions = [...updatedPermissions, ...submenus];
+            }
+        }
+        
+        const uniquePermissions = Array.from(new Map(updatedPermissions.map(p => [`${p.menuid}:${p.submenuid || 'null'}`, p])).values());
+        return uniquePermissions;
     });
+};
+
+
+  const addform_handleDataScopeToggle = (menuid, submenuid = null, scope) => {
+    addform_setPermissions(prev => prev.map(p => {
+        if (p.menuid === menuid && p.submenuid === submenuid) {
+            const newPerm = { ...p };
+            if ((menuid === 9 && submenuid === null) || (menuid === 2 && submenuid === 3)) {
+                newPerm.individualdata = scope === 'individual' ? 1 : 0;
+                newPerm.teamdata = scope === 'team' ? 1 : 0;
+                newPerm.alldata = scope === 'all' ? 1 : 0;
+            } else if (menuid === 15 && submenuid === 20) {
+                newPerm.teamdata = scope === 'team' ? 1 : 0;
+                newPerm.alldata = scope === 'all' ? 1 : 0;
+                newPerm.individualdata = 0;
+            }
+            return newPerm;
+        }
+        return p;
+    }));
   };
-
+  
   const addform_handleAllDataToggle = (menuid, submenuid = null) => {
-    if ((menuid !== 11 && submenuid === null) && (menuid !== 12 || submenuid !== 17)) return; // Only for Service Requests (menuid 11, no C_SUBMENU) and Interview (menuid 12, submenuid 17)
-
-    addform_setPermissions(prev => {
-      const updatedPermissions = prev.map(p => {
+    if ((menuid !== 11 && submenuid === null) && (menuid !== 12 || submenuid !== 17)) return;
+    addform_setPermissions(prev => prev.map(p => {
         if (p.menuid === menuid && p.submenuid === submenuid) {
           return { ...p, alldata: p.alldata === 1 ? 0 : 1 };
         }
         return p;
-      });
-      return updatedPermissions;
-    });
+      })
+    );
   };
 
   const handleSelectAllToggle = () => {
     const allPermissions = [
-      ...addform_availableMenus.map(C_MENU => ({ menuid: C_MENU.menuid, submenuid: null, alldata: C_MENU.menuid === 11 ? 0 : 0 })),
-      ...addform_availableSubmenus.map(C_SUBMENU => ({ menuid: C_SUBMENU.menuid, submenuid: C_SUBMENU.submenuid, alldata: C_SUBMENU.submenuid === 17 ? 0 : 0 }))
+      ...addform_availableMenus.map(C_MENU => ({ menuid: C_MENU.menuid, submenuid: null, alldata: C_MENU.menuid === 11 ? 0 : 0, teamdata: 0, individualdata: 0 })),
+      ...addform_availableSubmenus.map(C_SUBMENU => ({ menuid: C_SUBMENU.menuid, submenuid: C_SUBMENU.submenuid, alldata: C_SUBMENU.submenuid === 17 ? 0 : 0, teamdata: 0, individualdata: 0 }))
     ];
     const allSelected = addform_permissions.length === allPermissions.length;
     addform_setPermissions(allSelected ? [] : [...new Map(allPermissions.map(p => [JSON.stringify(p), p])).values()]);
@@ -533,7 +569,9 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
     const standardPermissions = menusWithoutSubmenus.map(C_MENU => ({
       menuid: C_MENU.menuid,
       submenuid: null,
-      alldata: C_MENU.menuid === 11 ? addform_permissions.find(p => p.menuid === 11 && !p.submenuid)?.alldata || 0 : 0
+      alldata: C_MENU.menuid === 11 ? addform_permissions.find(p => p.menuid === 11 && !p.submenuid)?.alldata || 0 : 0,
+      teamdata: 0,
+      individualdata: C_MENU.menuid === 9 ? 1 : 0
     }));
     const allStandardSelected = standardPermissions.every(stdPerm => 
       addform_permissions.some(p => p.menuid === stdPerm.menuid && !p.submenuid)
@@ -550,10 +588,16 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
 
   const handleAdvancedFeaturesToggle = () => {
     const advancedPermissions = [
-      ...menusWithSubmenus.map(C_MENU => ({ menuid: C_MENU.menuid, submenuid: null, alldata: 0 })),
+      ...menusWithSubmenus.map(C_MENU => ({ menuid: C_MENU.menuid, submenuid: null, alldata: 0, teamdata: 0, individualdata: 0 })),
       ...addform_availableSubmenus.filter(C_SUBMENU => 
         menusWithSubmenus.some(C_MENU => C_MENU.menuid === C_SUBMENU.menuid)
-      ).map(C_SUBMENU => ({ menuid: C_SUBMENU.menuid, submenuid: C_SUBMENU.submenuid, alldata: C_SUBMENU.submenuid === 17 ? 0 : 0 }))
+      ).map(C_SUBMENU => {
+        const perm = { menuid: C_SUBMENU.menuid, submenuid: C_SUBMENU.submenuid, alldata: 0, teamdata: 0, individualdata: 0 };
+        if (C_SUBMENU.submenuid === 17) perm.alldata = 1;
+        if (C_SUBMENU.menuid === 2 && C_SUBMENU.submenuid === 3) perm.individualdata = 1;
+        if (C_SUBMENU.menuid === 15 && C_SUBMENU.submenuid === 20) perm.teamdata = 1;
+        return perm;
+      })
     ];
     const allAdvancedSelected = advancedPermissions.every(advPerm => 
       addform_permissions.some(p => 
@@ -594,8 +638,8 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
 
   const handleAllPermissionsToggle = () => {
     const allPermissions = [
-      ...availableMenus.map(C_MENU => ({ menuid: C_MENU.menuid, submenuid: null, alldata: C_MENU.menuid === 11 ? tempPermissions.find(p => p.menuid === 11 && !p.submenuid)?.alldata || 0 : 0 })),
-      ...availableSubmenus.map(C_SUBMENU => ({ menuid: C_SUBMENU.menuid, submenuid: C_SUBMENU.submenuid, alldata: C_SUBMENU.submenuid === 17 ? tempPermissions.find(p => p.menuid === 12 && p.submenuid === 17)?.alldata || 0 : 0 }))
+      ...availableMenus.map(C_MENU => ({ menuid: C_MENU.menuid, submenuid: null, alldata: C_MENU.menuid === 11 ? tempPermissions.find(p => p.menuid === 11 && !p.submenuid)?.alldata || 0 : 0, teamdata: 0, individualdata: C_MENU.menuid === 9 ? 1: 0 })),
+      ...availableSubmenus.map(C_SUBMENU => ({ menuid: C_SUBMENU.menuid, submenuid: C_SUBMENU.submenuid, alldata: C_SUBMENU.submenuid === 17 ? tempPermissions.find(p => p.menuid === 12 && p.submenuid === 17)?.alldata || 0 : 0, teamdata: C_SUBMENU.menuid === 15 && C_SUBMENU.submenuid === 20 ? 1 : 0, individualdata: C_SUBMENU.menuid === 2 && C_SUBMENU.submenuid === 3 ? 1: 0 }))
     ];
     const allSelected = tempPermissions.length === allPermissions.length;
     setTempPermissions(allSelected ? [] : [...new Map(allPermissions.map(p => [JSON.stringify(p), p])).values()]);
@@ -605,7 +649,9 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
     const standardPermissions = menusWithoutSubmenus.map(C_MENU => ({
       menuid: C_MENU.menuid,
       submenuid: null,
-      alldata: C_MENU.menuid === 11 ? tempPermissions.find(p => p.menuid === 11 && !p.submenuid)?.alldata || 0 : 0
+      alldata: C_MENU.menuid === 11 ? tempPermissions.find(p => p.menuid === 11 && !p.submenuid)?.alldata || 0 : 0,
+      teamdata: 0,
+      individualdata: C_MENU.menuid === 9 ? 1 : 0
     }));
     const allStandardSelected = standardPermissions.every(stdPerm => 
       tempPermissions.some(p => p.menuid === stdPerm.menuid && !p.submenuid)
@@ -622,10 +668,16 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
 
   const handleAdvancedPermissionsToggle = () => {
     const advancedPermissions = [
-      ...menusWithSubmenus.map(C_MENU => ({ menuid: C_MENU.menuid, submenuid: null, alldata: 0 })),
+      ...menusWithSubmenus.map(C_MENU => ({ menuid: C_MENU.menuid, submenuid: null, alldata: 0, teamdata: 0, individualdata: 0 })),
       ...availableSubmenus.filter(C_SUBMENU => 
         menusWithSubmenus.some(C_MENU => C_MENU.menuid === C_SUBMENU.menuid)
-      ).map(C_SUBMENU => ({ menuid: C_SUBMENU.menuid, submenuid: C_SUBMENU.submenuid, alldata: C_SUBMENU.submenuid === 17 ? tempPermissions.find(p => p.menuid === 12 && p.submenuid === 17)?.alldata || 0 : 0 }))
+      ).map(C_SUBMENU => {
+          const perm = { menuid: C_SUBMENU.menuid, submenuid: C_SUBMENU.submenuid, alldata: 0, teamdata: 0, individualdata: 0 };
+          if (C_SUBMENU.submenuid === 17) perm.alldata = tempPermissions.find(p => p.menuid === 12 && p.submenuid === 17)?.alldata || 0;
+          if (C_SUBMENU.menuid === 2 && C_SUBMENU.submenuid === 3) perm.individualdata = 1;
+          if (C_SUBMENU.menuid === 15 && C_SUBMENU.submenuid === 20) perm.teamdata = 1;
+          return perm;
+      })
     ];
     const allAdvancedSelected = advancedPermissions.every(advPerm => 
       tempPermissions.some(p => 
@@ -807,6 +859,10 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
   }
 
   const renderPermissionsGrid = (isEditing = false, permissionsToUse = permissions) => {
+    const currentPermissionsHandler = isEditing ? handlePermissionToggle : () => {};
+    const currentDataScopeHandler = isEditing ? handleDataScopeToggle : () => {};
+    const currentAllDataHandler = isEditing ? handleAllDataToggle : () => {};
+
     return (
       <>
         {isEditing && (
@@ -814,6 +870,7 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
             <div className="roles_permissions-title">Select Features:</div>
             <div className="roles_permissions-toggle-buttons">
               <label className="roles_permissions-toggle-checkbox-label">
+                <span>Select All</span>
                 <input
                   type="checkbox"
                   checked={isAllPermissionsSelected()}
@@ -831,6 +888,7 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
               <div className="roles_permissions-menu-category-title">Standalone Features</div>
               {isEditing && (
                 <label className="roles_permissions-category-toggle-label">
+                  <span>Select All</span>
                   <input
                     type="checkbox"
                     checked={menusWithoutSubmenus.every(C_MENU => 
@@ -852,7 +910,7 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
                         <input
                           type="checkbox"
                           checked={permissionsToUse.some((p) => p.menuid === C_MENU.menuid && !p.submenuid)}
-                          onChange={isEditing ? () => handlePermissionToggle(C_MENU.menuid) : undefined}
+                          onChange={() => currentPermissionsHandler(C_MENU.menuid)}
                           className="roles_permission-checkbox"
                           disabled={!isEditing}
                         />
@@ -863,11 +921,27 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
                           <input
                             type="checkbox"
                             checked={permissionsToUse.find(p => p.menuid === 11 && !p.submenuid)?.alldata === 1}
-                            onChange={isEditing ? () => handleAllDataToggle(C_MENU.menuid) : undefined}
+                            onChange={() => currentAllDataHandler(C_MENU.menuid)}
                             className="roles_permission-checkbox"
                             disabled={!isEditing}
                           />
                         </label>
+                      )}
+                      {C_MENU.menuid === 9 && permissionsToUse.some(p => p.menuid === 9 && !p.submenuid) && (
+                        <div style={{ marginLeft: '20px', marginTop: '5px' }}>
+                            <label className="roles_submenu-label">
+                                <span className="roles_submenu-name">Individual Data</span>
+                                <input type="checkbox" className="roles_permission-checkbox" checked={permissionsToUse.find(p => p.menuid === 9 && !p.submenuid)?.individualdata === 1} onChange={() => currentDataScopeHandler(9, null, 'individual')} disabled={!isEditing} />
+                            </label>
+                            <label className="roles_submenu-label">
+                                <span className="roles_submenu-name">Team Data</span>
+                                <input type="checkbox" className="roles_permission-checkbox" checked={permissionsToUse.find(p => p.menuid === 9 && !p.submenuid)?.teamdata === 1} onChange={() => currentDataScopeHandler(9, null, 'team')} disabled={!isEditing} />
+                            </label>
+                            <label className="roles_submenu-label">
+                                <span className="roles_submenu-name">All Data</span>
+                                <input type="checkbox" className="roles_permission-checkbox" checked={permissionsToUse.find(p => p.menuid === 9 && !p.submenuid)?.alldata === 1} onChange={() => currentDataScopeHandler(9, null, 'all')} disabled={!isEditing} />
+                            </label>
+                        </div>
                       )}
                     </div>
                   ))}
@@ -883,21 +957,14 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
               <div className="roles_permissions-menu-category-title">Expandable Features</div>
               {isEditing && (
                 <label className="roles_permissions-category-toggle-label">
+                  <span>Select All</span>
                   <input
                     type="checkbox"
                     checked={(() => {
-                      const advancedPermissions = [
-                        ...menusWithSubmenus.map(C_MENU => ({ menuid: C_MENU.menuid, submenuid: null })),
-                        ...availableSubmenus.filter(C_SUBMENU => 
-                          menusWithSubmenus.some(C_MENU => C_MENU.menuid === C_SUBMENU.menuid)
-                        ).map(C_SUBMENU => ({ menuid: C_SUBMENU.menuid, submenuid: C_SUBMENU.submenuid }))
-                      ];
-                      return advancedPermissions.every(advPerm => 
-                        permissionsToUse.some(p => 
-                          p.menuid === advPerm.menuid && 
-                          ((advPerm.submenuid === null && !p.submenuid) || (p.submenuid === advPerm.submenuid))
-                        )
-                      );
+                      const advancedMenuIds = menusWithSubmenus.map(m => m.menuid);
+                      const allSubmenusForAdvanced = availableSubmenus.filter(sm => advancedMenuIds.includes(sm.menuid));
+                      return advancedMenuIds.every(mid => permissionsToUse.some(p => p.menuid === mid && !p.submenuid)) &&
+                             allSubmenusForAdvanced.every(sm => permissionsToUse.some(p => p.menuid === sm.menuid && p.submenuid === sm.submenuid));
                     })()}
                     onChange={handleAdvancedPermissionsToggle}
                     className="roles_permissions-category-toggle-checkbox"
@@ -915,7 +982,7 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
                         <input
                           type="checkbox"
                           checked={permissionsToUse.some((p) => p.menuid === C_MENU.menuid && !p.submenuid)}
-                          onChange={isEditing ? () => handlePermissionToggle(C_MENU.menuid) : undefined}
+                          onChange={() => currentPermissionsHandler(C_MENU.menuid)}
                           className="roles_permission-checkbox"
                           disabled={!isEditing}
                         />
@@ -929,25 +996,33 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
                                 <span className="roles_submenu-name">{C_SUBMENU.submenuname}</span>
                                 <input
                                   type="checkbox"
-                                  checked={permissionsToUse.some(
-                                    (p) => p.menuid === C_MENU.menuid && p.submenuid === C_SUBMENU.submenuid
-                                  )}
-                                  onChange={isEditing ? () => handlePermissionToggle(C_MENU.menuid, C_SUBMENU.submenuid) : undefined}
+                                  checked={permissionsToUse.some((p) => p.menuid === C_MENU.menuid && p.submenuid === C_SUBMENU.submenuid)}
+                                  onChange={() => currentPermissionsHandler(C_MENU.menuid, C_SUBMENU.submenuid)}
                                   className="roles_permission-checkbox"
                                   disabled={!isEditing}
                                 />
                               </label>
+                              
                               {C_SUBMENU.submenuid === 17 && permissionsToUse.some(p => p.menuid === 12 && p.submenuid === 17) && (
                                 <label className="roles_submenu-label" style={{ marginLeft: '20px' }}>
                                   <span className="roles_submenu-name">All Data</span>
-                                  <input
-                                    type="checkbox"
-                                    checked={permissionsToUse.find(p => p.menuid === 12 && p.submenuid === 17)?.alldata === 1}
-                                    onChange={isEditing ? () => handleAllDataToggle(C_MENU.menuid, C_SUBMENU.submenuid) : undefined}
-                                    className="roles_permission-checkbox"
-                                    disabled={!isEditing}
-                                  />
+                                  <input type="checkbox" className="roles_permission-checkbox" checked={permissionsToUse.find(p => p.menuid === 12 && p.submenuid === 17)?.alldata === 1} onChange={() => currentAllDataHandler(12, 17)} disabled={!isEditing}/>
                                 </label>
+                              )}
+
+                              {C_MENU.menuid === 2 && C_SUBMENU.submenuid === 3 && permissionsToUse.some(p => p.menuid === 2 && p.submenuid === 3) && (
+                                <div style={{ marginLeft: '20px' }}>
+                                    <label className="roles_submenu-label"><span className="roles_submenu-name">Individual Data</span><input type="checkbox" className="roles_permission-checkbox" checked={permissionsToUse.find(p=>p.menuid===2 && p.submenuid===3)?.individualdata===1} onChange={()=>currentDataScopeHandler(2,3,'individual')} disabled={!isEditing}/></label>
+                                    <label className="roles_submenu-label"><span className="roles_submenu-name">Team Data</span><input type="checkbox" className="roles_permission-checkbox" checked={permissionsToUse.find(p=>p.menuid===2 && p.submenuid===3)?.teamdata===1} onChange={()=>currentDataScopeHandler(2,3,'team')} disabled={!isEditing}/></label>
+                                    <label className="roles_submenu-label"><span className="roles_submenu-name">All Data</span><input type="checkbox" className="roles_permission-checkbox" checked={permissionsToUse.find(p=>p.menuid===2 && p.submenuid===3)?.alldata===1} onChange={()=>currentDataScopeHandler(2,3,'all')} disabled={!isEditing}/></label>
+                                </div>
+                              )}
+
+                              {C_MENU.menuid === 15 && C_SUBMENU.submenuid === 20 && permissionsToUse.some(p => p.menuid === 15 && p.submenuid === 20) && (
+                                <div style={{ marginLeft: '20px' }}>
+                                    <label className="roles_submenu-label"><span className="roles_submenu-name">Team Data</span><input type="checkbox" className="roles_permission-checkbox" checked={permissionsToUse.find(p=>p.menuid===15 && p.submenuid===20)?.teamdata===1} onChange={()=>currentDataScopeHandler(15,20,'team')} disabled={!isEditing}/></label>
+                                    <label className="roles_submenu-label"><span className="roles_submenu-name">All Data</span><input type="checkbox" className="roles_permission-checkbox" checked={permissionsToUse.find(p=>p.menuid===15 && p.submenuid===20)?.alldata===1} onChange={()=>currentDataScopeHandler(15,20,'all')} disabled={!isEditing}/></label>
+                                </div>
                               )}
                             </div>
                           ))}
@@ -962,6 +1037,107 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
       </>
     );
   };
+  
+    const renderAddFormPermissions = () => {
+    const menusWithoutSubmenus_addform = addform_availableMenus.filter(C_MENU => C_MENU.hassubmenu !== 'yes');
+    const menusWithSubmenus_addform = addform_availableMenus.filter(C_MENU => C_MENU.hassubmenu === 'yes');
+
+    return (
+      <>
+        {menusWithoutSubmenus_addform.length > 0 && (
+          <div className="roles_menus-without-submenus">
+            <div className="roles_menu-category-header">
+              <div className="roles_menu-category-title">Standalone Features</div>
+              <label className="roles_category-toggle-label">
+                <input type="checkbox" checked={menusWithoutSubmenus_addform.every(C_MENU => addform_permissions.some(p => p.menuid === C_MENU.menuid && !p.submenuid))} onChange={handleStandardFeaturesToggle} className="roles_category-toggle-checkbox" />
+              </label>
+            </div>
+            <div className="roles_features-grid">
+              {Array.from({ length: Math.ceil(menusWithoutSubmenus_addform.length / 5) }, (_, row) => (
+                <div key={`no-submenu-row-${row}`} className="roles_features-row">
+                  {menusWithoutSubmenus_addform.slice(row * 5, (row * 5) + 5).map((C_MENU) => (
+                    <div key={`menu-${C_MENU.menuid}`} className="roles_feature-item">
+                      <label className="roles_feature-label">
+                        <span className="roles_feature-name">{C_MENU.menuname}</span>
+                        <input type="checkbox" checked={addform_permissions.some((p) => p.menuid === C_MENU.menuid && !p.submenuid)} onChange={() => addform_handlePermissionToggle(C_MENU.menuid)} className="roles_feature-checkbox" />
+                      </label>
+                      {C_MENU.menuid === 11 && addform_permissions.some(p => p.menuid === 11 && !p.submenuid) && (
+                        <label className="roles_feature-label" style={{ marginLeft: '20px' }}>
+                          <span className="roles_feature-name">All Data</span>
+                          <input type="checkbox" checked={addform_permissions.find(p => p.menuid === 11 && !p.submenuid)?.alldata === 1} onChange={() => addform_handleAllDataToggle(C_MENU.menuid)} className="roles_feature-checkbox" />
+                        </label>
+                      )}
+                      {C_MENU.menuid === 9 && addform_permissions.some(p => p.menuid === 9 && !p.submenuid) && (
+                        <div style={{ marginLeft: '20px', marginTop: '5px' }}>
+                          <label className="roles_submenu-label"><span className="roles_submenu-name">Individual Data</span><input type="checkbox" className="roles_permission-checkbox" checked={addform_permissions.find(p=>p.menuid===9 && !p.submenuid)?.individualdata===1} onChange={()=>addform_handleDataScopeToggle(9,null,'individual')} /></label>
+                          <label className="roles_submenu-label"><span className="roles_submenu-name">Team Data</span><input type="checkbox" className="roles_permission-checkbox" checked={addform_permissions.find(p=>p.menuid===9 && !p.submenuid)?.teamdata===1} onChange={()=>addform_handleDataScopeToggle(9,null,'team')} /></label>
+                          <label className="roles_submenu-label"><span className="roles_submenu-name">All Data</span><input type="checkbox" className="roles_permission-checkbox" checked={addform_permissions.find(p=>p.menuid===9 && !p.submenuid)?.alldata===1} onChange={()=>addform_handleDataScopeToggle(9,null,'all')} /></label>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {menusWithSubmenus_addform.length > 0 && (
+          <div className="roles_menus-with-submenus">
+            <div className="roles_menu-category-header">
+              <div className="roles_menu-category-title">Expandable Features</div>
+              <label className="roles_category-toggle-label">
+                <input type="checkbox" checked={(() => { const advMenuIds = menusWithSubmenus_addform.map(m=>m.menuid); const allSubmenus = addform_availableSubmenus.filter(sm => advMenuIds.includes(sm.menuid)); return advMenuIds.every(mid=>addform_permissions.some(p=>p.menuid===mid && !p.submenuid)) && allSubmenus.every(sm=>addform_permissions.some(p=>p.menuid===sm.menuid && p.submenuid===sm.submenuid)); })()} onChange={handleAdvancedFeaturesToggle} className="roles_category-toggle-checkbox" />
+              </label>
+            </div>
+            <div className="roles_features-grid">
+              {Array.from({ length: Math.ceil(menusWithSubmenus_addform.length / 5) }, (_, row) => (
+                <div key={`submenu-row-${row}`} className="roles_features-row">
+                  {menusWithSubmenus_addform.slice(row * 5, (row * 5) + 5).map((C_MENU) => (
+                    <div key={`menu-${C_MENU.menuid}`} className="roles_feature-item-with-submenus">
+                      <label className="roles_feature-label roles_main-feature">
+                        <span className="roles_feature-name">{C_MENU.menuname}</span>
+                        <input type="checkbox" checked={addform_permissions.some((p) => p.menuid === C_MENU.menuid && !p.submenuid)} onChange={() => addform_handlePermissionToggle(C_MENU.menuid)} className="roles_feature-checkbox" />
+                      </label>
+                      <div className="roles_submenus-container">
+                        {addform_availableSubmenus.filter((sm) => sm.menuid === C_MENU.menuid).map((C_SUBMENU) => (
+                          <div key={`submenu-${C_SUBMENU.submenuid}`}>
+                            <label className="roles_feature-label roles_submenu-label">
+                              <span className="roles_submenu-name">{C_SUBMENU.submenuname}</span>
+                              <input type="checkbox" checked={addform_permissions.some((p) => p.menuid === C_MENU.menuid && p.submenuid === C_SUBMENU.submenuid)} onChange={() => addform_handlePermissionToggle(C_MENU.menuid, C_SUBMENU.submenuid)} className="roles_feature-checkbox" />
+                            </label>
+                            {C_SUBMENU.submenuid === 17 && addform_permissions.some(p => p.menuid === 12 && p.submenuid === 17) && (
+                              <label className="roles_feature-label roles_submenu-label" style={{ marginLeft: '20px' }}>
+                                <span className="roles_submenu-name">All Data</span>
+                                <input type="checkbox" checked={addform_permissions.find(p => p.menuid === 12 && p.submenuid === 17)?.alldata === 1} onChange={() => addform_handleAllDataToggle(12, 17)} className="roles_feature-checkbox" />
+                              </label>
+                            )}
+                            {C_MENU.menuid === 2 && C_SUBMENU.submenuid === 3 && addform_permissions.some(p => p.menuid === 2 && p.submenuid === 3) && (
+                              <div style={{ marginLeft: '20px' }}>
+                                <label className="roles_submenu-label"><span className="roles_submenu-name">Individual Data</span><input type="checkbox" className="roles_permission-checkbox" checked={addform_permissions.find(p=>p.menuid===2 && p.submenuid===3)?.individualdata===1} onChange={()=>addform_handleDataScopeToggle(2,3,'individual')} /></label>
+                                <label className="roles_submenu-label"><span className="roles_submenu-name">Team Data</span><input type="checkbox" className="roles_permission-checkbox" checked={addform_permissions.find(p=>p.menuid===2 && p.submenuid===3)?.teamdata===1} onChange={()=>addform_handleDataScopeToggle(2,3,'team')} /></label>
+                                <label className="roles_submenu-label"><span className="roles_submenu-name">All Data</span><input type="checkbox" className="roles_permission-checkbox" checked={addform_permissions.find(p=>p.menuid===2 && p.submenuid===3)?.alldata===1} onChange={()=>addform_handleDataScopeToggle(2,3,'all')} /></label>
+                              </div>
+                            )}
+                            {C_MENU.menuid === 15 && C_SUBMENU.submenuid === 20 && addform_permissions.some(p => p.menuid === 15 && p.submenuid === 20) && (
+                              <div style={{ marginLeft: '20px' }}>
+                                <label className="roles_submenu-label"><span className="roles_submenu-name">Team Data</span><input type="checkbox" className="roles_permission-checkbox" checked={addform_permissions.find(p=>p.menuid===15 && p.submenuid===20)?.teamdata===1} onChange={()=>addform_handleDataScopeToggle(15,20,'team')} /></label>
+                                <label className="roles_submenu-label"><span className="roles_submenu-name">All Data</span><input type="checkbox" className="roles_permission-checkbox" checked={addform_permissions.find(p=>p.menuid===15 && p.submenuid===20)?.alldata===1} onChange={()=>addform_handleDataScopeToggle(15,20,'all')} /></label>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </>
+    );
+  };
+
 
   return (
     <div className="roles_roles-overview-container">
@@ -1003,136 +1179,7 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
                     </label>
                   </div>
                 </div>
-                {(() => {
-                  const menusWithoutSubmenus_addform = addform_availableMenus.filter(C_MENU => C_MENU.hassubmenu !== 'yes');
-                  const menusWithSubmenus_addform = addform_availableMenus.filter(C_MENU => C_MENU.hassubmenu === 'yes');
-                  return (
-                    <>
-                      {menusWithoutSubmenus_addform.length > 0 && (
-                        <div className="roles_menus-without-submenus">
-                          <div className="roles_menu-category-header">
-                            <div className="roles_menu-category-title">Standalone Features</div>
-                            <label className="roles_category-toggle-label">
-                              <input
-                                type="checkbox"
-                                checked={menusWithoutSubmenus_addform.every(C_MENU => 
-                                  addform_permissions.some(p => p.menuid === C_MENU.menuid && !p.submenuid)
-                                )}
-                                onChange={handleStandardFeaturesToggle}
-                                className="roles_category-toggle-checkbox"
-                              />
-                            </label>
-                          </div>
-                          <div className="roles_features-grid">
-                            {Array.from({ length: Math.ceil(menusWithoutSubmenus_addform.length / 5) }, (_, row) => (
-                              <div key={`no-submenu-row-${row}`} className="roles_features-row">
-                                {menusWithoutSubmenus_addform.slice(row * 5, (row * 5) + 5).map((C_MENU) => (
-                                  <div key={`menu-${C_MENU.menuid}`} className="roles_feature-item">
-                                    <label className="roles_feature-label">
-                                      <span className="roles_feature-name">{C_MENU.menuname}</span>
-                                      <input
-                                        type="checkbox"
-                                        checked={addform_permissions.some((p) => p.menuid === C_MENU.menuid && !p.submenuid)}
-                                        onChange={() => addform_handlePermissionToggle(C_MENU.menuid)}
-                                        className="roles_feature-checkbox"
-                                      />
-                                    </label>
-                                    {C_MENU.menuid === 11 && addform_permissions.some(p => p.menuid === 11 && !p.submenuid) && (
-                                      <label className="roles_feature-label" style={{ marginLeft: '20px' }}>
-                                        <span className="roles_feature-name">All Data</span>
-                                        <input
-                                          type="checkbox"
-                                          checked={addform_permissions.find(p => p.menuid === 11 && !p.submenuid)?.alldata === 1}
-                                          onChange={() => addform_handleAllDataToggle(C_MENU.menuid)}
-                                          className="roles_feature-checkbox"
-                                        />
-                                      </label>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {menusWithSubmenus_addform.length > 0 && (
-                        <div className="roles_menus-with-submenus">
-                          <div className="roles_menu-category-header">
-                            <div className="roles_menu-category-title">Expandable Features</div>
-                            <label className="roles_category-toggle-label">
-                              <input
-                                type="checkbox"
-                                checked={(() => {
-                                  const advancedPermissions = [
-                                    ...menusWithSubmenus_addform.map(C_MENU => ({ menuid: C_MENU.menuid, submenuid: null })),
-                                    ...addform_availableSubmenus.filter(C_SUBMENU => 
-                                      menusWithSubmenus_addform.some(C_MENU => C_MENU.menuid === C_SUBMENU.menuid)
-                                    ).map(C_SUBMENU => ({ menuid: C_SUBMENU.menuid, submenuid: C_SUBMENU.submenuid }))
-                                  ];
-                                  return advancedPermissions.every(advPerm => 
-                                    addform_permissions.some(p => 
-                                      p.menuid === advPerm.menuid && 
-                                      ((advPerm.submenuid === null && !p.submenuid) || (p.submenuid === advPerm.submenuid))
-                                    )
-                                  );
-                                })()}
-                                onChange={handleAdvancedFeaturesToggle}
-                                className="roles_category-toggle-checkbox"
-                              />
-                            </label>
-                          </div>
-                          <div className="roles_features-grid">
-                            {Array.from({ length: Math.ceil(menusWithSubmenus_addform.length / 5) }, (_, row) => (
-                              <div key={`submenu-row-${row}`} className="roles_features-row">
-                                {menusWithSubmenus_addform.slice(row * 5, (row * 5) + 5).map((C_MENU) => (
-                                  <div key={`menu-${C_MENU.menuid}`} className="roles_feature-item-with-submenus">
-                                    <label className="roles_feature-label roles_main-feature">
-                                      <span className="roles_feature-name">{C_MENU.menuname}</span>
-                                      <input
-                                        type="checkbox"
-                                        checked={addform_permissions.some((p) => p.menuid === C_MENU.menuid && !p.submenuid)}
-                                        onChange={() => addform_handlePermissionToggle(C_MENU.menuid)}
-                                        className="roles_feature-checkbox"
-                                      />
-                                    </label>
-                                    <div className="roles_submenus-container">
-                                      {addform_availableSubmenus
-                                        .filter((sm) => sm.menuid === C_MENU.menuid)
-                                        .map((C_SUBMENU) => (
-                                          <label key={`submenu-${C_SUBMENU.submenuid}`} className="roles_feature-label roles_submenu-label">
-                                            <span className="roles_submenu-name">{C_SUBMENU.submenuname}</span>
-                                            <input
-                                              type="checkbox"
-                                              checked={addform_permissions.some(
-                                                (p) => p.menuid === C_MENU.menuid && p.submenuid === C_SUBMENU.submenuid
-                                              )}
-                                              onChange={() => addform_handlePermissionToggle(C_MENU.menuid, C_SUBMENU.submenuid)}
-                                              className="roles_feature-checkbox"
-                                              />
-                                            {C_SUBMENU.submenuid === 17 && addform_permissions.some(p => p.menuid === 12 && p.submenuid === 17) && (
-                                              <label className="roles_feature-label roles_submenu-label" style={{ marginLeft: '20px' }}>
-                                                <span className="roles_submenu-name">All Data</span>
-                                                <input
-                                                  type="checkbox"
-                                                  checked={addform_permissions.find(p => p.menuid === 12 && p.submenuid === 17)?.alldata === 1}
-                                                  onChange={() => addform_handleAllDataToggle(C_MENU.menuid, C_SUBMENU.submenuid)}
-                                                  className="roles_feature-checkbox"
-                                                />
-                                              </label>
-                                            )}
-                                          </label>
-                                        ))}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  );
-                })()}
+                {renderAddFormPermissions()}
               </div>
             </div>
             <div className="roles_submit-section">
