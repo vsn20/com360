@@ -101,8 +101,9 @@ export async function fetchRoleById(roleid) {
       throw new Error('Role not found.');
     }
 
+    // MODIFIED: Added teamdata and individualdata to the SELECT statement
     const [permissionRows] = await pool.execute(
-      `SELECT menuid, submenuid, alldata 
+      `SELECT menuid, submenuid, alldata, teamdata, individualdata
        FROM C_ROLE_MENU_PERMISSIONS 
        WHERE roleid = ?`,
       [roleid]
@@ -251,8 +252,9 @@ export async function updateRole(prevState, formData) {
     }
 
     if (permissions.length >= 0) {
+      // MODIFIED: Fetching new columns to compare for updates
       const [existingPermissions] = await pool.execute(
-        `SELECT menuid, submenuid, alldata 
+        `SELECT menuid, submenuid, alldata, teamdata, individualdata
          FROM C_ROLE_MENU_PERMISSIONS 
          WHERE roleid = ?`,
         [roleid]
@@ -281,27 +283,33 @@ export async function updateRole(prevState, formData) {
       );
       for (const perm of newPermissions) {
         if (perm.menuid) {
+          // MODIFIED: Inserting new columns
           await pool.query(
-            `INSERT INTO C_ROLE_MENU_PERMISSIONS (roleid, menuid, submenuid, alldata, CREATED_DATE) 
-             VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-            [roleid, perm.menuid, perm.submenuid || null, perm.alldata || 0]
+            `INSERT INTO C_ROLE_MENU_PERMISSIONS (roleid, menuid, submenuid, alldata, teamdata, individualdata, CREATED_DATE) 
+             VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+            [roleid, perm.menuid, perm.submenuid || null, perm.alldata || 0, perm.teamdata || 0, perm.individualdata || 0]
           );
         }
       }
 
-      // Update alldata for existing permissions
-      const permissionsToUpdate = permissions.filter(p => 
-        existingPermissionSet.has(`${p.menuid}:${p.submenuid || 'null'}`) && 
-        p.alldata !== existingPermissions.find(ep => 
+      // MODIFIED: Update alldata, teamdata, and individualdata for existing permissions
+      const permissionsToUpdate = permissions.filter(p => {
+        const existingPerm = existingPermissions.find(ep => 
           ep.menuid === p.menuid && (ep.submenuid || null) === (p.submenuid || null)
-        )?.alldata
-      );
+        );
+        return existingPerm && (
+          p.alldata !== existingPerm.alldata ||
+          p.teamdata !== existingPerm.teamdata ||
+          p.individualdata !== existingPerm.individualdata
+        );
+      });
+
       for (const perm of permissionsToUpdate) {
         await pool.query(
           `UPDATE C_ROLE_MENU_PERMISSIONS 
-           SET alldata = ? 
+           SET alldata = ?, teamdata = ?, individualdata = ?
            WHERE roleid = ? AND menuid = ? AND (submenuid = ? OR (submenuid IS NULL AND ? IS NULL))`,
-          [perm.alldata || 0, roleid, perm.menuid, perm.submenuid, perm.submenuid]
+          [perm.alldata || 0, perm.teamdata || 0, perm.individualdata || 0, roleid, perm.menuid, perm.submenuid, perm.submenuid]
         );
       }
     }
@@ -404,10 +412,12 @@ export async function addRole(formData) {
     );
     console.log('Role added successfully, newRoleId:', newRoleId);
 
-    const permissionValues = permissions.map(p => [newRoleId, p.menuid, p.submenuid || null, p.alldata || 0]);
+    // MODIFIED: Adding teamdata and individualdata to the permission values
+    const permissionValues = permissions.map(p => [newRoleId, p.menuid, p.submenuid || null, p.alldata || 0, p.teamdata || 0, p.individualdata || 0]);
     if (permissionValues.length > 0) {
+      // MODIFIED: Added teamdata and individualdata to the INSERT statement
       await connection.query(
-        'INSERT INTO C_ROLE_MENU_PERMISSIONS (roleid, menuid, submenuid, alldata) VALUES ?',
+        'INSERT INTO C_ROLE_MENU_PERMISSIONS (roleid, menuid, submenuid, alldata, teamdata, individualdata) VALUES ?',
         [permissionValues]
       );
       console.log('Permissions added successfully for roleId:', newRoleId);
