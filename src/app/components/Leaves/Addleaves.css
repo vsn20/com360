@@ -1,6 +1,6 @@
 /* === Page Layout & Title === */
 .leaves_add_page_container {
-  position: relative; /* Establishes positioning context for the back button */
+  position: relative;
   padding-bottom: 20px;
   max-width: 800px;
   margin: 0 auto;
@@ -28,6 +28,14 @@
   flex-direction: column;
   gap: 20px;
 }
+
+/* **FIX**: Removes the black square border from around the form fields */
+.leaves_add_form fieldset {
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
 .addleaves_form_grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -106,6 +114,11 @@
   box-shadow: 0 4px 12px rgba(15, 212, 108, 0.3);
   transform: translateY(-1px);
 }
+.leaves_add_button_submit:disabled {
+  background-color: #d1d5db;
+  cursor: not-allowed;
+}
+
 
 /* === Loading State === */
 .addleaves_loading_container { display: flex; justify-content: center; align-items: center; min-height: 400px; }
@@ -113,11 +126,30 @@
 .addleaves_loading_spinner::after { content: ''; width: 20px; height: 20px; margin-left: 12px; border: 2px solid #e5e7eb; border-top: 2px solid #0fd46c; border-radius: 50%; animation: addleaves-spin 1s linear infinite; }
 @keyframes addleaves-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-/* === Back Button (CORRECTED: Positioned top-right) === */
+/* === Success & Error Messages === */
+.addleaves_success_message {
+  color: #155724; /* Dark green text */
+  background-color: #d4edda; /* Light green background */
+  border: 1px solid #c3e6cb; /* Green border */
+  padding: 12px 16px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  font-weight: 500;
+}
+.addleaves_error_message {
+  color: #721c24;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  padding: 12px 16px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+/* === Back Button === */
 .leaves_back_button {
   position: absolute !important;
   top: 5px;
-  right: 0; /* This moves the button to the right */
+  right: 0;
   padding: 8px 12px 8px 8px !important;
   background-color: transparent !important;
   color: #6c757d !important;
@@ -138,3 +170,48 @@
 .leaves_back_button::after { content: 'Back' !important; font-size: 13px !important; }
 .leaves_back_button:hover { background-color: #f8f9fa !important; border-color: #6c757d !important; color: #495057 !important; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important; transform: translateX(-2px) !important; }
 .leaves_back_button:hover::before { color: #495057 !important; }
+
+/* === Available Leaves Display === */
+.leaves_available_section_add_page {
+  margin-bottom: 24px;
+  padding: 16px;
+  background-color: #f8fafc;
+  border-radius: 8px;
+  border-left: 4px solid #0fd46c;
+}
+
+.leaves_available_title_add_page {
+  font-size: 16px;
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 12px 0;
+}
+
+.leaves_available_list_add_page {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.leaves_available_item_add_page {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background-color: #fff;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+}
+
+.leaves_available_name_add_page {
+  font-weight: 500;
+  color: #374151;
+  font-size: 14px;
+}
+
+.leaves_available_count_add_page {
+  font-weight: 700;
+  color: #0fd46c;
+  font-size: 16px;
+}
