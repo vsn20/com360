@@ -1,90 +1,104 @@
 'use client';
-import React, { useState, useEffect } from 'react';
-import { fetchPendingLeaves, fetchEmployeesUnderSuperior } from '@/app/serverActions/Leaves/Overview';
-import { approveEmployeeLeave, fetchLeaveTypes } from '@/app/serverActions/Leaves/Addleave';
+import React, { useState, useEffect, useCallback } from 'react';
+import { fetchPendingLeaves, fetchLeaveTypes } from '@/app/serverActions/Leaves/Overview';
+import { approveEmployeeLeave, updateEmployeeLeave } from '@/app/serverActions/Leaves/Addleave';
+import EditLeaveModal from './EditLeaveModal';
 import './pendingleaves.css';
-import { useRouter } from 'next/navigation';
 
-const PendingLeaveApprovals = ({ onBack }) => { // Accept onBack as a prop
-  const router = useRouter();
+const PendingLeaveApprovals = ({ onBack }) => {
   const [pendingLeaves, setPendingLeaves] = useState([]);
-  const [employees, setEmployees] = useState([]);
   const [leaveTypes, setLeaveTypes] = useState([]);
   const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(false);
+  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(true);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingLeave, setEditingLeave] = useState(null);
+  
+  const [filters, setFilters] = useState({
+    searchQuery: '',
+    leaveType: 'all',
+    startDate: '',
+    endDate: '',
+    period: 'all'
+  });
 
-  const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageInputValue, setPageInputValue] = useState('1');
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [itemsPerPageInput, setItemsPerPageInput] = useState('10');
 
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    const [pendingResult, leaveTypesResult] = await Promise.all([
+      fetchPendingLeaves(),
+      fetchLeaveTypes()
+    ]);
+
+    if (pendingResult.error) {
+      setError(pendingResult.error);
+      setPendingLeaves([]);
+    } else {
+      setPendingLeaves(pendingResult.leaves || []);
+    }
+    if (!leaveTypesResult.error) {
+      setLeaveTypes(leaveTypesResult);
+    }
+    setLoading(false);
+  }, []);
+
   useEffect(() => {
-    const fetchData = async () => {
-      setError(null);
-      setSuccess(false);
-      setLoading(true);
-
-      const employeesResult = await fetchEmployeesUnderSuperior();
-      if (employeesResult.error) {
-        setError(employeesResult.error);
-        setEmployees([]);
-      } else {
-        setEmployees(employeesResult.employees);
-      }
-
-      const leaveTypesResult = await fetchLeaveTypes();
-      if (leaveTypesResult.error) {
-        setError(leaveTypesResult.error);
-      } else {
-        setLeaveTypes(leaveTypesResult);
-      }
-
-      const result = await fetchPendingLeaves();
-      if (result.error) {
-        setError(result.error);
-        setPendingLeaves([]);
-        if (result.error.includes('You are not authorized')) {
-          router.push('/userscreens/leaves');
-        }
-      } else {
-        const currentEmpId = employees[0]?.empid;
-        setPendingLeaves(result.leaves.filter(leave => leave.empid !== currentEmpId));
-      }
-
-      setLoading(false);
-    };
     fetchData();
-  }, [router]);
+  }, [fetchData]);
+
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    setFilters(prev => ({ ...prev, [name]: value }));
+    setCurrentPage(1);
+    setPageInputValue('1');
+  };
+
+  const resetFilters = () => {
+    setFilters({
+      searchQuery: '',
+      leaveType: 'all',
+      startDate: '',
+      endDate: '',
+      period: 'all'
+    });
+    setCurrentPage(1);
+    setPageInputValue('1');
+  };
 
   const handleApproveChange = async (leaveId, empId, action) => {
-    console.log('Approving leaveId:', leaveId, 'for empId:', empId, 'with action:', action); // Debug log
     setError(null);
-    setSuccess(false);
+    setSuccess('');
     const result = await approveEmployeeLeave(leaveId, action);
     if (result.error) {
       setError(result.error);
     } else {
-      setPendingLeaves(prev => prev.filter(l => l.id !== leaveId));
-      setSuccess(true);
+      setSuccess('Action successful!');
+      fetchData();
     }
+  };
+
+  const handleEditClick = (leave) => {
+    setEditingLeave(leave);
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdateSuccess = () => {
+    setIsEditModalOpen(false);
+    setEditingLeave(null);
+    setSuccess('Leave updated successfully!');
+    fetchData();
   };
 
   const formatDate = (date) => {
     if (!date || isNaN(new Date(date))) return '';
     const d = new Date(date);
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${month}/${day}/${d.getFullYear()}`;
+    return new Intl.DateTimeFormat('en-US', { month: '2-digit', day: '2-digit', year: 'numeric', timeZone: 'UTC' }).format(d);
   };
-
-  const filteredLeaves = pendingLeaves.filter(leave =>
-    leave.employee_name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const totalPages = Math.ceil(filteredLeaves.length / itemsPerPage);
-  const currentLeaves = filteredLeaves.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const handleNextPage = () => {
     if (currentPage < totalPages) {
@@ -92,16 +106,13 @@ const PendingLeaveApprovals = ({ onBack }) => { // Accept onBack as a prop
       setPageInputValue((currentPage + 1).toString());
     }
   };
-
   const handlePrevPage = () => {
     if (currentPage > 1) {
       setCurrentPage(prev => prev - 1);
       setPageInputValue((currentPage - 1).toString());
     }
   };
-
   const handlePageInputChange = (e) => setPageInputValue(e.target.value);
-
   const handlePageInputKeyPress = (e) => {
     if (e.key === 'Enter') {
       const value = parseInt(pageInputValue, 10);
@@ -112,132 +123,106 @@ const PendingLeaveApprovals = ({ onBack }) => { // Accept onBack as a prop
       }
     }
   };
-
-  const handleItemsPerPageInputChange = (e) => {
+  const handleItemsPerPageChange = (e) => {
     setItemsPerPageInput(e.target.value);
   };
-
-  const handleItemsPerPageInputKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      const value = parseInt(e.target.value, 10);
-      if (!isNaN(value) && value >= 1) {
-        setItemsPerPage(value);
-        setItemsPerPageInput(value.toString());
-        setCurrentPage(1);
-        setPageInputValue('1');
-      } else {
-        setItemsPerPageInput(itemsPerPage.toString());
-        setCurrentPage(1);
-        setPageInputValue('1');
-      }
+  const handleItemsPerPageKeyPress = (e) => {
+    if(e.key === 'Enter') {
+        const value = parseInt(itemsPerPageInput, 10);
+        if(!isNaN(value) && value > 0) {
+            setItemsPerPage(value);
+            setCurrentPage(1);
+            setPageInputValue('1');
+        } else {
+            setItemsPerPageInput(itemsPerPage.toString());
+        }
     }
   };
 
+  const filteredLeaves = pendingLeaves.filter(leave => {
+    const leaveStartDate = new Date(leave.startdate);
+    const leaveEndDate = new Date(leave.enddate);
+
+    const filterStartDate = filters.startDate ? new Date(filters.startDate + 'T00:00:00Z') : null;
+    const filterEndDate = filters.endDate ? new Date(filters.endDate + 'T23:59:59Z') : null;
+
+    const searchMatch = leave.employee_name.toLowerCase().includes(filters.searchQuery.toLowerCase());
+    const startDateMatch = !filterStartDate || leaveEndDate >= filterStartDate;
+    const endDateMatch = !filterEndDate || leaveStartDate <= filterEndDate;
+    const leaveTypeMatch = filters.leaveType === 'all' || leave.leaveid.toString() === filters.leaveType;
+    const periodMatch = filters.period === 'all' || leave.am_pm === filters.period;
+    return searchMatch && startDateMatch && endDateMatch && leaveTypeMatch && periodMatch;
+  });
+
+  const totalPages = Math.ceil(filteredLeaves.length / itemsPerPage);
+  const currentLeaves = filteredLeaves.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   if (loading) return <div className="loading">Loading...</div>;
-  if (error) return <div className="error">{error}</div>;
 
   return (
     <div className="leaves_pending_page_container">
+      {isEditModalOpen && editingLeave && ( <EditLeaveModal leave={editingLeave} onClose={() => setIsEditModalOpen(false)} onSuccess={handleUpdateSuccess} isAdmin={true} isSuperior={true} /> )}
       <h2 className="leaves_pending_page_title">Pending Leave Approvals</h2>
       <button onClick={onBack} className="leaves_back_button"></button>
-
       <div className="leaves_pending_container">
-        {success && <p className="leaves_pending_message_success">Leave action successful!</p>}
+        {success && <p className="leaves_pending_message_success">{success}</p>}
+        {error && <p className="leaves_error_message">{error}</p>}
         
-        <div className="leaves_pending_controls_header">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="leaves_pending_search-input"
-            placeholder="Search by employee name..."
-          />
+        <div className="leaves_filters_container">
+            <div className="leaves_filter_group"><label>Employee Name</label><input type="text" name="searchQuery" value={filters.searchQuery} onChange={handleFilterChange} placeholder="Search by name..." /></div>
+            <div className="leaves_filter_group"><label>Leave Type</label><select name="leaveType" value={filters.leaveType} onChange={handleFilterChange}><option value="all">All</option>{leaveTypes.map(lt => <option key={lt.id} value={lt.id}>{lt.Name}</option>)}</select></div>
+            {/* <div className="leaves_filter_group"><label>From</label><input type="date" name="startDate" value={filters.startDate} onChange={handleFilterChange} /></div>
+            <div className="leaves_filter_group"><label>To</label><input type="date" name="endDate" value={filters.endDate} onChange={handleFilterChange} /></div> */}
+            <div className="leaves_filter_group"><label>Period</label><select name="period" value={filters.period} onChange={handleFilterChange}><option value="all">All</option><option value="am">Morning</option><option value="pm">Afternoon</option><option value="both">Full Day</option></select></div>
+            {/* <button onClick={resetFilters} className="leaves_button secondary">Reset</button> */}
         </div>
-        
+
         {filteredLeaves.length === 0 ? (
-          <p className="leaves_pending_message_info">No pending leave requests found.</p>
+          <p className="leaves_pending_message_info">No pending leaves match the current filters.</p>
         ) : (
           <>
             <div className="leaves_pending_table_wrapper">
               <table className="leaves_pending_table">
                 <thead>
-                  <tr>
-                    <th>Employee Name</th>
-                    <th>Leave Name</th>
-                    <th>Start Date</th>
-                    <th>End Date</th>
-                    <th>No. of Noons</th>
-                    <th>AM/PM</th>
-                    <th>Reason</th>
-                    <th>Action</th>
-                  </tr>
+                  <tr><th style={{width: '3%'}}></th><th>Employee Name</th><th>Leave Name</th><th>Start Date</th><th>End Date</th><th>Noons</th><th>Reason</th><th>Action</th></tr>
                 </thead>
                 <tbody>
                   {currentLeaves.map((leave) => (
                     <tr key={leave.id}>
-                      <td>{leave.employee_name}</td>
-                      <td>{leave.leave_name || 'Unknown Leave Type'}</td>
-                      <td>{formatDate(leave.startdate)}</td>
-                      <td>{formatDate(leave.enddate)}</td>
-                      <td>{leave.noofnoons}</td>
-                      <td>{leave.am_pm}</td>
-                      <td>{leave.description || 'No reason provided'}</td>
+                      <td className="leaves_indicator_cell"><span className={`leaves_status_indicator leaves_indicator_${leave.status}`}></span></td>
+                      <td>{leave.employee_name}</td><td>{leave.leave_name || 'N/A'}</td><td>{formatDate(leave.startdate)}</td><td>{formatDate(leave.enddate)}</td><td>{leave.noofnoons}</td><td>{leave.description || '--'}</td>
                       <td>
-                        <select
-                          className="leaves_pending_action_select"
-                          onChange={(e) => handleApproveChange(leave.id, leave.empid, e.target.value)}
-                          defaultValue=""
-                        >
-                          <option value="">Select Action</option>
-                          <option value="accept">Accept</option>
-                          <option value="reject">Reject</option>
-                        </select>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <button onClick={() => handleEditClick(leave)} className="leaves_button secondary" style={{padding: '5px 10px', fontSize: '12px', whiteSpace: 'nowrap'}}>Edit</button>
+                            <select className="leaves_pending_action_select" onChange={(e) => handleApproveChange(leave.id, leave.empid, e.target.value)} defaultValue="">
+                                <option value="">Action</option><option value="accept">Accept</option><option value="reject">Reject</option>
+                            </select>
+                        </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-
-            {filteredLeaves.length > itemsPerPage && (
-              <div className="leaves_pending_pagination_container">
-                <button className="leaves_pending_button" onClick={handlePrevPage} disabled={currentPage === 1}>
-                  &larr; Previous
-                </button>
-                <span className="leaves_pending_pagination_text">
-                  Page{' '}
-                  <input
-                    type="text"
-                    value={pageInputValue}
-                    onChange={handlePageInputChange}
-                    onKeyPress={handlePageInputKeyPress}
-                    className="leaves_pending_pagination_input"
-                  />{' '}
-                  of {totalPages}
-                </span>
-                <button className="leaves_pending_button" onClick={handleNextPage} disabled={currentPage === totalPages}>
-                  Next &rarr;
-                </button>
+            <div className="leaves_pagination_controls">
+              {totalPages > 1 && (
+                  <div className="leaves_pagination_container">
+                      <button className="leaves_button secondary" onClick={handlePrevPage} disabled={currentPage === 1}>&larr; Prev</button>
+                      <span className="leaves_pagination_text">
+                          Page <input type="number" value={pageInputValue} onChange={handlePageInputChange} onKeyPress={handlePageInputKeyPress} className="leaves_pagination_input" /> of {totalPages}
+                      </span>
+                      <button className="leaves_button secondary" onClick={handleNextPage} disabled={currentPage === totalPages}>Next &rarr;</button>
+                  </div>
+              )}
+              <div className="leaves_rows_per_page_container">
+                  <label>Rows per page:</label>
+                  <input type="number" value={itemsPerPageInput} onChange={handleItemsPerPageChange} onKeyPress={handleItemsPerPageKeyPress} className="leaves_rows_per_page_input" />
               </div>
-            )}
-            {filteredLeaves.length > 0 && (
-              <div className="leaves_pending_rows-per-page-container">
-                <label className="leaves_pending_rows-per-page-label">Rows/ Page</label>
-                <input
-                  type="text"
-                  value={itemsPerPageInput}
-                  onChange={handleItemsPerPageInputChange}
-                  onKeyPress={handleItemsPerPageInputKeyPress}
-                  className="leaves_pending_rows-per-page-input"
-                  aria-label="Number of rows per page"
-                />
-              </div>
-            )}
+            </div>
           </>
         )}
       </div>
     </div>
   );
 };
-
 export default PendingLeaveApprovals;

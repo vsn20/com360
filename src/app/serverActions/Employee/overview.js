@@ -4,6 +4,7 @@ import DBconnection from '@/app/utils/config/db';
 import { cookies } from 'next/headers';
 import fs from 'fs/promises';
 import path from 'path';
+import { start } from 'repl';
 
 const decodeJwt = (token) => {
   try {
@@ -25,6 +26,15 @@ const formatDate = (date) => {
     const day = String(d.getDate()).padStart(2, '0');
     return `${month}/${day}/${d.getFullYear()}`;
   };
+
+const formatDateToInput = (date) => {
+  if (!date || isNaN(new Date(date))) return '';
+  const d = new Date(date);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 
 export async function updateEmployee(prevState, formData) {
@@ -744,10 +754,21 @@ export async function fetchdocumentsbyid(empid) {
     const pool = await DBconnection();
     console.log("MySQL connection pool acquired");
     const [rows] = await pool.query(
-      `SELECT id, empid, orgid, document_name, document_type, document_path, document_purpose, 
-              created_by, updated_by, created_date, last_updated_date 
-       FROM C_EMP_DOCUMENTS 
-       WHERE empid = ? AND orgid = ?`,
+      `SELECT ed.id, ed.empid, ed.orgid, ed.document_name, 
+              ed.document_type as document_type_id,
+              COALESCE(gv_type.Name, ed.document_type) as document_type_name,
+              ed.document_path, 
+              ed.document_purpose as document_purpose_id,
+              COALESCE(gv_purpose.Name, ed.document_purpose) as document_purpose_name,
+              ed.created_by, ed.updated_by, ed.created_date, ed.last_updated_date,
+              ed.subtype as subtype_id,
+              COALESCE(gv_subtype.Name, ed.subtype) as subtype_name,
+              ed.startdate, ed.enddate, ed.comments 
+       FROM C_EMP_DOCUMENTS ed
+       LEFT JOIN C_GENERIC_VALUES gv_type ON ed.document_type = gv_type.id AND gv_type.g_id = 18 AND gv_type.orgid = ed.orgid
+       LEFT JOIN C_GENERIC_VALUES gv_purpose ON ed.document_purpose = gv_purpose.id AND gv_purpose.g_id = 20 AND gv_purpose.orgid = ed.orgid
+       LEFT JOIN C_GENERIC_VALUES gv_subtype ON ed.subtype = gv_subtype.id AND gv_subtype.g_id = 19 AND gv_subtype.orgid = ed.orgid
+       WHERE ed.empid = ? AND ed.orgid = ?`,
       [empid, orgId]
     );
 
@@ -756,10 +777,12 @@ export async function fetchdocumentsbyid(empid) {
       return [];
     }
 
-    // Map over rows to format last_updated_date for each document
+    // Map over rows to format last_updated_date, startdate, and enddate for each document
     const formattedDocuments = rows.map((doc) => ({
       ...doc,
       last_updated_date: formatDate(doc.last_updated_date),
+      startdate: formatDateToInput(doc.startdate),
+      enddate: formatDateToInput(doc.enddate),
     }));
 
     console.log("Formatted document rows:", formattedDocuments);

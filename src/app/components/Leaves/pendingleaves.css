@@ -1,9 +1,8 @@
 /* === Page Layout & Title === */
 .leaves_pending_page_container {
-  position: relative; /* Establishes positioning context for the back button */
+  position: relative;
   padding-bottom: 20px;
 }
-
 .leaves_pending_page_title {
   font-size: 18px;
   color: #1f2937;
@@ -11,286 +10,156 @@
   font-weight: bold;
 }
 
-/* === Main Content Container (The Card) === */
+/* === Main Content Container === */
 .leaves_pending_container {
   padding: 24px;
   background-color: #fff;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  font-family: Arial, sans-serif;
-  overflow-x: hidden; /* Prevent horizontal overflow */
 }
 
-/* === Controls Header (Search) === */
-.leaves_pending_controls_header {
-  margin-bottom: 20px;
-}
-
+/* === Controls & Messages === */
+.leaves_pending_controls_header { margin-bottom: 20px; }
 .leaves_pending_search-input {
   padding: 8px 12px;
   border: 1px solid #ccc;
   border-radius: 4px;
-  font-size: 14px;
   width: 250px;
-  max-width: 100%; /* Prevent overflow on small screens */
-  box-sizing: border-box;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
-
-.leaves_pending_search-input:focus {
-  outline: none;
-  border-color: #0fd46c;
-  box-shadow: 0 0 0 2px rgba(15, 212, 108, 0.25);
-}
-
-/* === Messages === */
 .leaves_pending_message_success {
-  color: #155724;
-  background-color: #d4edda;
-  border: 1px solid #c3e6cb;
-  padding: 12px 16px;
-  border-radius: 4px;
-  margin-bottom: 20px;
+  color: #155724; background-color: #d4edda; border: 1px solid #c3e6cb;
+  padding: 12px; border-radius: 4px; margin-bottom: 20px;
 }
-.leaves_pending_message_info {
-  text-align: center;
-  padding: 40px;
-  color: #6b7280;
-  font-size: 14px;
-}
+.leaves_pending_message_info { text-align: center; padding: 40px; color: #6b7280; }
 
 /* === Table Styling === */
-.leaves_pending_table_wrapper {
-  overflow-x: hidden; /* Remove horizontal scroll */
-  width: 100%;
-}
-
-.leaves_pending_table {
-  width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed; /* Fixed layout to control column widths */
-  /* Remove white-space: nowrap to allow text wrapping */
-}
-
-.leaves_pending_table th,
-.leaves_pending_table td {
-  padding: 12px 8px; /* Reduced padding to save space */
+.leaves_pending_table_wrapper { overflow-x: auto; }
+.leaves_pending_table { width: 100%; border-collapse: collapse; }
+.leaves_pending_table th, .leaves_pending_table td {
+  padding: 12px;
   text-align: left;
   border-bottom: 1px solid #f3f4f6;
-  font-size: 13px; /* Slightly smaller font */
-  color: #374151;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  vertical-align: top;
+  white-space: nowrap;
 }
+.leaves_pending_table th { background-color: #f8fafc; font-weight: 600; }
 
-.leaves_pending_table th {
-  background-color: #f8fafc;
-  font-weight: 600;
-  border-bottom: 2px solid #e5e7eb;
-  white-space: nowrap; /* Keep headers single line */
+/* **NEW**: Styles for status indicator dot */
+.leaves_indicator_cell {
+    width: 20px;
+    padding-right: 0;
 }
-
-.leaves_pending_table tbody tr:hover {
-  background-color: #f8fafc;
+.leaves_status_indicator {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
-
-/* === Specific Column Widths === */
-.leaves_pending_table th:nth-child(1),
-.leaves_pending_table td:nth-child(1) { /* Employee Name */
-  width: 18%;
-  min-width: 120px;
-}
-
-.leaves_pending_table th:nth-child(2),
-.leaves_pending_table td:nth-child(2) { /* Leave Name */
-  width: 15%;
-  min-width: 100px;
-}
-
-.leaves_pending_table th:nth-child(3),
-.leaves_pending_table td:nth-child(3) { /* Start Date */
-  width: 12%;
-  min-width: 90px;
-}
-
-.leaves_pending_table th:nth-child(4),
-.leaves_pending_table td:nth-child(4) { /* End Date */
-  width: 12%;
-  min-width: 90px;
-}
-
-.leaves_pending_table th:nth-child(5),
-.leaves_pending_table td:nth-child(5) { /* No. of Noons */
-  width: 10%;
-  min-width: 70px;
-  text-align: center;
-}
-
-.leaves_pending_table th:nth-child(6),
-.leaves_pending_table td:nth-child(6) { /* AM/PM */
-  width: 8%;
-  min-width: 60px;
-  text-align: center;
-}
-
-.leaves_pending_table th:nth-child(7),
-.leaves_pending_table td:nth-child(7) { /* Reason */
-  width: 15%;
-  min-width: 80px;
-  max-width: 120px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.leaves_pending_table th:nth-child(8),
-.leaves_pending_table td:nth-child(8) { /* Action */
-  width: 15%;
-  min-width: 100px;
-}
+.leaves_indicator_accepted { background-color: #0fd46c; }
+.leaves_indicator_pending { background-color: #f59e0b; }
+.leaves_indicator_rejected { background-color: #dc2626; }
 
 /* === Action Select Dropdown === */
 .leaves_pending_action_select {
   padding: 6px 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
-  font-size: 12px;
-  background-color: #fff;
-  width: 100%;
-  max-width: 100px;
-  box-sizing: border-box;
-  transition: all 0.2s ease;
-}
-
-.leaves_pending_action_select:focus {
-  outline: none;
-  border-color: #0fd46c;
-  box-shadow: 0 0 0 2px rgba(15, 212, 108, 0.25);
 }
 
 /* === Back Button === */
 .leaves_back_button {
-  position: absolute !important;
-  top: 5px;
-  right: 0;
-  padding: 8px 12px 8px 8px !important;
-  background-color: transparent !important;
-  color: #6c757d !important;
-  border: 1px solid #dee2e6 !important;
-  border-radius: 20px !important;
-  cursor: pointer !important;
-  font-size: 14px !important;
-  font-family: Arial, sans-serif !important;
-  font-weight: 500 !important;
-  text-decoration: none !important;
-  transition: all 0.3s ease !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 6px !important;
+  position: absolute !important; top: 5px; right: 0;
+  /* ... other back button styles */
 }
-.leaves_back_button::before { content: '‹' !important; font-size: 18px  !important; font-weight: bold !important; color: #6c757d !important; transition: color 0.3s ease !important; }
-.leaves_back_button::after { content: 'Back' !important; font-size: 13px !important; }
-.leaves_back_button:hover { background-color: #f8f9fa !important; border-color: #6c757d !important; color: #495057 !important; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important; transform: translateX(-2px) !important; }
-.leaves_back_button:hover::before { color: #495057 !important; }
 
-/* === Pagination Controls === */
-.leaves_pending_pagination_container {
+/* === Pagination & Rows Per Page === */
+.leaves_pagination_controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+    padding: 0 10px;
+}
+.leaves_pagination_container {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-top: 24px;
-  gap: 10px;
-  flex-wrap: wrap;
+  gap: 12px;
 }
-.leaves_pending_pagination_input {
-  width: 40px;
+.leaves_pagination_input {
+  width: 50px;
   text-align: center;
-  border: 1px solid #ccc;
+  border: 1px solid #d1d5db;
   border-radius: 4px;
-  padding: 6px;
-  font-size: 14px;
+  padding: 8px 6px;
 }
-.leaves_pending_pagination_text { font-size: 14px; color: #333; }
-.leaves_pending_button {
-  background-color: #26dd0e;
-  border: 1px solid #ccc;
-  color: black !important;
-  padding: 5px 16px;
-  border-radius: 5px;
+.leaves_pagination_text { font-size: 14px; }
+.leaves_rows_per_page_container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.leaves_rows_per_page_container label { font-size: 14px; }
+.leaves_rows_per_page_input {
+    width: 60px;
+    padding: 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+}
+.leaves_button.secondary {
+  background-color: #fff;
+  border: 1px solid #d1d5db;
+  color: #374151 !important;
+  padding: 8px 16px;
+  border-radius: 4px;
   cursor: pointer;
-  font-size: 14px;
-  transition: all 0.2s ease;
 }
-.leaves_pending_button:hover:not(:disabled) { background-color: #17da21; border-color: #9ca3af; }
-.leaves_pending_button:disabled { background-color: #cccccc; cursor: not-allowed; }
-
-/* === Rows Per Page Input === */
-.leaves_pending_rows-per-page-container {
+.leaves_button:disabled {
+  background-color: #e5e7eb;
+  cursor: not-allowed;
+}
+/* === Filters Section (Add to both CSS files) === */
+.leaves_filters_container {
   display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 10px;
-  margin-top: 16px;
   flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-end; /* Aligns items to the bottom */
+  padding: 16px;
+  background-color: #f8fafc;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  border: 1px solid #e5e7eb;
 }
-.leaves_pending_rows-per-page-label {
-  font-size: 14px;
-  color: #333;
-  font-weight: 500;
+
+.leaves_filter_group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 150px;
+  flex-grow: 1;
 }
-.leaves_pending_rows-per-page-input {
-  width: 60px;
-  padding: 8px;
-  border: 1px solid #ccc;
+
+.leaves_filter_group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #4b5563;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.leaves_filter_group select,
+.leaves_filter_group input {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
   border-radius: 4px;
   font-size: 14px;
-  text-align: center;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-.leaves_pending_rows-per-page-input:focus {
-  outline: none;
-  border-color: #0fd46c;
-  box-shadow: 0 0 0 2px rgba(15, 212, 108, 0.25);
+  background-color: #fff;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-/* === Responsive Design === */
-@media (max-width: 768px) {
-  .leaves_pending_container {
-    padding: 16px;
-  }
-  
-  .leaves_pending_search-input {
-    width: 100%;
-  }
-  
-  .leaves_pending_table th,
-  .leaves_pending_table td {
-    padding: 8px 4px;
-    font-size: 12px;
-  }
-  
-  /* Stack headers vertically on very small screens */
-  .leaves_pending_table th:nth-child(7),
-  .leaves_pending_table td:nth-child(7) { /* Reason column gets more space on mobile */
-    max-width: none;
-    white-space: normal;
-  }
-}
-
-@media (max-width: 480px) {
-  .leaves_pending_table {
-    font-size: 11px;
-  }
-  
-  .leaves_pending_table th,
-  .leaves_pending_table td {
-    padding: 6px 2px;
-  }
-  
-  .leaves_pending_action_select {
-    font-size: 11px;
-    padding: 4px 6px;
-    max-width: 80px;
-  }
+.leaves_filters_container .leaves_button.secondary {
+    padding-top: 8px;
+    padding-bottom: 8px;
+    flex-shrink: 0; /* Prevents button from shrinking */
 }

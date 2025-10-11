@@ -17,7 +17,20 @@ const decodeJwt = (token) => {
   }
 };
 
-// ... addDocument function remains unchanged ...
+const compareDates = (startStr, endStr) => {
+  if (!startStr || !endStr) return true; // Skip if either is missing
+
+  // Parse to Date objects, focusing on date part only
+  const startDate = new Date(startStr);
+  const endDate = new Date(endStr);
+
+  // Compare only date parts (ignore time)
+  startDate.setHours(0, 0, 0, 0);
+  endDate.setHours(0, 0, 0, 0);
+
+  return startDate <= endDate;
+};
+
 export async function addDocument(formData) {
   try {
     const cookieStore = cookies();
@@ -39,31 +52,48 @@ export async function addDocument(formData) {
       throw new Error('Employee ID is required.');
     }
 
-    const documentName = formData.get('documentName') || '';
-    const documentPurpose = formData.get('documentPurpose') || '';
+    const documentName = formData.get('documentName') || null;
+    const documentType = formData.get('documentType') || null;
+    const subtype = formData.get('subtype') || null;
+    const documentPurpose = formData.get('documentPurpose') || null;
+    let startdate = formData.get('startdate') || null;
+    let enddate = formData.get('enddate') || null;
+    const comments = formData.get('comments') || null;
     const file = formData.get('file');
 
     if (!file) {
       throw new Error('File is required for document upload.');
     }
 
+    // Validate startdate <= enddate
+    if (!compareDates(startdate, enddate)) {
+      throw new Error('Start date must be less than or equal to end date.');
+    }
+
+    // Handle date formatting for DB (add time if only date provided)
+    if (startdate && !startdate.includes(' ')) {
+      startdate += ' 00:00:00';
+    }
+    if (enddate && !enddate.includes(' ')) {
+      enddate += ' 00:00:00';
+    }
+
     const extension = file.name.split('.').pop().toLowerCase();
-    const uniqueSuffix = Date.now(); // Add timestamp for uniqueness
-    const filename = `${empId}_${documentName || file.name.replace(/\.[^/.]+$/, '')}_${uniqueSuffix}.${extension}`;
+    const uniqueSuffix = Date.now();
+    const filename = `${empId}_${documentName?.replace(/[^a-zA-Z0-9]/g, '_') || file.name.replace(/\.[^/.]+$/, '')}_${uniqueSuffix}.${extension}`;
     const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'documents');
     const filePath = path.join(uploadDir, filename);
 
     await fs.mkdir(uploadDir, { recursive: true });
     await fs.writeFile(filePath, Buffer.from(await file.arrayBuffer()));
 
-    const documentType = extension === 'pdf' ? 'pdf' : extension === 'jpg' ? 'jpg' : extension === 'jpeg' ? 'jpeg' : 'unknown';
     const documentPath = `/uploads/documents/${filename}`;
 
     const pool = await DBconnection();
     const [result] = await pool.query(
-      `INSERT INTO C_EMP_DOCUMENTS (empid, orgid, document_name, document_type, document_path, document_purpose, created_by, updated_by, created_date, last_updated_date)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-      [empId, orgId, documentName, documentType, documentPath, documentPurpose, userId, userId]
+      `INSERT INTO C_EMP_DOCUMENTS (empid, orgid, document_name, document_type, subtype, document_path, document_purpose, comments, startdate, enddate, created_by, updated_by, created_date, last_updated_date)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+      [empId, orgId, documentName, documentType, subtype, documentPath, documentPurpose, comments, startdate, enddate, userId, userId]
     );
     return result.insertId;
   } catch (error) {
@@ -72,8 +102,6 @@ export async function addDocument(formData) {
   }
 }
 
-
-// <-- MODIFIED: The update function now handles file replacement
 export async function updateDocument(formData) {
   try {
     const cookieStore = cookies();
@@ -96,22 +124,62 @@ export async function updateDocument(formData) {
       throw new Error('Document ID and Employee ID are required.');
     }
 
-    const documentName = formData.get('documentName');
-    const documentPurpose = formData.get('documentPurpose');
+    const documentName = formData.get('documentName') || null;
+    const documentType = formData.get('documentType') || null;
+    const subtype = formData.get('subtype') || null;
+    const documentPurpose = formData.get('documentPurpose') || null;
+    let comments = formData.get('comments') || null;
+    let startdate = formData.get('startdate') || null;
+    let enddate = formData.get('enddate') || null;
     const file = formData.get('file');
     const oldDocumentPath = formData.get('oldDocumentPath');
+
+    // Validate startdate <= enddate
+    if (!compareDates(startdate, enddate)) {
+      throw new Error('Start date must be less than or equal to end date.');
+    }
+
+    // Handle date formatting for DB
+    if (startdate && !startdate.includes(' ')) {
+      startdate += ' 00:00:00';
+    }
+    if (enddate && !enddate.includes(' ')) {
+      enddate += ' 00:00:00';
+    }
 
     const pool = await DBconnection();
     let updateQuery = `UPDATE C_EMP_DOCUMENTS SET updated_by = ?, last_updated_date = NOW()`;
     const params = [userId];
 
-    if (documentName) {
+    // Always update these fields if provided (set to null if empty)
+    const safeValue = (val) => val || null;
+    if (documentName !== undefined) {
       updateQuery += ', document_name = ?';
-      params.push(documentName);
+      params.push(safeValue(documentName));
     }
-    if (documentPurpose) {
+    if (documentType !== undefined) {
+      updateQuery += ', document_type = ?';
+      params.push(safeValue(documentType));
+    }
+    if (subtype !== undefined) {
+      updateQuery += ', subtype = ?';
+      params.push(safeValue(subtype));
+    }
+    if (documentPurpose !== undefined) {
       updateQuery += ', document_purpose = ?';
-      params.push(documentPurpose);
+      params.push(safeValue(documentPurpose));
+    }
+    if (comments !== undefined) {
+      updateQuery += ', comments = ?';
+      params.push(safeValue(comments));
+    }
+    if (startdate !== undefined) {
+      updateQuery += ', startdate = ?';
+      params.push(safeValue(startdate));
+    }
+    if (enddate !== undefined) {
+      updateQuery += ', enddate = ?';
+      params.push(safeValue(enddate));
     }
 
     // If a new file is uploaded, handle deletion of old and saving of new
@@ -126,20 +194,18 @@ export async function updateDocument(formData) {
 
       // 2. Save the new file
       const extension = file.name.split('.').pop().toLowerCase();
-      const uniqueSuffix = Date.now(); // Add timestamp for uniqueness
-      const filename = `${empId}_${documentName || file.name.replace(/\.[^/.]+$/, '')}_${uniqueSuffix}.${extension}`;
+      const uniqueSuffix = Date.now();
+      const filename = `${empId}_${documentName?.replace(/[^a-zA-Z0-9]/g, '_') || file.name.replace(/\.[^/.]+$/, '')}_${uniqueSuffix}.${extension}`;
       const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'documents');
       const newFilePath = path.join(uploadDir, filename);
 
       await fs.mkdir(uploadDir, { recursive: true });
       await fs.writeFile(newFilePath, Buffer.from(await file.arrayBuffer()));
 
-      // 3. Prepare new path and type for database update
-      const documentType = extension === 'pdf' ? 'pdf' : extension === 'jpg' ? 'jpg' : extension === 'jpeg' ? 'jpeg' : 'unknown';
+      // 3. Update path (type is handled separately above)
       const documentPath = `/uploads/documents/${filename}`;
-
-      updateQuery += ', document_type = ?, document_path = ?';
-      params.push(documentType, documentPath);
+      updateQuery += ', document_path = ?';
+      params.push(documentPath);
     }
 
     updateQuery += ' WHERE id = ? AND empid = ? AND orgid = ?';
@@ -156,7 +222,6 @@ export async function updateDocument(formData) {
   }
 }
 
-// <-- IMPROVED: More robust file path handling
 export async function deleteDocument(id) {
   try {
     const cookieStore = cookies();

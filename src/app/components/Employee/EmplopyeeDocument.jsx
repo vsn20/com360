@@ -4,16 +4,22 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { addDocument, updateDocument, deleteDocument } from '@/app/serverActions/Employee/employeedocuments';
 import styles from './document.module.css';
 
-const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate }) => {
+const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate, document_types, document_purposes, document_subtypes }) => {
   const [editing, setEditing] = useState(false);
+  const [isViewOnly, setIsViewOnly] = useState(false);
   const [error, setError] = useState(null);
   const [newDocument, setNewDocument] = useState({
     documentName: '',
     documentType: '',
+    subtype: '',
     documentPurpose: '',
+    startdate: '',
+    enddate: '',
+    comments: '',
     file: null,
   });
   const [editDocument, setEditDocument] = useState(null);
+  const [originalDocument, setOriginalDocument] = useState(null);
   const [editFile, setEditFile] = useState(null);
   const [allDocuments, setAllDocuments] = useState(Array.isArray(initialDocuments) ? initialDocuments : []);
   const [sortConfig, setSortConfig] = useState({ column: 'document_name', direction: 'asc' });
@@ -23,9 +29,53 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
   const [documentsPerPageInput, setDocumentsPerPageInput] = useState('5');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('all');
+  const [filterSubtype, setFilterSubtype] = useState('all');
+  const [filterPurpose, setFilterPurpose] = useState('all');
 
-  // <-- ADDED: Define max file size for reuse
   const MAX_FILE_SIZE_BYTES = 1 * 1024 * 1024; // 1 MB
+
+  /**
+   * A single, robust function to format dates.
+   * @param {string | Date} dateStr - The date string or Date object.
+   * @param {'input' | 'display'} formatType - 'input' for YYYY-MM-DD, 'display' for MM/DD/YYYY.
+   * @returns {string} The formatted date string.
+   */
+  const formatDate = (dateStr, formatType = 'input') => {
+    if (!dateStr) {
+      return formatType === 'display' ? 'N/A' : '';
+    }
+
+    let datePart;
+    if (dateStr instanceof Date) {
+      datePart = dateStr.toISOString().split('T')[0]; // Convert Date to YYYY-MM-DD string
+    } else if (typeof dateStr === 'string') {
+      datePart = dateStr;
+    } else {
+      return formatType === 'display' ? 'N/A' : '';
+    }
+
+    // Now datePart is a string
+    const parts = datePart.split(/[-/]/);
+    if (parts.length !== 3) {
+      return formatType === 'display' ? 'N/A' : '';
+    }
+
+    let year, month, day;
+    if (datePart.includes('-')) {
+      // YYYY-MM-DD
+      [year, month, day] = parts;
+    } else {
+      // MM/DD/YYYY
+      [month, day, year] = parts;
+    }
+
+    if (formatType === 'display') {
+      return `${month}/${day}/${year}`;
+    }
+
+    // For input, return YYYY-MM-DD
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  };
 
   useEffect(() => {
     setAllDocuments(Array.isArray(initialDocuments) ? initialDocuments : []);
@@ -35,23 +85,50 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
     setPageInputValue(currentPage.toString());
   }, [currentPage]);
 
+  const handleCancel = () => {
+    if (editDocument && !isViewOnly) {
+      // Cancel editing existing document: revert to original and go to view mode
+      setEditDocument({ ...originalDocument });
+      setEditFile(null);
+      setIsViewOnly(true);
+      setError(null);
+    } else if (editDocument && isViewOnly) {
+      // Back to list from view mode
+      setEditing(false);
+      setEditDocument(null);
+      setOriginalDocument(null);
+      setIsViewOnly(false);
+      setEditFile(null);
+      setError(null);
+    } else {
+      // Cancel adding new document
+      setNewDocument({
+        documentName: '',
+        documentType: '',
+        subtype: '',
+        documentPurpose: '',
+        startdate: '',
+        enddate: '',
+        comments: '',
+        file: null,
+      });
+      setEditing(false);
+      setError(null);
+    }
+  };
+
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // <-- ADDED: File size validation
       if (file.size > MAX_FILE_SIZE_BYTES) {
         setError('File size cannot exceed 1 MB.');
-        e.target.value = null; // Clear the invalid file from input
+        e.target.value = null;
         return;
       }
-      setError(null); // Clear any previous errors
-
-      const extension = file.name.split('.').pop().toLowerCase();
-      const type = extension === 'pdf' ? 'pdf' : extension === 'jpg' ? 'jpg' : extension === 'jpeg' ? 'jpeg' : 'unknown';
+      setError(null);
       setNewDocument({
         ...newDocument,
         file,
-        documentType: type,
       });
     }
   };
@@ -59,36 +136,45 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
   const handleEditFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // <-- ADDED: File size validation
       if (file.size > MAX_FILE_SIZE_BYTES) {
         setError('File size cannot exceed 1 MB.');
-        e.target.value = null; // Clear the invalid file from input
+        e.target.value = null;
         return;
       }
-      setError(null); // Clear any previous errors
-
+      setError(null);
       setEditFile(file);
-      const extension = file.name.split('.').pop().toLowerCase();
-      const type = extension === 'pdf' ? 'pdf' : extension === 'jpg' ? 'jpg' : extension === 'jpeg' ? 'jpeg' : 'unknown';
-      setEditDocument({ ...editDocument, document_type: type });
     }
   };
 
   const handleAddDocument = async (e) => {
     e.preventDefault();
-    if (!newDocument.file) {
-      setError('Please select a file to upload.');
+    if (!newDocument.file || !newDocument.documentType || !newDocument.subtype) {
+      setError('Please fill required fields: Type, Subtype, and select a file.');
       return;
     }
     const formData = new FormData();
     formData.append('empid', id);
-    formData.append('documentName', newDocument.documentName || newDocument.file.name.replace(/\.[^/.]+$/, ''));
+    formData.append('documentName', newDocument.documentName);
+    formData.append('documentType', newDocument.documentType);
+    formData.append('subtype', newDocument.subtype);
     formData.append('documentPurpose', newDocument.documentPurpose);
+    formData.append('startdate', newDocument.startdate ? `${newDocument.startdate} 00:00:00` : null);
+    formData.append('enddate', newDocument.enddate ? `${newDocument.enddate} 00:00:00` : null);
+    formData.append('comments', newDocument.comments);
     formData.append('file', newDocument.file);
 
     try {
       await addDocument(formData);
-      setNewDocument({ documentName: '', documentType: '', documentPurpose: '', file: null });
+      setNewDocument({ 
+        documentName: '',
+        documentType: '',
+        subtype: '',
+        documentPurpose: '',
+        startdate: '',
+        enddate: '',
+        comments: '',
+        file: null 
+      });
       setEditing(false);
       if (onDocumentsUpdate) onDocumentsUpdate();
       setError(null);
@@ -99,12 +185,17 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
 
   const handleUpdateDocument = async (e) => {
     e.preventDefault();
-    if (!editDocument) return;
+    if (!editDocument || !editDocument.subtype_id) return;
     const formData = new FormData();
     formData.append('id', editDocument.id);
     formData.append('empid', id);
     formData.append('documentName', editDocument.document_name);
-    formData.append('documentPurpose', editDocument.document_purpose);
+    formData.append('documentType', editDocument.document_type_id);
+    formData.append('subtype', editDocument.subtype_id);
+    formData.append('documentPurpose', editDocument.document_purpose_id);
+    formData.append('startdate', editDocument.startdate ? `${formatDate(editDocument.startdate)} 00:00:00` : null);
+    formData.append('enddate', editDocument.enddate ? `${formatDate(editDocument.enddate)} 00:00:00` : null);
+    formData.append('comments', editDocument.comments);
 
     if (editFile) {
       formData.append('file', editFile);
@@ -114,8 +205,10 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
     try {
       await updateDocument(formData);
       setEditDocument(null);
+      setOriginalDocument(null);
       setEditFile(null);
       setEditing(false);
+      setIsViewOnly(false);
       if (onDocumentsUpdate) onDocumentsUpdate();
       setError(null);
     } catch (err) {
@@ -124,8 +217,15 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
   };
 
   const handleDeleteDocument = async (docId) => {
+    if (!window.confirm("Are you sure you want to delete this document? This action cannot be undone.")) {
+      return;
+    }
     try {
       await deleteDocument(docId);
+      setEditing(false);
+      setEditDocument(null);
+      setOriginalDocument(null);
+      setIsViewOnly(false);
       if (onDocumentsUpdate) onDocumentsUpdate();
       setError(null);
     } catch (err) {
@@ -134,8 +234,8 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
   };
 
   const handleDocumentClick = (path) => {
-    if (path && path.toLowerCase().endsWith('.pdf')) {
-      window.open(path, '_blank');
+    if (path) {
+      window.open(path, '_blank', 'noopener,noreferrer');
     }
   };
 
@@ -147,12 +247,24 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
         bValue = (b.document_name || '').toLowerCase();
         return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
       case 'document_type':
-        aValue = (a.document_type || '').toLowerCase();
-        bValue = (b.document_type || '').toLowerCase();
+        aValue = (a.document_type_name || '').toLowerCase();
+        bValue = (b.document_type_name || '').toLowerCase();
         return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
-      case 'last_updated_date':
-        aValue = a.last_updated_date ? new Date(a.last_updated_date) : new Date(0);
-        bValue = b.last_updated_date ? new Date(b.last_updated_date) : new Date(0);
+      case 'subtype':
+        aValue = (a.subtype_name || '').toLowerCase();
+        bValue = (b.subtype_name || '').toLowerCase();
+        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      case 'document_purpose':
+        aValue = (a.document_purpose_name || '').toLowerCase();
+        bValue = (b.document_purpose_name || '').toLowerCase();
+        return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      case 'startdate':
+        aValue = a.startdate ? new Date(formatDate(a.startdate)) : new Date(0);
+        bValue = b.startdate ? new Date(formatDate(b.startdate)) : new Date(0);
+        return direction === 'asc' ? aValue - bValue : bValue - aValue;
+      case 'enddate':
+        aValue = a.enddate ? new Date(formatDate(a.enddate)) : new Date(0);
+        bValue = b.enddate ? new Date(formatDate(b.enddate)) : new Date(0);
         return direction === 'asc' ? aValue - bValue : bValue - aValue;
       default:
         return 0;
@@ -219,13 +331,25 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
     setCurrentPage(1);
   };
 
+  const handleFilterSubtypeChange = (e) => {
+    setFilterSubtype(e.target.value);
+    setCurrentPage(1);
+  };
+
+  const handleFilterPurposeChange = (e) => {
+    setFilterPurpose(e.target.value);
+    setCurrentPage(1);
+  };
+
   const filteredDocuments = useMemo(() => {
     return (Array.isArray(allDocuments) ? allDocuments : []).filter((doc) => {
       const matchesSearch = doc.document_name?.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesType = filterType === 'all' || doc.document_type === filterType;
-      return matchesSearch && matchesType;
+      const matchesType = filterType === 'all' || String(doc.document_type_id) === filterType;
+      const matchesSubtype = filterSubtype === 'all' || String(doc.subtype_id) === filterSubtype;
+      const matchesPurpose = filterPurpose === 'all' || String(doc.document_purpose_id) === filterPurpose;
+      return matchesSearch && matchesType && matchesSubtype && matchesPurpose;
     });
-  }, [allDocuments, searchQuery, filterType]);
+  }, [allDocuments, searchQuery, filterType, filterSubtype, filterPurpose]);
 
   const sortedDocuments = useMemo(() => {
     return [...filteredDocuments].sort((a, b) => sortDocuments(a, b, sortConfig.column, sortConfig.direction));
@@ -237,9 +361,11 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
   const currentDocuments = sortedDocuments.slice(indexOfFirstDocument, indexOfLastDocument);
 
   return (
-    <div >
+    <div>
       <div className={styles.titleContainer}>
-        <h3 className={styles.title}>Employee Documents</h3>
+        <h3 className={styles.title}>
+          {editing ? (isViewOnly ? 'Document Details' : (editDocument ? 'Edit Document' : 'Add New Document')) : 'Employee Documents'}
+        </h3>
         {!editing && (
           <button className={`${styles.button} ${styles.addButton}`} onClick={() => setEditing(true)}>
             Add Document
@@ -252,7 +378,7 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
         <form onSubmit={editDocument ? handleUpdateDocument : handleAddDocument} className={styles.form}>
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Name*</label>
+              <label className={styles.formLabel}>Name</label>
               <input
                 type="text"
                 value={editDocument ? editDocument.document_name : newDocument.documentName}
@@ -261,51 +387,189 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
                     ? setEditDocument({ ...editDocument, document_name: e.target.value })
                     : setNewDocument({ ...newDocument, documentName: e.target.value })
                 }
-                required
                 className={styles.formInput}
+                disabled={isViewOnly}
               />
             </div>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Type*</label>
-              <input
-                type="text"
-                value={editDocument ? editDocument.document_type : newDocument.documentType}
-                disabled
-                className={`${styles.formInput} ${styles.formInput}:disabled`}
-              />
+              <select
+                value={editDocument ? String(editDocument.document_type_id) : newDocument.documentType}
+                onChange={(e) =>
+                  editDocument
+                    ? setEditDocument({ ...editDocument, document_type_id: e.target.value })
+                    : setNewDocument({ ...newDocument, documentType: e.target.value })
+                }
+                required
+                className={styles.formInput}
+                disabled={isViewOnly}
+              >
+                <option value="">Select Type</option>
+                {document_types.map((type) => (
+                  <option key={type.id} value={type.id}>
+                    {type.Name}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Purpose*</label>
-              <input
-                type="text"
-                value={editDocument ? editDocument.document_purpose : newDocument.documentPurpose}
+              <label className={styles.formLabel}>Subtype*</label>
+              <select
+                value={editDocument ? String(editDocument.subtype_id) : newDocument.subtype}
                 onChange={(e) =>
                   editDocument
-                    ? setEditDocument({ ...editDocument, document_purpose: e.target.value })
-                    : setNewDocument({ ...newDocument, documentPurpose: e.target.value })
+                    ? setEditDocument({ ...editDocument, subtype_id: e.target.value })
+                    : setNewDocument({ ...newDocument, subtype: e.target.value })
                 }
                 required
                 className={styles.formInput}
+                disabled={isViewOnly}
+              >
+                <option value="">Select Subtype</option>
+                {document_subtypes.map((st) => (
+                  <option key={st.id} value={st.id}>
+                    {st.Name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Purpose</label>
+              <select
+                value={editDocument ? String(editDocument.document_purpose_id) : newDocument.documentPurpose}
+                onChange={(e) =>
+                  editDocument
+                    ? setEditDocument({ ...editDocument, document_purpose_id: e.target.value })
+                    : setNewDocument({ ...newDocument, documentPurpose: e.target.value })
+                }
+                className={styles.formInput}
+                disabled={isViewOnly}
+              >
+                <option value="">Select Purpose</option>
+                {document_purposes.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.Name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className={styles.formRow}>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Start Date</label>
+              <input
+                type="date"
+                value={editDocument ? formatDate(editDocument.startdate) : newDocument.startdate}
+                onChange={(e) =>
+                  editDocument
+                    ? setEditDocument({ ...editDocument, startdate: e.target.value })
+                    : setNewDocument({ ...newDocument, startdate: e.target.value })
+                }
+                className={styles.formInput}
+                disabled={isViewOnly}
               />
             </div>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>End Date</label>
+              <input
+                type="date"
+                value={editDocument ? formatDate(editDocument.enddate) : newDocument.enddate}
+                onChange={(e) =>
+                  editDocument
+                    ? setEditDocument({ ...editDocument, enddate: e.target.value })
+                    : setNewDocument({ ...newDocument, enddate: e.target.value })
+                }
+                className={styles.formInput}
+                disabled={isViewOnly}
+              />
+            </div>
+          </div>
+          <div className={styles.formRow}>
+            <div className={`${styles.formGroup} ${styles.fullWidth}`}>
+              <label className={styles.formLabel}>Comments</label>
+              <textarea
+                value={editDocument ? (editDocument.comments || '') : newDocument.comments}
+                onChange={(e) =>
+                  editDocument
+                    ? setEditDocument({ ...editDocument, comments: e.target.value })
+                    : setNewDocument({ ...newDocument, comments: e.target.value })
+                }
+                className={styles.textarea}
+                disabled={isViewOnly}
+              />
+            </div>
+          </div>
+          {editDocument && isViewOnly && (
+            <>
+              <div className={styles.formRow}>
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>Created By</label>
+                  <input
+                    type="text"
+                    value={editDocument.created_by || 'N/A'}
+                    disabled
+                    className={styles.formInput}
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>Created Date</label>
+                  <input
+                    type="text"
+                    value={formatDate(editDocument.created_date, 'display')}
+                    disabled
+                    className={styles.formInput}
+                  />
+                </div>
+              </div>
+              <div className={styles.formRow}>
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>Last Updated By</label>
+                  <input
+                    type="text"
+                    value={editDocument.updated_by || 'N/A'}
+                    disabled
+                    className={styles.formInput}
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>Last Updated Date</label>
+                  <input
+                    type="text"
+                    value={formatDate(editDocument.last_updated_date, 'display')}
+                    disabled
+                    className={styles.formInput}
+                  />
+                </div>
+              </div>
+            </>
+          )}
+          <div className={styles.formRow}>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>File</label>
               {editDocument ? (
                 <div>
                   <div className={styles.fileName}>
-                    Current: {editDocument.document_path.split('/').pop()}
+                    Current:{' '}
+                    <a
+                      href={editDocument.document_path}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={styles.attachmentLink}
+                    >
+                      {editDocument.document_path.split('/').pop()}
+                    </a>
                   </div>
-                  <input
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg"
-                    onChange={handleEditFileChange}
-                    className={styles.fileInput}
-                  />
+                  {!isViewOnly && (
+                    <input
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg"
+                      onChange={handleEditFileChange}
+                      className={styles.fileInput}
+                    />
+                  )}
                   {editFile && <div className={styles.fileName}>New: {editFile.name}</div>}
-
-                  {/* <-- ADDED: Overwrite warning message --> */}
                   {editFile && (
                     <p className={styles.warningMessage}>
                       ⚠️ Warning: Saving will permanently replace the original file.
@@ -324,20 +588,34 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
             </div>
           </div>
           <div className={styles.formButtons}>
-            <button type="submit" className={`${styles.button} ${styles.saveButton}`}>
-              {editDocument ? 'Save' : 'Add Document'}
-            </button>
+            {isViewOnly ? (
+              <>
+                <button
+                  type="button"
+                  className={`${styles.button} ${styles.editButton}`}
+                  onClick={() => setIsViewOnly(false)}
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.button} ${styles.deleteButton}`}
+                  onClick={() => handleDeleteDocument(editDocument.id)}
+                >
+                  Delete
+                </button>
+              </>
+            ) : (
+              <button type="submit" className={`${styles.button} ${styles.saveButton}`}>
+                {editDocument ? 'Save' : 'Add Document'}
+              </button>
+            )}
             <button
               type="button"
               className={`${styles.button} ${styles.cancelButton}`}
-              onClick={() => {
-                setEditing(false);
-                setEditDocument(null);
-                setEditFile(null);
-                setError(null);
-              }}
+              onClick={handleCancel}
             >
-              Cancel
+              {isViewOnly ? 'Back to List' : 'Cancel'}
             </button>
           </div>
         </form>
@@ -353,10 +631,27 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
             />
             <select value={filterType} onChange={handleFilterChange} className={styles.filterSelect}>
               <option value="all">All Types</option>
-              <option value="pdf">PDF</option>
-              <option value="jpg">JPG</option>
-              <option value="jpeg">JPEG</option>
-              <option value="unknown">Unknown</option>
+              {document_types.map((type) => (
+                <option key={type.id} value={type.id}>
+                  {type.Name}
+                </option>
+              ))}
+            </select>
+            <select value={filterSubtype} onChange={handleFilterSubtypeChange} className={styles.filterSelect}>
+              <option value="all">All Subtypes</option>
+              {document_subtypes.map((st) => (
+                <option key={st.id} value={st.id}>
+                  {st.Name}
+                </option>
+              ))}
+            </select>
+            <select value={filterPurpose} onChange={handleFilterPurposeChange} className={styles.filterSelect}>
+              <option value="all">All Purposes</option>
+              {document_purposes.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.Name}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -381,41 +676,61 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate 
                         Type
                       </th>
                       <th
-                        className={`${styles.tableHeader} ${styles.sortable} ${sortConfig.column === 'last_updated_date' ? (sortConfig.direction === 'asc' ? styles.sortAsc : styles.sortDesc) : ''}`}
-                        onClick={() => requestSort('last_updated_date')}
+                        className={`${styles.tableHeader} ${styles.sortable} ${sortConfig.column === 'subtype' ? (sortConfig.direction === 'asc' ? styles.sortAsc : styles.sortDesc) : ''}`}
+                        onClick={() => requestSort('subtype')}
                       >
-                        Last Updated
+                        Subtype
                       </th>
-                      <th className={styles.tableHeader}>Purpose</th>
-                      <th className={styles.tableHeader}>Actions</th>
+                      <th className={styles.tableHeader}>Attachment</th>
+                      <th
+                        className={`${styles.tableHeader} ${styles.sortable} ${sortConfig.column === 'document_purpose' ? (sortConfig.direction === 'asc' ? styles.sortAsc : styles.sortDesc) : ''}`}
+                        onClick={() => requestSort('document_purpose')}
+                      >
+                        Purpose
+                      </th>
+                      <th
+                        className={`${styles.tableHeader} ${styles.sortable} ${sortConfig.column === 'startdate' ? (sortConfig.direction === 'asc' ? styles.sortAsc : styles.sortDesc) : ''}`}
+                        onClick={() => requestSort('startdate')}
+                      >
+                        Start Date
+                      </th>
+                      <th
+                        className={`${styles.tableHeader} ${styles.sortable} ${sortConfig.column === 'enddate' ? (sortConfig.direction === 'asc' ? styles.sortAsc : styles.sortDesc) : ''}`}
+                        onClick={() => requestSort('enddate')}
+                      >
+                        End Date
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {currentDocuments.map((d) => (
-                      <tr key={d.id} className={styles.tableRow}>
+                      <tr key={d.id} className={styles.tableRow} onClick={() => { 
+                        setOriginalDocument({ ...d }); 
+                        setEditDocument({ ...d }); 
+                        setEditing(true); 
+                        setIsViewOnly(true); 
+                      }} style={{ cursor: 'pointer' }}>
+                        <td className={styles.tableCell}>{d.document_name || 'N/A'}</td>
+                        <td className={styles.tableCell}>{d.document_type_name || 'N/A'}</td>
+                        <td className={styles.tableCell}>{d.subtype_name || 'N/A'}</td>
                         <td
-                          className={`${styles.tableCell} ${d.document_path && d.document_path.toLowerCase().endsWith('.pdf') ? styles.clickableCell : ''}`}
-                          onClick={() => handleDocumentClick(d.document_path)}
+                          className={styles.tableCell}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDocumentClick(d.document_path);
+                          }}
                         >
-                          {d.document_name || 'N/A'}
+                          {d.document_path ? (
+                            <a href={d.document_path} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+                              View Attachment
+                            </a>
+                          ) : (
+                            'N/A'
+                          )}
                         </td>
-                        <td className={styles.tableCell}>{d.document_type || 'N/A'}</td>
-                        <td className={styles.tableCell}>{d.last_updated_date || 'N/A'}</td>
-                        <td className={styles.tableCell}>{d.document_purpose || 'N/A'}</td>
-                        <td className={`${styles.tableCell} ${styles.actionsCell}`}>
-                          <button
-                            className={styles.editButton}
-                            onClick={() => {
-                              setEditing(true);
-                              setEditDocument({ ...d });
-                            }}
-                          >
-                            Edit
-                          </button>
-                          <button className={styles.deleteButton} onClick={() => handleDeleteDocument(d.id)}>
-                            Delete
-                          </button>
-                        </td>
+                        <td className={styles.tableCell}>{d.document_purpose_name || 'N/A'}</td>
+                        <td className={styles.tableCell}>{formatDate(d.startdate, 'display')}</td>
+                        <td className={styles.tableCell}>{formatDate(d.enddate, 'display')}</td>
                       </tr>
                     ))}
                   </tbody>

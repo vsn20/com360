@@ -36,6 +36,9 @@ export default async function OverviewPage({ searchParams }) {
   let statuses = [];
   let workerCompClasses = [];
   let suborgs=[];
+  let document_types=[];
+  let document_purposes=[];
+  let document_subtypes=[];
   let timestamp = new Date().getTime();
   try {
     // Establish database connection
@@ -136,6 +139,20 @@ export default async function OverviewPage({ searchParams }) {
       'SELECT suborgid, suborgname FROM C_SUB_ORG WHERE orgid = ? AND isstatus = 1',[orgid]
     );
 
+    [document_types] = await pool.query(
+      'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 18 AND orgid = ? AND isactive = 1',
+      [orgid]
+    );
+    [document_purposes] = await pool.query(
+      'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 20 AND orgid = ? AND isactive = 1',
+      [orgid]
+    );
+
+    [document_subtypes] = await pool.query(
+      'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 19 AND orgid = ? AND isactive = 1',
+      [orgid]
+    );
+
     // Fetch all roles for the role dropdown
     const { success, roles: fetchedRoles, error: fetchError } = await getAllroles();
     if (!success) {
@@ -179,6 +196,9 @@ export default async function OverviewPage({ searchParams }) {
       workerCompClasses={workerCompClasses}
       timestamp={timestamp}
       suborgs={suborgs}
+      document_types={document_types}
+      document_purposes={document_purposes}
+      document_subtypes={document_subtypes}
     />
   );
 }
