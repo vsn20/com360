@@ -11,7 +11,7 @@ import {
   canEditForm,
   deleteForm
 } from '@/app/serverActions/Employee/i9forms';
-import './I9Forms.css';
+import styles from './I9Forms.module.css';
 import { useRouter } from 'next/navigation';
 import SignatureCanvas from 'react-signature-canvas';
 
@@ -99,7 +99,6 @@ const I9Forms = ({
     try {
       const form = forms.find(f => f.ID === formId);
       
-      // Check if it's a non-I9 form
       if (form && form.FORM_TYPE !== 'I9') {
         setError('This form type will be available later. Currently only I-9 forms can be edited.');
         return;
@@ -185,7 +184,6 @@ const I9Forms = ({
       return;
     }
 
-    // Only allow I9 forms for now
     if (selectedFormType !== 'I9') {
       setError('Only I-9 forms are available at this time. Other form types will be available later.');
       return;
@@ -377,7 +375,6 @@ const I9Forms = ({
   };
 
   const getStatus = (form) => {
-    // Use FORM_STATUS from database if available
     if (form.FORM_STATUS) {
       const statusMap = {
         'DRAFT': 'Draft',
@@ -388,7 +385,6 @@ const I9Forms = ({
       return statusMap[form.FORM_STATUS] || form.FORM_STATUS;
     }
     
-    // Fallback logic
     if (form.EMPLOYER_VERIFIED_UPLOADED_FLAG === 1) {
       return 'Employer Verified';
     }
@@ -423,29 +419,29 @@ const I9Forms = ({
   };
 
   return (
-    <div className="i9-forms-container">
+    <div className={styles.i9FormsContainer}>
       {error && (
-        <div className="error-message">
+        <div className={styles.errorMessage}>
           <strong>Error:</strong> {error}
         </div>
       )}
       
       {successMessage && (
-        <div className="success-message">
+        <div className={styles.successMessage}>
           <strong>Success:</strong> {successMessage}
         </div>
       )}
 
       {showFormTypeModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent}>
             <h3>Select Form Type</h3>
-            <div className="form-group">
+            <div className={styles.formGroup}>
               <label>Form Type*</label>
               <select 
                 value={selectedFormType} 
                 onChange={(e) => setSelectedFormType(e.target.value)}
-                className="form-select"
+                className={styles.formSelect}
               >
                 <option value="">Select Form Type</option>
                 {formTypes.map((type) => (
@@ -455,11 +451,11 @@ const I9Forms = ({
                 ))}
               </select>
             </div>
-            <div className="modal-buttons">
-              <button className="button save" onClick={handleFormTypeSelect}>
+            <div className={styles.modalButtons}>
+              <button className={`${styles.button} ${styles.buttonSave}`} onClick={handleFormTypeSelect}>
                 Continue
               </button>
-              <button className="button cancel" onClick={() => setShowFormTypeModal(false)}>
+              <button className={`${styles.button} ${styles.buttonCancel}`} onClick={() => setShowFormTypeModal(false)}>
                 Cancel
               </button>
             </div>
@@ -468,12 +464,12 @@ const I9Forms = ({
       )}
 
       {!isAdding && !selectedFormId ? (
-        <div className="forms-list">
-          <div className="header-section">
-            <h2 className="title">Employee Forms</h2>
-            <button className="button add" onClick={handleAddForm}>Add Form</button>
+        <div className={styles.formsList}>
+          <div className={styles.headerSection}>
+            <h2 className={styles.title}>Employee Forms</h2>
+            <button className={`${styles.button} ${styles.buttonAdd}`} onClick={handleAddForm}>Add Form</button>
           </div>
-          <div className="table-wrapper">
+          <div className={styles.tableWrapper}>
             <table>
               <thead>
                 <tr>
@@ -526,7 +522,7 @@ const I9Forms = ({
                       <td onClick={(e) => e.stopPropagation()}>
                         {canEdit(form) && getStatus(form) === 'Draft' && (
                           <button 
-                            className="button cancel"
+                            className={`${styles.button} ${styles.buttonCancel}`}
                             onClick={(e) => handleDelete(form.ID, e)}
                             style={{ padding: '5px 10px', fontSize: '12px' }}
                           >
@@ -542,29 +538,29 @@ const I9Forms = ({
           </div>
         </div>
       ) : (
-        <div className="form-details">
-          <div className="header-section">
-            <h2 className="title">
+        <div className={styles.formDetails}>
+          <div className={styles.headerSection}>
+            <h2 className={styles.title}>
               {isAdding ? `Add ${getFormTypeLabel(formData.form_type)}` : `View/Edit ${getFormTypeLabel(formData.form_type)}`}
             </h2>
             <div style={{ display: 'flex', gap: '10px' }}>
               {!isEditing && !isAdding && (
-                <button className="button save" onClick={handleEditForm}>
+                <button className={`${styles.button} ${styles.buttonSave}`} onClick={handleEditForm}>
                   Edit Form
                 </button>
               )}
-              <button className="button back" onClick={handleBack}>
+              <button className={`${styles.button} ${styles.buttonBack}`} onClick={handleBack}>
                 Back to List
               </button>
             </div>
           </div>
           
           <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
-            <div className="form-section">
+            <div className={styles.formSection}>
               <h3>Section 1: Employee Information and Attestation</h3>
               
-              <div className="form-row">
-                <div className="form-group">
+              <div className={styles.formRow}>
+                <div className={styles.formGroup}>
                   <label>Last Name*</label>
                   <input 
                     name="employee_last_name" 
@@ -574,7 +570,7 @@ const I9Forms = ({
                     disabled={!isAdding && !isEditing}
                   />
                 </div>
-                <div className="form-group">
+                <div className={styles.formGroup}>
                   <label>First Name*</label>
                   <input 
                     name="employee_first_name" 
@@ -584,7 +580,7 @@ const I9Forms = ({
                     disabled={!isAdding && !isEditing}
                   />
                 </div>
-                <div className="form-group">
+                <div className={styles.formGroup}>
                   <label>Middle Initial</label>
                   <input 
                     name="employee_middle_initial" 
@@ -595,8 +591,8 @@ const I9Forms = ({
                 </div>
               </div>
               
-              <div className="form-row">
-                <div className="form-group">
+              <div className={styles.formRow}>
+                <div className={styles.formGroup}>
                   <label>Other Last Names Used</label>
                   <input 
                     name="employee_other_last_names" 
@@ -607,8 +603,8 @@ const I9Forms = ({
                 </div>
               </div>
               
-              <div className="form-row">
-                <div className="form-group">
+              <div className={styles.formRow}>
+                <div className={styles.formGroup}>
                   <label>Street Address*</label>
                   <input 
                     name="employee_street_address" 
@@ -618,7 +614,7 @@ const I9Forms = ({
                     disabled={!isAdding && !isEditing}
                   />
                 </div>
-                <div className="form-group">
+                <div className={styles.formGroup}>
                   <label>Apt. Number</label>
                   <input 
                     name="employee_apt_number" 
@@ -629,8 +625,8 @@ const I9Forms = ({
                 </div>
               </div>
               
-              <div className="form-row">
-                <div className="form-group">
+              <div className={styles.formRow}>
+                <div className={styles.formGroup}>
                   <label>City*</label>
                   <input 
                     name="employee_city" 
@@ -640,7 +636,7 @@ const I9Forms = ({
                     disabled={!isAdding && !isEditing}
                   />
                 </div>
-                <div className="form-group">
+                <div className={styles.formGroup}>
                   <label>State*</label>
                   <select 
                     name="employee_state" 
@@ -655,7 +651,7 @@ const I9Forms = ({
                     ))}
                   </select>
                 </div>
-                <div className="form-group">
+                <div className={styles.formGroup}>
                   <label>ZIP Code*</label>
                   <input 
                     name="employee_zip_code" 
@@ -667,8 +663,8 @@ const I9Forms = ({
                 </div>
               </div>
               
-              <div className="form-row">
-                <div className="form-group">
+              <div className={styles.formRow}>
+                <div className={styles.formGroup}>
                   <label>Date of Birth*</label>
                   <input 
                     type="date" 
@@ -679,7 +675,7 @@ const I9Forms = ({
                     disabled={!isAdding && !isEditing}
                   />
                 </div>
-                <div className="form-group">
+                <div className={styles.formGroup}>
                   <label>Social Security Number</label>
                   <input 
                     name="employee_ssn" 
@@ -692,8 +688,8 @@ const I9Forms = ({
                 </div>
               </div>
               
-              <div className="form-row">
-                <div className="form-group">
+              <div className={styles.formRow}>
+                <div className={styles.formGroup}>
                   <label>Email Address</label>
                   <input 
                     type="email" 
@@ -703,7 +699,7 @@ const I9Forms = ({
                     disabled={!isAdding && !isEditing}
                   />
                 </div>
-                <div className="form-group">
+                <div className={styles.formGroup}>
                   <label>Telephone Number</label>
                   <input 
                     name="employee_phone" 
@@ -714,10 +710,9 @@ const I9Forms = ({
                 </div>
               </div>
               
-              {/* Only show citizenship fields for I9 forms */}
               {formData.form_type === 'I9' && (
                 <>
-                  <div className="form-group">
+                  <div className={styles.formGroup}>
                     <label>Citizenship/Immigration Status*</label>
                     <select 
                       name="citizenship_status" 
@@ -734,7 +729,7 @@ const I9Forms = ({
                   </div>
                   
                   {formData.citizenship_status === '3' && (
-                    <div className="form-group">
+                    <div className={styles.formGroup}>
                       <label>USCIS A-Number*</label>
                       <input 
                         name="uscis_a_number" 
@@ -749,7 +744,7 @@ const I9Forms = ({
                   
                   {formData.citizenship_status === '4' && (
                     <>
-                      <div className="form-group">
+                      <div className={styles.formGroup}>
                         <label>Alien Number</label>
                         <input 
                           name="alien_number" 
@@ -758,7 +753,7 @@ const I9Forms = ({
                           disabled={!isAdding && !isEditing}
                         />
                       </div>
-                      <div className="form-group">
+                      <div className={styles.formGroup}>
                         <label>Work Authorization Expiry*</label>
                         <input 
                           type="date" 
@@ -769,7 +764,7 @@ const I9Forms = ({
                           disabled={!isAdding && !isEditing}
                         />
                       </div>
-                      <div className="form-group">
+                      <div className={styles.formGroup}>
                         <label>USCIS A-Number</label>
                         <input 
                           name="uscis_a_number" 
@@ -779,7 +774,7 @@ const I9Forms = ({
                           disabled={!isAdding && !isEditing}
                         />
                       </div>
-                      <div className="form-group">
+                      <div className={styles.formGroup}>
                         <label>I-94 Admission Number</label>
                         <input 
                           name="i94_admission_number" 
@@ -788,7 +783,7 @@ const I9Forms = ({
                           disabled={!isAdding && !isEditing}
                         />
                       </div>
-                      <div className="form-group">
+                      <div className={styles.formGroup}>
                         <label>Foreign Passport Number</label>
                         <input 
                           name="foreign_passport_number" 
@@ -797,7 +792,7 @@ const I9Forms = ({
                           disabled={!isAdding && !isEditing}
                         />
                       </div>
-                      <div className="form-group">
+                      <div className={styles.formGroup}>
                         <label>Country of Issuance</label>
                         <select 
                           name="country_of_issuance" 
@@ -816,7 +811,7 @@ const I9Forms = ({
                 </>
               )}
               
-              <div className="form-group">
+              <div className={styles.formGroup}>
                 <label>Signature Date</label>
                 <input 
                   type="date" 
@@ -827,9 +822,8 @@ const I9Forms = ({
                 />
               </div>
               
-              {/* Signature Section */}
               {(isAdding || isEditing) ? (
-                <div className="form-group">
+                <div className={styles.formGroup}>
                   <label>Signature*</label>
                   <p style={{ fontSize: '14px', color: '#666', marginBottom: '10px' }}>
                     {isEditing 
@@ -849,13 +843,13 @@ const I9Forms = ({
                       />
                     </div>
                   )}
-                  <div className="signature-canvas-wrapper">
+                  <div className={styles.signatureCanvasWrapper}>
                     <SignatureCanvas 
                       ref={sigCanvas}
                       canvasProps={{ 
                         width: 600, 
                         height: 200, 
-                        className: 'signature-canvas'
+                        className: styles.signatureCanvas
                       }} 
                     />
                   </div>
@@ -863,14 +857,14 @@ const I9Forms = ({
                     type="button" 
                     onClick={clearSignature}
                     style={{ marginTop: '10px' }}
-                    className="button"
+                    className={styles.button}
                   >
                     Clear Signature
                   </button>
                 </div>
               ) : (
                 formData.employee_signature_url && (
-                  <div className="form-group">
+                  <div className={styles.formGroup}>
                     <label>Employee Signature</label>
                     <div style={{ padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
                       <img 
@@ -885,13 +879,13 @@ const I9Forms = ({
             </div>
             
             {(isAdding || isEditing) && (
-              <div className="form-buttons">
-                <button type="submit" className="button save" disabled={isSaving}>
+              <div className={styles.formButtons}>
+                <button type="submit" className={`${styles.button} ${styles.buttonSave}`} disabled={isSaving}>
                   {isSaving ? 'Saving...' : 'Submit Form'}
                 </button>
                 <button 
                   type="button" 
-                  className="button cancel" 
+                  className={`${styles.button} ${styles.buttonCancel}`}
                   onClick={handleBack}
                   disabled={isSaving}
                 >

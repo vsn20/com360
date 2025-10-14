@@ -1,0 +1,390 @@
+PDF FORM FIELDS EXTRACTION REPORT
+================================================================================
+
+Template: D:\com360\com360\public\templates\1760217680073_i-9.pdf
+Total Fields: 128
+
+1. Field Name: "3 A lawful permanent resident Enter USCIS or ANumber"
+   Type: PDFTextField
+
+2. Field Name: "Signature of Employee"
+   Type: PDFTextField
+
+3. Field Name: "Last Name Family Name from Section 1"
+   Type: PDFTextField
+
+4. Field Name: "First Name Given Name from Section 1"
+   Type: PDFTextField
+
+5. Field Name: "Middle initial if any from Section 1"
+   Type: PDFTextField
+
+6. Field Name: "First Name Given Name"
+   Type: PDFTextField
+
+7. Field Name: "Employee Middle Initial (if any)"
+   Type: PDFTextField
+
+8. Field Name: "Employee Other Last Names Used (if any)"
+   Type: PDFTextField
+
+9. Field Name: "Today's Date mmddyyy"
+   Type: PDFTextField
+
+10. Field Name: "List A.  Document 2. Expiration Date (if any)"
+   Type: PDFTextField
+
+11. Field Name: "List A.   Document Title 3.  If any"
+   Type: PDFTextField
+
+12. Field Name: "List A. Document 3.  Enter Issuing Authority"
+   Type: PDFTextField
+
+13. Field Name: "List A.  Document 3 Number.  If any"
+   Type: PDFTextField
+
+14. Field Name: "List B Document 1 Title"
+   Type: PDFTextField
+
+15. Field Name: "Additional Information"
+   Type: PDFTextField
+
+16. Field Name: "Middle initial if any from Section 1-2"
+   Type: PDFTextField
+
+17. Field Name: "Sig Date mmddyyyy 1"
+   Type: PDFTextField
+
+18. Field Name: "Sig Date mmddyyyy 0"
+   Type: PDFTextField
+
+19. Field Name: "Sig Date mmddyyyy 2"
+   Type: PDFTextField
+
+20. Field Name: "Sig Date mmddyyyy 3"
+   Type: PDFTextField
+
+21. Field Name: "Signature of Preparer or Translator 0"
+   Type: PDFTextField
+
+22. Field Name: "Signature of Preparer or Translator 1"
+   Type: PDFTextField
+
+23. Field Name: "Signature of Preparer or Translator 2"
+   Type: PDFTextField
+
+24. Field Name: "Signature of Preparer or Translator 3"
+   Type: PDFTextField
+
+25. Field Name: "Preparer or Translator Last Name (Family Name) 0"
+   Type: PDFTextField
+
+26. Field Name: "Preparer or Translator Last Name (Family Name) 2"
+   Type: PDFTextField
+
+27. Field Name: "Preparer or Translator Last Name (Family Name) 3"
+   Type: PDFTextField
+
+28. Field Name: "Preparer or Translator Address (Street Number and Name) 0"
+   Type: PDFTextField
+
+29. Field Name: "Preparer or Translator Address (Street Number and Name) 1"
+   Type: PDFTextField
+
+30. Field Name: "Preparer or Translator Address (Street Number and Name) 2"
+   Type: PDFTextField
+
+31. Field Name: "Preparer or Translator Address (Street Number and Name) 3"
+   Type: PDFTextField
+
+32. Field Name: "Preparer or Translator First Name (Given Name) 0"
+   Type: PDFTextField
+
+33. Field Name: "Preparer or Translator Last Name (Family Name) 1"
+   Type: PDFTextField
+
+34. Field Name: "Preparer or Translator First Name (Given Name) 2"
+   Type: PDFTextField
+
+35. Field Name: "Preparer or Translator First Name (Given Name) 3"
+   Type: PDFTextField
+
+36. Field Name: "Preparer or Translator City or Town 0"
+   Type: PDFTextField
+
+37. Field Name: "Preparer or Translator City or Town 1"
+   Type: PDFTextField
+
+38. Field Name: "Preparer or Translator City or Town 2"
+   Type: PDFTextField
+
+39. Field Name: "Preparer or Translator City or Town 3"
+   Type: PDFTextField
+
+40. Field Name: "Preparer State 0"
+   Type: PDFDropdown
+
+41. Field Name: "Preparer State 1"
+   Type: PDFDropdown
+
+42. Field Name: "Preparer State 2"
+   Type: PDFDropdown
+
+43. Field Name: "Preparer State 3"
+   Type: PDFDropdown
+
+44. Field Name: "Zip Code 0"
+   Type: PDFTextField
+
+45. Field Name: "Zip Code 1"
+   Type: PDFTextField
+
+46. Field Name: "Zip Code 2"
+   Type: PDFTextField
+
+47. Field Name: "Zip Code 3"
+   Type: PDFTextField
+
+48. Field Name: "CB_1"
+   Type: PDFCheckBox
+
+49. Field Name: "CB_2"
+   Type: PDFCheckBox
+
+50. Field Name: "CB_3"
+   Type: PDFCheckBox
+
+51. Field Name: "CB_4"
+   Type: PDFCheckBox
+
+52. Field Name: "Date of Rehire 0"
+   Type: PDFTextField
+
+53. Field Name: "Date of Rehire 1"
+   Type: PDFTextField
+
+54. Field Name: "Date of Rehire 2"
+   Type: PDFTextField
+
+55. Field Name: "Todays Date 0"
+   Type: PDFTextField
+
+56. Field Name: "Todays Date 1"
+   Type: PDFTextField
+
+57. Field Name: "Todays Date 2"
+   Type: PDFTextField
+
+58. Field Name: "Last Name 0"
+   Type: PDFTextField
+
+59. Field Name: "Last Name 1"
+   Type: PDFTextField
+
+60. Field Name: "Last Name 2"
+   Type: PDFTextField
+
+61. Field Name: "First Name 0"
+   Type: PDFTextField
+
+62. Field Name: "First Name 1"
+   Type: PDFTextField
+
+63. Field Name: "First Name 2"
+   Type: PDFTextField
+
+64. Field Name: "Middle Initial 0"
+   Type: PDFTextField
+
+65. Field Name: "Middle Initial 1"
+   Type: PDFTextField
+
+66. Field Name: "Middle Initial 2"
+   Type: PDFTextField
+
+67. Field Name: "PT Middle Initial 0"
+   Type: PDFTextField
+
+68. Field Name: "PT Middle Initial 1"
+   Type: PDFTextField
+
+69. Field Name: "PT Middle Initial 2"
+   Type: PDFTextField
+
+70. Field Name: "PT Middle Initial 3"
+   Type: PDFTextField
+
+71. Field Name: "Document Title 0"
+   Type: PDFTextField
+
+72. Field Name: "Document Title 2"
+   Type: PDFTextField
+
+73. Field Name: "Document Number 0"
+   Type: PDFTextField
+
+74. Field Name: "Document Number 1"
+   Type: PDFTextField
+
+75. Field Name: "Document Number 2"
+   Type: PDFTextField
+
+76. Field Name: "Expiration Date 0"
+   Type: PDFTextField
+
+77. Field Name: "Expiration Date 2"
+   Type: PDFTextField
+
+78. Field Name: "Expiration Date 1"
+   Type: PDFTextField
+
+79. Field Name: "Name of Emp or Auth Rep 0"
+   Type: PDFTextField
+
+80. Field Name: "Name of Emp or Auth Rep 1"
+   Type: PDFTextField
+
+81. Field Name: "Name of Emp or Auth Rep 2"
+   Type: PDFTextField
+
+82. Field Name: "Signature of Emp Rep 0"
+   Type: PDFTextField
+
+83. Field Name: "Signature of Emp Rep 1"
+   Type: PDFTextField
+
+84. Field Name: "Signature of Emp Rep 2"
+   Type: PDFTextField
+
+85. Field Name: "CB_Alt_0"
+   Type: PDFCheckBox
+
+86. Field Name: "CB_Alt_1"
+   Type: PDFCheckBox
+
+87. Field Name: "CB_Alt_2"
+   Type: PDFCheckBox
+
+88. Field Name: "Addtl Info 0"
+   Type: PDFTextField
+
+89. Field Name: "Addtl Info 2"
+   Type: PDFTextField
+
+90. Field Name: "Addtl Info 1"
+   Type: PDFTextField
+
+91. Field Name: "CB_Alt"
+   Type: PDFCheckBox
+
+92. Field Name: "Last Name Family Name from Section 1-2"
+   Type: PDFTextField
+
+93. Field Name: "First Name Given Name from Section 1-2"
+   Type: PDFTextField
+
+94. Field Name: "State"
+   Type: PDFDropdown
+
+95. Field Name: "ZIP Code"
+   Type: PDFTextField
+
+96. Field Name: "Date of Birth mmddyyyy"
+   Type: PDFTextField
+
+97. Field Name: "US Social Security Number"
+   Type: PDFTextField
+
+98. Field Name: "Telephone Number"
+   Type: PDFTextField
+
+99. Field Name: "Last Name (Family Name)"
+   Type: PDFTextField
+
+100. Field Name: "Address Street Number and Name"
+   Type: PDFTextField
+
+101. Field Name: "Apt Number (if any)"
+   Type: PDFTextField
+
+102. Field Name: "City or Town"
+   Type: PDFTextField
+
+103. Field Name: "Employees E-mail Address"
+   Type: PDFTextField
+
+104. Field Name: "Exp Date mmddyyyy"
+   Type: PDFTextField
+
+105. Field Name: "USCIS ANumber"
+   Type: PDFTextField
+
+106. Field Name: "Form I94 Admission Number"
+   Type: PDFTextField
+
+107. Field Name: "Foreign Passport Number and Country of IssuanceRow1"
+   Type: PDFTextField
+
+108. Field Name: "Document Title 1"
+   Type: PDFTextField
+
+109. Field Name: "Issuing Authority 1"
+   Type: PDFTextField
+
+110. Field Name: "Document Number 0 (if any)"
+   Type: PDFTextField
+
+111. Field Name: "Document Title 2 If any"
+   Type: PDFTextField
+
+112. Field Name: "Issuing Authority_2"
+   Type: PDFTextField
+
+113. Field Name: "Document Number If any_2"
+   Type: PDFTextField
+
+114. Field Name: "Document Number if any_3"
+   Type: PDFTextField
+
+115. Field Name: "List C Expiration Date 1"
+   Type: PDFTextField
+
+116. Field Name: "List C Document Number 1"
+   Type: PDFTextField
+
+117. Field Name: "List C Issuing Authority 1"
+   Type: PDFTextField
+
+118. Field Name: "List C Document Title 1"
+   Type: PDFTextField
+
+119. Field Name: "FirstDayEmployed mmddyyyy"
+   Type: PDFTextField
+
+120. Field Name: "S2 Todays Date mmddyyyy"
+   Type: PDFTextField
+
+121. Field Name: "Last Name First Name and Title of Employer or Authorized Representative"
+   Type: PDFTextField
+
+122. Field Name: "Signature of Employer or AR"
+   Type: PDFTextField
+
+123. Field Name: "Employers Business or Org Name"
+   Type: PDFTextField
+
+124. Field Name: "Employers Business or Org Address"
+   Type: PDFTextField
+
+125. Field Name: "Expiration Date if any"
+   Type: PDFTextField
+
+126. Field Name: "List B Issuing Authority 1"
+   Type: PDFTextField
+
+127. Field Name: "List B Document Number 1"
+   Type: PDFTextField
+
+128. Field Name: "List B Expiration Date 1"
+   Type: PDFTextField
+

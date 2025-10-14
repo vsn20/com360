@@ -22,7 +22,7 @@ export default async function FormCompletionPage({ searchParams }) {
   const error = queryError ? decodeURIComponent(queryError) : null;
 
   let orgid = null;
-  let empid = '2_1'; // Hardcoded based on access grant
+  let empid = null; // ✅ Changed from hardcoded to null
   let roles = [];
   let countries = [];
   let states = [];
@@ -44,7 +44,9 @@ export default async function FormCompletionPage({ searchParams }) {
     }
 
     const decoded = decodeJwt(token);
-    if (!decoded || !decoded.orgid) {
+    
+    // ✅ Validate that both orgid and empid exist in token
+    if (!decoded || !decoded.orgid || !decoded.empid) {
       return (
         <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
           <h1>Form Completion</h1>
@@ -53,7 +55,11 @@ export default async function FormCompletionPage({ searchParams }) {
       );
     }
 
+    // ✅ Extract both orgid and empid from JWT
     orgid = decoded.orgid;
+    empid = decoded.empid;
+
+    console.log('🔍 Logged in user - OrgID:', orgid, 'EmpID:', empid);
 
     // Fetch countries and states
     [countries] = await pool.query('SELECT ID, VALUE FROM C_COUNTRY WHERE ACTIVE = 1');
