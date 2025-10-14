@@ -20,108 +20,108 @@ import 'react-image-crop/dist/ReactCrop.css';
 
 // Your CustomSelect and MultiSelectRoles components remain the same...
 const CustomSelect = ({ name, value, onChange, options, placeholder, disabled }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
 
-  const handleSelect = (optionValue, optionLabel) => {
-    onChange({ target: { name, value: optionValue } });
-    setIsOpen(false);
-  };
+  const handleSelect = (optionValue, optionLabel) => {
+    onChange({ target: { name, value: optionValue } });
+    setIsOpen(false);
+  };
 
-  const handleClickOutside = (event) => {
-    if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-      setIsOpen(false);
-    }
-  };
+  const handleClickOutside = (event) => {
+    if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+      setIsOpen(false);
+    }
+  };
 
-  useEffect(() => {
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
+  useEffect(() => {
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
-  const selectedOption = options.find(opt => opt.value === value);
+  const selectedOption = options.find(opt => opt.value === value);
 
-  return (
-    <div className={`custom-select ${disabled ? 'disabled' : ''}`} ref={dropdownRef}>
-      <div className="select-selected" onClick={() => !disabled && setIsOpen(!isOpen)}>
-        {selectedOption ? selectedOption.label : placeholder}
-      </div>
-      {isOpen && (
-        <div className="select-items">
-          {options.map((option) => (
-            <div
-              key={option.value}
-              className={`select-option ${value === option.value ? 'selected' : ''}`}
-              onClick={() => handleSelect(option.value, option.label)}
-            >
-              {option.label}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  return (
+    <div className={`custom-select ${disabled ? 'disabled' : ''}`} ref={dropdownRef}>
+      <div className="select-selected" onClick={() => !disabled && setIsOpen(!isOpen)}>
+        {selectedOption ? selectedOption.label : placeholder}
+      </div>
+      {isOpen && (
+        <div className="select-items">
+          {options.map((option) => (
+            <div
+              key={option.value}
+              className={`select-option ${value === option.value ? 'selected' : ''}`}
+              onClick={() => handleSelect(option.value, option.label)}
+            >
+              {option.label}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 };
 
 const MultiSelectRoles = ({ selectedRoles, setSelectedRoles, roles, disabled }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
 
-  const handleRoleToggle = (roleid) => {
-    setSelectedRoles((prev) =>
-      prev.includes(roleid)
-        ? prev.filter((id) => id !== roleid)
-        : [...prev, roleid]
-    );
-  };
+  const handleRoleToggle = (roleid) => {
+    setSelectedRoles((prev) =>
+      prev.includes(roleid)
+        ? prev.filter((id) => id !== roleid)
+        : [...prev, roleid]
+    );
+  };
 
-  const toggleDropdown = () => {
-    setIsOpen((prev) => !prev);
-  };
+  const toggleDropdown = () => {
+    setIsOpen((prev) => !prev);
+  };
 
-  const handleClickOutside = (event) => {
-    if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-      setIsOpen(false);
-    }
-  };
+  const handleClickOutside = (event) => {
+    if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+      setIsOpen(false);
+    }
+  };
 
-  useEffect(() => {
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
+  useEffect(() => {
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
-  const getSelectedRoleNames = () => {
-    return selectedRoles
-      .map((roleid) => roles.find((r) => r.roleid === roleid)?.rolename || 'Unknown Role')
-      .join(', ') || 'Select Roles';
-  };
+  const getSelectedRoleNames = () => {
+    return selectedRoles
+      .map((roleid) => roles.find((r) => r.roleid === roleid)?.rolename || 'Unknown Role')
+      .join(', ') || 'Select Roles';
+  };
 
-  return (
-    <div className={`custom-select-container ${disabled ? 'disabled' : ''}`} ref={dropdownRef}>
-      <div className="select-selected" onClick={() => !disabled && toggleDropdown()}>
-        {getSelectedRoleNames()}
-      </div>
-      {isOpen && (
-        <div className="select-items">
-          {roles.map((role) => (
-            <div
-              key={role.roleid}
-              className={`select-option ${selectedRoles.includes(role.roleid) ? 'selected' : ''}`}
-              onClick={() => handleRoleToggle(role.roleid)}
-            >
-              <input
-                type="checkbox"
-                checked={selectedRoles.includes(role.roleid)}
-                readOnly
-              />
-              {role.rolename}
-            </div>
-          ))}
-        </div>
+  return (
+    <div className={`custom-select-container ${disabled ? 'disabled' : ''}`} ref={dropdownRef}>
+      <div className="select-selected" onClick={() => !disabled && toggleDropdown()}>
+        {getSelectedRoleNames()}
+      </div>
+      {isOpen && (
+        <div className="select-items">
+          {roles.map((role) => (
+            <div
+              key={role.roleid}
+              className={`select-option ${selectedRoles.includes(role.roleid) ? 'selected' : ''}`}
+              onClick={() => handleRoleToggle(role.roleid)}
+            >
+              <input
+                type="checkbox"
+                checked={selectedRoles.includes(role.roleid)}
+                readOnly
+              />
+              {role.rolename}
+            </div>
+          ))}
+        </div>
     )}
   </div>
  );
@@ -146,7 +146,9 @@ const Overview = ({
   suborgs,
   document_types,
   document_purposes,
-  document_subtypes
+  document_subtypes,
+  loggedInEmpId,      
+  permissionLevel,    
 }) => {
   const [selectedEmpId, setSelectedEmpId] = useState(null);
   const [employeeDetails, setEmployeeDetails] = useState(null);
@@ -163,6 +165,8 @@ const Overview = ({
   const [crop, setCrop] = useState();
   const imgRef = useRef(null);
   const [photoModalError, setPhotoModalError] = useState(null);
+  
+  const [hasMounted, setHasMounted] = useState(false);
 
   let ts = timestamp;
   
@@ -224,7 +228,6 @@ const Overview = ({
   
   const [formLeaves, setFormLeaves] = useState({});
   const [error, setError] = useState(initialError);
-  const [canEditEmployees, setCanEditEmployees] = useState(true);
   const [editingPersonal, setEditingPersonal] = useState(false);
   const [editingEmployment, setEditingEmployment] = useState(false);
   const [editingLeaves, setEditingLeaves] = useState(false);
@@ -242,6 +245,39 @@ const Overview = ({
   
   const [sortConfig, setSortConfig] = useState({ column: 'empid', direction: 'asc' });
 
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
+  const canEdit = (section) => {
+    if (!selectedEmpId) return false;
+
+    // Define the sections that are restricted for self-editing under team/individual roles
+    const restrictedSections = ['employment', 'leaves'];
+
+    if (permissionLevel === 'individual') {
+        // Can edit ONLY if it's their own profile AND the section is NOT restricted
+        return !restrictedSections.includes(section) && selectedEmpId === loggedInEmpId;
+    }
+    
+    if (permissionLevel === 'team') {
+        if (selectedEmpId === loggedInEmpId) {
+            // For themselves, they can edit anything that is NOT a restricted section
+            return !restrictedSections.includes(section);
+        } else {
+            // For subordinates, they can edit everything
+            return true;
+        }
+    }
+
+    if (permissionLevel === 'all') {
+        // 'all' permission can edit everything for everyone
+        return true;
+    }
+
+    // Default to no permission
+    return false;
+};
   useEffect(() => {
     const sortedEmployees = [...employees].sort((a, b) => sortEmployees(a, b, sortConfig.column, sortConfig.direction));
     setAllEmployees(sortedEmployees);
@@ -434,7 +470,6 @@ const Overview = ({
     setworkdetails(null);
     setemployementdetails(null);
     console.log('Selected employee:', empid);
-    // --- FIX 2: Added Cache Buster ---
     setImgSrc(`/uploads/profile_photos/${empid}.png?${new Date().getTime()}`);
   };
 
@@ -552,21 +587,15 @@ const [employementdetails,setemployementdetails]=useState(null);
     router.refresh();
    }
 
-    // In Overview.jsx
-
 const handleProfilePhotoUpload = (e) => {
-  setPhotoModalError(null); // Clear previous errors
-
+  setPhotoModalError(null); 
   if (e.target.files && e.target.files.length > 0) {
     const file = e.target.files[0];
-    
     if (file.size > 1 * 1024 * 1024) {
-      // Use the new state to set the error
       setPhotoModalError('File is too large. Please select an image under 1MB.');
-      e.target.value = null; // Clear the file input
+      e.target.value = null;
       return;
     }
-
     setCrop(undefined);
     const reader = new FileReader();
     reader.addEventListener('load', () => {
@@ -576,89 +605,68 @@ const handleProfilePhotoUpload = (e) => {
   }
 };
 
-    // --- FIX 1: Corrected Cropping Logic ---
-    // In Overview.jsx
-
-// --- THIS IS THE CORRECTED FUNCTION ---
-    const handleSaveCroppedPhoto = async () => {
-        // 1. Guard Clause: Ensure the image ref and crop area are valid.
-        if (!imgRef.current || !crop || !crop.width || !crop.height) {
-          setError('Please select an area to crop.');
-          return;
-        }
-
-        const image = imgRef.current;
-        const canvas = document.createElement('canvas');
-
-        // 2. Calculate the scaling ratio between the original image and the displayed image.
-        // This is the most critical step.
-        const scaleX = image.naturalWidth / image.width;
-        const scaleY = image.naturalHeight / image.height;
-
-        // 3. Set the canvas size to the *actual pixel dimensions* of the selected crop area.
-        // This ensures the final saved image is not low quality.
-        canvas.width = Math.floor(crop.width * scaleX);
-        canvas.height = Math.floor(crop.height * scaleY);
-
-        const ctx = canvas.getContext('2d');
-
-        // 4. Draw the correctly scaled and positioned section of the original image onto the canvas.
-        ctx.drawImage(
-          image,                // The source image
-          crop.x * scaleX,      // The X coordinate of the crop on the original image
-          crop.y * scaleY,      // The Y coordinate of the crop on the original image
-          crop.width * scaleX,  // The width of the crop on the original image
-          crop.height * scaleY, // The height of the crop on the original image
-          0,                    // Destination X on the canvas (start from the corner)
-          0,                    // Destination Y on the canvas
-          canvas.width,         // Fill the entire canvas width
-          canvas.height         // Fill the entire canvas height
-        );
-
-        // 5. Convert the canvas to a file (blob) and upload it.
-        canvas.toBlob(async (blob) => {
-          if (blob) {
-            const formData = new FormData();
-            formData.append('file', blob, `${employeeDetails.empid}.png`);
-            formData.append('empId', employeeDetails.empid);
-
-            try {
-              await uploadProfilePhoto(formData);
-              // Use the cache-busting timestamp to ensure the new image loads
-              setImgSrc(`/uploads/profile_photos/${employeeDetails.empid}.png?${new Date().getTime()}`);
-              setError(null);
-              setIsPhotoModalOpen(false);
-              setImageToCrop(null);
-            } catch (err) {
-              console.error('Error uploading profile photo:', err);
-              setError('Failed to upload profile photo.');
-            }
-          }
-        }, 'image/png', 1); // Use quality '1' for best results
-    };
-    const handleDeleteProfilePhoto = async (empId) => {
-        if (!empId || imgSrc.includes("default.png")) return;
+const handleSaveCroppedPhoto = async () => {
+    if (!imgRef.current || !crop || !crop.width || !crop.height) {
+      setError('Please select an area to crop.');
+      return;
+    }
+    const image = imgRef.current;
+    const canvas = document.createElement('canvas');
+    const scaleX = image.naturalWidth / image.width;
+    const scaleY = image.naturalHeight / image.height;
+    canvas.width = Math.floor(crop.width * scaleX);
+    canvas.height = Math.floor(crop.height * scaleY);
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(
+      image,
+      crop.x * scaleX,
+      crop.y * scaleY,
+      crop.width * scaleX,
+      crop.height * scaleY,
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    );
+    canvas.toBlob(async (blob) => {
+      if (blob) {
+        const formData = new FormData();
+        formData.append('file', blob, `${employeeDetails.empid}.png`);
+        formData.append('empId', employeeDetails.empid);
         try {
-            await deleteProfilePhoto(empId);
-            setImgSrc("/uploads/profile_photos/default.png");
-            setError(null);
-            console.log('Profile photo deleted successfully for empid:', empId);
+          await uploadProfilePhoto(formData);
+          setImgSrc(`/uploads/profile_photos/${employeeDetails.empid}.png?${new Date().getTime()}`);
+          setError(null);
+          setIsPhotoModalOpen(false);
+          setImageToCrop(null);
         } catch (err) {
-            console.error('Error deleting profile photo:', err);
-            setError('Failed to delete profile photo.');
+          console.error('Error uploading profile photo:', err);
+          setError('Failed to upload profile photo.');
         }
-        setIsPhotoModalOpen(false);
-        setImageToCrop(null);
-    };
+      }
+    }, 'image/png', 1);
+};
 
-    // In Overview.jsx
+const handleDeleteProfilePhoto = async (empId) => {
+    if (!empId || imgSrc.includes("default.png")) return;
+    try {
+        await deleteProfilePhoto(empId);
+        setImgSrc("/uploads/profile_photos/default.png");
+        setError(null);
+        console.log('Profile photo deleted successfully for empid:', empId);
+    } catch (err) {
+        console.error('Error deleting profile photo:', err);
+        setError('Failed to delete profile photo.');
+    }
+    setIsPhotoModalOpen(false);
+    setImageToCrop(null);
+};
 
 function onImageLoad(e) {
   const { width, height } = e.currentTarget;
-  // Create a centered, square crop area in PIXELS
-  const cropWidth = Math.min(width, height) * 0.9; // 90% of the smaller dimension
+  const cropWidth = Math.min(width, height) * 0.9;
   setCrop({
-    unit: 'px', // Explicitly set the unit to pixels
+    unit: 'px',
     x: (width - cropWidth) / 2,
     y: (height - cropWidth) / 2,
     width: cropWidth,
@@ -822,7 +830,7 @@ function onImageLoad(e) {
       const updatedDocuments = await fetchdocumentsbyid(formData.empid);
       setEmployeeDetails(updatedEmployee);
       setLeaveAssignments(updatedLeaveAssignments);
-      setemployeedocuments(updatedDocuments); // Refresh documents
+      setemployeedocuments(updatedDocuments);
       setSelectedRoles(updatedEmployee.roleids || []);
       if (section === 'personal') setEditingPersonal(false);
       if (section === 'employment') setEditingEmployment(false);
@@ -923,7 +931,6 @@ const handleRoleToggle = (roleid) => {
   });
 };
 
-  // Add employee form states
   const [addform_formError, addform_setFormError] = useState(null);
   const [addform_leaves, addform_setLeaves] = useState({});
   const [addform_workCountryId, addform_setWorkCountryId] = useState('185');
@@ -993,7 +1000,6 @@ const handleRoleToggle = (roleid) => {
     return { ...employee, rolename };
   });
 
-  // Sorting functions
   const sortEmployees = (a, b, column, direction) => {
     let aValue, bValue;
     switch (column) {
@@ -1101,7 +1107,6 @@ const handleRoleToggle = (roleid) => {
   const currentEmployees = filteredEmployees.slice(indexOfFirstEmployee, indexOfLastEmployee);
 
   
-
   return (
     <div className="roles-overview-container">
       {error && <div className="error-message">{error}</div>}
@@ -1763,119 +1768,124 @@ const handleRoleToggle = (roleid) => {
             </select>
           </div>
           
-          {employees.length === 0 && !error ? (
-            <div className="empty-state">
-              <p>No active employees found.</p>
-            </div>
-          ) : (
-            <div className="table-wrapper">
-              <table className="six-column">
-                <colgroup>
-                  <col />
-                  <col />
-                  <col />
-                  <col />
-                  <col />
-                  <col />
-                </colgroup>
-                <thead>
-                  <tr>
-                    <th 
-                      className={`sortable ${sortConfig.column === 'empid' ? `sort-${sortConfig.direction}` : ''}`}
-                      onClick={() => requestSort('empid')}
-                    >
-                      Employee ID
-                    </th>
-                    <th 
-                      className={`sortable ${sortConfig.column === 'name' ? `sort-${sortConfig.direction}` : ''}`}
-                      onClick={() => requestSort('name')}
-                    >
-                      Name
-                    </th>
-                    <th>Email</th>
-                    <th 
-                      className={`sortable ${sortConfig.column === 'hireDate' ? `sort-${sortConfig.direction}` : ''}`}
-                      onClick={() => requestSort('hireDate')}
-                    >
-                      Hire Date
-                    </th>
-                    <th>Mobile</th>
-                    <th>
-                      Status
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {currentEmployees.map((employee) => (
-                    <tr
-                      key={employee.empid}
-                      onClick={() => handleRowClick(employee.empid)}
-                      className={selectedEmpId === employee.empid ? 'selected-row' : ''}
-                    >
-                      <td className="id-cell">
-                        <span className={employee.STATUS.toLowerCase() === 'active' ? 'role-indicator' : 'role-indicatorinactive '}></span>
-                        Employee-{getdisplayprojectid(employee.empid)}
-                      </td>
-                      <td>{employee.EMP_PREF_NAME || `${employee.EMP_FST_NAME} ${employee.EMP_MID_NAME || ''} ${employee.EMP_LAST_NAME}`.trim()}</td>
-                      <td>{employee.email}</td>
-                      <td>{employee.HIRE ? new Date(employee.HIRE).toLocaleDateString('en-US') : '-'}</td>
-                      <td>{employee.MOBILE_NUMBER || '-'}</td>
-                      <td>
-                        {employee.STATUS && (
-                          <span className={`status-badge ${employee.STATUS.toLowerCase() === 'active' ? 'active' : 'inactive'}`}>
-                            {employee.STATUS}
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-          
-          {filteredEmployees.length > employeesPerPage && (
-            <div className="pagination-container">
-              <button
-                className="button"
-                onClick={handlePrevPage}
-                disabled={currentPage === 1}
-              >
-                ← Previous
-              </button>
-              <span className="pagination-text">
-                Page{' '}
+          {hasMounted && (
+            <>
+              {employees.length === 0 && !error ? (
+                <div className="empty-state">
+                  <p>No employees found for your permission level.</p>
+                </div>
+              ) : (
+                <div className="table-wrapper">
+                  <table className="six-column">
+                    <colgroup>
+                      <col />
+                      <col />
+                      <col />
+                      <col />
+                      <col />
+                      <col />
+                    </colgroup>
+                    <thead>
+                      <tr>
+                        <th 
+                          className={`sortable ${sortConfig.column === 'empid' ? `sort-${sortConfig.direction}` : ''}`}
+                          onClick={() => requestSort('empid')}
+                        >
+                          Employee ID
+                        </th>
+                        <th 
+                          className={`sortable ${sortConfig.column === 'name' ? `sort-${sortConfig.direction}` : ''}`}
+                          onClick={() => requestSort('name')}
+                        >
+                          Name
+                        </th>
+                        <th>Email</th>
+                        <th 
+                          className={`sortable ${sortConfig.column === 'hireDate' ? `sort-${sortConfig.direction}` : ''}`}
+                          onClick={() => requestSort('hireDate')}
+                        >
+                          Hire Date
+                        </th>
+                        <th>Mobile</th>
+                        <th>
+                          Status
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {currentEmployees.map((employee) => (
+                        <tr
+                          key={employee.empid}
+                          onClick={() => handleRowClick(employee.empid)}
+                          className={selectedEmpId === employee.empid ? 'selected-row' : ''}
+                        >
+                          <td className="id-cell">
+                            <span className={employee.STATUS.toLowerCase() === 'active' ? 'role-indicator' : 'role-indicatorinactive '}></span>
+                            Employee-{getdisplayprojectid(employee.empid)}
+                          </td>
+                          <td>{employee.EMP_PREF_NAME || `${employee.EMP_FST_NAME} ${employee.EMP_MID_NAME || ''} ${employee.EMP_LAST_NAME}`.trim()}</td>
+                          <td>{employee.email}</td>
+                          <td>{employee.formattedHireDate}</td>
+                          <td>{employee.MOBILE_NUMBER || '-'}</td>
+                          <td>
+                            {employee.STATUS && (
+                              <span className={`status-badge ${employee.STATUS.toLowerCase() === 'active' ? 'active' : 'inactive'}`}>
+                                {employee.STATUS}
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              
+              {filteredEmployees.length > employeesPerPage && (
+                <div className="pagination-container">
+                  <button
+                    className="button"
+                    onClick={handlePrevPage}
+                    disabled={currentPage === 1}
+                  >
+                    ← Previous
+                  </button>
+                  <span className="pagination-text">
+                    Page{' '}
+                    <input
+                      type="text"
+                      value={pageInputValue}
+                      onChange={handlePageInputChange}
+                      onKeyPress={handlePageInputKeyPress}
+                      className="pagination-input"
+                    />{' '}
+                    of {totalPages}
+                  </span>
+                  <button
+                    className="button"
+                    onClick={handleNextPage}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
+              
+              <div className="rows-per-page-container">
+                <label className="rows-per-page-label">Rows per Page:</label>
                 <input
                   type="text"
-                  value={pageInputValue}
-                  onChange={handlePageInputChange}
-                  onKeyPress={handlePageInputKeyPress}
-                  className="pagination-input"
-                />{' '}
-                of {totalPages}
-              </span>
-              <button
-                className="button"
-                onClick={handleNextPage}
-                disabled={currentPage === totalPages}
-              >
-                Next →
-              </button>
-            </div>
+                  value={employeesPerPageInput}
+                  onChange={handleEmployeesPerPageInputChange}
+                  onKeyPress={handleEmployeesPerPageInputKeyPress}
+                  placeholder="Employees per page"
+                  className="rows-per-page-input"
+                  aria-label="Number of rows per page"
+                />
+              </div>
+            </>
           )}
-          
-          <div className="rows-per-page-container">
-            <label className="rows-per-page-label">Rows per Page:</label>
-            <input
-              type="text"
-              value={employeesPerPageInput}
-              onChange={handleEmployeesPerPageInputChange}
-              onKeyPress={handleEmployeesPerPageInputKeyPress}
-              placeholder="Employees per page"
-              className="rows-per-page-input"
-              aria-label="Number of rows per page"
-            />
-          </div>
+
         </div>
       ) :  !issadd&& 
       (
@@ -1914,8 +1924,6 @@ const handleRoleToggle = (roleid) => {
                         <div className="cropper-image-wrapper">
                            <ReactCrop
                             crop={crop}
-                            // --- CHANGE THIS LINE ---
-                            // Ensure we are using the pixelCrop object (the first argument)
                             onChange={(pixelCrop) => setCrop(pixelCrop)} 
                             aspect={1}
                             minWidth={100}
@@ -2014,7 +2022,7 @@ const handleRoleToggle = (roleid) => {
             {!employementdetails&&personaldetails&&!workdetails&&(
                 <div className="role-details-block96">
               <h3>Personal Details</h3>
-              {editingPersonal && canEditEmployees ? (
+              {editingPersonal ? (
                 <form onSubmit={(e) => { e.preventDefault(); handleSave('personal'); }}>
                   <div className="form-row">
                     <div className="form-group">
@@ -2146,10 +2154,8 @@ const handleRoleToggle = (roleid) => {
                       <p>{employeeDetails.LINKEDIN_URL || '-'}</p>
                     </div>
                   </div>
-                  {canEditEmployees && (
-                   
+                  {canEdit('personal') && (
                       <button className="button" onClick={() => handleEdit('personal')}>Edit</button>
-                    
                   )}
                 </div>
               )}
@@ -2161,7 +2167,7 @@ const handleRoleToggle = (roleid) => {
               <>
                 <div className="role-details-block96">
               <h3>Employment Details</h3>
-              {editingEmployment && canEditEmployees ? (
+              {editingEmployment ? (
                 <form onSubmit={(e) => { e.preventDefault(); handleSave('employment'); }}>
                   <div className="form-row">
                     <div className="form-group">
@@ -2384,7 +2390,7 @@ const handleRoleToggle = (roleid) => {
                     <p>{getSuborgName(employeeDetails.suborgid)}</p>
                     </div>
                   </div>
-                  {canEditEmployees && (                    
+                  {canEdit('employment') && (                    
                     <button className="button" onClick={() => handleEdit('employment')}>Edit</button>
                   )}
                 </div>
@@ -2393,7 +2399,7 @@ const handleRoleToggle = (roleid) => {
                           
             <div className="role-details-block96">
               <h3>Leave Assignments</h3>
-              {editingLeaves && canEditEmployees ? (
+              {editingLeaves ? (
                 <div className="leaves-container">
                   {leaveTypes.map((leave) => (
                     <div key={leave.id} className="form-group">
@@ -2427,7 +2433,8 @@ const handleRoleToggle = (roleid) => {
                       )
                     ))
                   )}
-                  {canEditEmployees && (
+                  {/* ***** THIS IS THE LINE YOU NEED TO CHANGE ***** */}
+                  {canEdit('leaves') && (
                       <button className="button" onClick={() => handleEdit('leaves')}>Edit</button>  
                   )}
                 </div>
@@ -2442,7 +2449,7 @@ const handleRoleToggle = (roleid) => {
              <>
                <div className="role-details-block96">
               <h3>Work Address</h3>
-              {editingWorkAddress && canEditEmployees ? (
+              {editingWorkAddress ? (
                 <form onSubmit={(e) => { e.preventDefault(); handleSave('workAddress'); }}>
                   <div className="form-row">
                     <div className="form-group">
@@ -2541,10 +2548,8 @@ const handleRoleToggle = (roleid) => {
                       <p>{employeeDetails.WORK_POSTAL_CODE || '-'}</p>
                     </div>
                   </div>
-                  {canEditEmployees && (
-                   
+                  {canEdit('workAddress') && (
                       <button className="button" onClick={() => handleEdit('workAddress')}>Edit</button>
-                   
                   )}
                 </div>
               )}
@@ -2553,7 +2558,7 @@ const handleRoleToggle = (roleid) => {
 
             <div className="role-details-block96">
               <h3>Home Address</h3>
-              {editingHomeAddress && canEditEmployees ? (
+              {editingHomeAddress ? (
                 <form onSubmit={(e) => { e.preventDefault(); handleSave('homeAddress'); }}>
                   <div className="form-row">
                     <div className="form-group">
@@ -2652,10 +2657,8 @@ const handleRoleToggle = (roleid) => {
                       <p>{employeeDetails.HOME_POSTAL_CODE || '-'}</p>
                     </div>
                   </div>
-                  {canEditEmployees && (
-                    
+                  {canEdit('homeAddress') && (
                       <button className="button" onClick={() => handleEdit('homeAddress')}>Edit</button>
-                  
                   )}
                 </div>
               )}
@@ -2665,7 +2668,7 @@ const handleRoleToggle = (roleid) => {
 
              <div className="role-details-block96">
               <h3>Emergency Contact</h3>
-              {editingEmergencyContact && canEditEmployees ? (
+              {editingEmergencyContact ? (
                 <form onSubmit={(e) => { e.preventDefault(); handleSave('emergencyContact'); }}>
                   <div className="form-row">
                     <div className="form-group">
@@ -2794,7 +2797,7 @@ const handleRoleToggle = (roleid) => {
                       <p>{employeeDetails.EMERG_CNCT_POSTAL_CODE || '-'}</p>
                     </div>
                   </div>
-                  {canEditEmployees && (                    
+                  {canEdit('emergencyContact') && (                    
                       <button className="button" onClick={() => handleEdit('emergencyContact')}>Edit</button>                    
                   )}
                 </div>
