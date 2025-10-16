@@ -1,18 +1,37 @@
 'use client'
 import React, { useState, useEffect } from 'react';
-import { updateEmployeeLeave } from '@/app/serverActions/Leaves/Addleave';
-import { fetchLeaveTypes } from '@/app/serverActions/Leaves/Addleave';
+import { updateEmployeeLeave, fetchLeaveTypes } from '@/app/serverActions/Leaves/Addleave';
 import './EditLeaveModal.css';
 
-export default function EditLeaveModal({ leave, onClose, onSuccess, isAdmin, isSuperior }) {
+/**
+ * **NEW**: Helper function to convert "MM/DD/YYYY" to "YYYY-MM-DD"
+ * This is required for the <input type="date"> element.
+ */
+const convertDisplayDateToInputDate = (dateString) => {
+  if (!dateString) return '';
+  const parts = dateString.split('/');
+  if (parts.length === 3) {
+    // parts[0] = MM, parts[1] = DD, parts[2] = YYYY
+    return `${parts[2]}-${parts[0]}-${parts[1]}`;
+  }
+  // Handle case where date might be in YYYY-MM-DD format already
+  if (dateString.includes('-')) {
+    return dateString.split('T')[0];
+  }
+  return ''; // Return empty if format is wrong
+};
+
+export default function EditLeaveModal({ leave, onClose, onSuccess, canEditAnytime }) {
   const [leaveData, setLeaveData] = useState({
     leaveid: leave.leaveid || '',
-    startdate: leave.startdate ? new Date(leave.startdate).toISOString().split('T')[0] : '',
-    enddate: leave.enddate ? new Date(leave.enddate).toISOString().split('T')[0] : '',
+    // **FIX**: Use the helper function to set the correct input format
+    startdate: convertDisplayDateToInputDate(leave.startdate),
+    enddate: convertDisplayDateToInputDate(leave.enddate),
     am_pm: leave.am_pm || 'both',
     description: leave.description || '',
     status: leave.status || 'pending',
   });
+  
   const [leaveTypes, setLeaveTypes] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -20,7 +39,7 @@ export default function EditLeaveModal({ leave, onClose, onSuccess, isAdmin, isS
   useEffect(() => {
     const getLeaveTypes = async () => {
       const data = await fetchLeaveTypes();
-      if (!data.error) {
+      if (data && !data.error) {
         setLeaveTypes(data);
       }
     };
@@ -75,7 +94,7 @@ export default function EditLeaveModal({ leave, onClose, onSuccess, isAdmin, isS
               </select>
             </div>
             
-            {(isAdmin || isSuperior) && (
+            {canEditAnytime && (
               <div className="form-group">
                 <label htmlFor="status">Status</label>
                 <select id="status" name="status" value={leaveData.status} onChange={handleChange}>

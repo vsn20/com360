@@ -2,6 +2,8 @@
 
 import DBconnection from "@/app/utils/config/db";
 import { cookies } from "next/headers";
+// Import the central permission function
+import { getLeaveManagementScope } from "./Overview"; 
 
 const decodeJwt = (token) => {
   try {
@@ -15,93 +17,9 @@ const decodeJwt = (token) => {
   }
 };
 
-// Internal helper functions, not exported
-const isUserAdmin = async (pool, empId, orgId) => {
-  if (!empId || !orgId) return false;
-  const [rows] = await pool.execute(
-    `SELECT 1 FROM C_EMP_ROLE_ASSIGN era 
-     JOIN C_ORG_ROLE_TABLE r ON era.roleid = r.roleid AND era.orgid = r.orgid
-     WHERE era.empid = ? AND era.orgid = ? AND r.isadmin = 1 LIMIT 1`,
-    [empId, orgId]
-  );
-  return rows.length > 0;
-};
-
-const getAllSubordinatesCTE = async (pool, superiorEmpId) => {
-  if (!superiorEmpId) return [];
-  const query = `
-      WITH RECURSIVE SubordinateHierarchy AS (
-          SELECT empid, EMP_FST_NAME, EMP_LAST_NAME, superior FROM C_EMP WHERE superior = ?
-          UNION ALL
-          SELECT e.empid, e.EMP_FST_NAME, e.EMP_LAST_NAME, e.superior FROM C_EMP e
-          INNER JOIN SubordinateHierarchy sh ON e.superior = sh.empid
-      )
-      SELECT DISTINCT empid, EMP_FST_NAME, EMP_LAST_NAME FROM SubordinateHierarchy;
-  `;
-  const [rows] = await pool.execute(query, [superiorEmpId]);
-  return rows;
-};
-
-const getDelegatedSubordinatesCTE = async (pool, userEmpId) => {
-  const [delegateRows] = await pool.execute(
-    `SELECT senderempid FROM C_DELEGATE WHERE receiverempid = ? AND menuid = (SELECT id FROM C_MENU WHERE name = 'Leaves') AND isactive = 1 AND (submenuid IS NULL OR submenuid = 0)`,
-    [userEmpId]
-  );
-  if (delegateRows.length === 0) return [];
-  
-  const delegatedSuperiorIds = delegateRows.map(row => row.senderempid);
-  const placeholders = delegatedSuperiorIds.map(() => '?').join(',');
-
-  const query = `
-      WITH RECURSIVE DelegatedHierarchy AS (
-          SELECT empid, EMP_FST_NAME, EMP_LAST_NAME FROM C_EMP WHERE empid IN (${placeholders})
-          UNION ALL
-          SELECT e.empid, e.EMP_FST_NAME, e.EMP_LAST_NAME FROM C_EMP e
-          INNER JOIN DelegatedHierarchy dh ON e.superior = dh.empid
-      )
-      SELECT DISTINCT empid, EMP_FST_NAME, EMP_LAST_NAME FROM DelegatedHierarchy;
-  `;
-  const [allRelatedEmployees] = await pool.execute(query, [...delegatedSuperiorIds]);
-  return allRelatedEmployees.filter(emp => emp.empid !== userEmpId && !delegatedSuperiorIds.includes(emp.empid));
-};
-
-export async function fetchEmployeesUnderSuperior() {
-  try {
-    const token = cookies().get("jwt_token")?.value;
-    if (!token) return { error: "No token found." };
-
-    const decoded = decodeJwt(token);
-    if (!decoded || !decoded.userId) return { error: "Invalid token." };
-
-    const pool = await DBconnection();
-    const [userRows] = await pool.execute("SELECT empid FROM C_USER WHERE username = ?", [decoded.userId]);
-    if (!userRows.length) return { error: "User not found." };
-    const superiorEmpId = userRows[0].empid;
-
-    const [selfRows] = await pool.execute("SELECT empid, EMP_FST_NAME, EMP_LAST_NAME FROM C_EMP WHERE empid = ?", [superiorEmpId]);
-    const currentEmployee = selfRows[0] || {};
-    
-    const directSubordinates = await getAllSubordinatesCTE(pool, superiorEmpId);
-    const delegatedSubordinates = await getDelegatedSubordinatesCTE(pool, superiorEmpId);
-
-    let allEmployees = [currentEmployee, ...directSubordinates, ...delegatedSubordinates];
-    
-    const uniqueEmployees = allEmployees.reduce((acc, current) => {
-        if (!acc.find(item => item.empid === current.empid)) acc.push(current);
-        return acc;
-    }, []);
-
-    return { employees: uniqueEmployees };
-  } catch (error) {
-    console.error("Error fetching employees under superior:", error.message);
-    return { error: `Failed to fetch employees: ${error.message}` };
-  }
-}
-
 export async function addEmployeeLeave(formData) {
   try {
-    const cookieStore = cookies();
-    const token = cookieStore.get('jwt_token')?.value;
+    const token = cookies().get('jwt_token')?.value;
     if (!token) return { error: 'No token found. Please log in.' };
     
     const decoded = decodeJwt(token);
@@ -148,8 +66,7 @@ export async function addEmployeeLeave(formData) {
 
 export async function approveEmployeeLeave(leaveId, action) {
   try {
-    const cookieStore = cookies();
-    const token = cookieStore.get('jwt_token')?.value;
+    const token = cookies().get('jwt_token')?.value;
     if (!token) return { error: 'No token found. Please log in.' };
     
     const decoded = decodeJwt(token);
@@ -166,21 +83,17 @@ export async function approveEmployeeLeave(leaveId, action) {
     if (leaveRows.length === 0) return { error: 'Leave request not found.' };
     const leave = leaveRows[0];
 
-    const isAdmin = await isUserAdmin(pool, currentEmpId, orgid);
-    const directSubordinates = await getAllSubordinatesCTE(pool, currentEmpId);
-    const delegatedSubordinates = await getDelegatedSubordinatesCTE(pool, currentEmpId);
-    const allManageableEmployees = [...directSubordinates, ...delegatedSubordinates]
-        .filter((sub, index, self) => index === self.findIndex((s) => s.empid === sub.empid));
+    // *** PERMISSION CHECK using corrected scope function ***
+    const scope = await getLeaveManagementScope(pool, currentEmpId, orgid);
+    if (!scope.manageableEmpIds.includes(leave.empid)) {
+        return { error: 'You are not authorized to approve this leave request.' };
+    }
 
-    const isSuperior = allManageableEmployees.some(sub => sub.empid === leave.empid);
-    const isAdminSelfApproving = isAdmin && currentEmpId === leave.empid;
-
-    if (!isSuperior && !isAdminSelfApproving) return { error: 'You are not authorized to approve this leave request.' };
     if (leave.status !== 'pending') return { error: 'Leave request already processed.' };
 
     const leaveDays = leave.am_pm === 'both' ? (leave.noofnoons || 0) / 2.0 : (leave.noofnoons || 0) * 0.5;
     const [superiorInfo] = await pool.execute('SELECT EMP_FST_NAME, EMP_LAST_NAME FROM C_EMP WHERE empid = ?', [currentEmpId]);
-    const superiorName = superiorInfo.length > 0 ? `${superiorInfo[0].EMP_FST_NAME} ${superiorInfo[0].EMP_LAST_NAME || ''}`.trim() : 'Admin';
+    const superiorName = superiorInfo.length > 0 ? `${superiorInfo[0].EMP_FST_NAME} ${superiorInfo[0].EMP_LAST_NAME || ''}`.trim() : 'System';
     const newStatus = action === 'accept' ? 'accepted' : 'rejected';
 
     await pool.execute(`UPDATE C_EMPLOYEE_LEAVES SET status = ?, approved_by = ? WHERE id = ?`, [newStatus, superiorName, leaveId]);
@@ -209,12 +122,10 @@ export async function updateEmployeeLeave(leaveId, formData) {
 
         const token = cookies().get('jwt_token')?.value;
         if (!token) throw new Error('Authentication token not found.');
-
         const decoded = decodeJwt(token);
         if (!decoded || !decoded.userId || !decoded.orgid) throw new Error('Invalid authentication token.');
         
         const { userId, orgid } = decoded;
-        
         const [userRows] = await connection.execute('SELECT empid FROM C_USER WHERE username = ?', [userId]);
         if (userRows.length === 0) throw new Error('User not found.');
         const currentEmpId = userRows[0].empid;
@@ -222,19 +133,13 @@ export async function updateEmployeeLeave(leaveId, formData) {
         const [leaveRows] = await connection.execute('SELECT * FROM C_EMPLOYEE_LEAVES WHERE id = ? AND orgid = ?', [leaveId, orgid]);
         if (leaveRows.length === 0) throw new Error('Leave request not found.');
         const originalLeave = leaveRows[0];
-        const leaveOwnerEmpId = originalLeave.empid;
         
-        const isAdmin = await isUserAdmin(connection, currentEmpId, orgid);
-        const directAndIndirectSubordinates = await getAllSubordinatesCTE(connection, currentEmpId);
-        const delegatedSubordinates = await getDelegatedSubordinatesCTE(connection, currentEmpId);
+        // *** PERMISSION CHECK using corrected scope function ***
+        const scope = await getLeaveManagementScope(connection, currentEmpId, orgid);
+        const canEditAnytime = scope.manageableEmpIds.includes(originalLeave.empid);
+        const canEditOwnPending = (currentEmpId === originalLeave.empid) && (originalLeave.status === 'pending');
         
-        const allManageableEmployees = [...directAndIndirectSubordinates, ...delegatedSubordinates]
-            .filter((sub, index, self) => index === self.findIndex((s) => s.empid === sub.empid));
-
-        const isSuperior = allManageableEmployees.some(sub => sub.empid === leaveOwnerEmpId);
-        const canEditOwnLeave = (currentEmpId === leaveOwnerEmpId) && (originalLeave.status === 'pending' || isAdmin);
-
-        if (!isSuperior && !canEditOwnLeave) {
+        if (!canEditAnytime && !canEditOwnPending) {
             throw new Error('You are not authorized to edit this leave request.');
         }
 
@@ -243,17 +148,13 @@ export async function updateEmployeeLeave(leaveId, formData) {
         const enddate = formData.get('enddate');
         const am_pm = formData.get('am_pm');
         const description = formData.get('description') || '';
-        const status = (isAdmin || isSuperior) ? formData.get('status') : originalLeave.status;
+        const status = canEditAnytime ? formData.get('status') : originalLeave.status;
 
         if (new Date(startdate) > new Date(enddate)) throw new Error('Start date cannot be after end date.');
         
-        const calculateDays = (noons, duration) => {
-            if (!noons) return 0;
-            return duration === 'both' ? noons / 2.0 : noons * 0.5;
-        };
+        const calculateDays = (noons, duration) => noons ? (duration === 'both' ? noons / 2.0 : noons * 0.5) : 0;
 
         const originalDays = calculateDays(originalLeave.noofnoons, originalLeave.am_pm);
-        
         const newDaysDiff = Math.ceil((new Date(enddate) - new Date(startdate)) / (1000 * 60 * 60 * 24)) + 1;
         const newNoons = am_pm === 'both' ? newDaysDiff * 2 : newDaysDiff;
         const newDays = am_pm === 'both' ? newDaysDiff : newDaysDiff * 0.5;
@@ -261,21 +162,21 @@ export async function updateEmployeeLeave(leaveId, formData) {
         if (originalLeave.status === 'accepted') {
             await connection.execute(
                 'UPDATE C_EMPLOYEE_LEAVES_ASSIGN SET noofleaves = noofleaves + ? WHERE empid = ? AND leaveid = ? AND orgid = ?',
-                [originalDays, leaveOwnerEmpId, originalLeave.leaveid, orgid]
+                [originalDays, originalLeave.empid, originalLeave.leaveid, orgid]
             );
         }
 
         if (status === 'accepted') {
             const [assignRows] = await connection.execute(
                 'SELECT noofleaves FROM C_EMPLOYEE_LEAVES_ASSIGN WHERE empid = ? AND leaveid = ? AND orgid = ?',
-                [leaveOwnerEmpId, leaveid, orgid]
+                [originalLeave.empid, leaveid, orgid]
             );
             if (assignRows.length === 0 || assignRows[0].noofleaves < newDays) {
                 throw new Error('Insufficient leave balance for this change.');
             }
             await connection.execute(
                 'UPDATE C_EMPLOYEE_LEAVES_ASSIGN SET noofleaves = noofleaves - ? WHERE empid = ? AND leaveid = ? AND orgid = ?',
-                [newDays, leaveOwnerEmpId, leaveid, orgid]
+                [newDays, originalLeave.empid, leaveid, orgid]
             );
         }
 
@@ -288,7 +189,7 @@ export async function updateEmployeeLeave(leaveId, formData) {
              WHERE id = ?`,
             [leaveid, startdate, enddate, status, newNoons, am_pm, description, status !== 'pending' ? approverName : null, leaveId]
         );
-
+        
         await connection.commit();
         return { success: true };
     } catch (error) {
@@ -300,6 +201,7 @@ export async function updateEmployeeLeave(leaveId, formData) {
     }
 }
 
+// **RESTORED**: fetchLeaveTypes is back in this file and exported.
 export async function fetchLeaveTypes() {
   try {
     const token = cookies().get('jwt_token')?.value;

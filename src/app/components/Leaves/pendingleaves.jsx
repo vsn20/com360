@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { fetchPendingLeaves, fetchLeaveTypes } from '@/app/serverActions/Leaves/Overview';
-import { approveEmployeeLeave, updateEmployeeLeave } from '@/app/serverActions/Leaves/Addleave';
+import { fetchPendingLeaves } from '@/app/serverActions/Leaves/Overview';
+import { approveEmployeeLeave, fetchLeaveTypes } from '@/app/serverActions/Leaves/Addleave';
 import EditLeaveModal from './EditLeaveModal';
 import './pendingleaves.css';
 
@@ -15,11 +15,7 @@ const PendingLeaveApprovals = ({ onBack }) => {
   const [editingLeave, setEditingLeave] = useState(null);
   
   const [filters, setFilters] = useState({
-    searchQuery: '',
-    leaveType: 'all',
-    startDate: '',
-    endDate: '',
-    period: 'all'
+    searchQuery: '', leaveType: 'all', startDate: '', endDate: '', period: 'all'
   });
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -41,7 +37,7 @@ const PendingLeaveApprovals = ({ onBack }) => {
     } else {
       setPendingLeaves(pendingResult.leaves || []);
     }
-    if (!leaveTypesResult.error) {
+    if (leaveTypesResult && !leaveTypesResult.error) {
       setLeaveTypes(leaveTypesResult);
     }
     setLoading(false);
@@ -52,27 +48,12 @@ const PendingLeaveApprovals = ({ onBack }) => {
   }, [fetchData]);
 
   const handleFilterChange = (e) => {
-    const { name, value } = e.target;
-    setFilters(prev => ({ ...prev, [name]: value }));
-    setCurrentPage(1);
-    setPageInputValue('1');
+    setFilters(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    setCurrentPage(1); setPageInputValue('1');
   };
 
-  const resetFilters = () => {
-    setFilters({
-      searchQuery: '',
-      leaveType: 'all',
-      startDate: '',
-      endDate: '',
-      period: 'all'
-    });
-    setCurrentPage(1);
-    setPageInputValue('1');
-  };
-
-  const handleApproveChange = async (leaveId, empId, action) => {
-    setError(null);
-    setSuccess('');
+  const handleApproveChange = async (leaveId, action) => {
+    setError(null); setSuccess('');
     const result = await approveEmployeeLeave(leaveId, action);
     if (result.error) {
       setError(result.error);
@@ -88,8 +69,7 @@ const PendingLeaveApprovals = ({ onBack }) => {
   };
 
   const handleUpdateSuccess = () => {
-    setIsEditModalOpen(false);
-    setEditingLeave(null);
+    setIsEditModalOpen(false); setEditingLeave(null);
     setSuccess('Leave updated successfully!');
     fetchData();
   };
@@ -97,61 +77,23 @@ const PendingLeaveApprovals = ({ onBack }) => {
   const formatDate = (date) => {
     if (!date || isNaN(new Date(date))) return '';
     const d = new Date(date);
-    return new Intl.DateTimeFormat('en-US', { month: '2-digit', day: '2-digit', year: 'numeric', timeZone: 'UTC' }).format(d);
+    const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(d.getUTCDate()).padStart(2, '0');
+    return `${month}/${day}/${d.getUTCFullYear()}`;
   };
 
-  const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(prev => prev + 1);
-      setPageInputValue((currentPage + 1).toString());
-    }
-  };
-  const handlePrevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(prev => prev - 1);
-      setPageInputValue((currentPage - 1).toString());
-    }
-  };
+  const handleNextPage = () => { if (currentPage < totalPages) { setCurrentPage(prev => prev + 1); setPageInputValue((currentPage + 1).toString()); } };
+  const handlePrevPage = () => { if (currentPage > 1) { setCurrentPage(prev => prev - 1); setPageInputValue((currentPage - 1).toString()); } };
   const handlePageInputChange = (e) => setPageInputValue(e.target.value);
-  const handlePageInputKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      const value = parseInt(pageInputValue, 10);
-      if (!isNaN(value) && value >= 1 && value <= totalPages) {
-        setCurrentPage(value);
-      } else {
-        setPageInputValue(currentPage.toString());
-      }
-    }
-  };
-  const handleItemsPerPageChange = (e) => {
-    setItemsPerPageInput(e.target.value);
-  };
-  const handleItemsPerPageKeyPress = (e) => {
-    if(e.key === 'Enter') {
-        const value = parseInt(itemsPerPageInput, 10);
-        if(!isNaN(value) && value > 0) {
-            setItemsPerPage(value);
-            setCurrentPage(1);
-            setPageInputValue('1');
-        } else {
-            setItemsPerPageInput(itemsPerPage.toString());
-        }
-    }
-  };
+  const handlePageInputKeyPress = (e) => { if (e.key === 'Enter') { const value = parseInt(pageInputValue, 10); if (!isNaN(value) && value >= 1 && value <= totalPages) setCurrentPage(value); else setPageInputValue(currentPage.toString()); } };
+  const handleItemsPerPageChange = (e) => setItemsPerPageInput(e.target.value);
+  const handleItemsPerPageKeyPress = (e) => { if (e.key === 'Enter') { const value = parseInt(itemsPerPageInput, 10); if (!isNaN(value) && value > 0) { setItemsPerPage(value); setCurrentPage(1); setPageInputValue('1'); } else setItemsPerPageInput(itemsPerPage.toString()); } };
 
   const filteredLeaves = pendingLeaves.filter(leave => {
-    const leaveStartDate = new Date(leave.startdate);
-    const leaveEndDate = new Date(leave.enddate);
-
+    const leaveStartDate = new Date(leave.startdate); const leaveEndDate = new Date(leave.enddate);
     const filterStartDate = filters.startDate ? new Date(filters.startDate + 'T00:00:00Z') : null;
     const filterEndDate = filters.endDate ? new Date(filters.endDate + 'T23:59:59Z') : null;
-
-    const searchMatch = leave.employee_name.toLowerCase().includes(filters.searchQuery.toLowerCase());
-    const startDateMatch = !filterStartDate || leaveEndDate >= filterStartDate;
-    const endDateMatch = !filterEndDate || leaveStartDate <= filterEndDate;
-    const leaveTypeMatch = filters.leaveType === 'all' || leave.leaveid.toString() === filters.leaveType;
-    const periodMatch = filters.period === 'all' || leave.am_pm === filters.period;
-    return searchMatch && startDateMatch && endDateMatch && leaveTypeMatch && periodMatch;
+    return leave.employee_name.toLowerCase().includes(filters.searchQuery.toLowerCase()) && (!filterStartDate || leaveEndDate >= filterStartDate) && (!filterEndDate || leaveStartDate <= filterEndDate) && (filters.leaveType === 'all' || leave.leaveid.toString() === filters.leaveType) && (filters.period === 'all' || leave.am_pm === filters.period);
   });
 
   const totalPages = Math.ceil(filteredLeaves.length / itemsPerPage);
@@ -161,24 +103,20 @@ const PendingLeaveApprovals = ({ onBack }) => {
 
   return (
     <div className="leaves_pending_page_container">
-      {isEditModalOpen && editingLeave && ( <EditLeaveModal leave={editingLeave} onClose={() => setIsEditModalOpen(false)} onSuccess={handleUpdateSuccess} isAdmin={true} isSuperior={true} /> )}
+      {/* **FIX**: This now passes the correct `canEditAnytime` prop. It's always true on this screen. */}
+      {isEditModalOpen && editingLeave && ( <EditLeaveModal leave={editingLeave} onClose={() => setIsEditModalOpen(false)} onSuccess={handleUpdateSuccess} canEditAnytime={true} /> )}
       <h2 className="leaves_pending_page_title">Pending Leave Approvals</h2>
       <button onClick={onBack} className="leaves_back_button"></button>
       <div className="leaves_pending_container">
         {success && <p className="leaves_pending_message_success">{success}</p>}
         {error && <p className="leaves_error_message">{error}</p>}
-        
         <div className="leaves_filters_container">
             <div className="leaves_filter_group"><label>Employee Name</label><input type="text" name="searchQuery" value={filters.searchQuery} onChange={handleFilterChange} placeholder="Search by name..." /></div>
             <div className="leaves_filter_group"><label>Leave Type</label><select name="leaveType" value={filters.leaveType} onChange={handleFilterChange}><option value="all">All</option>{leaveTypes.map(lt => <option key={lt.id} value={lt.id}>{lt.Name}</option>)}</select></div>
-            {/* <div className="leaves_filter_group"><label>From</label><input type="date" name="startDate" value={filters.startDate} onChange={handleFilterChange} /></div>
-            <div className="leaves_filter_group"><label>To</label><input type="date" name="endDate" value={filters.endDate} onChange={handleFilterChange} /></div> */}
             <div className="leaves_filter_group"><label>Period</label><select name="period" value={filters.period} onChange={handleFilterChange}><option value="all">All</option><option value="am">Morning</option><option value="pm">Afternoon</option><option value="both">Full Day</option></select></div>
-            {/* <button onClick={resetFilters} className="leaves_button secondary">Reset</button> */}
         </div>
-
         {filteredLeaves.length === 0 ? (
-          <p className="leaves_pending_message_info">No pending leaves match the current filters.</p>
+          <p className="leaves_pending_message_info">No pending leaves to approve.</p>
         ) : (
           <>
             <div className="leaves_pending_table_wrapper">
@@ -194,7 +132,7 @@ const PendingLeaveApprovals = ({ onBack }) => {
                       <td>
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                             <button onClick={() => handleEditClick(leave)} className="leaves_button secondary" style={{padding: '5px 10px', fontSize: '12px', whiteSpace: 'nowrap'}}>Edit</button>
-                            <select className="leaves_pending_action_select" onChange={(e) => handleApproveChange(leave.id, leave.empid, e.target.value)} defaultValue="">
+                            <select className="leaves_pending_action_select" onChange={(e) => handleApproveChange(leave.id, e.target.value)} defaultValue="">
                                 <option value="">Action</option><option value="accept">Accept</option><option value="reject">Reject</option>
                             </select>
                         </div>
@@ -208,9 +146,7 @@ const PendingLeaveApprovals = ({ onBack }) => {
               {totalPages > 1 && (
                   <div className="leaves_pagination_container">
                       <button className="leaves_button secondary" onClick={handlePrevPage} disabled={currentPage === 1}>&larr; Prev</button>
-                      <span className="leaves_pagination_text">
-                          Page <input type="number" value={pageInputValue} onChange={handlePageInputChange} onKeyPress={handlePageInputKeyPress} className="leaves_pagination_input" /> of {totalPages}
-                      </span>
+                      <span className="leaves_pagination_text"> Page <input type="number" value={pageInputValue} onChange={handlePageInputChange} onKeyPress={handlePageInputKeyPress} className="leaves_pagination_input" /> of {totalPages} </span>
                       <button className="leaves_button secondary" onClick={handleNextPage} disabled={currentPage === totalPages}>Next &rarr;</button>
                   </div>
               )}
