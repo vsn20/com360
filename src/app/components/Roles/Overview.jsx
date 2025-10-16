@@ -347,6 +347,8 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
         if (menuid === 15 && submenuid === 20) newPerm.teamdata = 1;
         if (menuid === 11 && submenuid === null) newPerm.alldata = prev.find(p => p.menuid === 11 && !p.submenuid)?.alldata || 0;
         if (menuid === 12 && submenuid === 17) newPerm.alldata = prev.find(p => p.menuid === 12 && p.submenuid === 17)?.alldata || 0;
+        // **NEW**: Default 'expenses verification' (16/22) to 'alldata'
+        if (menuid === 16 && submenuid === 22) newPerm.alldata = 1;
 
         updatedPermissions.push(newPerm);
 
@@ -362,6 +364,8 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
                 if (menuid === 2 && sm.submenuid === 3) submenuPerm.individualdata = 1;
                 if (menuid === 15 && sm.submenuid === 20) submenuPerm.teamdata = 1;
                 if (menuid === 12 && sm.submenuid === 17) submenuPerm.alldata = prev.find(p => p.menuid === 12 && p.submenuid === 17)?.alldata || 0;
+                // **NEW**: Default 'expenses verification' (16/22) to 'alldata'
+                if (menuid === 16 && sm.submenuid === 22) submenuPerm.alldata = 1;
                 return submenuPerm;
               })
             updatedPermissions = [...updatedPermissions, ...submenus];
@@ -385,6 +389,12 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
           newPerm.teamdata = scope === 'team' ? 1 : 0;
           newPerm.alldata = scope === 'all' ? 1 : 0;
           newPerm.individualdata = 0;
+        } 
+        // **NEW**: Handle data scope for 'expenses verification' (16/22)
+        else if (menuid === 16 && submenuid === 22) {
+          newPerm.teamdata = scope === 'team' ? 1 : 0;
+          newPerm.alldata = scope === 'all' ? 1 : 0;
+          newPerm.individualdata = 0; // Explicitly set to 0
         }
         return newPerm;
       }
@@ -491,6 +501,8 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
             if (menuid === 15 && submenuid === 20) newPerm.teamdata = 1;
             if (menuid === 11 && submenuid === null) newPerm.alldata = prev.find(p => p.menuid === 11 && !p.submenuid)?.alldata || 0;
             if (menuid === 12 && submenuid === 17) newPerm.alldata = prev.find(p => p.menuid === 12 && p.submenuid === 17)?.alldata || 0;
+            // **NEW**: Default 'expenses verification' (16/22) to 'alldata'
+            if (menuid === 16 && submenuid === 22) newPerm.alldata = 1;
 
             updatedPermissions.push(newPerm);
 
@@ -506,6 +518,8 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
                         if (menuid === 2 && sm.submenuid === 3) submenuPerm.individualdata = 1;
                         if (menuid === 15 && sm.submenuid === 20) submenuPerm.teamdata = 1;
                         if (menuid === 12 && sm.submenuid === 17) submenuPerm.alldata = prev.find(p => p.menuid === 12 && p.submenuid === 17)?.alldata || 0;
+                        // **NEW**: Default 'expenses verification' (16/22) to 'alldata'
+                        if (menuid === 16 && sm.submenuid === 22) submenuPerm.alldata = 1;
                         return submenuPerm;
                     });
                 updatedPermissions = [...updatedPermissions, ...submenus];
@@ -530,6 +544,12 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
                 newPerm.teamdata = scope === 'team' ? 1 : 0;
                 newPerm.alldata = scope === 'all' ? 1 : 0;
                 newPerm.individualdata = 0;
+            }
+            // **NEW**: Handle data scope for 'expenses verification' (16/22)
+            else if (menuid === 16 && submenuid === 22) {
+                newPerm.teamdata = scope === 'team' ? 1 : 0;
+                newPerm.alldata = scope === 'all' ? 1 : 0;
+                newPerm.individualdata = 0; // Explicitly set to 0
             }
             return newPerm;
         }
@@ -596,6 +616,8 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
         if (C_SUBMENU.submenuid === 17) perm.alldata = 1;
         if (C_SUBMENU.menuid === 2 && C_SUBMENU.submenuid === 3) perm.individualdata = 1;
         if (C_SUBMENU.menuid === 15 && C_SUBMENU.submenuid === 20) perm.teamdata = 1;
+        // **NEW**: Default 'expenses verification' (16/22) to 'alldata'
+        if (C_SUBMENU.menuid === 16 && C_SUBMENU.submenuid === 22) perm.alldata = 1;
         return perm;
       })
     ];
@@ -639,7 +661,15 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
   const handleAllPermissionsToggle = () => {
     const allPermissions = [
       ...availableMenus.map(C_MENU => ({ menuid: C_MENU.menuid, submenuid: null, alldata: C_MENU.menuid === 11 ? tempPermissions.find(p => p.menuid === 11 && !p.submenuid)?.alldata || 0 : 0, teamdata: 0, individualdata: C_MENU.menuid === 9 ? 1: 0 })),
-      ...availableSubmenus.map(C_SUBMENU => ({ menuid: C_SUBMENU.menuid, submenuid: C_SUBMENU.submenuid, alldata: C_SUBMENU.submenuid === 17 ? tempPermissions.find(p => p.menuid === 12 && p.submenuid === 17)?.alldata || 0 : 0, teamdata: C_SUBMENU.menuid === 15 && C_SUBMENU.submenuid === 20 ? 1 : 0, individualdata: C_SUBMENU.menuid === 2 && C_SUBMENU.submenuid === 3 ? 1: 0 }))
+      ...availableSubmenus.map(C_SUBMENU => {
+          const perm = { menuid: C_SUBMENU.menuid, submenuid: C_SUBMENU.submenuid, alldata: 0, teamdata: 0, individualdata: 0 };
+          if (C_SUBMENU.submenuid === 17) perm.alldata = tempPermissions.find(p => p.menuid === 12 && p.submenuid === 17)?.alldata || 0;
+          if (C_SUBMENU.menuid === 2 && C_SUBMENU.submenuid === 3) perm.individualdata = 1;
+          if (C_SUBMENU.menuid === 15 && C_SUBMENU.submenuid === 20) perm.teamdata = 1;
+          // **NEW**: Default 'expenses verification' (16/22) to 'alldata'
+          if (C_SUBMENU.menuid === 16 && C_SUBMENU.submenuid === 22) perm.alldata = 1;
+          return perm;
+      })
     ];
     const allSelected = tempPermissions.length === allPermissions.length;
     setTempPermissions(allSelected ? [] : [...new Map(allPermissions.map(p => [JSON.stringify(p), p])).values()]);
@@ -676,6 +706,8 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
           if (C_SUBMENU.submenuid === 17) perm.alldata = tempPermissions.find(p => p.menuid === 12 && p.submenuid === 17)?.alldata || 0;
           if (C_SUBMENU.menuid === 2 && C_SUBMENU.submenuid === 3) perm.individualdata = 1;
           if (C_SUBMENU.menuid === 15 && C_SUBMENU.submenuid === 20) perm.teamdata = 1;
+          // **NEW**: Default 'expenses verification' (16/22) to 'alldata'
+          if (C_SUBMENU.menuid === 16 && C_SUBMENU.submenuid === 22) perm.alldata = 1;
           return perm;
       })
     ];
@@ -1024,6 +1056,14 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
                                     <label className="roles_submenu-label"><span className="roles_submenu-name">All Data</span><input type="checkbox" className="roles_permission-checkbox" checked={permissionsToUse.find(p=>p.menuid===15 && p.submenuid===20)?.alldata===1} onChange={()=>currentDataScopeHandler(15,20,'all')} disabled={!isEditing}/></label>
                                 </div>
                               )}
+
+                              {/* **NEW**: Render data scope for 'expenses verification' (16/22) */}
+                              {C_MENU.menuid === 16 && C_SUBMENU.submenuid === 22 && permissionsToUse.some(p => p.menuid === 16 && p.submenuid === 22) && (
+                                <div style={{ marginLeft: '20px' }}>
+                                    <label className="roles_submenu-label"><span className="roles_submenu-name">Team Data</span><input type="checkbox" className="roles_permission-checkbox" checked={permissionsToUse.find(p=>p.menuid===16 && p.submenuid===22)?.teamdata===1} onChange={()=>currentDataScopeHandler(16,22,'team')} disabled={!isEditing}/></label>
+                                    <label className="roles_submenu-label"><span className="roles_submenu-name">All Data</span><input type="checkbox" className="roles_permission-checkbox" checked={permissionsToUse.find(p=>p.menuid===16 && p.submenuid===22)?.alldata===1} onChange={()=>currentDataScopeHandler(16,22,'all')} disabled={!isEditing}/></label>
+                                </div>
+                              )}
                             </div>
                           ))}
                       </div>
@@ -1122,6 +1162,13 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
                               <div style={{ marginLeft: '20px' }}>
                                 <label className="roles_submenu-label"><span className="roles_submenu-name">Team Data</span><input type="checkbox" className="roles_permission-checkbox" checked={addform_permissions.find(p=>p.menuid===15 && p.submenuid===20)?.teamdata===1} onChange={()=>addform_handleDataScopeToggle(15,20,'team')} /></label>
                                 <label className="roles_submenu-label"><span className="roles_submenu-name">All Data</span><input type="checkbox" className="roles_permission-checkbox" checked={addform_permissions.find(p=>p.menuid===15 && p.submenuid===20)?.alldata===1} onChange={()=>addform_handleDataScopeToggle(15,20,'all')} /></label>
+                              </div>
+                            )}
+                            {/* **NEW**: Render data scope for 'expenses verification' (16/22) */}
+                            {C_MENU.menuid === 16 && C_SUBMENU.submenuid === 22 && addform_permissions.some(p => p.menuid === 16 && p.submenuid === 22) && (
+                              <div style={{ marginLeft: '20px' }}>
+                                <label className="roles_submenu-label"><span className="roles_submenu-name">Team Data</span><input type="checkbox" className="roles_permission-checkbox" checked={addform_permissions.find(p=>p.menuid===16 && p.submenuid===22)?.teamdata===1} onChange={()=>addform_handleDataScopeToggle(16,22,'team')} /></label>
+                                <label className="roles_submenu-label"><span className="roles_submenu-name">All Data</span><input type="checkbox" className="roles_permission-checkbox" checked={addform_permissions.find(p=>p.menuid===16 && p.submenuid===22)?.alldata===1} onChange={()=>addform_handleDataScopeToggle(16,22,'all')} /></label>
                               </div>
                             )}
                           </div>
