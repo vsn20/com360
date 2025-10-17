@@ -2,6 +2,8 @@
 import { cookies } from 'next/headers';
 import DBconnection from '@/app/utils/config/db';
 import VerificationContainer from '@/app/components/Employee/VerificationContainer';
+// ✅ Import the new W-9 function
+import { getPendingI9Approvals, getPendingW9Approvals } from '@/app/serverActions/forms/verification/actions';
 
 const decodeJwt = (token) => {
   try {
@@ -86,6 +88,7 @@ export default async function DocumentVerificationPage() {
     let hasTeamData = false;
 
     if (roleids.length > 0) {
+      // Assuming menuid = 15, submenuid = 20 is for 'Document Verification'
       const [permissionRows] = await pool.query(
         'SELECT alldata, teamdata FROM C_ROLE_MENU_PERMISSIONS WHERE roleid IN (?) AND menuid = 15 AND submenuid = 20',
         [roleids]
@@ -99,6 +102,7 @@ export default async function DocumentVerificationPage() {
 
     // Get employee list based on permissions
     let employees = [];
+    let subordinateIds = [];
     
     if (isAdmin) {
       // Admin ALWAYS has all data - can verify ALL employees INCLUDING self
@@ -122,45 +126,22 @@ export default async function DocumentVerificationPage() {
       } else if (hasTeamData) {
         // Non-admin with team data: show only subordinates (nested)
         employees = await getAllSubordinates(pool, empid, orgid);
+        subordinateIds = employees.map(e => e.empid);
       }
     }
 
-    // Get pending approvals count
-    let pendingCount = 0;
-    if (isAdmin && hasAllData) {
-      // Admin with all data can see all pending forms
-      const [countResult] = await pool.query(
-        'SELECT COUNT(*) as count FROM C_FORMS WHERE ORG_ID = ? AND FORM_STATUS = "EMPLOYEE_SUBMITTED"',
-        [orgid]
-      );
-      pendingCount = countResult[0].count;
-    } else if (hasAllData) {
-      // Non-admin with all data: see forms where they are superior
-      const [countResult] = await pool.query(
-        `SELECT COUNT(*) as count FROM C_FORMS f
-         INNER JOIN C_EMP e ON f.EMP_ID = e.empid AND f.ORG_ID = e.orgid
-         WHERE f.ORG_ID = ? AND f.FORM_STATUS = "EMPLOYEE_SUBMITTED" AND e.superior = ?`,
-        [orgid, empid]
-      );
-      pendingCount = countResult[0].count;
-    } else if (hasTeamData) {
-      // Team data: see forms of subordinates only
-      const subordinateIds = employees.map(e => e.empid);
-      if (subordinateIds.length > 0) {
-        const [countResult] = await pool.query(
-          'SELECT COUNT(*) as count FROM C_FORMS WHERE ORG_ID = ? AND EMP_ID IN (?) AND FORM_STATUS = "EMPLOYEE_SUBMITTED"',
-          [orgid, subordinateIds]
-        );
-        pendingCount = countResult[0].count;
-      }
-    }
+    // ✅ FIX: Get pending counts for BOTH I-9 and W-9
+    const i9Pending = await getPendingI9Approvals(orgid, empid, isAdmin, hasAllData, subordinateIds);
+    const w9Pending = await getPendingW9Approvals(orgid, empid, isAdmin, hasAllData, subordinateIds);
+    const totalPendingCount = i9Pending.length + w9Pending.length;
+
 
     // Get organization name
     const [orgRows] = await pool.query(
       'SELECT orgname FROM C_ORG WHERE orgid = ?',
       [orgid]
     );
-    const orgName = orgRows.length > 0 ? orgRows[0].NAME : 'Organization';
+    const orgName = orgRows.length > 0 ? orgRows[0].orgname : 'Organization'; // Fixed: .orgname
 
     return (
       <VerificationContainer
@@ -171,7 +152,7 @@ export default async function DocumentVerificationPage() {
         currentEmpId={empid}
         orgId={orgid}
         orgName={orgName}
-        pendingCount={pendingCount}
+        pendingCount={totalPendingCount} // ✅ Pass the combined count
       />
     );
 

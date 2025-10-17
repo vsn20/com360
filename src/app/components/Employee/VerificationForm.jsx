@@ -50,10 +50,11 @@ const VerificationForm = ({
   const sigCanvas = useRef(null);
 
   const isVerified = form.FORM_STATUS === 'EMPLOYER_VERIFIED';
-  const canEdit = form.FORM_STATUS === 'EMPLOYEE_SUBMITTED' || 
-                  (isAdmin && form.FORM_STATUS === 'EMPLOYER_VERIFIED');
+  // Allow editing if the form is pending, or if the user is an admin (even if already verified).
+  const canEdit = form.FORM_STATUS === 'EMPLOYEE_SUBMITTED' || (isAdmin && isVerified);
 
   useEffect(() => {
+    // Pre-fill form if Section 2 data exists
     if (form.EMPLOYER_FIRST_DAY) {
       setFormData(prev => ({
         ...prev,
@@ -118,9 +119,12 @@ const VerificationForm = ({
     if (!formData.employer_title) {
       throw new Error('Employer/Verifier title is required');
     }
-
-    if (!sigCanvas.current || sigCanvas.current.isEmpty()) {
-      throw new Error('Signature is required');
+    
+    // Signature is not required if just viewing a verified form without editing
+    if (!isVerified || isEditing) {
+        if (!sigCanvas.current || sigCanvas.current.isEmpty()) {
+            throw new Error('Signature is required to verify or re-verify the form');
+        }
     }
 
     return true;
@@ -163,37 +167,13 @@ const VerificationForm = ({
 
   const handleCancelEdit = () => {
     setIsEditing(false);
-    // Reset form data to original values
-    if (form.EMPLOYER_FIRST_DAY) {
-      setFormData({
-        employer_first_day: form.EMPLOYER_FIRST_DAY ? new Date(form.EMPLOYER_FIRST_DAY).toISOString().split('T')[0] : '',
-        employer_list_type: form.EMPLOYER_LIST_TYPE || 'LIST_A',
-        doc1_title: form.DOC1_TITLE || '',
-        doc1_issuing_authority: form.DOC1_ISSUING_AUTHORITY || '',
-        doc1_number: form.DOC1_NUMBER || '',
-        doc1_expiry: form.DOC1_EXPIRY ? new Date(form.DOC1_EXPIRY).toISOString().split('T')[0] : '',
-        doc2_title: form.DOC2_TITLE || '',
-        doc2_issuing_authority: form.DOC2_ISSUING_AUTHORITY || '',
-        doc2_number: form.DOC2_NUMBER || '',
-        doc2_expiry: form.DOC2_EXPIRY ? new Date(form.DOC2_EXPIRY).toISOString().split('T')[0] : '',
-        doc3_title: form.DOC3_TITLE || '',
-        doc3_issuing_authority: form.DOC3_ISSUING_AUTHORITY || '',
-        doc3_number: form.DOC3_NUMBER || '',
-        doc3_expiry: form.DOC3_EXPIRY ? new Date(form.DOC3_EXPIRY).toISOString().split('T')[0] : '',
-        employer_signature_date: form.EMPLOYER_SIGNATURE_DATE ? new Date(form.EMPLOYER_SIGNATURE_DATE).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-        employer_name: form.EMPLOYER_NAME || '',
-        employer_title: form.EMPLOYER_TITLE || '',
-        employer_business_name: form.EMPLOYER_BUSINESS_NAME || orgName || '',
-        employer_address: form.EMPLOYER_ADDRESS || '',
-        alternative_procedure_used: !!form.ALTERNATIVE_PROCEDURE_USED,
-        additional_info: form.ADDITIONAL_INFO || ''
-      });
-    }
+    // No need to reset form data, as useEffect will handle it based on `isEditing` state.
   };
 
   const formatDate = (dateStr) => {
     if (!dateStr) return 'N/A';
-    return new Date(dateStr).toLocaleDateString();
+    const date = new Date(dateStr);
+    return new Date(date.getTime() + date.getTimezoneOffset() * 60000).toLocaleDateString();
   };
 
   const getCitizenshipLabel = (status) => {
@@ -205,6 +185,8 @@ const VerificationForm = ({
     };
     return labels[status] || 'N/A';
   };
+  
+  const isFormDisabled = isVerified && !isEditing;
 
   return (
     <div className={styles.verificationFormContainer}>
@@ -216,7 +198,7 @@ const VerificationForm = ({
 
       <div className={styles.headerSection}>
         <h2 className={styles.title}>
-          {isVerified && !isEditing ? 'View Verified Form' : 'Verify I-9 Form'}
+          {isVerified && !isEditing ? 'View Verified I-9 Form' : 'Verify I-9 Form'}
         </h2>
         <div className={styles.headerButtons}>
           {isVerified && !isEditing && canEdit && (
@@ -334,7 +316,7 @@ const VerificationForm = ({
                   value={safeValue(formData.employer_first_day)}
                   onChange={handleChange}
                   required
-                  disabled={isVerified && !isEditing}
+                  disabled={isFormDisabled}
                 />
               </div>
               
@@ -344,7 +326,7 @@ const VerificationForm = ({
                   name="employer_list_type"
                   value={safeValue(formData.employer_list_type, 'LIST_A')}
                   onChange={handleChange}
-                  disabled={isVerified && !isEditing}
+                  disabled={isFormDisabled}
                 >
                   <option value="LIST_A">List A (Identity & Employment Authorization)</option>
                   <option value="LIST_B_C">List B & C (Identity + Employment Authorization)</option>
@@ -363,7 +345,7 @@ const VerificationForm = ({
                   value={safeValue(formData.doc1_title)}
                   onChange={handleChange}
                   required
-                  disabled={isVerified && !isEditing}
+                  disabled={isFormDisabled}
                 />
               </div>
               
@@ -374,7 +356,7 @@ const VerificationForm = ({
                   name="doc1_issuing_authority"
                   value={safeValue(formData.doc1_issuing_authority)}
                   onChange={handleChange}
-                  disabled={isVerified && !isEditing}
+                  disabled={isFormDisabled}
                 />
               </div>
             </div>
@@ -387,7 +369,7 @@ const VerificationForm = ({
                   name="doc1_number"
                   value={safeValue(formData.doc1_number)}
                   onChange={handleChange}
-                  disabled={isVerified && !isEditing}
+                  disabled={isFormDisabled}
                 />
               </div>
               
@@ -398,7 +380,7 @@ const VerificationForm = ({
                   name="doc1_expiry"
                   value={safeValue(formData.doc1_expiry)}
                   onChange={handleChange}
-                  disabled={isVerified && !isEditing}
+                  disabled={isFormDisabled}
                 />
               </div>
             </div>
@@ -415,7 +397,7 @@ const VerificationForm = ({
                       value={safeValue(formData.doc2_title)}
                       onChange={handleChange}
                       required
-                      disabled={isVerified && !isEditing}
+                      disabled={isFormDisabled}
                     />
                   </div>
                   
@@ -426,7 +408,7 @@ const VerificationForm = ({
                       name="doc2_issuing_authority"
                       value={safeValue(formData.doc2_issuing_authority)}
                       onChange={handleChange}
-                      disabled={isVerified && !isEditing}
+                      disabled={isFormDisabled}
                     />
                   </div>
                 </div>
@@ -439,7 +421,7 @@ const VerificationForm = ({
                       name="doc2_number"
                       value={safeValue(formData.doc2_number)}
                       onChange={handleChange}
-                      disabled={isVerified && !isEditing}
+                      disabled={isFormDisabled}
                     />
                   </div>
                   
@@ -450,7 +432,7 @@ const VerificationForm = ({
                       name="doc2_expiry"
                       value={safeValue(formData.doc2_expiry)}
                       onChange={handleChange}
-                      disabled={isVerified && !isEditing}
+                      disabled={isFormDisabled}
                     />
                   </div>
                 </div>
@@ -467,7 +449,7 @@ const VerificationForm = ({
                   name="doc3_title"
                   value={safeValue(formData.doc3_title)}
                   onChange={handleChange}
-                  disabled={isVerified && !isEditing}
+                  disabled={isFormDisabled}
                 />
               </div>
               
@@ -478,7 +460,7 @@ const VerificationForm = ({
                   name="doc3_issuing_authority"
                   value={safeValue(formData.doc3_issuing_authority)}
                   onChange={handleChange}
-                  disabled={isVerified && !isEditing}
+                  disabled={isFormDisabled}
                 />
               </div>
             </div>
@@ -491,7 +473,7 @@ const VerificationForm = ({
                   name="doc3_number"
                   value={safeValue(formData.doc3_number)}
                   onChange={handleChange}
-                  disabled={isVerified && !isEditing}
+                  disabled={isFormDisabled}
                 />
               </div>
               
@@ -502,7 +484,7 @@ const VerificationForm = ({
                   name="doc3_expiry"
                   value={safeValue(formData.doc3_expiry)}
                   onChange={handleChange}
-                  disabled={isVerified && !isEditing}
+                  disabled={isFormDisabled}
                 />
               </div>
             </div>
@@ -511,27 +493,27 @@ const VerificationForm = ({
             <h4>Certification</h4>
             <div className={styles.formRow}>
               <div className={styles.formGroup}>
-                <label>Last Name, First Name and Title*</label>
+                <label>Last Name, First Name of Verifier*</label>
                 <input
                   type="text"
                   name="employer_name"
                   value={safeValue(formData.employer_name)}
                   onChange={handleChange}
                   required
-                  disabled={isVerified && !isEditing}
+                  disabled={isFormDisabled}
                   placeholder="Last, First Name"
                 />
               </div>
               
               <div className={styles.formGroup}>
-                <label>Title/Position*</label>
+                <label>Title/Position of Verifier*</label>
                 <input
                   type="text"
                   name="employer_title"
                   value={safeValue(formData.employer_title)}
                   onChange={handleChange}
                   required
-                  disabled={isVerified && !isEditing}
+                  disabled={isFormDisabled}
                 />
               </div>
             </div>
@@ -544,7 +526,7 @@ const VerificationForm = ({
                   name="employer_business_name"
                   value={safeValue(formData.employer_business_name)}
                   onChange={handleChange}
-                  disabled={isVerified && !isEditing}
+                  disabled={isFormDisabled}
                 />
               </div>
               
@@ -556,7 +538,7 @@ const VerificationForm = ({
                   value={safeValue(formData.employer_signature_date)}
                   onChange={handleChange}
                   required
-                  disabled={isVerified && !isEditing}
+                  disabled={isFormDisabled}
                 />
               </div>
             </div>
@@ -568,7 +550,7 @@ const VerificationForm = ({
                 name="employer_address"
                 value={safeValue(formData.employer_address)}
                 onChange={handleChange}
-                disabled={isVerified && !isEditing}
+                disabled={isFormDisabled}
                 placeholder="City, State, ZIP Code"
               />
             </div>
@@ -580,7 +562,7 @@ const VerificationForm = ({
                   name="alternative_procedure_used"
                   checked={!!formData.alternative_procedure_used}
                   onChange={handleChange}
-                  disabled={isVerified && !isEditing}
+                  disabled={isFormDisabled}
                 />
                 {' '}Alternative procedure authorized by DHS was used to examine documents
               </label>
@@ -593,19 +575,19 @@ const VerificationForm = ({
                 value={safeValue(formData.additional_info)}
                 onChange={handleChange}
                 rows="3"
-                disabled={isVerified && !isEditing}
+                disabled={isFormDisabled}
                 placeholder="Any additional notes or information"
               />
             </div>
 
             {/* Signature Section */}
-            {(isVerified && !isEditing) ? (
-              form.EMPLOYER_SIGNATURE_URL && (
+            {isFormDisabled ? (
+              form.VERIFIER_SIGNATURE_URL && (
                 <div className={styles.formGroup}>
                   <label>Employer/Verifier Signature</label>
                   <div className={styles.signatureDisplay}>
                     <img 
-                      src={form.EMPLOYER_SIGNATURE_URL} 
+                      src={form.VERIFIER_SIGNATURE_URL} 
                       alt="Employer Signature"
                       style={{ maxWidth: '300px', border: '1px solid #ccc' }}
                     />
@@ -621,13 +603,13 @@ const VerificationForm = ({
                     : 'Please sign below using your mouse or touchscreen.'
                   }
                 </p>
-                {isEditing && form.EMPLOYER_SIGNATURE_URL && (
+                {isEditing && form.VERIFIER_SIGNATURE_URL && (
                   <div style={{ marginBottom: '10px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
                     <p style={{ margin: '0 0 10px 0', fontSize: '13px', fontWeight: 'bold' }}>
                       Current signature (will be replaced):
                     </p>
                     <img 
-                      src={form.EMPLOYER_SIGNATURE_URL}
+                      src={form.VERIFIER_SIGNATURE_URL}
                       alt="Current Signature" 
                       style={{ maxWidth: '300px', border: '1px solid #ccc', borderRadius: '4px' }}
                     />
@@ -655,7 +637,7 @@ const VerificationForm = ({
             )}
           </div>
 
-          {(!isVerified || isEditing) && (
+          {!isFormDisabled && (
             <div className={styles.formButtons}>
               <button 
                 type="submit" 
