@@ -1,4 +1,3 @@
-
 import { NextResponse } from 'next/server';
 
 // Function to decode JWT (server-side, reused from your layout)
@@ -34,6 +33,61 @@ export async function middleware(request) {
   ];
 
   const { pathname } = request.nextUrl;
+
+  // Handle expense attachment paths (/expenses/expense_EXP-xxx_timestamp.ext)
+  const isExpensePath = pathname.match(/^\/expenses\/expense_(.+)_(\d+)\.(jpg|jpeg|png|pdf|gif)$/i);
+  if (isExpensePath) {
+    const expenseId = isExpensePath[1]; // Extract expense ID from filename
+    const token = request.cookies.get('jwt_token')?.value;
+
+    console.log('Expense attachment path detected:', pathname);
+    console.log('Extracted expense ID from filename:', expenseId);
+
+    if (!token) {
+      console.log("No jwt_token found for expense attachment path, redirecting to login");
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+
+    try {
+      const decoded = decodeJwt(token);
+      if (!decoded || !decoded.orgid || !decoded.empid) {
+        console.log("Invalid or missing orgid/empid in JWT for expense attachment path, redirecting to login");
+        return NextResponse.redirect(new URL('/login', request.url));
+      }
+
+      // Verify the user has access to this expense attachment
+      const verifyResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/expenses/verify-attachment-access`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: `jwt_token=${token}`,
+        },
+        body: JSON.stringify({ 
+          token, 
+          expenseId,
+          orgid: decoded.orgid,
+          empid: decoded.empid
+        }),
+      });
+
+      const result = await verifyResponse.json();
+      console.log('Verify Attachment Access Response:', result);
+
+      if (verifyResponse.ok && result.success) {
+        console.log(`Access granted to expense attachment ${pathname}`);
+        return NextResponse.next();
+      } else {
+        console.log(`Access denied to expense attachment ${pathname}: ${result.error}`);
+        return new Response(JSON.stringify({ error: result.error || 'Unauthorized: Cannot access this expense attachment' }), {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+    } catch (error) {
+      console.error('Error verifying JWT for expense attachment path:', error.message);
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+  }
 
   // Handle org logo paths (/uploads/orglogos/:orgid.jpg)
   const isOrgLogoPath = pathname.match(/^\/uploads\/orglogos\/(\d+)\.jpg$/);
