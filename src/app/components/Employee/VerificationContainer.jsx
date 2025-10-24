@@ -5,14 +5,14 @@ import {
   getEmployeeFormsForVerification, 
   getPendingI9Approvals,
   getI9FormDetails,
-  getW9FormDetails,
-  getPendingW9Approvals,
-  getW4FormDetails, // Import W-4 action
-  getPendingW4Approvals // Import W-4 action
+  // getW9FormDetails, // No longer needed here
+  // getPendingW9Approvals, // No longer needed here
+  getW4FormDetails, 
+  getPendingW4Approvals 
 } from '@/app/serverActions/forms/verification/actions';
 import VerificationForm from './VerificationForm';
-import W9VerificationForm from './W9VerificationForm';
-import W4VerificationForm from './W4VerificationForm'; // Import W-4 verification component
+// import W9VerificationForm from './W9VerificationForm'; // No longer needed
+import W4VerificationForm from './W4VerificationForm'; 
 import styles from './Verification.module.css';
 
 const VerificationContainer = ({
@@ -46,6 +46,8 @@ const VerificationContainer = ({
     setLoading(true);
     setError(null);
     try {
+      // This function on the server side should still fetch all forms,
+      // but we will only be able to click on I-9 and W-4
       const data = await getEmployeeFormsForVerification(empId, orgId);
       setForms(data);
     } catch (err) {
@@ -62,16 +64,15 @@ const VerificationContainer = ({
     try {
       const subordinateIds = employees.map(e => e.empid);
       
-      const [i9Data, w9Data, w4Data] = await Promise.all([
+      // ✅ Removed getPendingW9Approvals
+      const [i9Data, w4Data] = await Promise.all([
         getPendingI9Approvals(orgId, currentEmpId, isAdmin, hasAllData, subordinateIds),
-        getPendingW9Approvals(orgId, currentEmpId, isAdmin, hasAllData, subordinateIds),
-        getPendingW4Approvals(orgId, currentEmpId, isAdmin, hasAllData, subordinateIds) // Fetch W-4 pending
+        getPendingW4Approvals(orgId, currentEmpId, isAdmin, hasAllData, subordinateIds) 
       ]);
 
       const combined = [
         ...i9Data,
-        ...w9Data.map(f => ({ ...f, ID: `W9-${f.ID}` })),
-        ...w4Data.map(f => ({ ...f, ID: `W4-${f.ID}` })) // Add W-4 pending
+        ...w4Data.map(f => ({ ...f, ID: `W4-${f.ID}` })) 
       ];
       
       combined.sort((a, b) => {
@@ -115,16 +116,18 @@ const VerificationContainer = ({
     setError(null);
     try {
       let fullFormData;
-      if (form.FORM_TYPE === 'W9') {
-        const w9Id = parseInt(String(form.ID).replace('W9-', ''));
-        fullFormData = await getW9FormDetails(w9Id);
-        fullFormData.FORM_TYPE = 'W9'; 
-      } else if (form.FORM_TYPE === 'W4') { // Handle W-4
+      // ✅ Removed W-9 logic
+      if (form.FORM_TYPE === 'W4') { 
         const w4Id = parseInt(String(form.ID).replace('W4-', ''));
         fullFormData = await getW4FormDetails(w4Id);
         fullFormData.FORM_TYPE = 'W4';
-      } else {
+      } else if (form.FORM_TYPE === 'I9') { // Handle I-9
         fullFormData = await getI9FormDetails(form.ID);
+      } else {
+        // If it's a W-9 or other non-verifiable form, just set an error
+        setError('This form type does not require verification.');
+        setLoading(false);
+        return;
       }
       setSelectedForm(fullFormData);
     } catch (err) {
@@ -160,8 +163,8 @@ const VerificationContainer = ({
       'EMPLOYEE_SUBMITTED': { color: '#007bff', label: 'Pending I-9' },
       'EMPLOYER_VERIFIED': { color: '#28a745', label: 'Verified I-9' },
       'REJECTED': { color: '#dc3545', label: 'Rejected' },
-      'SUBMITTED': { color: '#0d6efd', label: 'Pending' }, // W-9 & W-4
-      'VERIFIED': { color: '#28a745', label: 'Verified' } // W-9 & W-4
+      'SUBMITTED': { color: '#0d6efd', label: 'Submitted' }, // W-9 & W-4
+      'VERIFIED': { color: '#28a745', label: 'Verified (W-4)' } // W-4 only
     };
     
     const config = statusConfig[status] || statusConfig['DRAFT'];
@@ -188,19 +191,7 @@ const VerificationContainer = ({
   };
 
   if (selectedForm) {
-    if (selectedForm.FORM_TYPE === 'W9') {
-      return (
-        <W9VerificationForm
-          form={selectedForm}
-          verifierEmpId={currentEmpId}
-          orgId={orgId}
-          onBack={handleBack}
-          onSuccess={handleVerificationSuccess}
-          isAdmin={isAdmin}
-        />
-      );
-    }
-    
+    // ✅ Removed W-9 verification form render
     if (selectedForm.FORM_TYPE === 'W4') {
       return (
         <W4VerificationForm
@@ -215,6 +206,7 @@ const VerificationContainer = ({
       );
     }
     
+    // Default to I-9 (VerificationForm)
     return (
       <VerificationForm
         form={selectedForm}
@@ -267,7 +259,8 @@ const VerificationContainer = ({
 
       {!loading && (showPending ? pendingForms : forms).length > 0 && (
         <div className={styles.formsList}>
-          <h3>{showPending ? 'Pending Approvals (I-9, W-9, W-4)' : 'Employee Forms (I-9, W-9, W-4)'}</h3>
+          {/* ✅ Updated title */}
+          <h3>{showPending ? 'Pending Approvals (I-9 & W-4)' : 'Employee Forms (I-9, W-9, W-4)'}</h3>
           <div className={styles.tableWrapper}>
             <table className={styles.verificationTable}>
               <thead>
@@ -281,22 +274,26 @@ const VerificationContainer = ({
                 </tr>
               </thead>
               <tbody>
-                {(showPending ? pendingForms : forms).map((form) => (
-                  <tr 
-                    key={form.ID}
-                    onClick={() => handleFormClick(form)}
-                    className={styles.clickableRow}
-                  >
-                    <td>{form.ID}</td>
-                    {showPending && <td>{form.EMPLOYEE_FIRST_NAME} {form.EMPLOYEE_LAST_NAME}</td>}
-                    <td>{form.FORM_TYPE}</td>
-                    <td>{formatDate(form.SUBMITTED_DATE || form.EMPLOYEE_SIGNATURE_DATE)}</td>
-                    <td>{getStatusBadge(form.FORM_STATUS)}</td>
-                    <td>
-                      {`${form.VERIFIER_FIRST_NAME || ''} ${form.VERIFIER_LAST_NAME || ''}`.trim() || 'Not Assigned'}
-                    </td>
-                  </tr>
-                ))}
+                {(showPending ? pendingForms : forms).map((form) => {
+                  // ✅ Make W-9 rows non-clickable in this view
+                  const isClickable = form.FORM_TYPE === 'I9' || form.FORM_TYPE === 'W4';
+                  return (
+                    <tr 
+                      key={form.ID}
+                      onClick={isClickable ? () => handleFormClick(form) : undefined}
+                      className={isClickable ? styles.clickableRow : styles.nonClickableRow}
+                    >
+                      <td>{form.ID}</td>
+                      {showPending && <td>{form.EMPLOYEE_FIRST_NAME} {form.EMPLOYEE_LAST_NAME}</td>}
+                      <td>{form.FORM_TYPE}</td>
+                      <td>{formatDate(form.SUBMITTED_DATE || form.EMPLOYEE_SIGNATURE_DATE)}</td>
+                      <td>{getStatusBadge(form.FORM_STATUS)}</td>
+                      <td>
+                        {`${form.VERIFIER_FIRST_NAME || ''} ${form.VERIFIER_LAST_NAME || ''}`.trim() || 'Not Assigned'}
+                      </td>
+                    </tr>
+                  );
+                 })}
               </tbody>
             </table>
           </div>
@@ -306,8 +303,9 @@ const VerificationContainer = ({
       {!loading && !showPending && selectedEmployee && forms.length === 0 && (
         <div className={styles.emptyState}>No I-9, W-9, or W-4 forms found for this employee.</div>
       )}
+      {/* ✅ Updated title */}
       {!loading && showPending && pendingForms.length === 0 && (
-        <div className={styles.emptyState}>No pending I-9, W-9, or W-4 approvals at this time.</div>
+        <div className={styles.emptyState}>No pending I-9 or W-4 approvals at this time.</div>
       )}
     </div>
   );

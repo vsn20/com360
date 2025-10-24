@@ -438,9 +438,17 @@ const I9Forms = ({
       'EMPLOYEE_SUBMITTED': 'Submitted (I-9)',
       'SUBMITTED': 'Submitted', // W-9 and W-4
       'EMPLOYER_VERIFIED': 'Verified (I-9)',
-      'VERIFIED': 'Verified', // W-9 and W-4
+      'VERIFIED': 'Verified (W-4)', // W-4
       'REJECTED': 'Rejected'
     };
+    // W-9 doesn't have a 'VERIFIED' status, so 'SUBMITTED' is its final state
+    if (form.FORM_TYPE === 'W9' && form.FORM_STATUS === 'SUBMITTED') {
+      return 'Submitted (W-9)';
+    }
+    // W-4 'VERIFIED' is the final state
+    if (form.FORM_TYPE === 'W4' && form.FORM_STATUS === 'VERIFIED') {
+        return 'Verified (W-4)';
+    }
     return statusMap[form.FORM_STATUS] || form.FORM_STATUS;
   };
 
@@ -448,12 +456,16 @@ const I9Forms = ({
     const status = form.FORM_STATUS;
     const colorMap = {
       'DRAFT': '#6c757d',
-      'EMPLOYEE_SUBMITTED': '#007bff',
-      'SUBMITTED': '#0d6efd',
-      'EMPLOYER_VERIFIED': '#28a745',
-      'VERIFIED': '#28a745',
+      'EMPLOYEE_SUBMITTED': '#007bff', // I-9
+      'SUBMITTED': '#0d6efd', // W-9 & W-4
+      'EMPLOYER_VERIFIED': '#28a745', // I-9
+      'VERIFIED': '#28a745', // W-4
       'REJECTED': '#dc3545'
     };
+    // W-9 'SUBMITTED' is a final state, so color it like 'VERIFIED'
+    if (form.FORM_TYPE === 'W9' && status === 'SUBMITTED') {
+        return '#28a745'; // Green
+    }
     return colorMap[status] || '#6c757d';
   };
 
@@ -557,13 +569,26 @@ const I9Forms = ({
                 ) : (
                   forms.map((form) => {
                     const isDraft = form.FORM_STATUS === 'DRAFT';
+                    
+                    // ✅ *** MODIFICATION START ***
+                    // This logic determines if a form is in its final, non-editable state
+                    const isFinal = (
+                        form.FORM_STATUS === 'EMPLOYER_VERIFIED' || // I-9 Verified
+                        form.FORM_STATUS === 'VERIFIED' || // W-4 Verified
+                        (form.FORM_TYPE === 'W9' && form.FORM_STATUS === 'SUBMITTED') // W-9 Submitted
+                    );
+                    // ✅ *** MODIFICATION END ***
+
                     return (
                       <tr
                         key={form.ID}
                         onClick={() => handleRowClick(form)}
                         style={{
                           cursor: 'pointer',
-                          opacity: (form.FORM_STATUS === 'VERIFIED' || form.FORM_STATUS === 'EMPLOYER_VERIFIED') ? 0.7 : 1
+                          // ✅ *** MODIFICATION START ***
+                          // Use the new 'isFinal' variable to set opacity
+                          opacity: isFinal ? 0.7 : 1
+                          // ✅ *** MODIFICATION END ***
                         }}
                       >
                         <td>{form.ID}</td>

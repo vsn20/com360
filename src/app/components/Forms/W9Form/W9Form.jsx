@@ -55,7 +55,7 @@ const W9Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
             city: employee.HOME_CITY || '',
             state: states.find(s => String(s.ID) === String(employee.HOME_STATE_ID))?.VALUE || employee.HOME_STATE_NAME_CUSTOM || '',
             zip_code: employee.HOME_POSTAL_CODE || '',
-            taxpayer_identification_number: employee.SSN || '',
+            taxpayer_identification_number:'',
             signature_date: new Date().toISOString().split('T')[0],
           });
           setFormattedTin(ssn);
@@ -194,7 +194,8 @@ const W9Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
     }
   };
 
-  const isSubmitted = existingForm?.FORM_STATUS === 'SUBMITTED' || existingForm?.FORM_STATUS === 'VERIFIED';
+  // ✅ Change: 'VERIFIED' status is removed
+  const isSubmitted = existingForm?.FORM_STATUS === 'SUBMITTED';
 
   return (
     <div className={styles.w9FormContainer}>

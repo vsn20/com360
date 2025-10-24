@@ -11,7 +11,7 @@ async function extractW4PDFFields() {
     console.log('\n📋 Extracting W-4 PDF Form Fields...\n');
     
     // Path to your W-4 template
-    const templatePath = path.join(process.cwd(), 'public', 'templates', 'fw4.pdf');
+    const templatePath = path.join(process.cwd(), 'public', 'templates', 'fw9.pdf');
     
     // Check if file exists
     try {

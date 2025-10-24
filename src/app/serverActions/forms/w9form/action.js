@@ -85,8 +85,10 @@ export async function canEditW9Form(formId) {
       return { canEdit: false, reason: 'Form not found' };
     }
     const form = rows[0];
-    if (form.FORM_STATUS === 'VERIFIED') {
-      return { canEdit: false, reason: 'This form has been verified and cannot be edited' };
+    
+    // ✅ Change: Cannot edit if SUBMITTED (since 'VERIFIED' is removed)
+    if (form.FORM_STATUS === 'SUBMITTED') {
+      return { canEdit: false, reason: 'This form has been submitted and cannot be edited' };
     }
     return { canEdit: true };
   } catch (error) {
@@ -111,7 +113,10 @@ export async function saveW9Form(formData, formId = null) {
     ];
 
     if (currentFormId) {
-      await canEditW9Form(currentFormId);
+      // Check edit permissions
+      const editCheck = await canEditW9Form(currentFormId);
+      if (!editCheck.canEdit) throw new Error(editCheck.reason);
+
       const query = `
         UPDATE C_FORM_W9 SET
           NAME = ?, BUSINESS_NAME = ?, TAX_CLASSIFICATION = ?, LLC_CLASSIFICATION_CODE = ?,
@@ -180,7 +185,10 @@ export async function submitW9Form(formData, formId) {
     ];
 
     if (currentFormId) {
-        await canEditW9Form(currentFormId);
+        // Check edit permissions
+        const editCheck = await canEditW9Form(currentFormId);
+        if (!editCheck.canEdit) throw new Error(editCheck.reason);
+
         const query = `
             UPDATE C_FORM_W9 SET
             NAME = ?, BUSINESS_NAME = ?, TAX_CLASSIFICATION = ?, LLC_CLASSIFICATION_CODE = ?,
@@ -213,7 +221,9 @@ export async function submitW9Form(formData, formId) {
     );
 
     const savedForm = await getW9FormDetails(currentFormId);
-    const pdfResult = await generateW9PDF(savedForm, savedForm.SIGNATURE_URL);
+    
+    // ✅ Change: Call generateW9PDF without verifier data
+    const pdfResult = await generateW9PDF(savedForm);
     if (!pdfResult.success) throw new Error('Failed to generate PDF.');
 
     const uploadResult = await uploadPDFToDocuments(pdfResult.pdfBytes, emp_id, orgid, currentFormId, userId);
@@ -249,8 +259,9 @@ export async function deleteW9Form(formId) {
     }
 }
 
-// Generates the filled W-9 PDF (Employee version)
-export async function generateW9PDF(w9Data, verifierData = null) {
+// ✅ Change: Generates the filled W-9 PDF (Employee version, NO verifier)
+// ✅ Change: Generates the filled W-9 PDF (Employee version, NO verifier)
+export async function generateW9PDF(w9Data) {
   try {
     const templatePath = path.join(process.cwd(), "public", "templates", "fw9.pdf");
     const existingPdfBytes = await fs.readFile(templatePath);
@@ -312,80 +323,62 @@ export async function generateW9PDF(w9Data, verifierData = null) {
       );
     }
 
-    // --- ✅ Correct TIN Field Mapping for Rev. March 2024 ---
+    // --- ✅ Corrected TIN Field Mapping for Rev. March 2024 ---
     const tin = (w9Data.TAXPAYER_IDENTIFICATION_NUMBER || "").replace(/-/g, "");
     if (tin.length === 9) {
       if (w9Data.TAX_CLASSIFICATION === "INDIVIDUAL") {
-        // SSN fields
+        // SSN fields - These seem correct based on your field list
         setSafeText("topmostSubform[0].Page1[0].f1_11[0]", tin.substring(0, 3));
         setSafeText("topmostSubform[0].Page1[0].f1_12[0]", tin.substring(3, 5));
         setSafeText("topmostSubform[0].Page1[0].f1_13[0]", tin.substring(5, 9));
       } else {
-        // EIN fields — corrected structure (inside SSN_EIN[0])
+        // ✅ *** FIX START ***
+        // EIN fields — Use field names directly from your list
         setSafeText(
-          "topmostSubform[0].Page1[0].SSN_EIN[0].f1_14[0]",
+          "topmostSubform[0].Page1[0].f1_14[0]", // Removed "SSN_EIN[0]."
           tin.substring(0, 2)
         );
         setSafeText(
-          "topmostSubform[0].Page1[0].SSN_EIN[0].f1_15[0]",
+          "topmostSubform[0].Page1[0].f1_15[0]", // Removed "SSN_EIN[0]."
           tin.substring(2, 9)
         );
+        // ✅ *** FIX END ***
       }
     } else {
       console.warn(`⚠️ Invalid or missing TIN: ${tin}`);
     }
 
-    // --- 🖋️ Embed Employee Signature ---
-// --- 🖋️ Embed Employee Signature + Date ---
-if (w9Data.SIGNATURE_URL) {
-  try {
-    const sigPath = path.join(process.cwd(), "public", w9Data.SIGNATURE_URL);
-    const sigBytes = await fs.readFile(sigPath);
-    const sigImage = await pdfDoc.embedPng(sigBytes);
-
-    // Embed font once, outside of drawText()
-    const helveticaFont = await pdfDoc.embedFont(PDFDocument.PDFName ? 'Helvetica' : 'Helvetica');
-
-    const sigX = 100;
-    const sigY = 125;
-
-    // Draw employee signature
-    page.drawImage(sigImage, { x: sigX, y: sigY, width: 200, height: 40 });
-
-    // Compute and draw date near signature
-    const dateText = w9Data.SIGNATURE_DATE
-      ? new Date(w9Data.SIGNATURE_DATE).toLocaleDateString()
-      : new Date().toLocaleDateString();
-     
-      page.drawText(dateText, {
-      x: 330,   // horizontally inside the Date field
-      y: sigY + 10,
-      size: 11,
-      font: helveticaFont,
-    });
-
-  } catch (err) {
-    console.warn(`⚠️ Failed to embed employee signature/date: ${err.message}`);
-  }
-}
-
-
-    // --- 🖋️ Embed Verifier Signature (if provided) ---
-    if (verifierData && verifierData.signatureUrl) {
+    // --- 🖋️ Embed Employee Signature + Date ---
+    if (w9Data.SIGNATURE_URL) {
       try {
-        const verSigPath = path.join(process.cwd(), "public", verifierData.signatureUrl);
-        const verSigBytes = await fs.readFile(verSigPath);
-        const verSigImage = await pdfDoc.embedPng(verSigBytes);
-        page.drawImage(verSigImage, { x: 350, y: 55, width: 150, height: 35 });
-      } catch (err) {
-        console.warn(`⚠️ Failed to embed verifier signature: ${err.message}`);
-      }
-    }
+        const sigPath = path.join(process.cwd(), "public", w9Data.SIGNATURE_URL);
+        const sigBytes = await fs.readFile(sigPath);
+        const sigImage = await pdfDoc.embedPng(sigBytes);
+        
+        // Embed font once, outside of drawText()
+        const helveticaFont = await pdfDoc.embedFont('Helvetica'); // Use standard font name
 
-    // --- 🧾 Add verifier info text ---
-    if (verifierData) {
-      const verifierText = `Verified by: ${verifierData.name} (${verifierData.empId})\nDate: ${verifierData.date}`;
-      page.drawText(verifierText, { x: 50, y: 40, size: 8 });
+       const sigX = 200;
+        const sigY = 185;
+
+        // Draw employee signature
+        page.drawImage(sigImage, { x: sigX, y: sigY, width: 200, height: 40 });
+
+        // Compute and draw date near signature
+        const dateText = w9Data.SIGNATURE_DATE
+          ? new Date(w9Data.SIGNATURE_DATE).toLocaleDateString('en-US') // Use locale for formatting
+          : new Date().toLocaleDateString('en-US'); // Use locale for formatting
+         
+          page.drawText(dateText, {
+           x: 450,   // horizontally inside the Date field
+          y: sigY + 10,
+          size: 11,
+          font: helveticaFont,
+        });
+
+      } catch (err) {
+        console.warn(`⚠️ Failed to embed employee signature/date: ${err.message}`);
+      }
     }
 
     // --- Finalize PDF ---
@@ -397,40 +390,97 @@ if (w9Data.SIGNATURE_URL) {
     console.error("❌ Error generating W-9 PDF:", error);
     return { success: false, error: error.message };
   }
-}
-// Upload PDF to employee documents
+}// Upload PDF to employee documents
+// Upload PDF to sub-organization documents
 async function uploadPDFToDocuments(pdfBytes, empId, orgId, formId, userId) {
+    let pool; // Define pool outside the try block
     try {
+        pool = await DBconnection(); // Assign pool connection
+
+        // --- Step 1: Get the suborgid for the employee ---
+        const [empRows] = await pool.query(
+            `SELECT suborgid FROM C_EMP WHERE empid = ? AND orgid = ?`,
+            [empId, orgId]
+        );
+
+        if (empRows.length === 0 || !empRows[0].suborgid) {
+            throw new Error(`Employee ${empId} not found or does not have a suborgid assigned.`);
+        }
+        const subOrgId = empRows[0].suborgid;
+        // --- End Step 1 ---
+
+
+        // --- Step 2: Save the PDF file ---
         const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'documents');
         await fs.mkdir(uploadDir, { recursive: true });
 
+        // Keep filename descriptive, it's okay
         const filename = `W9_Form_Submitted_${empId}_${formId}_${Date.now()}.pdf`;
         const filePath = path.join(uploadDir, filename);
         await fs.writeFile(filePath, pdfBytes);
-
         const documentPath = `/uploads/documents/${filename}`;
-        const pool = await DBconnection();
-        
+        // --- End Step 2 ---
+
+
+        // --- Step 3: Check for existing document in C_SUB_ORG_DOCUMENTS ---
+        // Let's use suborgid, orgid, and document_purpose to identify if it exists
+        // Assuming 'W9-Form' is a suitable purpose identifier
+        const documentPurpose = 'Compliance';
+        const documentName = `Form W-9 (Submitted ${new Date().toLocaleDateString()})`; // Add date for uniqueness if needed
+
         const [existingDocs] = await pool.query(
-            `SELECT id FROM C_EMP_DOCUMENTS WHERE empid = ? AND orgid = ? AND subtype = 69 AND comments LIKE ?`,
-            [empId, orgId, `%Form ID: ${formId}%`]
+            `SELECT id FROM C_SUB_ORG_DOCUMENTS
+             WHERE suborgid = ? AND orgid = ? AND document_purpose = ?`,
+            [subOrgId, orgId, documentPurpose]
         );
-        
+        // --- End Step 3 ---
+
+
+        // --- Step 4: Insert or Update the record in C_SUB_ORG_DOCUMENTS ---
         if (existingDocs.length > 0) {
+            // Update existing record
             await pool.query(
-                `UPDATE C_EMP_DOCUMENTS SET document_name = ?, document_path = ?, comments = ?, updated_by = ?, last_updated_date = NOW() WHERE id = ?`,
-                ['Form W-9 (Submitted)', documentPath, `Submitted W-9 Form. Form ID: ${formId}`, userId, existingDocs[0].id]
+                `UPDATE C_SUB_ORG_DOCUMENTS SET
+                   document_name = ?,
+                   document_path = ?,
+                   updated_by = ?,
+                   last_updated_date = NOW()
+                 WHERE id = ?`,
+                [
+                    documentName,
+                    documentPath,
+                    userId,
+                    existingDocs[0].id
+                ]
             );
+            console.log(`Updated W-9 document record ${existingDocs[0].id} for suborgid ${subOrgId}`);
         } else {
+            // Insert new record
             await pool.query(
-                `INSERT INTO C_EMP_DOCUMENTS (empid, orgid, document_name, document_type, subtype, document_path, document_purpose, comments, startdate, created_by, updated_by)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?)`,
-                [empId, orgId, 'Form W-9 (Submitted)', 65, 69, documentPath, 63, `Submitted W-9 Form. Form ID: ${formId}`, userId, userId]
+                `INSERT INTO C_SUB_ORG_DOCUMENTS
+                   (suborgid, orgid, document_name, document_type, document_path, document_purpose, created_by, updated_by, created_date, last_updated_date)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+                [
+                    subOrgId,
+                    orgId,
+                    documentName,
+                    'W-9', // Example document type, adjust as needed
+                    documentPath,
+                    documentPurpose,
+                    userId,
+                    userId
+                ]
             );
+            console.log(`Inserted new W-9 document record for suborgid ${subOrgId}`);
         }
-        return { success: true };
+        // --- End Step 4 ---
+
+        return { success: true, path: documentPath }; // Return path for consistency
+
     } catch (error) {
-        console.error('Error uploading W-9 PDF to documents:', error);
+        console.error('Error uploading W-9 PDF to sub-org documents:', error);
         return { success: false, error: error.message };
     }
+    // No finally block needed here as pool connection management might be handled elsewhere
+    // If not, add pool.end() or pool.release() in a finally block if necessary.
 }
