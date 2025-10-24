@@ -4,7 +4,7 @@
 import DBconnection from '@/app/utils/config/db';
 
 /**
- * Fetches all I-9 and W-9 forms for a specific employee for the verification screen.
+ * Fetches all I-9, W-9, and W-4 forms for a specific employee for the verification screen.
  */
 export async function getEmployeeFormsForVerification(empId, orgId) {
   try {
@@ -33,11 +33,24 @@ export async function getEmployeeFormsForVerification(empId, orgId) {
        WHERE w9.EMP_ID = ? AND w9.ORG_ID = ?`,
        [empId, orgId]
     );
+    
+    // Fetch W-4 Forms from C_FORM_W4
+    const [w4Forms] = await pool.query(
+      `SELECT ID, ORG_ID, EMP_ID, FORM_STATUS, SUBMITTED_AT as SUBMITTED_DATE, 'W4' as FORM_TYPE,
+              v.EMP_FST_NAME as VERIFIER_FIRST_NAME, 
+              v.EMP_LAST_NAME as VERIFIER_LAST_NAME,
+              CREATED_AT
+       FROM C_FORM_W4 w4
+       LEFT JOIN C_EMP v ON w4.VERIFIER_ID = v.empid AND w4.ORG_ID = v.orgid
+       WHERE w4.EMP_ID = ? AND w4.ORG_ID = ?`,
+       [empId, orgId]
+    );
 
-    // Combine, add a unique prefix to W-9 IDs, and sort
+    // Combine, add unique prefixes, and sort
     const combinedForms = [
         ...i9Forms, 
-        ...w9Forms.map(f => ({ ...f, ID: `W9-${f.ID}` }))
+        ...w9Forms.map(f => ({ ...f, ID: `W9-${f.ID}` })),
+        ...w4Forms.map(f => ({ ...f, ID: `W4-${f.ID}` }))
     ];
 
     combinedForms.sort((a, b) => {
@@ -103,7 +116,6 @@ export async function getPendingI9Approvals(orgId, currentEmpId, isAdmin, hasAll
 }
 
 /**
- * ✅ NEW FUNCTION
  * Fetches only the W-9 forms that are pending verification based on user permissions.
  */
 export async function getPendingW9Approvals(orgId, currentEmpId, isAdmin, hasAllData, subordinateIds) {
@@ -152,6 +164,56 @@ export async function getPendingW9Approvals(orgId, currentEmpId, isAdmin, hasAll
   }
 }
 
+/**
+ * ✅ NEW FUNCTION
+ * Fetches only the W-4 forms that are pending verification based on user permissions.
+ */
+export async function getPendingW4Approvals(orgId, currentEmpId, isAdmin, hasAllData, subordinateIds) {
+  try {
+    const pool = await DBconnection();
+    
+    let query = `
+      SELECT f.ID, 'W4' as FORM_TYPE, f.FORM_STATUS, f.SUBMITTED_AT as SUBMITTED_DATE, 
+             e.EMP_FST_NAME as EMPLOYEE_FIRST_NAME,
+             e.EMP_LAST_NAME as EMPLOYEE_LAST_NAME,
+             v.EMP_FST_NAME as VERIFIER_FIRST_NAME,
+             v.EMP_LAST_NAME as VERIFIER_LAST_NAME,
+             f.CREATED_AT
+      FROM C_FORM_W4 f
+      INNER JOIN C_EMP e ON f.EMP_ID = e.empid AND f.ORG_ID = e.orgid
+      LEFT JOIN C_EMP v ON f.VERIFIER_ID = v.empid AND f.ORG_ID = v.orgid
+      WHERE f.ORG_ID = ? AND f.FORM_STATUS = 'SUBMITTED'
+    `;
+    
+    const params = [orgId];
+    
+    if (isAdmin) {
+      // Admin sees all pending forms.
+    } else if (hasAllData) {
+      // User with 'alldata' sees all pending forms except their own.
+      query += ` AND f.EMP_ID != ?`;
+      params.push(currentEmpId);
+    } else {
+      // User with 'teamdata' sees only their subordinates' forms.
+      if (subordinateIds && subordinateIds.length > 0) {
+        query += ` AND f.EMP_ID IN (?)`;
+        params.push(subordinateIds);
+      } else {
+        return []; // No subordinates, no pending forms to see.
+      }
+    }
+    
+    query += ` ORDER BY f.CREATED_AT DESC`;
+    
+    const [forms] = await pool.query(query, params);
+    
+    return forms;
+  } catch (error) {
+    console.error('Error fetching pending W-4 approvals:', error);
+    throw new Error('Failed to fetch pending W-4 approvals');
+  }
+}
+
 
 /**
  * Fetches the full details of a specific I-9 form.
@@ -192,7 +254,6 @@ export async function getW9FormDetails(formId) {
   try {
     const pool = await DBconnection();
     
-    // ✅ FIX: Also join verifier info
     const [rows] = await pool.query(
       `SELECT w9.*, 
               e.EMP_FST_NAME, e.EMP_LAST_NAME,
@@ -213,5 +274,36 @@ export async function getW9FormDetails(formId) {
   } catch (error) {
     console.error('Error fetching W-9 form details:', error);
     throw new Error('Failed to fetch W-9 form details');
+  }
+}
+
+/**
+ * ✅ NEW FUNCTION
+ * Fetches the full details of a specific W-4 form.
+ */
+export async function getW4FormDetails(formId) {
+  try {
+    const pool = await DBconnection();
+    
+    const [rows] = await pool.query(
+      `SELECT w4.*, 
+              e.EMP_FST_NAME, e.EMP_LAST_NAME,
+              v.EMP_FST_NAME as VERIFIER_FIRST_NAME,
+              v.EMP_LAST_NAME as VERIFIER_LAST_NAME,
+              v.JOB_TITLE as VERIFIER_TITLE
+       FROM C_FORM_W4 w4
+       JOIN C_EMP e ON w4.EMP_ID = e.empid AND w4.ORG_ID = e.orgid
+       LEFT JOIN C_EMP v ON w4.VERIFIER_ID = v.empid AND w4.ORG_ID = v.orgid
+       WHERE w4.ID = ?`,
+      [formId]
+    );
+
+    if (rows.length === 0) {
+      throw new Error('W-4 Form not found');
+    }
+    return rows[0];
+  } catch (error) {
+    console.error('Error fetching W-4 form details:', error);
+    throw new Error('Failed to fetch W-4 form details');
   }
 }

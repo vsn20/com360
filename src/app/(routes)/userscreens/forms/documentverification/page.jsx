@@ -2,8 +2,12 @@
 import { cookies } from 'next/headers';
 import DBconnection from '@/app/utils/config/db';
 import VerificationContainer from '@/app/components/Employee/VerificationContainer';
-// ✅ Import the new W-9 function
-import { getPendingI9Approvals, getPendingW9Approvals } from '@/app/serverActions/forms/verification/actions';
+// Import all pending approval functions
+import { 
+    getPendingI9Approvals, 
+    getPendingW9Approvals,
+    getPendingW4Approvals // Import W-4 function
+} from '@/app/serverActions/forms/verification/actions';
 
 const decodeJwt = (token) => {
   try {
@@ -130,10 +134,14 @@ export default async function DocumentVerificationPage() {
       }
     }
 
-    // ✅ FIX: Get pending counts for BOTH I-9 and W-9
-    const i9Pending = await getPendingI9Approvals(orgid, empid, isAdmin, hasAllData, subordinateIds);
-    const w9Pending = await getPendingW9Approvals(orgid, empid, isAdmin, hasAllData, subordinateIds);
-    const totalPendingCount = i9Pending.length + w9Pending.length;
+    // Get pending counts for ALL form types
+    const [i9Pending, w9Pending, w4Pending] = await Promise.all([
+        getPendingI9Approvals(orgid, empid, isAdmin, hasAllData, subordinateIds),
+        getPendingW9Approvals(orgid, empid, isAdmin, hasAllData, subordinateIds),
+        getPendingW4Approvals(orgid, empid, isAdmin, hasAllData, subordinateIds)
+    ]);
+    
+    const totalPendingCount = i9Pending.length + w9Pending.length + w4Pending.length;
 
 
     // Get organization name
@@ -141,7 +149,7 @@ export default async function DocumentVerificationPage() {
       'SELECT orgname FROM C_ORG WHERE orgid = ?',
       [orgid]
     );
-    const orgName = orgRows.length > 0 ? orgRows[0].orgname : 'Organization'; // Fixed: .orgname
+    const orgName = orgRows.length > 0 ? orgRows[0].orgname : 'Organization';
 
     return (
       <VerificationContainer
@@ -152,7 +160,7 @@ export default async function DocumentVerificationPage() {
         currentEmpId={empid}
         orgId={orgid}
         orgName={orgName}
-        pendingCount={totalPendingCount} // ✅ Pass the combined count
+        pendingCount={totalPendingCount} // Pass the combined count
       />
     );
 

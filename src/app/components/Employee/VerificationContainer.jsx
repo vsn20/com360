@@ -6,10 +6,13 @@ import {
   getPendingI9Approvals,
   getI9FormDetails,
   getW9FormDetails,
-  getPendingW9Approvals 
+  getPendingW9Approvals,
+  getW4FormDetails, // Import W-4 action
+  getPendingW4Approvals // Import W-4 action
 } from '@/app/serverActions/forms/verification/actions';
 import VerificationForm from './VerificationForm';
 import W9VerificationForm from './W9VerificationForm';
+import W4VerificationForm from './W4VerificationForm'; // Import W-4 verification component
 import styles from './Verification.module.css';
 
 const VerificationContainer = ({
@@ -59,14 +62,16 @@ const VerificationContainer = ({
     try {
       const subordinateIds = employees.map(e => e.empid);
       
-      const [i9Data, w9Data] = await Promise.all([
+      const [i9Data, w9Data, w4Data] = await Promise.all([
         getPendingI9Approvals(orgId, currentEmpId, isAdmin, hasAllData, subordinateIds),
-        getPendingW9Approvals(orgId, currentEmpId, isAdmin, hasAllData, subordinateIds)
+        getPendingW9Approvals(orgId, currentEmpId, isAdmin, hasAllData, subordinateIds),
+        getPendingW4Approvals(orgId, currentEmpId, isAdmin, hasAllData, subordinateIds) // Fetch W-4 pending
       ]);
 
       const combined = [
         ...i9Data,
-        ...w9Data.map(f => ({ ...f, ID: `W9-${f.ID}` })) 
+        ...w9Data.map(f => ({ ...f, ID: `W9-${f.ID}` })),
+        ...w4Data.map(f => ({ ...f, ID: `W4-${f.ID}` })) // Add W-4 pending
       ];
       
       combined.sort((a, b) => {
@@ -113,9 +118,11 @@ const VerificationContainer = ({
       if (form.FORM_TYPE === 'W9') {
         const w9Id = parseInt(String(form.ID).replace('W9-', ''));
         fullFormData = await getW9FormDetails(w9Id);
-        // ✅ ✅ ✅ FIX IS HERE ✅ ✅ ✅
-        // Manually add FORM_TYPE back to the detailed data object.
         fullFormData.FORM_TYPE = 'W9'; 
+      } else if (form.FORM_TYPE === 'W4') { // Handle W-4
+        const w4Id = parseInt(String(form.ID).replace('W4-', ''));
+        fullFormData = await getW4FormDetails(w4Id);
+        fullFormData.FORM_TYPE = 'W4';
       } else {
         fullFormData = await getI9FormDetails(form.ID);
       }
@@ -151,10 +158,10 @@ const VerificationContainer = ({
     const statusConfig = {
       'DRAFT': { color: '#6c757d', label: 'Draft' },
       'EMPLOYEE_SUBMITTED': { color: '#007bff', label: 'Pending I-9' },
-      'EMPLOYER_VERIFIED': { color: '#28a745', label: 'Verified' },
+      'EMPLOYER_VERIFIED': { color: '#28a745', label: 'Verified I-9' },
       'REJECTED': { color: '#dc3545', label: 'Rejected' },
-      'SUBMITTED': { color: '#0d6efd', label: 'Pending W-9' }, 
-      'VERIFIED': { color: '#28a745', label: 'Verified' }
+      'SUBMITTED': { color: '#0d6efd', label: 'Pending' }, // W-9 & W-4
+      'VERIFIED': { color: '#28a745', label: 'Verified' } // W-9 & W-4
     };
     
     const config = statusConfig[status] || statusConfig['DRAFT'];
@@ -181,7 +188,6 @@ const VerificationContainer = ({
   };
 
   if (selectedForm) {
-    // This conditional logic will now work correctly for W-9 forms
     if (selectedForm.FORM_TYPE === 'W9') {
       return (
         <W9VerificationForm
@@ -194,6 +200,21 @@ const VerificationContainer = ({
         />
       );
     }
+    
+    if (selectedForm.FORM_TYPE === 'W4') {
+      return (
+        <W4VerificationForm
+          form={selectedForm}
+          verifierEmpId={currentEmpId}
+          orgId={orgId}
+          orgName={orgName}
+          onBack={handleBack}
+          onSuccess={handleVerificationSuccess}
+          isAdmin={isAdmin}
+        />
+      );
+    }
+    
     return (
       <VerificationForm
         form={selectedForm}
@@ -246,7 +267,7 @@ const VerificationContainer = ({
 
       {!loading && (showPending ? pendingForms : forms).length > 0 && (
         <div className={styles.formsList}>
-          <h3>{showPending ? 'Pending Approvals (I-9 & W-9)' : 'Employee Forms (I-9 & W-9)'}</h3>
+          <h3>{showPending ? 'Pending Approvals (I-9, W-9, W-4)' : 'Employee Forms (I-9, W-9, W-4)'}</h3>
           <div className={styles.tableWrapper}>
             <table className={styles.verificationTable}>
               <thead>
@@ -269,7 +290,7 @@ const VerificationContainer = ({
                     <td>{form.ID}</td>
                     {showPending && <td>{form.EMPLOYEE_FIRST_NAME} {form.EMPLOYEE_LAST_NAME}</td>}
                     <td>{form.FORM_TYPE}</td>
-                    <td>{formatDate(form.SUBMITTED_DATE)}</td>
+                    <td>{formatDate(form.SUBMITTED_DATE || form.EMPLOYEE_SIGNATURE_DATE)}</td>
                     <td>{getStatusBadge(form.FORM_STATUS)}</td>
                     <td>
                       {`${form.VERIFIER_FIRST_NAME || ''} ${form.VERIFIER_LAST_NAME || ''}`.trim() || 'Not Assigned'}
@@ -283,10 +304,10 @@ const VerificationContainer = ({
       )}
 
       {!loading && !showPending && selectedEmployee && forms.length === 0 && (
-        <div className={styles.emptyState}>No I-9 or W-9 forms found for this employee.</div>
+        <div className={styles.emptyState}>No I-9, W-9, or W-4 forms found for this employee.</div>
       )}
       {!loading && showPending && pendingForms.length === 0 && (
-        <div className={styles.emptyState}>No pending I-9 or W-9 approvals at this time.</div>
+        <div className={styles.emptyState}>No pending I-9, W-9, or W-4 approvals at this time.</div>
       )}
     </div>
   );

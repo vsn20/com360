@@ -1,0 +1,77 @@
+W-4 PDF FIELD NAMES
+===================
+
+1. "topmostSubform[0].Page1[0].Step1a[0].f1_01[0]" | Type: PDFTextField
+2. "topmostSubform[0].Page1[0].Step1a[0].f1_02[0]" | Type: PDFTextField
+3. "topmostSubform[0].Page1[0].Step1a[0].f1_03[0]" | Type: PDFTextField
+4. "topmostSubform[0].Page1[0].Step1a[0].f1_04[0]" | Type: PDFTextField
+5. "topmostSubform[0].Page1[0].f1_05[0]" | Type: PDFTextField
+6. "topmostSubform[0].Page1[0].c1_1[0]" | Type: PDFCheckBox
+7. "topmostSubform[0].Page1[0].c1_1[1]" | Type: PDFCheckBox
+8. "topmostSubform[0].Page1[0].c1_1[2]" | Type: PDFCheckBox
+9. "topmostSubform[0].Page1[0].c1_2[0]" | Type: PDFCheckBox
+10. "topmostSubform[0].Page1[0].Step3_ReadOrder[0].f1_06[0]" | Type: PDFTextField
+11. "topmostSubform[0].Page1[0].Step3_ReadOrder[0].f1_07[0]" | Type: PDFTextField
+12. "topmostSubform[0].Page1[0].f1_09[0]" | Type: PDFTextField
+13. "topmostSubform[0].Page1[0].f1_10[0]" | Type: PDFTextField
+14. "topmostSubform[0].Page1[0].f1_11[0]" | Type: PDFTextField
+15. "topmostSubform[0].Page1[0].f1_12[0]" | Type: PDFTextField
+16. "topmostSubform[0].Page1[0].f1_13[0]" | Type: PDFTextField
+17. "topmostSubform[0].Page1[0].f1_14[0]" | Type: PDFTextField
+18. "topmostSubform[0].Page1[0].f1_15[0]" | Type: PDFTextField
+19. "topmostSubform[0].Page3[0].f3_01[0]" | Type: PDFTextField
+20. "topmostSubform[0].Page3[0].f3_02[0]" | Type: PDFTextField
+21. "topmostSubform[0].Page3[0].f3_03[0]" | Type: PDFTextField
+22. "topmostSubform[0].Page3[0].f3_04[0]" | Type: PDFTextField
+23. "topmostSubform[0].Page3[0].f3_05[0]" | Type: PDFTextField
+24. "topmostSubform[0].Page3[0].f3_06[0]" | Type: PDFTextField
+25. "topmostSubform[0].Page3[0].f3_07[0]" | Type: PDFTextField
+26. "topmostSubform[0].Page3[0].f3_08[0]" | Type: PDFTextField
+27. "topmostSubform[0].Page3[0].f3_09[0]" | Type: PDFTextField
+28. "topmostSubform[0].Page3[0].f3_10[0]" | Type: PDFTextField
+29. "topmostSubform[0].Page3[0].f3_11[0]" | Type: PDFTextField
+
+========================================
+FIELD SUMMARY
+========================================
+Text Fields: 25
+Check Boxes: 4
+Other Fields: 0
+TOTAL: 29
+
+========================================
+TEXT FIELDS
+========================================
+1. "topmostSubform[0].Page1[0].Step1a[0].f1_01[0]"
+2. "topmostSubform[0].Page1[0].Step1a[0].f1_02[0]"
+3. "topmostSubform[0].Page1[0].Step1a[0].f1_03[0]"
+4. "topmostSubform[0].Page1[0].Step1a[0].f1_04[0]"
+5. "topmostSubform[0].Page1[0].f1_05[0]"
+6. "topmostSubform[0].Page1[0].Step3_ReadOrder[0].f1_06[0]"
+7. "topmostSubform[0].Page1[0].Step3_ReadOrder[0].f1_07[0]"
+8. "topmostSubform[0].Page1[0].f1_09[0]"
+9. "topmostSubform[0].Page1[0].f1_10[0]"
+10. "topmostSubform[0].Page1[0].f1_11[0]"
+11. "topmostSubform[0].Page1[0].f1_12[0]"
+12. "topmostSubform[0].Page1[0].f1_13[0]"
+13. "topmostSubform[0].Page1[0].f1_14[0]"
+14. "topmostSubform[0].Page1[0].f1_15[0]"
+15. "topmostSubform[0].Page3[0].f3_01[0]"
+16. "topmostSubform[0].Page3[0].f3_02[0]"
+17. "topmostSubform[0].Page3[0].f3_03[0]"
+18. "topmostSubform[0].Page3[0].f3_04[0]"
+19. "topmostSubform[0].Page3[0].f3_05[0]"
+20. "topmostSubform[0].Page3[0].f3_06[0]"
+21. "topmostSubform[0].Page3[0].f3_07[0]"
+22. "topmostSubform[0].Page3[0].f3_08[0]"
+23. "topmostSubform[0].Page3[0].f3_09[0]"
+24. "topmostSubform[0].Page3[0].f3_10[0]"
+25. "topmostSubform[0].Page3[0].f3_11[0]"
+
+========================================
+CHECK BOXES
+========================================
+1. "topmostSubform[0].Page1[0].c1_1[0]"
+2. "topmostSubform[0].Page1[0].c1_1[1]"
+3. "topmostSubform[0].Page1[0].c1_1[2]"
+4. "topmostSubform[0].Page1[0].c1_2[0]"

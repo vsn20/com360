@@ -1,0 +1,38 @@
+
+// W-4 PDF FIELD MAPPING TEMPLATE
+// Copy this into your generateW4PDF function
+
+// Step 1: Employee Info
+setSafeText('topmostSubform[0].Page1[0].Step1a[0].f1_01[0]', w4Data.FIRST_NAME || '');  // First Name
+setSafeText('topmostSubform[0].Page1[0].Step1a[0].f1_02[0]', w4Data.LAST_NAME || '');   // Last Name
+setSafeText('topmostSubform[0].Page1[0].Step1a[0].f1_03[0]', pdfSSN);                    // SSN
+setSafeText('topmostSubform[0].Page1[0].Step1a[0].f1_04[0]', w4Data.ADDRESS_STREET || ''); // Address
+setSafeText('topmostSubform[0].Page1[0].f1_05[0]', w4Data.ADDRESS_CITY_STATE_ZIP || ''); // City/State/ZIP
+
+// Filing Status (checkboxes)
+if (w4Data.FILING_STATUS === 'SINGLE') checkSafeBox('topmostSubform[0].Page1[0].c1_1[0]');
+else if (w4Data.FILING_STATUS === 'MARRIED_JOINTLY') checkSafeBox('topmostSubform[0].Page1[0].c1_1[1]');
+else if (w4Data.FILING_STATUS === 'HEAD_OF_HOUSEHOLD') checkSafeBox('topmostSubform[0].Page1[0].c1_1[2]');
+
+// Step 2: Multiple Jobs
+if (w4Data.MULTIPLE_JOBS_CHECKED) checkSafeBox('topmostSubform[0].Page1[0].c1_2[0]');
+
+// Step 3: Dependents
+setSafeText('topmostSubform[0].Page1[0].Step3_ReadOrder[0].f1_06[0]', String(Number(w4Data.QUALIFYING_CHILDREN_AMOUNT || 0).toFixed(0)));
+setSafeText('topmostSubform[0].Page1[0].Step3_ReadOrder[0].f1_07[0]', String(Number(w4Data.OTHER_DEPENDENTS_AMOUNT || 0).toFixed(0)));
+setSafeText('topmostSubform[0].Page1[0].f1_09[0]', String(Number(w4Data.TOTAL_CREDITS || 0).toFixed(0)));
+
+// Step 4: Other Adjustments
+setSafeText('topmostSubform[0].Page1[0].f1_10[0]', String(Number(w4Data.OTHER_INCOME || 0).toFixed(0)));
+setSafeText('topmostSubform[0].Page1[0].f1_11[0]', String(Number(w4Data.DEDUCTIONS || 0).toFixed(0)));
+setSafeText('topmostSubform[0].Page1[0].f1_12[0]', String(Number(w4Data.EXTRA_WITHHOLDING || 0).toFixed(0)));
+
+// Step 5: Signature Date
+setSafeText('topmostSubform[0].Page1[0].f1_13[0]', formatPdfDate(w4Data.EMPLOYEE_SIGNATURE_DATE));
+
+// Employer Section (if VERIFIED)
+if (w4Data.FORM_STATUS === 'VERIFIED') {
+  setSafeText('topmostSubform[0].Page1[0].f1_14[0]', w4Data.EMPLOYER_NAME_ADDRESS || '');
+  setSafeText('topmostSubform[0].Page1[0].f1_15[0]', formatPdfDate(w4Data.FIRST_DATE_OF_EMPLOYMENT));
+  setSafeText('topmostSubform[0].Page3[0].f3_01[0]', w4Data.EMPLOYER_EIN || '');
+}
