@@ -392,3 +392,4 @@ export async function getFormTypes() {
     { value: 'W9', label: 'W-9 Request for Taxpayer Identification' },
   ];
 }
+
