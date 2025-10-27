@@ -81,7 +81,7 @@ const Overview = ({ orgid, empid, organizations, countries, states }) => {
     }
   }, [selectedorgid, fetchDocuments]);
 
-  // Advanced filtering function
+  // Advanced filtering function - FIXED: Each filter result ANDs with others
   const applyFilters = (organizations, filters) => {
     if (!filters || filters.length === 0) return organizations;
 
@@ -147,8 +147,12 @@ const Overview = ({ orgid, empid, organizations, countries, states }) => {
         switch (operator) {
           case 'equals':
             return String(orgValue) === String(value);
+          case 'notEquals':
+            return String(orgValue) !== String(value);
           case 'contains':
             return String(orgValue).includes(filterValue);
+          case 'notContains':
+            return !String(orgValue).includes(filterValue);
           case 'startsWith':
             return String(orgValue).startsWith(filterValue);
           case 'endsWith':
@@ -173,6 +177,10 @@ const Overview = ({ orgid, empid, organizations, countries, states }) => {
   const handleAIQuery = async (query) => {
     setIsProcessingAI(true);
     setAiMessage('');
+    
+    // Clear manual filters when AI query comes in
+    setSearchQuery('');
+    setIsActiveFilter('all');
     
     try {
       const result = await gptintegration(query, '/organizations', countries, states);
@@ -288,7 +296,7 @@ const Overview = ({ orgid, empid, organizations, countries, states }) => {
     setAdd(false);
     setAiPrefilledData(null);
     setShowSelectionModal(false);
-    setActiveFilters([]);
+    // Don't clear filters when viewing details
   };
 
   const handleAdd = () => {
@@ -320,23 +328,36 @@ const Overview = ({ orgid, empid, organizations, countries, states }) => {
     setAiMessage('');
   };
 
-  // Apply AI filters first, then basic filters
+  // FIXED: Apply filters with proper AND logic
   let filteredOrganizations = allOrganizations;
   
-  // Apply AI filters if present
-  if (activeFilters.length > 0) {
-    filteredOrganizations = applyFilters(filteredOrganizations, activeFilters);
+  // Create combined filter array
+  const allActiveFilters = [...activeFilters];
+  
+  // Add manual search as a filter if present
+  if (searchQuery.trim()) {
+    allActiveFilters.push({
+      field: 'suborgname',
+      operator: 'contains',
+      value: searchQuery.toLowerCase(),
+      displayValue: searchQuery
+    });
   }
   
-  // Then apply basic search and status filters
-  filteredOrganizations = filteredOrganizations.filter((org) => {
-    const matchesSearch = searchQuery === '' || org.suborgname?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus =
-      isActiveFilter === 'all' ||
-      (isActiveFilter === 'active' && org.isstatus) ||
-      (isActiveFilter === 'inactive' && !org.isstatus);
-    return matchesSearch && matchesStatus;
-  });
+  // Add status filter if not 'all'
+  if (isActiveFilter !== 'all') {
+    allActiveFilters.push({
+      field: 'isstatus',
+      operator: 'equals',
+      value: isActiveFilter === 'active' ? '1' : '0',
+      displayValue: isActiveFilter === 'active' ? 'Active' : 'Inactive'
+    });
+  }
+  
+  // Apply all filters at once using unified logic
+  if (allActiveFilters.length > 0) {
+    filteredOrganizations = applyFilters(filteredOrganizations, allActiveFilters);
+  }
 
   const totalPages = Math.ceil(filteredOrganizations.length / orgsPerPage);
   const currentOrganizations = filteredOrganizations.slice((currentPage - 1) * orgsPerPage, currentPage * orgsPerPage);
@@ -350,15 +371,15 @@ const Overview = ({ orgid, empid, organizations, countries, states }) => {
         </div>
       )}
 
-      {/* Active Filters Display */}
-      {activeFilters.length > 0 && !add && !selectedorgid && (
+      {/* Active Filters Display - ENHANCED */}
+      {(activeFilters.length > 0 || searchQuery || isActiveFilter !== 'all') && !add && !selectedorgid && (
         <div className="organization_active_filters">
           <div className="organization_filter_header">
-            <span>Active Filters:</span>
+            <span>Active Filters ({allActiveFilters.length}):</span>
             <button onClick={clearFilters} className="organization_clear_filters">Clear All</button>
           </div>
           <div className="organization_filter_tags">
-            {activeFilters.map((filter, index) => (
+            {allActiveFilters.map((filter, index) => (
               <span key={index} className="organization_filter_tag">
                 {filter.field}: {filter.operator} "{filter.displayValue || filter.value}"
               </span>
@@ -477,11 +498,27 @@ const Overview = ({ orgid, empid, organizations, countries, states }) => {
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  // Clear AI message when manual search is used
+                  if (e.target.value && aiMessage) {
+                    setAiMessage('');
+                  }
+                }}
                 className="organization_search_input"
                 placeholder="Search by organization name..."
               />
-              <select value={isActiveFilter} onChange={(e) => setIsActiveFilter(e.target.value)} className="organization_filter_select">
+              <select 
+                value={isActiveFilter} 
+                onChange={(e) => {
+                  setIsActiveFilter(e.target.value);
+                  // Clear AI message when manual filter is used
+                  if (aiMessage) {
+                    setAiMessage('');
+                  }
+                }} 
+                className="organization_filter_select"
+              >
                 <option value="all">All Statuses</option>
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
@@ -490,7 +527,7 @@ const Overview = ({ orgid, empid, organizations, countries, states }) => {
             {filteredOrganizations.length === 0 ? (
               <div className="organization_empty_state">
                 No organizations found matching your criteria.
-                {activeFilters.length > 0 && (
+                {allActiveFilters.length > 0 && (
                   <button onClick={clearFilters} className="organization_retry_button">
                     Clear Filters
                   </button>
