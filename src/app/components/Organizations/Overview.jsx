@@ -113,6 +113,18 @@ const Overview = ({ orgid, empid, organizations, countries, states }) => {
           case 'postalcode':
             orgValue = (org.postalcode || '').toLowerCase();
             break;
+          case 'trade_name':
+            orgValue = (org.trade_name || '').toLowerCase();
+            break;
+          case 'registration_number':
+            orgValue = (org.registration_number || '').toLowerCase();
+            break;
+          case 'company_type':
+            orgValue = (org.company_type || '').toLowerCase();
+            break;
+          case 'industry':
+            orgValue = (org.industry || '').toLowerCase();
+            break;
           case 'created_date':
             orgValue = org.created_date ? new Date(org.created_date) : null;
             break;

@@ -3,10 +3,11 @@ import { cookies } from 'next/headers';
 import DBconnection from '@/app/utils/config/db';
 import VerificationContainer from '@/app/components/Employee/VerificationContainer';
 // Import all pending approval functions
-import { 
-    getPendingI9Approvals, 
-    getPendingW9Approvals,
-    getPendingW4Approvals // Import W-4 function
+import {
+    getPendingI9Approvals,
+    // getPendingW9Approvals is no longer fetched as it always returns []
+    getPendingW4Approvals,
+    getPendingI983Approvals // <-- Added import for I-983 pending action
 } from '@/app/serverActions/forms/verification/actions';
 
 const decodeJwt = (token) => {
@@ -24,20 +25,20 @@ const decodeJwt = (token) => {
 // Get all subordinates recursively for team data
 async function getAllSubordinates(pool, empid, orgid) {
   const subordinates = [];
-  
+
   const getDirectReports = async (managerId) => {
     const [reports] = await pool.query(
       'SELECT empid, EMP_FST_NAME, EMP_LAST_NAME, superior FROM C_EMP WHERE superior = ? AND orgid = ? AND STATUS = "ACTIVE"',
       [managerId, orgid]
     );
-    
+
     for (const report of reports) {
       subordinates.push(report);
       // Recursively get their subordinates
       await getDirectReports(report.empid);
     }
   };
-  
+
   await getDirectReports(empid);
   return subordinates;
 }
@@ -56,7 +57,7 @@ export default async function DocumentVerificationPage() {
   }
 
   const decoded = decodeJwt(token);
-  
+
   if (!decoded || !decoded.orgid || !decoded.empid) {
     return (
       <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
@@ -97,7 +98,7 @@ export default async function DocumentVerificationPage() {
         'SELECT alldata, teamdata FROM C_ROLE_MENU_PERMISSIONS WHERE roleid IN (?) AND menuid = 15 AND submenuid = 20',
         [roleids]
       );
-      
+
       hasAllData = permissionRows.some(row => row.alldata === 1);
       if (!hasAllData) {
         hasTeamData = permissionRows.every(row => row.teamdata === 1) && permissionRows.length > 0;
@@ -107,7 +108,7 @@ export default async function DocumentVerificationPage() {
     // Get employee list based on permissions
     let employees = [];
     let subordinateIds = [];
-    
+
     if (isAdmin) {
       // Admin ALWAYS has all data - can verify ALL employees INCLUDING self
       const [allEmps] = await pool.query(
@@ -134,14 +135,16 @@ export default async function DocumentVerificationPage() {
       }
     }
 
-    // Get pending counts for ALL form types
-    const [i9Pending, w9Pending, w4Pending] = await Promise.all([
+    // Get pending counts for ALL relevant form types
+    const [i9Pending, w4Pending, i983Pending] = await Promise.all([ // <-- Added i983Pending
         getPendingI9Approvals(orgid, empid, isAdmin, hasAllData, subordinateIds),
-        getPendingW9Approvals(orgid, empid, isAdmin, hasAllData, subordinateIds),
-        getPendingW4Approvals(orgid, empid, isAdmin, hasAllData, subordinateIds)
+        // No need to call getPendingW9Approvals as it returns []
+        getPendingW4Approvals(orgid, empid, isAdmin, hasAllData, subordinateIds),
+        getPendingI983Approvals(orgid, empid, isAdmin, hasAllData, subordinateIds) // <-- Fetch pending I-983
     ]);
-    
-    const totalPendingCount = i9Pending.length + w9Pending.length + w4Pending.length;
+
+    // Calculate total pending count including I-983
+    const totalPendingCount = i9Pending.length + w4Pending.length + i983Pending.length; // <-- Updated calculation
 
 
     // Get organization name
@@ -160,7 +163,7 @@ export default async function DocumentVerificationPage() {
         currentEmpId={empid}
         orgId={orgid}
         orgName={orgName}
-        pendingCount={totalPendingCount} // Pass the combined count
+        pendingCount={totalPendingCount} // Pass the updated combined count
       />
     );
 
@@ -174,3 +177,4 @@ export default async function DocumentVerificationPage() {
     );
   }
 }
+

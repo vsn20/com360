@@ -390,6 +390,7 @@ export async function getFormTypes() {
     { value: 'I9', label: 'I-9 Employment Eligibility Verification' },
     { value: 'W4', label: 'W-4 Employee Withholding Certificate' },
     { value: 'W9', label: 'W-9 Request for Taxpayer Identification' },
+    { value: 'I983', label: 'I-983 Training Plan for STEM OPT Students' },
   ];
 }
 

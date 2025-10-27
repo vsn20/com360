@@ -11,7 +11,7 @@ async function extractW4PDFFields() {
     console.log('\n📋 Extracting W-4 PDF Form Fields...\n');
     
     // Path to your W-4 template
-    const templatePath = path.join(process.cwd(), 'public', 'templates', 'fw9.pdf');
+    const templatePath = path.join(process.cwd(), 'public', 'templates', 'i983.pdf');
     
     // Check if file exists
     try {
@@ -115,7 +115,7 @@ async function extractW4PDFFields() {
     }
     
     // Save to file
-    const outputPath = path.join(process.cwd(), 'w4-pdf-fields-output.txt');
+    const outputPath = path.join(process.cwd(), 'I983-pdf-fields-output.txt');
     await fs.writeFile(outputPath, report);
     console.log(`\n✅ Full report saved to: ${outputPath}\n`);
     
