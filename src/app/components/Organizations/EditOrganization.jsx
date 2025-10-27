@@ -27,6 +27,10 @@ const EditOrganization = ({ selectedorgid, orgid, empid, countries, states, aiPr
     createddate: '',
     updatedby: '',
     updateddate: '',
+    trade_name: '',
+    registration_number: '',
+    company_type: '',
+    industry: '',
   });
 
   const getdisplayorgid = (orgid) => {
@@ -52,6 +56,10 @@ const EditOrganization = ({ selectedorgid, orgid, empid, countries, states, aiPr
           createddate: '',
           updatedby: '',
           updateddate: '',
+          trade_name: '',
+          registration_number: '',
+          company_type: '',
+          industry: '',
         });
         return;
       }
@@ -75,6 +83,10 @@ const EditOrganization = ({ selectedorgid, orgid, empid, countries, states, aiPr
           createddate: details.created_date ? new Date(details.created_date).toISOString().split('T')[0] : '',
           updatedby: details.updated_by || '',
           updateddate: details.updated_date ? new Date(details.updated_date).toISOString().split('T')[0] : '',
+          trade_name: details.trade_name || '',
+          registration_number: details.registration_number || '',
+          company_type: details.company_type || '',
+          industry: details.industry || '',
         });
         setError(null);
       } catch (error) {
@@ -100,6 +112,10 @@ const EditOrganization = ({ selectedorgid, orgid, empid, countries, states, aiPr
           country: aiPrefilledData.country !== null ? aiPrefilledData.country : prev.country,
           postalcode: aiPrefilledData.postalcode !== null ? aiPrefilledData.postalcode : prev.postalcode,
           isstatus: aiPrefilledData.isstatus !== null ? aiPrefilledData.isstatus : prev.isstatus,
+          trade_name: aiPrefilledData.trade_name !== null ? aiPrefilledData.trade_name : prev.trade_name,
+          registration_number: aiPrefilledData.registration_number !== null ? aiPrefilledData.registration_number : prev.registration_number,
+          company_type: aiPrefilledData.company_type !== null ? aiPrefilledData.company_type : prev.company_type,
+          industry: aiPrefilledData.industry !== null ? aiPrefilledData.industry : prev.industry,
         };
 
         // Handle state/customStateName based on country
@@ -174,6 +190,10 @@ const EditOrganization = ({ selectedorgid, orgid, empid, countries, states, aiPr
           createddate: updatedDetails.created_date ? new Date(updatedDetails.created_date).toISOString().split('T')[0] : '',
           updatedby: updatedDetails.updated_by || '',
           updateddate: updatedDetails.updated_date ? new Date(updatedDetails.updated_date).toISOString().split('T')[0] : '',
+          trade_name: updatedDetails.trade_name || '',
+          registration_number: updatedDetails.registration_number || '',
+          company_type: updatedDetails.company_type || '',
+          industry: updatedDetails.industry || '',
         });
         setTimeout(() => {
           setSuccess(null);
@@ -207,6 +227,10 @@ const EditOrganization = ({ selectedorgid, orgid, empid, countries, states, aiPr
       createddate: orgDetails?.created_date ? new Date(orgDetails.created_date).toISOString().split('T')[0] : '',
       updatedby: orgDetails?.updated_by || '',
       updateddate: orgDetails?.updated_date ? new Date(orgDetails.updated_date).toISOString().split('T')[0] : '',
+      trade_name: orgDetails?.trade_name || '',
+      registration_number: orgDetails?.registration_number || '',
+      company_type: orgDetails?.company_type || '',
+      industry: orgDetails?.industry || '',
     });
     setError(null);
   };
@@ -330,6 +354,46 @@ const EditOrganization = ({ selectedorgid, orgid, empid, countries, states, aiPr
                   />
                 </div>
               </div>
+              <div className="organization_form_row">
+                <div className="organization_form_group">
+                  <label>Trade Name</label>
+                  <input
+                    type="text"
+                    name="trade_name"
+                    value={form.trade_name}
+                    onChange={handleFormChange}
+                  />
+                </div>
+                <div className="organization_form_group">
+                  <label>Registration Number</label>
+                  <input
+                    type="text"
+                    name="registration_number"
+                    value={form.registration_number}
+                    onChange={handleFormChange}
+                  />
+                </div>
+              </div>
+              <div className="organization_form_row">
+                <div className="organization_form_group">
+                  <label>Company Type</label>
+                  <input
+                    type="text"
+                    name="company_type"
+                    value={form.company_type}
+                    onChange={handleFormChange}
+                  />
+                </div>
+                <div className="organization_form_group">
+                  <label>Industry</label>
+                  <input
+                    type="text"
+                    name="industry"
+                    value={form.industry}
+                    onChange={handleFormChange}
+                  />
+                </div>
+              </div>
               <div className="organization_form_buttons">
                 <button type="submit" className="organization_submit_button" disabled={isLoading}>
                   {isLoading ? 'Saving...' : 'Save'}
@@ -379,6 +443,26 @@ const EditOrganization = ({ selectedorgid, orgid, empid, countries, states, aiPr
                 <div className="organization_details_group">
                   <label>Postal Code</label>
                   <p>{form.postalcode || '-'}</p>
+                </div>
+              </div>
+              <div className="organization_details_row">
+                <div className="organization_details_group">
+                  <label>Trade Name</label>
+                  <p>{form.trade_name || '-'}</p>
+                </div>
+                <div className="organization_details_group">
+                  <label>Registration Number</label>
+                  <p>{form.registration_number || '-'}</p>
+                </div>
+              </div>
+              <div className="organization_details_row">
+                <div className="organization_details_group">
+                  <label>Company Type</label>
+                  <p>{form.company_type || '-'}</p>
+                </div>
+                <div className="organization_details_group">
+                  <label>Industry</label>
+                  <p>{form.industry || '-'}</p>
                 </div>
               </div>
               <div className="organization_details_row">

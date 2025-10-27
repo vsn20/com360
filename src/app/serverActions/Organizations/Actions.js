@@ -81,6 +81,10 @@ export async function addorganization(formData) {
       const state = formData.get('state')?.trim() || null;
       const customStateName = formData.get('customStateName')?.trim() || null;
       const postalcode = formData.get('postalcode')?.trim() || null;
+      const trade_name = formData.get('trade_name')?.trim() || null;
+      const registration_number = formData.get('registration_number')?.trim() || null;
+      const company_type = formData.get('company_type')?.trim() || null;
+      const industry = formData.get('industry')?.trim() || null;
 
       if (!suborgname) {
         return { error: 'Organization name is required.' };
@@ -102,8 +106,9 @@ export async function addorganization(formData) {
       await pool.query(
         `INSERT INTO C_SUB_ORG (
           suborgid, orgid, suborgname, isstatus, addresslane1, addresslane2, 
-          country, state, CUSTOME_STATE_NAME, postalcode, created_by, created_date
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+          country, state, CUSTOME_STATE_NAME, postalcode, created_by, created_date,
+          trade_name, registration_number, company_type, industry
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?)`,
         [
           suborgid,
           orgId,
@@ -116,6 +121,10 @@ export async function addorganization(formData) {
           custom_val,
           postalcode,
           createdBy,
+          trade_name,
+          registration_number,
+          company_type,
+          industry
         ]
       );
 
@@ -142,7 +151,8 @@ export async function getorgdetailsbyid(suborgid) {
       pool = await DBconnection();
       const [rows] = await pool.query(
         `SELECT suborgid, orgid, suborgname, isstatus, addresslane1, addresslane2, 
-         country, state, CUSTOME_STATE_NAME, postalcode, created_by, created_date, updated_by, updated_date 
+         country, state, CUSTOME_STATE_NAME, postalcode, created_by, created_date, updated_by, updated_date,
+         trade_name, registration_number, company_type, industry
          FROM C_SUB_ORG WHERE suborgid = ?`,
         [suborgid]
       );
@@ -191,6 +201,10 @@ export async function updateorganization(formData) {
       const customStateName = formData.get('customStateName')?.trim() || null;
       const postalcode = formData.get('postalcode')?.trim() || null;
       const suborgid = formData.get('suborgid')?.trim();
+      const trade_name = formData.get('trade_name')?.trim() || null;
+      const registration_number = formData.get('registration_number')?.trim() || null;
+      const company_type = formData.get('company_type')?.trim() || null;
+      const industry = formData.get('industry')?.trim() || null;
 
       if (!suborgname) {
         return { error: 'Organization name is required.' };
@@ -208,11 +222,14 @@ export async function updateorganization(formData) {
         `UPDATE C_SUB_ORG SET 
           suborgname = ?, isstatus = ?, addresslane1 = ?, addresslane2 = ?, 
           country = ?, state = ?, CUSTOME_STATE_NAME = ?, postalcode = ?, 
+          trade_name = ?, registration_number = ?, company_type = ?, industry = ?,
           updated_by = ?, updated_date = NOW() 
          WHERE suborgid = ?`,
         [
           suborgname, isActive, addresslane1, addresslane2, country,
-          state_val, custom_val, postalcode, updatedBy, suborgid,
+          state_val, custom_val, postalcode, 
+          trade_name, registration_number, company_type, industry,
+          updatedBy, suborgid,
         ]
       );
 
@@ -265,4 +282,3 @@ export async function fetchSubOrgDocumentsById(suborgid) {
     throw new Error(`Failed to fetch sub-organization documents: ${error.message}`);
   }
 }
-

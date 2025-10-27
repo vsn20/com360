@@ -42,7 +42,8 @@ const Page = async () => {
     try {
       const [orgRows] = await pool.query(
         `SELECT suborgid, orgid, suborgname, isstatus, country, state, CUSTOME_STATE_NAME, 
-         addresslane1, addresslane2, postalcode, created_by, created_date, updated_by, updated_date
+         addresslane1, addresslane2, postalcode, created_by, created_date, updated_by, updated_date,
+         trade_name, registration_number, company_type, industry
          FROM C_SUB_ORG WHERE orgid = ?`,
         [orgid]
       );

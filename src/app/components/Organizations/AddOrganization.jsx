@@ -19,6 +19,10 @@ const AddOrganization = ({ orgid, empid, countries, states, prefilledData }) => 
     state: '',
     customStateName: '',
     postalcode: '',
+    trade_name: '',
+    registration_number: '',
+    company_type: '',
+    industry: '',
   });
 
   // Prefill form when AI provides data
@@ -33,6 +37,10 @@ const AddOrganization = ({ orgid, empid, countries, states, prefilledData }) => 
         state: prefilledData.state || prev.state,
         postalcode: prefilledData.postalcode || prev.postalcode,
         isstatus: prefilledData.isstatus || prev.isstatus,
+        trade_name: prefilledData.trade_name || prev.trade_name,
+        registration_number: prefilledData.registration_number || prev.registration_number,
+        company_type: prefilledData.company_type || prev.company_type,
+        industry: prefilledData.industry || prev.industry,
       }));
     }
   }, [prefilledData]);
@@ -83,6 +91,10 @@ const AddOrganization = ({ orgid, empid, countries, states, prefilledData }) => 
           state: '',
           customStateName: '',
           postalcode: '',
+          trade_name: '',
+          registration_number: '',
+          company_type: '',
+          industry: '',
         });
         setSuccess('Organization added successfully.');
         setTimeout(() => {
@@ -198,6 +210,52 @@ const AddOrganization = ({ orgid, empid, countries, states, prefilledData }) => 
                 value={form.postalcode}
                 onChange={handleChange}
                 placeholder="Enter Postal Code"
+              />
+            </div>
+          </div>
+
+          <div className="organization_form_row">
+            <div className="organization_form_group">
+              <label>Trade Name</label>
+              <input
+                type="text"
+                name="trade_name"
+                value={form.trade_name}
+                onChange={handleChange}
+                placeholder="Enter Trade Name"
+              />
+            </div>
+            <div className="organization_form_group">
+              <label>Registration Number</label>
+              <input
+                type="text"
+                name="registration_number"
+                value={form.registration_number}
+                onChange={handleChange}
+                placeholder="Enter Registration Number"
+              />
+            </div>
+          </div>
+          
+          <div className="organization_form_row">
+            <div className="organization_form_group">
+              <label>Company Type</label>
+              <input
+                type="text"
+                name="company_type"
+                value={form.company_type}
+                onChange={handleChange}
+                placeholder="e.g., LLC, Private Ltd"
+              />
+            </div>
+            <div className="organization_form_group">
+              <label>Industry</label>
+              <input
+                type="text"
+                name="industry"
+                value={form.industry}
+                onChange={handleChange}
+                placeholder="e.g., IT, Healthcare"
               />
             </div>
           </div>
