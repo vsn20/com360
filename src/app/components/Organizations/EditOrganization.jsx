@@ -4,14 +4,14 @@ import { getorgdetailsbyid, updateorganization } from '@/app/serverActions/Organ
 import './organizations.css';
 import { useRouter } from 'next/navigation';
 
-const EditOrganization = ({ selectedorgid, orgid, empid, countries, states }) => {
+const EditOrganization = ({ selectedorgid, orgid, empid, countries, states, aiPrefilledData }) => {
   const router = useRouter();
   const [orgDetails, setOrgDetails] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-  const usaCountryId = '185'; // USA country ID
+  const usaCountryId = '185';
   const [form, setForm] = useState({
     suborgname: '',
     isstatus: 'Active',
@@ -87,14 +87,44 @@ const EditOrganization = ({ selectedorgid, orgid, empid, countries, states }) =>
     loadOrgDetails();
   }, [selectedorgid]);
 
+  // Apply AI prefilled data when available
+  useEffect(() => {
+    if (aiPrefilledData && orgDetails) {
+      setIsEditing(true);
+      setForm(prev => {
+        const newForm = {
+          ...prev,
+          suborgname: aiPrefilledData.suborgname !== null ? aiPrefilledData.suborgname : prev.suborgname,
+          addresslane1: aiPrefilledData.addresslane1 !== null ? aiPrefilledData.addresslane1 : prev.addresslane1,
+          addresslane2: aiPrefilledData.addresslane2 !== null ? aiPrefilledData.addresslane2 : prev.addresslane2,
+          country: aiPrefilledData.country !== null ? aiPrefilledData.country : prev.country,
+          postalcode: aiPrefilledData.postalcode !== null ? aiPrefilledData.postalcode : prev.postalcode,
+          isstatus: aiPrefilledData.isstatus !== null ? aiPrefilledData.isstatus : prev.isstatus,
+        };
+
+        // Handle state/customStateName based on country
+        const isUSA = (aiPrefilledData.country !== null ? aiPrefilledData.country : prev.country) === usaCountryId;
+        if (isUSA) {
+          newForm.state = aiPrefilledData.state !== null ? aiPrefilledData.state : prev.state;
+          newForm.customStateName = '';
+        } else {
+          newForm.state = '';
+          newForm.customStateName = prev.customStateName;
+        }
+
+        return newForm;
+      });
+    }
+  }, [aiPrefilledData, orgDetails]);
+
   const handleFormChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => {
       let newForm = { ...prev, [name]: value };
       if (name === 'country') {
         const isUSA = value === usaCountryId;
-        newForm.state = isUSA ? prev.state : ''; // Reset state if not USA
-        newForm.customStateName = isUSA ? '' : prev.customStateName; // Reset custom state if USA
+        newForm.state = isUSA ? prev.state : '';
+        newForm.customStateName = isUSA ? '' : prev.customStateName;
       }
       return newForm;
     });

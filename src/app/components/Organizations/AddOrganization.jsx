@@ -1,15 +1,15 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { addorganization } from '@/app/serverActions/Organizations/Actions';
 import { useRouter } from 'next/navigation';
 import './organizations.css';
 
-const AddOrganization = ({ orgid, empid, countries, states }) => {
+const AddOrganization = ({ orgid, empid, countries, states, prefilledData }) => {
   const router = useRouter();
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const usaCountryId = '185'; // USA country ID
+  const usaCountryId = '185';
   const [form, setForm] = useState({
     suborgname: '',
     isstatus: 'Active',
@@ -21,14 +21,30 @@ const AddOrganization = ({ orgid, empid, countries, states }) => {
     postalcode: '',
   });
 
+  // Prefill form when AI provides data
+  useEffect(() => {
+    if (prefilledData) {
+      setForm(prev => ({
+        ...prev,
+        suborgname: prefilledData.suborgname || prev.suborgname,
+        addresslane1: prefilledData.addresslane1 || prev.addresslane1,
+        addresslane2: prefilledData.addresslane2 || prev.addresslane2,
+        country: prefilledData.country || prev.country,
+        state: prefilledData.state || prev.state,
+        postalcode: prefilledData.postalcode || prev.postalcode,
+        isstatus: prefilledData.isstatus || prev.isstatus,
+      }));
+    }
+  }, [prefilledData]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => {
       let newForm = { ...prev, [name]: value };
       if (name === 'country') {
         const isUSA = value === usaCountryId;
-        newForm.state = isUSA ? prev.state : ''; // Reset state if not USA
-        newForm.customStateName = isUSA ? '' : prev.customStateName; // Reset custom state if USA
+        newForm.state = isUSA ? prev.state : '';
+        newForm.customStateName = isUSA ? '' : prev.customStateName;
       }
       return newForm;
     });
@@ -92,7 +108,7 @@ const AddOrganization = ({ orgid, empid, countries, states }) => {
       <div className="organization_details_block">
         <h3 className="organization_details_header_title">Add Organization</h3>
         
-        <form onSubmit={handleSubmit}>
+        <div onSubmit={handleSubmit}>
           <div className="organization_form_row">
             <div className="organization_form_group">
               <label>Organization Name*</label>
@@ -187,11 +203,11 @@ const AddOrganization = ({ orgid, empid, countries, states }) => {
           </div>
           
           <div className="organization_form_buttons">
-            <button type="submit" className="organization_submit_button" disabled={isLoading}>
+            <button type="submit" onClick={handleSubmit} className="organization_submit_button" disabled={isLoading}>
               {isLoading ? 'Saving...' : 'Add Organization'}
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );
