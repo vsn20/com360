@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { X } from 'lucide-react'; // Import X icon for close button
 import { 
   LayoutDashboard, 
   Users, 
@@ -29,23 +30,8 @@ import {
 } from 'lucide-react';
 import styles from '../(routes)/userscreens/userscreens.module.css';
 
-// Icon mapping for menu items
-const iconMap = {
-  'dashboard': LayoutDashboard,
-  'users': Users,
-  'reports': FileText,
-  'settings': Settings,
-  'sales': ShoppingCart,
-  'analytics': TrendingUp,
-  'statistics': BarChart3,
-  'inventory': Package,
-  'finance': DollarSign,
-  'calendar': Calendar,
-  'messages': Mail,
-  'contacts': Phone,
-};
+// ... keep all your existing icon mapping code ...
 
-// Direct icon mapping - Add your exact menu titles here
 const menuIconMap = {
   'Roles': Shield,
   'Employees': Users,
@@ -71,14 +57,11 @@ const menuIconMap = {
   'Tasks': ListChecks,
 };
 
-// Function to get icon based on menu title
 const getIconForTitle = (title) => {
-  // First try exact match
   if (menuIconMap[title]) {
     return menuIconMap[title];
   }
   
-  // Then try case-insensitive search
   const lowerTitle = title.toLowerCase();
   
   if (lowerTitle.includes('role')) return Shield;
@@ -106,10 +89,10 @@ const getIconForTitle = (title) => {
   if (lowerTitle.includes('contact')) return Phone;
   if (lowerTitle.includes('task')) return ListChecks;
   
-  return LayoutDashboard; // Default icon
+  return LayoutDashboard;
 };
 
-function Sidebar({ isAdmin }) {
+function Sidebar({ isAdmin, isSidebarOpen, closeSidebar }) {
   const pathname = usePathname();
   const router = useRouter();
   const [menuItems, setMenuItems] = useState([]);
@@ -156,19 +139,26 @@ function Sidebar({ isAdmin }) {
     router.push(`${href}?refresh=${timestamp}`);
     setOpenSubmenuIndex(null);
     setIsSubmenuLocked(true);
+    
+    // Close sidebar on mobile when menu item is clicked
+    if (closeSidebar) {
+      closeSidebar();
+    }
   };
 
   return (
-    <aside className={styles.sidebarContainer}>
+    <aside className={`${styles.sidebarContainer} ${isSidebarOpen ? styles.open : ''}`}>
+      {/* Close button for mobile */}
+      <div className={styles.sidebarCloseButton} onClick={closeSidebar}>
+        <X size={24} />
+      </div>
+      
       <ul className={styles.sidebarMenu}>
         <li className={styles.com360_logo}>COM@360</li>
         {finalMenuItems.map((item, index) => {
           const safeSubmenu = Array.isArray(item.C_SUBMENU) ? item.C_SUBMENU : [];
           const isActive = pathname === item.href || (safeSubmenu.length > 0 && safeSubmenu.some(sub => pathname === sub.href || pathname.startsWith(sub.href + '?')));
           const IconComponent = getIconForTitle(item.title);
-          
-          // Debug: Log menu titles to console
-          console.log('Menu Title:', item.title, 'Icon:', IconComponent.name);
           
           return (
             <li

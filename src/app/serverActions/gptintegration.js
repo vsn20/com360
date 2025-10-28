@@ -24,7 +24,7 @@ export async function gptintegration(query, currentRoute = '', countries = [], s
       : 'Not provided';
 
     const systemPrompt = `You are an AI assistant for a business management system analyzing queries about organizations.
-Current date: October 24, 2025
+Current date: October 27, 2025
 
 Extract from user queries:
 1. **Intent**: "add", "edit", "display", or "unknown"
@@ -40,9 +40,17 @@ CRITICAL RULES:
 - For dates: Parse relative dates ("before oct 10", "after jan 1") and convert to YYYY-MM-DD format
   - If year not mentioned, use 2025
   - Support: before, after, between, on specific dates
-- For name patterns: Detect "starting with", "ending with", "contains", "exact match"
+- For name patterns: Detect "starting with", "ending with", "contains", "exact match", "NOT named", "excluding"
 - For addresses: Extract street, city, state, country, postal code from natural language
 - Support MULTIPLE filters simultaneously (e.g., "names ending with 'vv' created before oct 10")
+
+NEGATIVE FILTERING (CRITICAL):
+- "NOT named X" = notEquals operator
+- "excluding X" = notEquals operator
+- "organizations other than X" = notEquals operator
+- "that are not X" = notEquals operator
+- "without X in name" = notContains operator
+- "not containing X" = notContains operator
 
 FILTERING CAPABILITIES:
 The system can filter on these fields (even if not visible in table):
@@ -56,6 +64,10 @@ The system can filter on these fields (even if not visible in table):
 - updated_date (date comparisons)
 - created_by (creator patterns)
 - updated_by (updater patterns)
+- trade_name (trade name patterns)
+- registration_number (registration number patterns)
+- company_type (company type patterns)
+- industry (industry patterns)
 
 EDIT BEHAVIOR:
 - If query mentions specific organization + changes: Set requiresSelection to false, provide filter for exact match
@@ -63,6 +75,46 @@ EDIT BEHAVIOR:
 - If editing with location info (country/state): Include in filter AND data for update
 
 EXAMPLES:
+
+Query: "Show organizations that are not named 'kalpanic'"
+Response: {
+  "intent": "display",
+  "entity": "organization",
+  "data": null,
+  "filters": [
+    {"field": "suborgname", "operator": "notEquals", "value": "kalpanic", "displayValue": "kalpanic"}
+  ],
+  "requiresSelection": false,
+  "confidence": 0.95,
+  "message": "Showing organizations that are not named 'kalpanic'"
+}
+
+Query: "Show all organizations excluding kalpanic"
+Response: {
+  "intent": "display",
+  "entity": "organization",
+  "data": null,
+  "filters": [
+    {"field": "suborgname", "operator": "notEquals", "value": "kalpanic", "displayValue": "kalpanic"}
+  ],
+  "requiresSelection": false,
+  "confidence": 0.95,
+  "message": "Showing all organizations excluding 'kalpanic'"
+}
+
+Query: "Show organizations other than kalpanic in India"
+Response: {
+  "intent": "display",
+  "entity": "organization",
+  "data": null,
+  "filters": [
+    {"field": "suborgname", "operator": "notEquals", "value": "kalpanic", "displayValue": "kalpanic"},
+    {"field": "country", "operator": "equals", "value": "91", "displayValue": "India"}
+  ],
+  "requiresSelection": false,
+  "confidence": 0.95,
+  "message": "Showing organizations in India excluding 'kalpanic'"
+}
 
 Query: "Show all organizations in India created before oct 10 2025"
 Response: {
@@ -169,6 +221,19 @@ Response: {
   "message": "Showing active organizations in California updated after January 1, 2025"
 }
 
+Query: "Show organizations without 'tech' in the name"
+Response: {
+  "intent": "display",
+  "entity": "organization",
+  "data": null,
+  "filters": [
+    {"field": "suborgname", "operator": "notContains", "value": "tech", "displayValue": "tech"}
+  ],
+  "requiresSelection": false,
+  "confidence": 0.92,
+  "message": "Showing organizations without 'tech' in the name"
+}
+
 RESPONSE FORMAT (JSON only):
 {
   "intent": "add|edit|display|unknown",
@@ -180,12 +245,16 @@ RESPONSE FORMAT (JSON only):
     "country": "ID string or null",
     "state": "ID string or null",
     "postalcode": "value or null",
-    "isstatus": "Active|Inactive or null"
+    "isstatus": "Active|Inactive or null",
+    "trade_name": "value or null",
+    "registration_number": "value or null",
+    "company_type": "value or null",
+    "industry": "value or null"
   },
   "filters": [
     {
       "field": "field_name",
-      "operator": "equals|contains|startsWith|endsWith|before|after|between",
+      "operator": "equals|notEquals|contains|notContains|startsWith|endsWith|before|after|between",
       "value": "filter_value",
       "displayValue": "human readable value",
       "value2": "optional second value for between operator"

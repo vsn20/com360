@@ -1,9 +1,6 @@
-import Sidebar from '../../components/Sidebar';
-import Navbar from '../../components/screenbar';
-import SubmenuBar from '../../components/SubmenuBar';
 import { cookies } from 'next/headers';
 import DBconnection from '../../utils/config/db';
-import styles from './userscreens.module.css';
+import UserscreenLayoutClient from './UserscreenLayoutClient';
 
 // Function to decode JWT (server-side)
 const decodeJwt = (token) => {
@@ -56,12 +53,13 @@ export default async function userscreenLayout({ children }) {
         );
         const roleids = roleRows.map(row => row.roleid);
 
-        const [employee]=await pool.query(
-          'select EMP_FST_NAME,EMP_LAST_NAME from C_EMP where empid=?',[decoded.empid]
+        const [employee] = await pool.query(
+          'SELECT EMP_FST_NAME, EMP_LAST_NAME FROM C_EMP WHERE empid = ?',
+          [decoded.empid]
         );
 
-         userData.username=`${employee[0].EMP_FST_NAME} ${employee[0].EMP_LAST_NAME}`;
-         userData.logoLetter=(userData.username || 'M')[0].toUpperCase();
+        userData.username = `${employee[0].EMP_FST_NAME} ${employee[0].EMP_LAST_NAME}`;
+        userData.logoLetter = (userData.username || 'M')[0].toUpperCase();
 
         if (roleids.length > 0) {
           const [adminRows] = await pool.query(
@@ -79,7 +77,7 @@ export default async function userscreenLayout({ children }) {
 
         if (orgRows.length > 0) {
           userData.orglogo_url = orgRows[0].orglogo_url || null;
-          userData.is_logo_set = orgRows[0].is_logo_set; // Keep as 1 or 0
+          userData.is_logo_set = orgRows[0].is_logo_set;
         }
       } catch (error) {
         console.error('Error fetching data from database:', error.message);
@@ -90,23 +88,5 @@ export default async function userscreenLayout({ children }) {
     }
   }
 
-  //console.log('Decoded user data:', userData);
-
-  return (
-    <div>
-      <Sidebar isAdmin={userData.isAdmin} />
-      <div className={styles.rightContent}>
-        <Navbar
-          orgName={userData.orgName}
-          logoLetter={userData.logoLetter}
-          username={userData.username}
-          rolename={userData.rolename}
-          orglogo_url={userData.orglogo_url}
-          is_logo_set={userData.is_logo_set}
-        />
-        <SubmenuBar />
-        <main className={styles.main}>{children}</main>
-      </div>
-    </div>
-  );
+  return <UserscreenLayoutClient userData={userData}>{children}</UserscreenLayoutClient>;
 }

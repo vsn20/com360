@@ -372,3 +372,100 @@
     transform: translateX(0);
   }
 }
+
+/* Hamburger button - only visible on mobile */
+.hamburgerButton {
+  display: none;
+  position: fixed;
+  top: 8px;
+  left: 16px;
+  z-index: 1002;
+  background-color: #0fd46c;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.hamburgerButton:hover {
+  background-color: #0bc158;
+}
+
+.hamburgerButton:active {
+  transform: scale(0.95);
+}
+
+/* Overlay for mobile sidebar */
+.sidebarOverlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.sidebarOverlay.visible {
+  display: block;
+  opacity: 1;
+}
+
+/* Close button inside sidebar */
+.sidebarCloseButton {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .hamburgerButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .navbar {
+    left: 0;
+    padding: 8px 60px 8px 60px; /* Space for hamburger button */
+  }
+
+  .submenuBar {
+    left: 0;
+  }
+
+  .rightContent {
+    margin-left: 0;
+  }
+
+  .sidebarContainer {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 1000;
+  }
+
+  .sidebarContainer.open {
+    transform: translateX(0);
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Close button inside sidebar for mobile */
+  .sidebarCloseButton {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 16px;
+    color: rgb(212, 215, 220);
+    cursor: pointer;
+    border-bottom: 1px solid rgba(212, 215, 220, 0.1);
+  }
+
+  .sidebarCloseButton:hover {
+    color: white;
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+}

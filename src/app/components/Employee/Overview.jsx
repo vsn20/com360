@@ -147,6 +147,7 @@ const Overview = ({
   document_types,
   document_purposes,
   document_subtypes,
+  employmentTypes,
   loggedInEmpId,      
   permissionLevel,    
 }) => {
@@ -197,6 +198,8 @@ const Overview = ({
     deptName: '',
     workCompClass: '',
     suborgid: '',
+    employee_number: '',
+    employment_type: '',
     workAddrLine1: '',
     workAddrLine2: '',
     workAddrLine3: '',
@@ -336,6 +339,8 @@ const Overview = ({
           workAddrLine2: '',
           workAddrLine3: '',
           suborgid:'',
+          employee_number: '',
+          employment_type: '',
           workCity: '',
           workStateId: '',
           workStateNameCustom: '',
@@ -410,6 +415,8 @@ const Overview = ({
           deptName: employee.DEPT_NAME || '',
           workCompClass: employee.WORK_COMP_CLASS || '',
           suborgid: employee.suborgid || '',
+          employee_number: employee.employee_number || '',
+          employment_type: employee.employment_type || '',
           workAddrLine1: employee.WORK_ADDR_LINE1 || '',
           workAddrLine2: employee.WORK_ADDR_LINE2 || '',
           workAddrLine3: employee.WORK_ADDR_LINE3 || '',
@@ -752,6 +759,7 @@ function onImageLoad(e) {
     formDataToSubmit.append('dob', formData.dob || '');
     formDataToSubmit.append('ssn', formData.ssn || '');
     formDataToSubmit.append('linkedinUrl', formData.linkedinUrl || '');
+    formDataToSubmit.append('employee_number', formData.employee_number || '');
   } else if (section === 'employment') {
     if (selectedRoles.length === 0) {
       setError('At least one role is required.');
@@ -778,6 +786,7 @@ function onImageLoad(e) {
     formDataToSubmit.append('deptName', formData.deptName || '');
     formDataToSubmit.append('workCompClass', formData.workCompClass || '');
     formDataToSubmit.append('suborgid', formData.suborgid || '');
+    formDataToSubmit.append('employment_type', formData.employment_type || '');
   } else if (section === 'leaves') {
     Object.entries(formLeaves).forEach(([leaveid, noofleaves]) => {
       if (noofleaves !== '' && noofleaves !== null && noofleaves !== undefined) {
@@ -1227,6 +1236,20 @@ const handleRoleToggle = (roleid) => {
                     />
                   </div>
                   <div className="form-group">
+                    <label htmlFor="employee_number">Employee Number:</label>
+                    <input
+                      type="text"
+                      id="employee_number"
+                      name="employee_number"
+                      placeholder="Enter Employee Number (5 digits)"
+                      maxLength="5"
+                      pattern="[0-9]*"
+                      onInput={(e) => e.target.value = e.target.value.replace(/[^0-9]/g, '')}
+                    />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
                     <label htmlFor="linkedinUrl">LinkedIn URL:</label>
                     <input
                       type="url"
@@ -1366,21 +1389,34 @@ const handleRoleToggle = (roleid) => {
                       ))}
                     </select>
                   </div>
-                   <div className="form-group">
-                  <label>Organization</label>
-                  <select
-                   name="suborgid"
-                   value={formData.suborgid}
-                   onChange={handleFormChange}
-                  >
-                  <option value="">Select Sub Organization</option>
-                    {suborgs.map((sub) => (
-                      <option key={sub.suborgid} value={sub.suborgid}>
-                      {sub.suborgname}
-                  </option>
-                  ))}
-                  </select>
+                  <div className="form-group">
+                    <label htmlFor="employment_type">Employment Type:</label>
+                    <select id="employment_type" name="employment_type">
+                      <option value="">Select Employment Type</option>
+                      {employmentTypes.map((type) => (
+                        <option key={type.id} value={type.id}>
+                          {type.Name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
+                <div className="form-row">
+                   <div className="form-group">
+                    <label>Organization</label>
+                    <select
+                     name="suborgid"
+                     value={formData.suborgid}
+                     onChange={handleFormChange}
+                    >
+                    <option value="">Select Sub Organization</option>
+                      {suborgs.map((sub) => (
+                        <option key={sub.suborgid} value={sub.suborgid}>
+                        {sub.suborgname}
+                    </option>
+                    ))}
+                    </select>
+                  </div>
                 </div>
               </div>
 
@@ -1791,7 +1827,7 @@ const handleRoleToggle = (roleid) => {
                           className={`sortable ${sortConfig.column === 'empid' ? `sort-${sortConfig.direction}` : ''}`}
                           onClick={() => requestSort('empid')}
                         >
-                          Employee ID
+                          Employee Number
                         </th>
                         <th 
                           className={`sortable ${sortConfig.column === 'name' ? `sort-${sortConfig.direction}` : ''}`}
@@ -1821,7 +1857,7 @@ const handleRoleToggle = (roleid) => {
                         >
                           <td className="id-cell">
                             <span className={employee.STATUS.toLowerCase() === 'active' ? 'role-indicator' : 'role-indicatorinactive '}></span>
-                            Employee-{getdisplayprojectid(employee.empid)}
+                            {employee.employee_number || 'Not Configured'}
                           </td>
                           <td>{employee.EMP_PREF_NAME || `${employee.EMP_FST_NAME} ${employee.EMP_MID_NAME || ''} ${employee.EMP_LAST_NAME}`.trim()}</td>
                           <td>{employee.email}</td>
@@ -2085,6 +2121,20 @@ const handleRoleToggle = (roleid) => {
                       <input type="url" name="linkedinUrl" value={formData.linkedinUrl} onChange={handleFormChange} />
                     </div>
                   </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Employee Number</label>
+                      <input
+                         type="text"
+                         name="employee_number"
+                         value={formData.employee_number}
+                         onChange={handleFormChange}
+                        maxLength="5"
+                        pattern="[0-9]*"
+                        onInput={(e) => e.target.value = e.target.value.replace(/[^0-9]/g, '')}
+                      />
+                    </div>
+                  </div>
                   <div className="form-buttons">
                     <button type="submit" className="save">Save</button>
                     <button type="button" className="cancel" onClick={() => setEditingPersonal(false)}>Cancel</button>
@@ -2096,6 +2146,12 @@ const handleRoleToggle = (roleid) => {
                     <div className="details-g">
                       <label>Employee ID</label>
                       <p>Employee-{getdisplayprojectid(employeeDetails.empid)}</p>
+                    </div>
+                  </div>
+                  <div className="details-row">
+                    <div className="details-g">
+                      <label>Employee Number</label>
+                      <p>{employeeDetails.employee_number || 'Not Configured'}</p>
                     </div>
                   </div>
                   <div className="details-row">
@@ -2322,6 +2378,17 @@ const handleRoleToggle = (roleid) => {
                       ))}
                      </select>
                     </div>
+                    <div className="form-group">
+                      <label>Employment Type</label>
+                      <select name="employment_type" value={formData.employment_type} onChange={handleFormChange}>
+                        <option value="">Select Employment Type</option>
+                        {employmentTypes.map((type) => (
+                          <option key={type.id} value={type.id}>
+                            {type.Name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                   <div className="form-buttons">
                     <button type="submit" className="save">Save</button>
@@ -2388,6 +2455,12 @@ const handleRoleToggle = (roleid) => {
                     <div className="details-g">
                     <label>Organization</label>
                     <p>{getSuborgName(employeeDetails.suborgid)}</p>
+                    </div>
+                  </div>
+                  <div className="details-row">
+                    <div className="details-g">
+                      <label>Employment Type</label>
+                      <p>{employmentTypes.find(t => t.id == employeeDetails.employment_type)?.Name || '-'}</p>
                     </div>
                   </div>
                   {canEdit('employment') && (                    

@@ -115,6 +115,7 @@ export async function updateEmployee(prevState, formData) {
       const dob = formData.get('dob') || null;
       const ssn = formData.get('ssn')?.trim() || null;
       const linkedinUrl = formData.get('linkedinUrl')?.trim() || null;
+      const employee_number = formData.get('employee_number')?.trim() || null;
 
       console.log('Personal details:', {
         empFstName, empMidName, empLastName, empPrefName, email, gender,
@@ -132,6 +133,25 @@ export async function updateEmployee(prevState, formData) {
       if (!email) {
         console.log('Email is missing');
         return { error: 'Email is required.' };
+      }
+
+      // Validate and format employee_number
+      let formattedEmployeeNumber = null;
+      if (employee_number) {
+        if (!/^\d{1,5}$/.test(employee_number)) {
+          console.log('Invalid employee number format');
+          return { error: 'Employee number must be 1-5 digits.' };
+        }
+        formattedEmployeeNumber = employee_number.padStart(5, '0');
+        // Check uniqueness within orgid
+        const [empNumCheck] = await pool.execute(
+          'SELECT empid FROM C_EMP WHERE employee_number = ? AND orgid = ? AND empid != ?',
+          [formattedEmployeeNumber, orgid, empid]
+        );
+        if (empNumCheck.length > 0) {
+          console.log('Employee number already in use');
+          return { error: 'Employee number is already in use by another employee in this organization.' };
+        }
       }
 
       // Check for email uniqueness (excluding current employee)
@@ -158,12 +178,14 @@ export async function updateEmployee(prevState, formData) {
            DOB = ?, 
            SSN = ?, 
            LINKEDIN_URL = ?, 
+           employee_number = ?, 
            LAST_UPDATED_DATE = CURRENT_TIMESTAMP, 
            LAST_UPDATED_BY = ? 
          WHERE empid = ? AND orgid = ?`,
         [
           empFstName, empMidName, empLastName, empPrefName, email,
           gender, mobileNumber, phoneNumber, dob, ssn, linkedinUrl,
+          formattedEmployeeNumber,
           'system', empid, orgid,
         ]
       );
@@ -189,6 +211,7 @@ export async function updateEmployee(prevState, formData) {
       const deptName = formData.get('deptName')?.trim() || null;
       const workCompClass = formData.get('workCompClass') || null;
       const suborgid = formData.get('suborgid') || null;
+      const employment_type = formData.get('employment_type') || null;
 
       console.log('Employment details:', {
         roleids, hireDate, lastWorkDate, terminatedDate, rejoinDate, superior,
@@ -299,6 +322,16 @@ export async function updateEmployee(prevState, formData) {
         return { error: 'Selected suborganization is invalid or inactive.' };
       }
    }
+      if (employment_type) {
+        const [empTypeCheck] = await pool.execute(
+          'SELECT id FROM C_GENERIC_VALUES WHERE id = ? AND g_id = 27 AND orgid = ? AND isactive = 1',
+          [employment_type, orgid]
+        );
+        if (empTypeCheck.length === 0) {
+          console.log('Invalid employment type selected');
+          return { error: 'Selected employment type is invalid or inactive.' };
+        }
+      }
 
       // Update C_EMP with the first roleid (for backward compatibility with existing schema)
       const primaryRoleId = roleids[0] || null;
@@ -316,12 +349,14 @@ export async function updateEmployee(prevState, formData) {
            DEPT_NAME = ?, 
            WORK_COMP_CLASS = ?,
            suborgid = ?, 
+           employment_type = ?, 
            LAST_UPDATED_DATE = CURRENT_TIMESTAMP, 
            LAST_UPDATED_BY = ? 
          WHERE empid = ? AND orgid = ?`,
         [
            hireDate, lastWorkDate, terminatedDate, rejoinDate, superior,
           status, jobTitle, payFrequency, deptId, finalDeptName, workCompClass,suborgid,
+          employment_type,
           'system', empid, orgid,
         ]
       );
@@ -696,7 +731,7 @@ export async function fetchEmployeesByOrgId() {
     const pool = await DBconnection();
     console.log('MySQL connection pool acquired');
     const [rows] = await pool.execute(
-      `SELECT empid, EMP_FST_NAME, EMP_LAST_NAME, roleid, email, HIRE, MOBILE_NUMBER, GENDER 
+      `SELECT empid, EMP_FST_NAME, EMP_LAST_NAME, roleid, email, HIRE, MOBILE_NUMBER, GENDER, STATUS, employee_number 
        FROM C_EMP 
        WHERE orgid = ?`,
       [orgId]
@@ -828,7 +863,7 @@ export async function fetchEmployeeById(empid) {
           roleid, GENDER, MOBILE_NUMBER, PHONE_NUMBER, DOB, HIRE, LAST_WORK_DATE, 
           TERMINATED_DATE, REJOIN_DATE, CREATED_BY, LAST_UPDATED_BY, superior, 
           STATUS, JOB_TITLE, PAY_FREQUENCY, DEPT_ID, DEPT_NAME, WORK_COMP_CLASS, 
-          SSN, LINKEDIN_URL,
+          SSN, LINKEDIN_URL, employee_number, employment_type,
           WORK_ADDR_LINE1, WORK_ADDR_LINE2, WORK_ADDR_LINE3, WORK_CITY, WORK_STATE_ID,
           WORK_STATE_NAME_CUSTOM, WORK_COUNTRY_ID, WORK_POSTAL_CODE,
           HOME_ADDR_LINE1, HOME_ADDR_LINE2, HOME_ADDR_LINE3, HOME_CITY, HOME_STATE_ID,

@@ -54,7 +54,6 @@ const formatDateForDisplay = (dateString) => {
     }).format(date);
 };
 
-
 export default async function OverviewPage({ searchParams }) {
   const { error: queryError } = searchParams || {};
   const error = queryError ? decodeURIComponent(queryError) : null;
@@ -72,12 +71,13 @@ export default async function OverviewPage({ searchParams }) {
   let jobTitles = [];
   let statuses = [];
   let workerCompClasses = [];
-  let suborgs=[];
-  let document_types=[];
-  let document_purposes=[];
-  let document_subtypes=[];
+  let suborgs = [];
+  let document_types = [];
+  let document_purposes = [];
+  let document_subtypes = [];
+  let employmentTypes = []; // Added employmentTypes
   let timestamp = new Date().getTime();
-  
+
   try {
     const pool = await DBconnection();
     const cookieStore = cookies();
@@ -160,10 +160,16 @@ export default async function OverviewPage({ searchParams }) {
     }
     console.log(`[DEBUG] 4. Calculated Permission Level -> ${permissionLevel}`);
     
+    // Fetch employment types
+    [employmentTypes] = await pool.query(
+      'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 27 AND orgid = ? AND isactive = 1',
+      [orgid]
+    );
+
     let employeeQuery = `
       SELECT 
          e.empid, e.EMP_FST_NAME, e.EMP_LAST_NAME, e.email, e.HIRE, 
-         e.MOBILE_NUMBER, e.GENDER, e.STATUS,
+         e.MOBILE_NUMBER, e.GENDER, e.STATUS, e.employee_number, e.employment_type,
          GROUP_CONCAT(era.roleid) AS roleids
        FROM C_EMP e
        LEFT JOIN C_EMP_ROLE_ASSIGN era ON e.empid = era.empid AND e.orgid = era.orgid
@@ -212,7 +218,7 @@ export default async function OverviewPage({ searchParams }) {
     [countries] = await pool.query('SELECT ID, VALUE FROM C_COUNTRY WHERE ACTIVE = 1');
     [states] = await pool.query('SELECT ID, VALUE FROM C_STATE WHERE ACTIVE = 1');
     [workerCompClasses] = await pool.query('SELECT class_code, phraseology FROM C_WORK_COMPENSATION_CLASS');
-    [suborgs] = await pool.query('SELECT suborgid, suborgname FROM C_SUB_ORG WHERE orgid = ? AND isstatus = 1',[orgid]);
+    [suborgs] = await pool.query('SELECT suborgid, suborgname FROM C_SUB_ORG WHERE orgid = ? AND isstatus = 1', [orgid]);
     [document_types] = await pool.query('SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 18 AND orgid = ? AND isactive = 1', [orgid]);
     [document_purposes] = await pool.query('SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 20 AND orgid = ? AND isactive = 1', [orgid]);
     [document_subtypes] = await pool.query('SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 19 AND orgid = ? AND isactive = 1', [orgid]);
@@ -261,6 +267,7 @@ export default async function OverviewPage({ searchParams }) {
       document_types={document_types}
       document_purposes={document_purposes}
       document_subtypes={document_subtypes}
+      employmentTypes={employmentTypes} // Added employmentTypes
     />
   );
 }
