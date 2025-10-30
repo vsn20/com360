@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useActionState } from 'react'; // <-- IMPORT useActionState
+import React, { useState, useEffect, useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { addContact } from '@/app/serverActions/Contacts/actions';
 import './contact.css'
@@ -89,8 +89,9 @@ export default function AddContactForm({
   orgid,
   onBackClick,
   onSaveSuccess,
+  prefilledData, // AI prefilled data
 }) {
-  const [state, formAction] = useActionState(addContact, {}); // <-- USE useActionState
+  const [state, formAction] = useActionState(addContact, {});
   const [formData, setFormData] = useState({
     ACCOUNT_ID: '',
     SUBORGID: '',
@@ -117,6 +118,38 @@ export default function AddContactForm({
     MAILING_POSTAL_CODE: '',
   });
   const [suborgName, setSuborgName] = useState('');
+
+  // Prefill form when AI provides data
+  useEffect(() => {
+    if (prefilledData) {
+      setFormData(prev => ({
+        ...prev,
+        ACCOUNT_ID: prefilledData.ACCOUNT_ID !== null ? prefilledData.ACCOUNT_ID : prev.ACCOUNT_ID,
+        SUBORGID: prefilledData.SUBORGID !== null ? prefilledData.SUBORGID : prev.SUBORGID,
+        CONTACT_TYPE_CD: prefilledData.CONTACT_TYPE_CD !== null ? prefilledData.CONTACT_TYPE_CD : prev.CONTACT_TYPE_CD,
+        EMAIL: prefilledData.EMAIL !== null ? prefilledData.EMAIL : prev.EMAIL,
+        PHONE: prefilledData.PHONE !== null ? prefilledData.PHONE : prev.PHONE,
+        MOBILE: prefilledData.MOBILE !== null ? prefilledData.MOBILE : prev.MOBILE,
+        FAX: prefilledData.FAX !== null ? prefilledData.FAX : prev.FAX,
+        HOME_ADDR_LINE1: prefilledData.HOME_ADDR_LINE1 !== null ? prefilledData.HOME_ADDR_LINE1 : prev.HOME_ADDR_LINE1,
+        HOME_ADDR_LINE2: prefilledData.HOME_ADDR_LINE2 !== null ? prefilledData.HOME_ADDR_LINE2 : prev.HOME_ADDR_LINE2,
+        HOME_ADDR_LINE3: prefilledData.HOME_ADDR_LINE3 !== null ? prefilledData.HOME_ADDR_LINE3 : prev.HOME_ADDR_LINE3,
+        HOME_CITY: prefilledData.HOME_CITY !== null ? prefilledData.HOME_CITY : prev.HOME_CITY,
+        HOME_COUNTRY_ID: prefilledData.HOME_COUNTRY_ID !== null ? prefilledData.HOME_COUNTRY_ID : prev.HOME_COUNTRY_ID,
+        HOME_STATE_ID: prefilledData.HOME_STATE_ID !== null ? prefilledData.HOME_STATE_ID : prev.HOME_STATE_ID,
+        HOME_POSTAL_CODE: prefilledData.HOME_POSTAL_CODE !== null ? prefilledData.HOME_POSTAL_CODE : prev.HOME_POSTAL_CODE,
+        HOME_CUSTOM_STATE: prefilledData.HOME_CUSTOM_STATE !== null ? prefilledData.HOME_CUSTOM_STATE : prev.HOME_CUSTOM_STATE,
+        MAILING_ADDR_LINE1: prefilledData.MAILING_ADDR_LINE1 !== null ? prefilledData.MAILING_ADDR_LINE1 : prev.MAILING_ADDR_LINE1,
+        MAILING_ADDR_LINE2: prefilledData.MAILING_ADDR_LINE2 !== null ? prefilledData.MAILING_ADDR_LINE2 : prev.MAILING_ADDR_LINE2,
+        MAILING_ADDR_LINE3: prefilledData.MAILING_ADDR_LINE3 !== null ? prefilledData.MAILING_ADDR_LINE3 : prev.MAILING_ADDR_LINE3,
+        MAILING_CITY: prefilledData.MAILING_CITY !== null ? prefilledData.MAILING_CITY : prev.MAILING_CITY,
+        MAILING_COUNTRY_ID: prefilledData.MAILING_COUNTRY_ID !== null ? prefilledData.MAILING_COUNTRY_ID : prev.MAILING_COUNTRY_ID,
+        MAILING_STATE_ID: prefilledData.MAILING_STATE_ID !== null ? prefilledData.MAILING_STATE_ID : prev.MAILING_STATE_ID,
+        MAILING_POSTAL_CODE: prefilledData.MAILING_POSTAL_CODE !== null ? prefilledData.MAILING_POSTAL_CODE : prev.MAILING_POSTAL_CODE,
+        MAILING_CUSTOM_STATE: prefilledData.MAILING_CUSTOM_STATE !== null ? prefilledData.MAILING_CUSTOM_STATE : prev.MAILING_CUSTOM_STATE,
+      }));
+    }
+  }, [prefilledData]);
 
   // Auto-fill Suborganization
   useEffect(() => {
