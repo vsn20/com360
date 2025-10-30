@@ -14,6 +14,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { addemployee } from '@/app/serverActions/addemployee';
 import styles from '../../(routes)/userscreens/userscreens.module.css';
 import EmplopyeeDocument from './EmplopyeeDocument';
+import EmployeeEducation from './EmployeeEducation';
+import EmployeeExperience from './EmployeeExperience';
 import Image from 'next/image';
 import ReactCrop, { centerCrop, makeAspectCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
@@ -247,6 +249,8 @@ const Overview = ({
   const [employeedocuments,setemployeedocuments]=useState({});
   
   const [sortConfig, setSortConfig] = useState({ column: 'empid', direction: 'asc' });
+  const [experiencedetails, setexperiencedetails] = useState(null);
+  const [educationdetails, seteducationdetails] = useState(null);
 
   useEffect(() => {
     setHasMounted(true);
@@ -476,6 +480,8 @@ const Overview = ({
     setpersonaldetails(empid);
     setworkdetails(null);
     setemployementdetails(null);
+    setexperiencedetails(null);
+    seteducationdetails(null);
     console.log('Selected employee:', empid);
     setImgSrc(`/uploads/profile_photos/${empid}.png?${new Date().getTime()}`);
   };
@@ -493,6 +499,8 @@ const Overview = ({
     setpersonaldetails(null);
     setemployementdetails(null);
     setworkdetails(null);
+    setexperiencedetails(null);
+    seteducationdetails(null);
     setSelectedRoles([]);
     setError(null);
     setisadd(false);
@@ -593,6 +601,48 @@ const [employementdetails,setemployementdetails]=useState(null);
     setisadd(false);
     router.refresh();
    }
+
+const experiencedetailsselecting = (id) => {
+  setselecteddocument(null);
+  setpersonaldetails(null);
+  setemployementdetails(null);
+  setActiveTab('experience');
+  setexperiencedetails(id);
+  setworkdetails(null);
+  seteducationdetails(null);
+  router.refresh();
+  setEditingPersonal(false);
+  setEditingEmployment(false);
+  setEditingLeaves(false);
+  setEditingWorkAddress(false);
+  setEditingHomeAddress(false);
+  setEditingEmergencyContact(false);
+  setSelectedRoles([]);
+  setError(null);
+  setisadd(false);
+  router.refresh();
+};
+
+const educationdetailsselecting = (id) => {
+  setselecteddocument(null);
+  setpersonaldetails(null);
+  setemployementdetails(null);
+  setActiveTab('education');
+  setexperiencedetails(null);
+  setworkdetails(null);
+  seteducationdetails(id);
+  router.refresh();
+  setEditingPersonal(false);
+  setEditingEmployment(false);
+  setEditingLeaves(false);
+  setEditingWorkAddress(false);
+  setEditingHomeAddress(false);
+  setEditingEmergencyContact(false);
+  setSelectedRoles([]);
+  setError(null);
+  setisadd(false);
+  router.refresh();
+};
 
 const handleProfilePhotoUpload = (e) => {
   setPhotoModalError(null); 
@@ -1740,6 +1790,22 @@ const handleRoleToggle = (roleid) => {
                 </div>
               </div>
 
+              {/* Work Experience Section */}
+              <div className="role-details-block93">
+                <h3>Work Experience (Optional)</h3>
+                <p style={{ fontSize: '14px', color: '#666', marginBottom: '15px' }}>
+                  Note: You can add detailed work experience after creating the employee profile.
+                </p>
+              </div>
+
+              {/* Education Section */}
+              <div className="role-details-block93">
+                <h3>Education (Optional)</h3>
+                <p style={{ fontSize: '14px', color: '#666', marginBottom: '15px' }}>
+                  Note: You can add detailed education records after creating the employee profile.
+                </p>
+              </div>
+
               {/* Leaves */}
               <div className="role-details-block93">
                 <h3>Leaves</h3>
@@ -2035,6 +2101,18 @@ const handleRoleToggle = (roleid) => {
           onClick={() =>workdetailsselecting(employeeDetails.empid)}
         >
           Address Details
+        </button>
+        <button
+          className={activeTab === 'experience' ? 'active' : ''}
+          onClick={() => experiencedetailsselecting(employeeDetails.empid)}
+        >
+          Work Experience
+        </button>
+        <button
+          className={activeTab === 'education' ? 'active' : ''}
+          onClick={() => educationdetailsselecting(employeeDetails.empid)}
+        >
+          Education
         </button>
         <button
           className={activeTab === 'documents' ? 'active' : ''}
@@ -2877,7 +2955,26 @@ const handleRoleToggle = (roleid) => {
               )}
             </div>
             </>
-            )}           
+            )}
+
+            {/* Work Experience Section */}
+            {experiencedetails && !workdetails && !employementdetails && !personaldetails && !educationdetails && !selecteddocument && (
+              <EmployeeExperience 
+                empid={employeeDetails.empid}
+                countries={countries}
+                canEdit={canEdit('personal')}
+              />
+            )}
+
+            {/* Education Section */}
+            {educationdetails && !workdetails && !employementdetails && !personaldetails && !experiencedetails && !selecteddocument && (
+              <EmployeeEducation 
+                empid={employeeDetails.empid}
+                countries={countries}
+                states={states}
+                canEdit={canEdit('personal')}
+              />
+            )}
           </div>            
         )       
       )}
