@@ -67,7 +67,7 @@ const decodeJwt = (token) => {
                 [orgid]
                 );
                 [external]=await pool.query(
-                  'select jobid,display_job_name,	no_of_vacancies,active from C_EXTERNAL_JOBS where orgid=?',
+                  'select jobid,display_job_name,	no_of_vacancies,active,job_type,expected_job_title from C_EXTERNAL_JOBS where orgid=?',
                   [orgid]
                 )
             }

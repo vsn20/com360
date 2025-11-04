@@ -960,9 +960,9 @@ const Overview = ({
                   </colgroup>
                   <thead>
                     <tr>
-                      <th className={sortConfig.column === 'accntId' ? `account_sortable account_sort_${sortConfig.direction}` : 'account_sortable'} onClick={() => requestSort('accntId')}>
+                      {/* <th className={sortConfig.column === 'accntId' ? `account_sortable account_sort_${sortConfig.direction}` : 'account_sortable'} onClick={() => requestSort('accntId')}>
                         Account ID
-                      </th>
+                      </th> */}
                       <th className={sortConfig.column === 'aliasName' ? `account_sortable account_sort_${sortConfig.direction}` : 'account_sortable'} onClick={() => requestSort('aliasName')}>
                         Account Name
                       </th>
@@ -972,6 +972,7 @@ const Overview = ({
                       <th className={sortConfig.column === 'branchType' ? `account_sortable account_sort_${sortConfig.direction}` : 'account_sortable'} onClick={() => requestSort('branchType')}>
                         Branch Type
                       </th>
+                      <th>State</th>
                       <th>
                         Status
                       </th>
@@ -986,11 +987,11 @@ const Overview = ({
                       >
                         <td className="account_id_cell">
                           <span className={account.ACTIVE_FLAG === 1 ?'account_indicator-active ':'account_indicator-inactive'}></span>
-                          Account-{getdisplayprojectid(account.ACCNT_ID)}
+                          {account.ALIAS_NAME || '-'}
                         </td>
-                        <td>{account.ALIAS_NAME || '-'}</td>
                         <td>{getAccountTypeName(account.ACCT_TYPE_CD)}</td>
                         <td>{getBranchTypeName(account.BRANCH_TYPE)}</td>
+                        <td>{getStateName(account.MAILING_STATE_ID)}</td>
                         <td className={account.ACTIVE_FLAG === 1 ?'account_status_badge account_actives ':'account_status_badge account_inactive'}>{account.ACTIVE_FLAG === 1 ?'Active':'Inactive'}</td>
                       </tr>
                     ))}
@@ -1139,15 +1140,15 @@ const Overview = ({
                   ) : (
                     <div className="account_view_details">
                       <div className="account_details_row">
-                        <div className="account_details_group">
+                        {/* <div className="account_details_group">
                           <label>Account ID</label>
                           <p>Account-{getdisplayprojectid(accountDetails.ACCNT_ID)}</p>
-                        </div>
+                        </div> */}
                       </div>
                       <div className="account_details_row">
-                        <div className="account_details_group">
-                          <label>Active Flag</label>
-                          <p>{accountDetails.ACTIVE_FLAG ? 'Active' : 'Inactive'}</p>
+                         <div className="account_details_group">
+                          <label>Account Name</label>
+                          <p>{accountDetails.ALIAS_NAME || '-'}</p>
                         </div>
                         <div className="account_details_group">
                           <label>Account Type</label>
@@ -1158,20 +1159,20 @@ const Overview = ({
                         <div className="account_details_group">
                           <label>Email</label>
                           <p>{accountDetails.EMAIL || '-'}</p>
-                        </div>
-                        <div className="account_details_group">
-                          <label>Account Name</label>
-                          <p>{accountDetails.ALIAS_NAME || '-'}</p>
+                        </div>                      
+                         <div className="account_details_group">
+                          <label>Organization</label>
+                          <p>{getSubOrgName(accountDetails.suborgid)}</p>
                         </div>
                       </div>
                       <div className="account_details_row">
                         <div className="account_details_group">
                           <label>Branch Type</label>
                           <p>{getBranchTypeName(accountDetails.BRANCH_TYPE)}</p>
-                        </div>
-                        <div className="account_details_group">
-                          <label>Organization</label>
-                          <p>{getSubOrgName(accountDetails.suborgid)}</p>
+                        </div>                      
+                          <div className="account_details_group">
+                          <label>Active Flag</label>
+                          <p>{accountDetails.ACTIVE_FLAG ? 'Active' : 'Inactive'}</p>
                         </div>
                       </div>
                       <div className="account_details_row">

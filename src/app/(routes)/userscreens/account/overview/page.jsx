@@ -39,7 +39,7 @@ export default async function OverviewPage({ searchParams }) {
         orgid = decoded.orgid;
 
         [accounts] = await pool.query(
-          'SELECT ACCNT_ID, ACCT_TYPE_CD, EMAIL, ALIAS_NAME, BRANCH_TYPE,ACTIVE_FLAG FROM C_ACCOUNT WHERE ORGID = ?',
+          'SELECT ACCNT_ID, ACCT_TYPE_CD, EMAIL, ALIAS_NAME, BRANCH_TYPE,ACTIVE_FLAG,MAILING_STATE_ID FROM C_ACCOUNT WHERE ORGID = ?',
           [orgid]
         );
         

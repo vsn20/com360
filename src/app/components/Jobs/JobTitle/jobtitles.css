@@ -166,10 +166,11 @@ table {
   table-layout: fixed;
 }
 
-table.jobtitles_four-column col:nth-child(1) { width: 15%; }
-table.jobtitles_four-column col:nth-child(2) { width: 35%; }
-table.jobtitles_four-column col:nth-child(3) { width: 15%; }
-table.jobtitles_four-column col:nth-child(4) { width: 35%; }
+table.jobtitles_four-column col:nth-child(1) { width: 30%; }
+table.jobtitles_four-column col:nth-child(2) { width: 20%; }
+table.jobtitles_four-column col:nth-child(3) { width: 20%; }
+table.jobtitles_four-column col:nth-child(4) { width: 25%; }
+table.jobtitles_four-column col:nth-child(5) { width: 15%; }
 
 th {
   background-color: #f8fafc;

@@ -1,3 +1,4 @@
+// src/app/components/Employee/VerificationContainer.jsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -70,6 +71,7 @@ const VerificationContainer = ({
       const subordinateIds = employees.map(e => e.empid);
 
       // Fetch pending forms for all relevant types
+      // getPendingI983Approvals now only fetches 'DRAFT' forms
       const [i9Data, w4Data, i983Data] = await Promise.all([
         getPendingI9Approvals(orgId, currentEmpId, isAdmin, hasAllData, subordinateIds),
         getPendingW4Approvals(orgId, currentEmpId, isAdmin, hasAllData, subordinateIds),
@@ -195,9 +197,9 @@ const VerificationContainer = ({
         draft: '#6c757d', // Grey
         pending: '#0d6efd', // Blue (needs action)
         submitted: '#007bff', // Lighter Blue (e.g., I-9 submitted by emp)
-        verified: '#28a745', // Green (I-9, W-4 final)
+        verified: '#28a745', // Green (I-9, W-4 final, I-983 generated)
         rejected: '#dc3545', // Red
-        completed: '#198754' // Darker Green (W-9, I-983 final)
+        completed: '#198754' // Darker Green (W-9)
     };
 
     let color = colors.draft;
@@ -215,31 +217,15 @@ const VerificationContainer = ({
         'VERIFIED': { label: 'Verified (W-4)', color: colors.verified },
         'REJECTED': { label: 'Rejected', color: colors.rejected }
      };
+    
+    // --- UPDATED I-983 Status Map ---
     const statusMapI983 = {
         'DRAFT': { label: 'Draft (I-983)', color: colors.draft },
-        // New Workflow
-        'PAGE1_COMPLETE': { label: 'Pending Employer Sec 3/4', color: colors.pending },
-        'PAGE2_COMPLETE': { label: 'Pending Student Sec 5 Names', color: colors.pending }, // Student's turn
-        'PAGE3_SEC5_NAMES_COMPLETE': { label: 'Pending Employer Sec 5 Site', color: colors.pending },
-        'PAGE3_SEC5_SITE_COMPLETE': { label: 'Pending Student Sec 5 Training', color: colors.pending }, // Student's turn
-        'PAGE3_SEC5_TRAINING_COMPLETE': { label: 'Pending Employer Sec 5 Oversight', color: colors.pending },
-        'PAGE3_SEC5_OVERSIGHT_COMPLETE': { label: 'Pending Employer Sec 6', color: colors.pending },
-        'PAGE4_SEC6_COMPLETE': { label: 'Pending Employer Eval 1 Init', color: colors.pending },
-        'EVAL1_PENDING_STUDENT_SIGNATURE': { label: 'Pending Student Eval 1 Signature', color: colors.pending }, // Student's turn
-        'EVAL1_PENDING_EMPLOYER_SIGNATURE': { label: 'Pending Employer Eval 1 Signature', color: colors.pending },
-        'EVAL1_COMPLETE': { label: 'Pending Employer Eval 2 Init', color: colors.pending },
-        'EVAL2_PENDING_STUDENT_SIGNATURE': { label: 'Pending Student Final Eval Sig', color: colors.pending }, // Student's turn
-        'EVAL2_PENDING_EMPLOYER_SIGNATURE': { label: 'Pending Employer Final Eval Sig', color: colors.pending },
-        'FORM_COMPLETED': { label: 'Completed (I-983)', color: colors.completed },
-        // Old Statuses (for backward compatibility)
-        'STUDENT_SEC1_2_COMPLETE': { label: 'Pending Employer Sec 3/4 (Old)', color: colors.pending },
-        'EMPLOYER_SEC3_4_COMPLETE': { label: 'Pending Student Sec 5 (Old)', color: colors.pending },
-        'STUDENT_SEC5_NAMES_COMPLETE': { label: 'Pending Employer Sec 5 (Old)', color: colors.pending },
-        'EMPLOYER_SEC5_SITE_COMPLETE': { label: 'Pending Student Sec 5 (Old)', color: colors.pending },
-        'STUDENT_SEC5_TRAINING_COMPLETE': { label: 'Pending Employer Sec 5 (Old)', color: colors.pending },
-        'EMPLOYER_SEC5_EVAL_COMPLETE': { label: 'Pending Employer Sec 6 (Old)', color: colors.pending },
-        'EMPLOYER_SEC6_COMPLETE': { label: 'Pending Employer Eval 1 (Old)', color: colors.pending },
+        'GENERATED': { label: 'Generated (I-983)', color: colors.verified },
+        // All other step-by-step statuses removed
      };
+     // --- END OF UPDATE ---
+    
      let config = { label: status, color: colors.draft }; // Default
 
      if (type === 'I9') config = statusMapI9[status] || config;
@@ -313,11 +299,11 @@ const VerificationContainer = ({
        return (
          <I983VerificationForm
            form={selectedForm}
-           verifierEmpId={currentEmpId}
+           verifierEmpId={currentEmpId} // Pass verifier ID
            orgId={orgId}
            orgName={orgName}
            onBack={handleBack}
-           onSuccess={handleVerificationSuccess}
+           onSuccess={handleVerificationSuccess} // This will refresh the list
            isAdmin={isAdmin}
            onError={setError} // Pass error handler
          />
@@ -389,12 +375,19 @@ const VerificationContainer = ({
               </thead>
               {/* --- FIX 1: The map starts on the SAME LINE as <tbody> --- */}
               <tbody>{(showPending ? pendingForms : forms).map((form) => {
+                // I-9, W-4, and I-983 are always clickable (to view/edit/verify)
                 const isClickable = form.FORM_TYPE === 'I9' || form.FORM_TYPE === 'W4' || form.FORM_TYPE === 'I983';
                 let rowStyle = {};
                 if (isClickable) {
                     rowStyle.cursor = 'pointer';
                 }
-                if (form.FORM_STATUS === 'EMPLOYER_VERIFIED' || form.FORM_STATUS === 'VERIFIED' || form.FORM_STATUS === 'FORM_COMPLETED' || (form.FORM_TYPE === 'W9' && form.FORM_STATUS === 'SUBMITTED')) {
+                
+                // ** UPDATED: Dimming logic **
+                if (form.FORM_STATUS === 'EMPLOYER_VERIFIED' || 
+                    form.FORM_STATUS === 'VERIFIED' || 
+                    (form.FORM_TYPE === 'I983' && form.FORM_STATUS === 'GENERATED') || 
+                    (form.FORM_TYPE === 'W9' && form.FORM_STATUS === 'SUBMITTED')) 
+                {
                      rowStyle.opacity = 0.7;
                 }
 
@@ -412,7 +405,8 @@ const VerificationContainer = ({
                     {/* --- FIX 2: No space between </td> and the comment --- */}
                     <td>{getStatusBadge(form)}</td>{/* Use updated badge function */}
                     <td>
-                      {`${form.VERIFIER_FIRST_NAME || ''} ${form.VERIFIER_LAST_NAME || ''}`.trim() || (form.FORM_TYPE === 'I983' && form.FORM_STATUS !== 'FORM_COMPLETED' ? 'Pending Action' : 'N/A')}
+                      {/* ** MODIFIED: I-983 Verifier display ** */}
+                      {`${form.VERIFIER_FIRST_NAME || ''} ${form.VERIFIER_LAST_NAME || ''}`.trim() || (form.FORM_TYPE === 'I983' && form.FORM_STATUS !== 'GENERATED' ? 'Pending Action' : 'N/A')}
                     </td>
                   </tr>
                 );

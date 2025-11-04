@@ -1,3 +1,4 @@
+// src/app/components/Employee/I9Forms.jsx
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -181,13 +182,13 @@ const I9Forms = ({
         }
         else if (form.FORM_TYPE === 'I983') {
              console.log("Handling I983 click...");
-            // *** NO canEdit CHECK NEEDED HERE for viewing/continuing workflow ***
+            // Per request, no edit check needed, just load the form
             const fetchedForm = await i983Actions.getI983FormDetails(numericId);
             console.log("Fetched I983 details:", fetchedForm);
             setActiveView('i983form');
-            // Set overall editing state based on completion. Component manages field disables.
-            setIsEditing(fetchedForm.FORM_STATUS !== 'FORM_COMPLETED');
-            console.log("Set activeView to i983form, isEditing:", fetchedForm.FORM_STATUS !== 'FORM_COMPLETED');
+            // Editing is always allowed
+            setIsEditing(true); 
+            console.log("Set activeView to i983form, isEditing: true");
         }
         else if (form.FORM_TYPE === 'I9') {
              console.log("Handling I9 click...");
@@ -466,7 +467,9 @@ const I9Forms = ({
 
  const handleDelete = async (form, e) => {
     e.stopPropagation(); // Prevent row click when clicking delete
-    const confirmMessage = 'Are you sure you want to delete this draft? This action cannot be undone.';
+    // ** MODIFIED Confirmation Message **
+    const confirmMessage = 'Are you sure you want to delete this form? This action cannot be undone.';
+    
     // TODO: Replace window.confirm with a proper modal component
     if (!window.confirm(confirmMessage)) return;
 
@@ -495,7 +498,7 @@ const I9Forms = ({
         if (!result || !result.success) {
             throw new Error(result.error || 'Failed to delete form');
         }
-        setSuccessMessage('Draft deleted successfully');
+        setSuccessMessage('Form deleted successfully');
         await loadAllForms(); // Refresh list
     } catch (err) {
       setError('Failed to delete form: ' + err.message);
@@ -520,32 +523,13 @@ const I9Forms = ({
         'REJECTED': 'Rejected'
      };
 
-    // --- REPLACE THE OLD statusMapI983 WITH THIS: ---
+    // --- UPDATED I-983 Status Map ---
      const statusMapI983 = {
          'DRAFT': 'Draft (I-983)',
-         'PAGE1_COMPLETE': 'Pending Employer Sec 3/4',
-         'PAGE2_COMPLETE': 'Pending Student Sec 5 Names',
-         'PAGE3_SEC5_NAMES_COMPLETE': 'Pending Employer Sec 5 Site',
-         'PAGE3_SEC5_SITE_COMPLETE': 'Pending Student Sec 5 Training',
-         'PAGE3_SEC5_TRAINING_COMPLETE': 'Pending Employer Sec 5 Oversight',
-         'PAGE3_SEC5_OVERSIGHT_COMPLETE': 'Pending Employer Sec 6',
-         'PAGE4_SEC6_COMPLETE': 'Pending Employer Eval 1 Init', // Verifier needs to initiate
-         'EVAL1_PENDING_STUDENT_SIGNATURE': 'Pending Student Eval 1 Signature',
-         'EVAL1_PENDING_EMPLOYER_SIGNATURE': 'Pending Employer Eval 1 Signature',
-         'EVAL1_COMPLETE': 'Pending Employer Eval 2 Init', // Verifier needs to initiate
-         'EVAL2_PENDING_STUDENT_SIGNATURE': 'Pending Student Final Eval Sig',
-         'EVAL2_PENDING_EMPLOYER_SIGNATURE': 'Pending Employer Final Eval Sig',
-         'FORM_COMPLETED': 'Completed (I-983)',
-          // Mappings for old statuses
-         'STUDENT_SEC1_2_COMPLETE': 'Pending Employer Sec 3/4 (Old)',
-         'EMPLOYER_SEC3_4_COMPLETE': 'Pending Student Sec 5 Names (Old)',
-         'STUDENT_SEC5_NAMES_COMPLETE': 'Pending Employer Sec 5 Site (Old)',
-         'EMPLOYER_SEC5_SITE_COMPLETE': 'Pending Student Sec 5 Training (Old)',
-         'STUDENT_SEC5_TRAINING_COMPLETE': 'Pending Employer Sec 5 Oversight (Old)',
-         'EMPLOYER_SEC5_EVAL_COMPLETE': 'Pending Employer Sec 6 (Old)',
-         'EMPLOYER_SEC6_COMPLETE': 'Pending Employer Eval 1 Init (Old)',
+         'GENERATED': 'Generated (I-983)',
+         // Removed all step-by-step statuses
      };
-    // --- END OF REPLACEMENT ---
+    // --- END OF UPDATE ---
 
     if (form.FORM_TYPE === 'I9') return statusMapI9[form.FORM_STATUS] || form.FORM_STATUS;
     if (form.FORM_TYPE === 'W4') return statusMapW9W4[form.FORM_STATUS] || form.FORM_STATUS;
@@ -586,9 +570,10 @@ const I9Forms = ({
             if (status === 'SUBMITTED') color = colors.completed;
             break;
         case 'I983':
-             // Color based on who needs to act or if completed
-             if (status === 'FORM_COMPLETED') color = colors.completed;
-             else if (status !== 'DRAFT') color = colors.pending; // Any non-draft/completed state is pending someone's action
+             // ** UPDATED: Simplified I-983 Color Logic **
+             if (status === 'GENERATED') color = colors.verified; // Use 'verified' green for generated
+             else if (status === 'DRAFT') color = colors.draft;
+             // Any other status (if it exists) defaults to draft
             break;
     }
     return color;
@@ -925,15 +910,17 @@ const I9Forms = ({
                   </tr>
                 ) : (
                   forms.map((form) => {
-                    const isDraft = form.FORM_STATUS === 'DRAFT';
+                    // ** MODIFIED: isDeletable **
+                    const isDeletable = form.FORM_STATUS === 'DRAFT' || (form.FORM_TYPE === 'I983' && form.FORM_STATUS === 'GENERATED');
+                    
                     // Determine if the form is in a final, non-editable state *for the employee*
                     const isFinalStateForEmployee = (
-                        form.FORM_TYPE === 'I9' && form.FORM_STATUS === 'EMPLOYER_VERIFIED' ||
-                        form.FORM_TYPE === 'W4' && form.FORM_STATUS === 'VERIFIED' ||
-                        form.FORM_TYPE === 'W9' && form.FORM_STATUS === 'SUBMITTED' ||
-                        form.FORM_TYPE === 'I983' && form.FORM_STATUS === 'FORM_COMPLETED' ||
-                        // Add rejected if it should also be dimmed
-                         form.FORM_STATUS === 'REJECTED'
+                        (form.FORM_TYPE === 'I9' && (form.FORM_STATUS === 'EMPLOYER_VERIFIED' || form.FORM_STATUS === 'EMPLOYEE_SUBMITTED')) ||
+                        (form.FORM_TYPE === 'W4' && (form.FORM_STATUS === 'VERIFIED' || form.FORM_STATUS === 'SUBMITTED')) ||
+                        (form.FORM_TYPE === 'W9' && form.FORM_STATUS === 'SUBMITTED') ||
+                        // ** MODIFIED: I-983 is never in a final state for the employee, even 'GENERATED' is editable
+                        // (form.FORM_TYPE === 'I983' && form.FORM_STATUS === 'FORM_COMPLETED') || 
+                        form.FORM_STATUS === 'REJECTED'
                     );
 
                     return (
@@ -942,7 +929,8 @@ const I9Forms = ({
                         onClick={() => handleRowClick(form)}
                         style={{
                           cursor: 'pointer',
-                          opacity: isFinalStateForEmployee ? 0.7 : 1 // Dim final state forms
+                           // ** MODIFIED: Dimming logic adjusted **
+                          opacity: (isFinalStateForEmployee && form.FORM_TYPE !== 'I983') ? 0.7 : 1
                         }}
                       >
                         <td>{form.ID}</td>
@@ -962,7 +950,8 @@ const I9Forms = ({
                           </span>
                         </td>
                         <td onClick={(e) => e.stopPropagation()}> {/* Prevent row click on action button */}
-                          {isDraft && ( // Only show delete for drafts
+                          {/* ** MODIFIED: Use isDeletable flag ** */}
+                          {isDeletable && (
                             <button
                               className={`${styles.button} ${styles.buttonCancel}`}
                               onClick={(e) => handleDelete(form, e)}
@@ -971,15 +960,14 @@ const I9Forms = ({
                               Delete
                             </button>
                           )}
-                           {!isDraft && !isFinalStateForEmployee && (form.FORM_TYPE === 'I9' || form.FORM_TYPE === 'I983') && ( // Show 'View/Edit' for non-draft, non-final I9/I983
+                           {/* ** MODIFIED: Show "View/Edit" for all non-final forms ** */}
+                           {!isFinalStateForEmployee && !isDeletable && (
                                 <span style={{fontSize: '12px', color: '#666'}}>View/Edit</span>
                            )}
-                            {isFinalStateForEmployee && ( // Show 'View Only' for final states
+                           {/* ** MODIFIED: I-983 is always View/Edit, never View Only ** */}
+                            {isFinalStateForEmployee && form.FORM_TYPE !== 'I983' && (
                                 <span style={{fontSize: '12px', color: '#666'}}>View Only</span>
                             )}
-                            {/* W4/W9 might just show 'View/Edit' if submitted but not final? Adjust as needed */}
-                            {/* Example: (form.FORM_TYPE === 'W4' && form.FORM_STATUS === 'SUBMITTED') && (<span...>) */}
-
                         </td>
                       </tr>
                     );
@@ -998,4 +986,3 @@ const I9Forms = ({
 };
 
 export default I9Forms;
-

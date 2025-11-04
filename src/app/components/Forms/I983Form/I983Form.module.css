@@ -1,0 +1,349 @@
+/* src/app/components/Forms/I983Form/I983Form.module.css */
+
+/* --- Container & Headers (from overview.css) --- */
+.i983_formContainer {
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background-color: #f5f7fa;
+  min-height: 100vh;
+}
+
+.i983_headerSection {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.i983_title {
+  font-size: 20px;
+  color: #0fd46c;
+  margin: 0;
+  font-weight: bold;
+}
+
+/* --- Buttons (from overview.css) --- */
+.i983_button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  text-decoration: none !important;
+  color: white !important;
+}
+
+.i983_button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  color: black !important;
+}
+
+.i983_button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.i983_buttonSave {
+  background-color: #0FD46C;
+}
+.i983_buttonSave:hover:not(:disabled) {
+  background-color: #0CB25A;
+}
+
+.i983_buttonGenerate {
+  background-color: #007bff; /* Blue for generate */
+}
+.i983_buttonGenerate:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.i983_buttonCancel {
+  background-color: #F44336;
+}
+.i983_buttonCancel:hover:not(:disabled) {
+  background-color: #D32F2F;
+}
+
+.i983_buttonBack {
+  padding: 8px 12px 8px 8px !important; 
+  background-color: transparent !important;
+  color: #6c757d !important;
+  border: 1px solid #dee2e6 !important;
+  border-radius: 20px !important;
+  font-weight: 500 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+.i983_buttonBack::before {
+   content: '‹' !important;
+  font-size: 18px  !important;
+  font-weight: bold !important;
+  color: #6c757d !important;
+}
+
+.i983_buttonBack::after {
+  content: 'Back' !important;
+  font-size: 13px !important;
+}
+
+.i983_buttonBack:hover:not(:disabled) {
+  background-color: #f8f9fa !important;
+  border-color: #6c757d !important;
+  color: #495057 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+  transform: translateX(-2px) !important;
+}
+
+.i983_clearButton {
+  background-color: #6c757d;
+  margin-top: 10px;
+  padding: 5px 10px;
+  font-size: 12px;
+}
+.i983_clearButton:hover:not(:disabled) {
+  background-color: #5a6268;
+}
+
+/* --- Pagination / Submenu Bar (NEW STYLES) --- */
+.i983_submenu_bar {
+  display: flex;
+  gap: 24px;
+  border-bottom: 1px solid #e5e7eb;
+  margin-top: 16px;
+  padding: 0 24px; /* Use padding from header for alignment */
+  background: white;
+  border-radius: 8px 8px 0 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.i983_submenu_button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 12px 0; /* Increased padding */
+  margin-bottom: -1px;
+  font-size: 14px;
+  font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  color: #6b7280 !important; /* Use important to override button default */
+  font-weight: 500;
+  transition: color 0.2s ease, border-color 0.2s ease;
+  border-bottom: 2px solid transparent; /* Placeholder border */
+}
+
+.i983_submenu_button:hover:not(:disabled) {
+  color: #1f2937 !important;
+  transform: none; /* Override default button hover */
+  box-shadow: none; /* Override default button hover */
+}
+
+.i983_submenu_button_active {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 12px 0;
+  margin-bottom: -1px;
+  font-size: 14px;
+  font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  color: #1f2937 !important; /* Override default button */
+  font-weight: 600;
+  border-bottom: 2px solid #0fd46c; /* Green highlight */
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+.i983_submenu_button_active:hover:not(:disabled) {
+  transform: none;
+  box-shadow: none;
+}
+
+
+/* --- Form Layout (from I9Forms.module.css) --- */
+.i983_formSection {
+  margin-bottom: 20px; /* ADDED: Creates gap between sections */
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 20px 30px;
+}
+
+.i983_formSection h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1a202c;
+  margin-top: 0;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.i983_formSection h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin-top: 25px;
+  margin-bottom: 15px;
+}
+
+.i983_formRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.i983_formGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.i983_formGroup label {
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: #495057;
+  font-size: 14px;
+}
+
+.i983_formGroup input,
+.i983_formGroup select,
+.i983_formGroup textarea {
+  padding: 10px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: border-color 0.2s ease;
+  width: 100%;
+  box-sizing: border-box; /* Important for grid layout */
+}
+
+.i983_formGroup input:focus,
+.i983_formGroup select:focus,
+.i983_formGroup textarea:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.i983_formGroup input:disabled,
+.i983_formGroup select:disabled,
+.i983_formGroup textarea:disabled {
+  background-color: #e9ecef;
+  cursor: not-allowed;
+}
+
+.i983_formCheckbox {
+  width: auto;
+  margin-right: 8px;
+  transform: scale(1.1);
+}
+
+.i983_formButtons {
+  display: flex;
+  gap: 10px;
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #e2e8f0;
+  justify-content: flex-end; /* Aligns buttons to the right */
+}
+
+/* --- Signature --- */
+.i983_signatureCanvasWrapper {
+  border: 2px solid #007bff;
+  border-radius: 4px;
+  background-color: #fff;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+  max-width: 600px;
+  height: 200px;
+}
+
+.i983_signatureCanvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.i983_signatureDisplay {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+  padding: 10px;
+}
+
+.i983_signatureDisplay p {
+  margin: 0 0 5px 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: #6c757d;
+}
+
+.i983_signatureDisplay img {
+  max-height: 80px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+/* --- Read-Only Info --- */
+.i983_infoGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 15px 20px;
+  background-color: #fdfdfd;
+  padding: 15px;
+  border-radius: 4px;
+  border: 1px solid #f0f0f0;
+}
+.i983_infoItem {
+  display: flex;
+  flex-direction: column;
+}
+.i983_infoItem label {
+  font-size: 13px;
+  color: #6c757d;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+.i983_infoItem span {
+  font-size: 14px;
+  color: #333;
+  word-wrap: break-word;
+}
+.i983_infoItemFullWidth {
+  grid-column: 1 / -1;
+}
+
+/* --- Messages --- */
+.i983_errorMessage,
+.i983_successMessage {
+  padding: 15px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.i983_errorMessage {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.i983_successMessage {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}

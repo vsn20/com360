@@ -190,7 +190,7 @@ const SubmittingApplication = ({ applieddetails, orgid, empid, handlesback }) =>
     <div className="schedule_interview_employee-overview-container">
       {selectedid ? (
         <>
-          <button className="schedule_interview_back-button" onClick={handleback}></button>
+          {/* <button className="schedule_interview_back-button" onClick={handleback}></button> */}
           <Scheduling
             id={selectedid}
             name={selectedname}
@@ -236,12 +236,12 @@ const SubmittingApplication = ({ applieddetails, orgid, empid, handlesback }) =>
                   <table className="schedule_interview_C_APPLICATIONS-table">
                     <thead>
                       <tr>
-                        <th 
+                        {/* <th 
                           className={sortConfig.column === 'applicationid' ? `schedule_interview_sortable schedule_interview_sort-${sortConfig.direction}` : 'schedule_interview_sortable'}
                           onClick={() => requestSort('applicationid')}
                         >
                           Application ID
-                        </th>
+                        </th> */}
                         <th 
                           className={sortConfig.column === 'C_CANDIDATEid' ? `schedule_interview_sortable schedule_interview_sort-${sortConfig.direction}` : 'schedule_interview_sortable'}
                           onClick={() => requestSort('C_CANDIDATEid')}
@@ -258,7 +258,7 @@ const SubmittingApplication = ({ applieddetails, orgid, empid, handlesback }) =>
                           className={sortConfig.column === 'jobname' ? `schedule_interview_sortable schedule_interview_sort-${sortConfig.direction}` : 'schedule_interview_sortable'}
                           onClick={() => requestSort('jobname')}
                         >
-                          Job Name-Job ID
+                          Job Name
                         </th>
                         <th 
                           className={sortConfig.column === 'applieddate' ? `schedule_interview_sortable schedule_interview_sort-${sortConfig.direction}` : 'schedule_interview_sortable'}
@@ -281,11 +281,11 @@ const SubmittingApplication = ({ applieddetails, orgid, empid, handlesback }) =>
                         <tr key={detail.applicationid}>
                           <td className="schedule_interview_id-cell">
                             <span className="schedule_interview_application-indicator"></span>
-                            {getdisplayprojectid(detail.applicationid)}
+                            {detail.candidate_id}
                           </td>
-                          <td>{detail.candidate_id}</td>
+                      
                           <td>{`${detail.first_name} ${detail.last_name}`}</td>
-                          <td>{`${detail.display_job_name} - ${detail.jobid}`}</td>
+                          <td>{`${detail.display_job_name}`}</td>
                           <td>{formatDate(detail.applieddate)}</td>
                           <td>
                              <span

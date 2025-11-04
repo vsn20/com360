@@ -222,12 +222,13 @@ const Jobtitle = ({ orgid, empid, jobtitles }) => {
                       <col />
                       <col />
                       <col />
+                      <col />
                     </colgroup>
                     <thead>
                       <tr>
-                        <th className={sortConfig.column === 'job_title_id' ? `jobtitles_sortable jobtitles_sort-${sortConfig.direction}` : 'jobtitles_sortable'} onClick={() => requestSort('job_title_id')}>
+                        {/* <th className={sortConfig.column === 'job_title_id' ? `jobtitles_sortable jobtitles_sort-${sortConfig.direction}` : 'jobtitles_sortable'} onClick={() => requestSort('job_title_id')}>
                           Job ID
-                        </th>
+                        </th> */}
                         <th className={sortConfig.column === 'job_title' ? `jobtitles_sortable jobtitles_sort-${sortConfig.direction}` : 'jobtitles_sortable'} onClick={() => requestSort('job_title')}>
                           Job Title
                         </th>
@@ -237,6 +238,10 @@ const Jobtitle = ({ orgid, empid, jobtitles }) => {
                         <th className={sortConfig.column === 'is_active' ? `jobtitles_sortable jobtitles_sort-${sortConfig.direction}` : 'jobtitles_sortable'} onClick={() => requestSort('is_active')}>
                           Status
                         </th>
+                        <th>
+                          Minimum Salary
+                        </th>
+                        <th>Maximum Salary</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -244,13 +249,14 @@ const Jobtitle = ({ orgid, empid, jobtitles }) => {
                         <tr key={job.job_title_id} onClick={() => handleRowClick(job.job_title_id)}>
                           <td className="jobtitles_id-cell">
                             <span className={job.is_active ? 'jobtitles_role-indicator' : 'jobtitles_role-indicatorinactiver'}></span>
-                            {job.job_title_id.split('-')[1] || job.job_title_id}
+                            {job.job_title || '-'}
                           </td>
-                          <td>{job.job_title || '-'}</td>
                           <td>{job.level || '-'}</td>
                           <td className={job.is_active ? 'jobtitles_status-badge jobtitles_active' : 'jobtitles_status-badge jobtitles_inactive'}>
                             {job.is_active ? 'Active' : 'Inactive'}
                           </td>
+                          <td>{job.min_salary}</td>
+                          <td>{job.max_salary}</td>
                         </tr>
                       ))}
                     </tbody>
