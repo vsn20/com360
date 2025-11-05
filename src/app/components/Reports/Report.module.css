@@ -292,6 +292,62 @@
   color: #6b7280;
 }
 
+/* NEW CLASSES FOR LOADING PROGRESS */
+.report_loading_container {
+  background-color: #f8fafc;
+  border: 2px solid #0FD46C;
+  border-radius: 12px;
+  padding: 30px;
+  margin: 20px 0;
+  text-align: center;
+}
+
+.report_loading_text {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 20px;
+}
+
+.report_progress_bar {
+  width: 100%;
+  height: 30px;
+  background-color: #e5e7eb;
+  border-radius: 15px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.report_progress_fill {
+  height: 100%;
+  background: linear-gradient(90deg, #0FD46C 0%, #0CB25A 50%, #0FD46C 100%);
+  background-size: 200% 100%;
+  animation: progressAnimation 2s ease-in-out infinite;
+  transition: width 0.3s ease;
+  border-radius: 15px;
+  position: relative;
+}
+
+@keyframes progressAnimation {
+  0% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 100% 0%;
+  }
+  100% {
+    background-position: 0% 0%;
+  }
+}
+
+.report_progress_text {
+  font-size: 24px;
+  font-weight: bold;
+  color: #0FD46C;
+  margin-top: 15px;
+}
+
 /* Print styles for PDF */
 @media print {
   .report_header_section,
@@ -300,7 +356,8 @@
   .report_week_display,
   .report_button_group,
   .report_error_message,
-  .report_success_message {
+  .report_success_message,
+  .report_loading_container {
     display: none !important;
   }
 

@@ -47,7 +47,25 @@ const calculateOvertimeForDay = (dailyHours, threshold) => {
   };
 };
 
-export async function generateProjectReport({ reportType, weekStart, weekEnd }) {
+// Helper function to check if a date falls within the actual range
+const isDateInRange = (date, actualStart, actualEnd) => {
+  return date >= actualStart && date <= actualEnd;
+};
+
+// Helper function to get the date for a specific day of the week
+const getDateForDay = (weekStart, dayIndex) => {
+  const date = new Date(weekStart);
+  date.setDate(date.getDate() + dayIndex);
+  return date.toISOString().split("T")[0];
+};
+
+export async function generateProjectReport({ 
+  reportType, 
+  searchStart, 
+  searchEnd, 
+  actualStart, 
+  actualEnd 
+}) {
   const token = cookies().get("jwt_token")?.value;
   if (!token) return { error: "No token found. Please log in." };
 
@@ -67,6 +85,8 @@ export async function generateProjectReport({ reportType, weekStart, weekEnd }) 
     const { orgid } = userRows[0];
     const otThreshold = await getOTThreshold(pool, orgid);
 
+    // Query all timesheets between searchStart and searchEnd
+    // We need to get all weeks that overlap with our date range
     const [timesheetRows] = await pool.execute(
       `SELECT t.*, 
               e.EMP_FST_NAME, 
@@ -80,18 +100,19 @@ export async function generateProjectReport({ reportType, weekStart, weekEnd }) 
        JOIN C_EMP e ON t.employee_id = e.empid
        JOIN C_PROJECT p ON t.project_id = p.PRJ_ID
        JOIN C_PROJ_EMP pe ON t.employee_id = pe.EMP_ID AND t.project_id = pe.PRJ_ID
-       WHERE t.week_start_date = ? 
+       WHERE t.week_start_date >= ? 
+       AND t.week_start_date <= ?
        AND t.is_approved = 1
        AND e.orgid = ?
        ORDER BY p.PRJ_NAME, e.EMP_FST_NAME`,
-      [weekStart, orgid]
+      [searchStart, searchEnd, orgid]
     );
 
     if (!timesheetRows.length) {
-      return { error: "No approved timesheets found for the selected week." };
+      return { error: "No approved timesheets found for the selected period." };
     }
 
-    // Get ALL employee expenses for the week (not just those with timesheets)
+    // Get ALL employee expenses for the date range
     const [expenseRows] = await pool.execute(
       `SELECT ex.EMP_ID, e.EMP_FST_NAME, e.EMP_LAST_NAME, SUM(ex.TOTAL) as total_expenses
        FROM C_EXPENSES ex
@@ -100,7 +121,7 @@ export async function generateProjectReport({ reportType, weekStart, weekEnd }) 
        AND ex.END_DATE >= ?
        AND ex.END_DATE <= ?
        GROUP BY ex.EMP_ID, e.EMP_FST_NAME, e.EMP_LAST_NAME`,
-      [orgid, weekStart, weekEnd]
+      [orgid, actualStart, actualEnd]
     );
 
     const expenseMap = {};
@@ -113,6 +134,7 @@ export async function generateProjectReport({ reportType, weekStart, weekEnd }) 
     });
 
     const projectMap = {};
+    const days = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
     timesheetRows.forEach(ts => {
       const projectId = ts.project_id;
@@ -126,7 +148,7 @@ export async function generateProjectReport({ reportType, weekStart, weekEnd }) 
           projectName,
           projectBillRate,
           projectOTBillRate,
-          employees: [],
+          employees: {},
           totalRegularHours: 0,
           totalOTHours: 0,
           totalRevenue: 0,
@@ -137,76 +159,84 @@ export async function generateProjectReport({ reportType, weekStart, weekEnd }) 
 
       const employeeId = ts.employee_id;
       const employeeName = `${ts.EMP_FST_NAME} ${ts.EMP_LAST_NAME || ""}`.trim();
+      const weekStartDate = ts.week_start_date;
 
-      const days = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
-      let totalRegularHours = 0;
-      let totalOTHours = 0;
-      const dailyHours = {};
-
-      days.forEach(day => {
-        const hours = parseFloat(ts[`${day}_hours`]) || 0;
-        dailyHours[day] = hours;
-
-        if (hours > 0) {
-          const { regularHours, otHours } = calculateOvertimeForDay(hours, otThreshold);
-          totalRegularHours += regularHours;
-          totalOTHours += otHours;
-        }
-      });
-
-      const empBillRate = parseFloat(ts.employee_bill_rate) || 0;
-      const empOTBillRate = parseFloat(ts.employee_ot_bill_rate) || 0;
-
-      // Check if both project and employee have OT rates defined
-      const hasOTRates = projectOTBillRate > 0 && empOTBillRate > 0;
-
-      // REVENUE: Company gets money from client (project rates)
-      // COST: Company pays employee (employee rates)
-      
-      // Calculate regular hours
-      const regularRevenue = totalRegularHours * projectBillRate; // What company GETS
-      const regularCost = totalRegularHours * empBillRate; // What company PAYS
-
-      // Calculate OT hours
-      let otRevenue = 0;
-      let otCost = 0;
-      let effectiveProjectOTRate = projectBillRate; // Default to regular rate
-      let effectiveEmployeeOTRate = empBillRate; // Default to regular rate
-      
-      if (totalOTHours > 0) {
-        if (hasOTRates) {
-          // Both have OT rates, use them
-          effectiveProjectOTRate = projectOTBillRate;
-          effectiveEmployeeOTRate = empOTBillRate;
-        }
-        // If no OT rates, use regular rates (already set as default)
-        
-        otRevenue = totalOTHours * effectiveProjectOTRate; // What company GETS for OT
-        otCost = totalOTHours * effectiveEmployeeOTRate; // What company PAYS for OT
+      // Initialize employee if not exists
+      if (!projectMap[projectId].employees[employeeId]) {
+        projectMap[projectId].employees[employeeId] = {
+          employeeId,
+          employeeName,
+          billRate: parseFloat(ts.employee_bill_rate) || 0,
+          otBillRate: parseFloat(ts.employee_ot_bill_rate) || 0,
+          hours: { sun: 0, mon: 0, tue: 0, wed: 0, thu: 0, fri: 0, sat: 0 },
+          regularHours: 0,
+          otHours: 0,
+          totalRevenue: 0,
+          totalCost: 0,
+          projectProfit: 0,
+        };
       }
 
-      const totalRevenue = regularRevenue + otRevenue;
-      const totalCost = regularCost + otCost;
-      const projectProfit = totalRevenue - totalCost; // Profit from this project only
+      const employee = projectMap[projectId].employees[employeeId];
 
-      projectMap[projectId].employees.push({
-        employeeId,
-        employeeName,
-        billRate: empBillRate,
-        otBillRate: empOTBillRate > 0 ? empOTBillRate : empBillRate,
-        hours: dailyHours,
-        regularHours: totalRegularHours,
-        otHours: totalOTHours,
-        totalRevenue,
-        totalCost,
-        projectProfit, // Profit from project work only
+      // Process each day, but only count hours if the date falls within actualStart to actualEnd
+      days.forEach((day, dayIndex) => {
+        const hours = parseFloat(ts[`${day}_hours`]) || 0;
+        const currentDate = getDateForDay(weekStartDate, dayIndex);
+
+        // Only count hours if this date is within our actual range
+        if (hours > 0 && isDateInRange(currentDate, actualStart, actualEnd)) {
+          employee.hours[day] += hours;
+
+          const { regularHours, otHours } = calculateOvertimeForDay(hours, otThreshold);
+          employee.regularHours += regularHours;
+          employee.otHours += otHours;
+        }
       });
+    });
 
-      projectMap[projectId].totalRegularHours += totalRegularHours;
-      projectMap[projectId].totalOTHours += totalOTHours;
-      projectMap[projectId].totalRevenue += totalRevenue;
-      projectMap[projectId].totalCost += totalCost;
-      projectMap[projectId].totalProfit += projectProfit;
+    // Calculate revenue and costs for each employee
+    Object.values(projectMap).forEach(project => {
+      project.employees = Object.values(project.employees);
+
+      project.employees.forEach(emp => {
+        const empBillRate = emp.billRate;
+        const empOTBillRate = emp.otBillRate;
+
+        // Check if both project and employee have OT rates defined
+        const hasOTRates = project.projectOTBillRate > 0 && empOTBillRate > 0;
+
+        // Calculate regular hours
+        const regularRevenue = emp.regularHours * project.projectBillRate;
+        const regularCost = emp.regularHours * empBillRate;
+
+        // Calculate OT hours
+        let otRevenue = 0;
+        let otCost = 0;
+        let effectiveProjectOTRate = project.projectBillRate;
+        let effectiveEmployeeOTRate = empBillRate;
+
+        if (emp.otHours > 0) {
+          if (hasOTRates) {
+            effectiveProjectOTRate = project.projectOTBillRate;
+            effectiveEmployeeOTRate = empOTBillRate;
+          }
+
+          otRevenue = emp.otHours * effectiveProjectOTRate;
+          otCost = emp.otHours * effectiveEmployeeOTRate;
+        }
+
+        emp.totalRevenue = regularRevenue + otRevenue;
+        emp.totalCost = regularCost + otCost;
+        emp.projectProfit = emp.totalRevenue - emp.totalCost;
+
+        // Update project totals
+        project.totalRegularHours += emp.regularHours;
+        project.totalOTHours += emp.otHours;
+        project.totalRevenue += emp.totalRevenue;
+        project.totalCost += emp.totalCost;
+        project.totalProfit += emp.projectProfit;
+      });
     });
 
     const projects = Object.values(projectMap);
@@ -217,9 +247,9 @@ export async function generateProjectReport({ reportType, weekStart, weekEnd }) 
       otHours: 0,
       totalRevenue: 0,
       totalCost: 0,
-      projectProfit: 0, // Total profit from all projects (before expenses)
-      totalExpenses: 0, // Total expenses across all employees
-      netProfit: 0, // Final profit after subtracting expenses
+      projectProfit: 0,
+      totalExpenses: 0,
+      netProfit: 0,
     };
 
     projects.forEach(project => {
@@ -230,10 +260,7 @@ export async function generateProjectReport({ reportType, weekStart, weekEnd }) 
       grandTotal.projectProfit += project.totalProfit;
     });
 
-    // Final net profit = project profit - expenses
-    grandTotal.netProfit = grandTotal.projectProfit - grandTotal.totalExpenses;
-
-    // Build employee expense summary (ALL employees with expenses, not just those in projects)
+    // Build employee expense summary
     const employeeExpenses = [];
     Object.keys(expenseMap).forEach(empId => {
       const expData = expenseMap[empId];
@@ -246,17 +273,20 @@ export async function generateProjectReport({ reportType, weekStart, weekEnd }) 
       }
     });
 
-    // Calculate total expenses from ALL employees
+    // Calculate total expenses and net profit
     grandTotal.totalExpenses = employeeExpenses.reduce((sum, emp) => sum + emp.expenses, 0);
     grandTotal.netProfit = grandTotal.projectProfit - grandTotal.totalExpenses;
 
     return {
       projects,
       grandTotal,
-      employeeExpenses, // Separate expense report
-      weekStart,
-      weekEnd,
+      employeeExpenses,
+      searchStart,
+      searchEnd,
+      actualStart,
+      actualEnd,
       otThreshold,
+      reportType,
     };
   } catch (error) {
     console.error("Error generating report:", error);
