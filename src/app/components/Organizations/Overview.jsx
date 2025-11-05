@@ -539,8 +539,10 @@ const Overview = ({ orgid, empid, organizations, countries, states }) => {
                   <table className="organization_table">
                     <thead>
                       <tr>
-                        <th onClick={() => requestSort('suborgid')}>Organization ID</th>
+                        {/* <th onClick={() => requestSort('suborgid')}>Organization ID</th> */}
                         <th onClick={() => requestSort('suborgname')}>Organization Name</th>
+                        <th>Trade Name</th>
+                        <th>Comapny Type</th>
                         <th>Country</th>
                         <th>Status</th>
                       </tr>
@@ -550,9 +552,10 @@ const Overview = ({ orgid, empid, organizations, countries, states }) => {
                         <tr key={org.suborgid} onClick={() => handleRowClick(org.suborgid)} className="organization_clickable_row">
                           <td className="organization_id_cell">
                              <span className={org.isstatus ? 'organization_indicator_active' : 'organization_indicator_inactive'}></span>
-                            {org.suborgid.split('-')[1] || org.suborgid}
+                          {org.suborgname || '-'}
                           </td>
-                          <td>{org.suborgname || '-'}</td>
+                          <td>{org.trade_name || '-'}</td>
+                          <td>{org.company_type}</td>
                           <td>{org.country ? (countries.find(c => String(c.ID) === org.country)?.VALUE || 'Unknown Country') : '-'}</td>
                           <td>
                             <span className={`organization_status_badge ${org.isstatus ? 'organization_active' : 'organization_inactive'}`}>

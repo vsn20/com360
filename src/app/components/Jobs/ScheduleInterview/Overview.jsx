@@ -232,12 +232,12 @@ const Overview = ({ scheduledetails, applieddetails, orgid, empid, time }) => {
                   <table className="schedule_interview_C_APPLICATIONS-table">
                     <thead>
                       <tr>
-                        <th 
+                        {/* <th 
                           className={sortConfig.column === 'applicationid' ? `schedule_interview_sortable schedule_interview_sort-${sortConfig.direction}` : 'schedule_interview_sortable'}
                           onClick={() => requestSort('applicationid')}
                         >
                           Application ID
-                        </th>
+                        </th> */}
                         <th 
                           className={sortConfig.column === 'name' ? `schedule_interview_sortable schedule_interview_sort-${sortConfig.direction}` : 'schedule_interview_sortable'}
                           onClick={() => requestSort('name')}
@@ -248,7 +248,7 @@ const Overview = ({ scheduledetails, applieddetails, orgid, empid, time }) => {
                           className={sortConfig.column === 'jobname' ? `schedule_interview_sortable schedule_interview_sort-${sortConfig.direction}` : 'schedule_interview_sortable'}
                           onClick={() => requestSort('jobname')}
                         >
-                          Job Name-Job ID
+                          Job Name
                         </th>
                         <th>Resume</th>
                         <th 
@@ -257,6 +257,7 @@ const Overview = ({ scheduledetails, applieddetails, orgid, empid, time }) => {
                         >
                           Status
                         </th>
+                        <th>Applied Date</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -270,10 +271,9 @@ const Overview = ({ scheduledetails, applieddetails, orgid, empid, time }) => {
                                   ? 'schedule_interview_role-indicator'
                                   : 'schedule_interview_role-indicatorinactiver'
                               }></span>
-                            {getdisplayprojectid(details.applicationid)}
+                            {`${details.first_name} ${details.last_name}`}
                           </td>
-                          <td>{`${details.first_name} ${details.last_name}`}</td>
-                          <td>{`${details.display_job_name} - ${getdisplayprojectid(details.jobid)}`}</td>
+                          <td>{`${details.display_job_name}`}</td>
                           <td>
                             <a href={details.resumepath} target="_blank" rel="noopener noreferrer">
                               View Resume
@@ -292,6 +292,7 @@ const Overview = ({ scheduledetails, applieddetails, orgid, empid, time }) => {
                               {details.status}
                             </span>
                           </td>
+                          <td>{details.applieddate}</td>
                         </tr>
                       ))}
                     </tbody>

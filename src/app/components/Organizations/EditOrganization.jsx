@@ -406,10 +406,10 @@ const EditOrganization = ({ selectedorgid, orgid, empid, countries, states, aiPr
           ) : (
             <div className="organization_view_details">
               <div className="organization_details_row">
-                <div className="organization_details_group">
+                {/* <div className="organization_details_group">
                   <label>Organization ID</label>
                   <p>{getdisplayorgid(form.suborgid)}</p>
-                </div>
+                </div> */}
                 <div className="organization_details_group">
                   <label>Organization Name</label>
                   <p>{form.suborgname || '-'}</p>

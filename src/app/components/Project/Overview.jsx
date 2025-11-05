@@ -763,9 +763,9 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                 <table className="project_table">
                   <thead>
                     <tr>
-                      <th className={sortConfig.column === 'prjId' ? `project_sortable project_sort_${sortConfig.direction}` : 'project_sortable'} onClick={() => requestSort('prjId')}>
+                      {/* <th className={sortConfig.column === 'prjId' ? `project_sortable project_sort_${sortConfig.direction}` : 'project_sortable'} onClick={() => requestSort('prjId')}>
                         Project ID
-                      </th>
+                      </th> */}
                       <th className={sortConfig.column === 'prjName' ? `project_sortable project_sort_${sortConfig.direction}` : 'project_sortable'} onClick={() => requestSort('prjName')}>
                         Project Name
                       </th>
@@ -774,6 +774,9 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                       </th>
                       <th className={sortConfig.column === 'accntId' ? `project_sortable project_sort_${sortConfig.direction}` : 'project_sortable'} onClick={() => requestSort('accntId')}>
                         Account
+                      </th>
+                      <th>
+                        Organization
                       </th>
                     </tr>
                   </thead>
@@ -787,11 +790,11 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                       >
                         <td className='project_id_cell'>
                           <span className='project_indicator'></span>
-                            Project-{getdisplayprojectid(project.PRJ_ID)}
+                          {project.PRJ_NAME || '-'}
                           </td>
-                        <td>{project.PRJ_NAME || '-'}</td>
                         <td>{project.PRS_DESC || '-'}</td>
                         <td>{getAccountName(project.ACCNT_ID)}</td>
+                        <td>{project.suborgname||'-'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -929,27 +932,25 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                   </div>
                   <div className="project_view_details">
                     <div className="project_details_row">
-                      <div className="project_details_group">
+                      {/* <div className="project_details_group">
                         <label>Project ID:</label>
                         <p>Project-{getdisplayprojectid(selectedProject.PRJ_ID)}</p>
-                      </div>
+                      </div> */}
                       <div className="project_details_group">
                         <label>Project Name:</label>
                         <p>{selectedProject.PRJ_NAME || '-'}</p>
                       </div>
-                    </div>
-                    <div className="project_details_row">
-                      <div className="project_details_group">
+                       <div className="project_details_group">
                         <label>Description:</label>
                         <p>{selectedProject.PRS_DESC || '-'}</p>
                       </div>
+                    </div>
+                    <div className="project_details_row">                    
                       <div className="project_details_group">
                         <label>Account:</label>
                         <p>{getAccountName(selectedProject.ACCNT_ID)}</p>
                       </div>
-                    </div>
-                    <div className="project_details_row">
-                      <div className="project_details_group">
+                       <div className="project_details_group">
                         <label>Organization:</label>
                         <p>{selectedProject.suborgname || '---'}</p>
                       </div>

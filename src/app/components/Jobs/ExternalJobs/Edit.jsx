@@ -396,13 +396,17 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
             ) : (
               <div className="view-details">
                 <div className="externaljobs_details-row">
-                  <div className="externaljobs_details-group">
+                  {/* <div className="externaljobs_details-group">
                     <label>Job ID:</label>
                     <p>{getdisplayprojectid(jobDetails.jobid)}</p>
-                  </div>
+                  </div> */}
                   <div className="externaljobs_details-group">
                     <label>Display Job Name:</label>
                     <p>{jobDetails.display_job_name || '-'}</p>
+                  </div>
+                   <div className="externaljobs_details-group">
+                    <label>Description:</label>
+                    <p>{jobDetails.description || '-'}</p>
                   </div>
                 </div>
                 <div className="externaljobs_details-row">
@@ -430,10 +434,7 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
                     <label>Number of Vacancies:</label>
                     <p>{jobDetails.no_of_vacancies || '-'}</p>
                   </div>
-                  <div className="externaljobs_details-group">
-                    <label>Description:</label>
-                    <p>{jobDetails.description || '-'}</p>
-                  </div>
+                 
                 </div>
               </div>
             )}

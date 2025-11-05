@@ -4,134 +4,161 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import SignatureCanvas from 'react-signature-canvas';
-import { saveOrUpdateI983Form } from '@/app/serverActions/forms/i983/actions'; // Import server action
-import styles from './Verification.module.css'; // Reuse existing verification styles
+import {
+  getI983FormDetails,
+  saveOrUpdateI983Form,
+  generateI983Pdf, // Import the new PDF generation action
+} from '@/app/serverActions/forms/i983/actions'; // Import server action
+// Import new CSS module
+import i983_styles from '../Forms/I983Form/I983Form.module.css';
 
-// Helper function to safely get values
+// Helper function to safely get values for controlled inputs
 const safeValue = (value, defaultValue = '') => value ?? defaultValue;
+
+// Helper function to format dates for input type="date" (YYYY-MM-DD)
+const formatDateForInput = (dateStr) => {
+    if (!dateStr) return '';
+    try {
+        const date = new Date(dateStr);
+        const year = date.getUTCFullYear();
+        const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(date.getUTCDate()).padStart(2, '0');
+         if (year < 1900 || year > 2100) return '';
+        return `${year}-${month}-${day}`;
+    } catch (e) { return ''; }
+};
 
 // Helper function to format dates for display (MM/DD/YYYY)
 const formatDateDisplay = (dateStr) => {
     if (!dateStr) return 'N/A';
     try {
         const date = new Date(dateStr);
-        // Use UTC date parts for consistency display
         const year = date.getUTCFullYear();
         const month = String(date.getUTCMonth() + 1).padStart(2, '0');
         const day = String(date.getUTCDate()).padStart(2, '0');
-         if (year < 1900 || year > 2100) return 'Invalid Date'; // Basic validation
-        return `${month}/${day}/${year}`; // MM/DD/YYYY format
-    } catch (e) {
-        return 'Invalid Date';
-    }
+         if (year < 1900 || year > 2100) return 'Invalid Date';
+        return `${month}/${day}/${year}`;
+    } catch (e) { return 'Invalid Date'; }
 };
 
-// Helper function to format dates for input fields (YYYY-MM-DD)
-const formatDateForInput = (dateStr) => {
-    if (!dateStr) return '';
-    try {
-        const date = new Date(dateStr);
-        // Use UTC date parts to avoid timezone issues when setting input value
-        const year = date.getUTCFullYear();
-        const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-        const day = String(date.getUTCDate()).padStart(2, '0');
-        if (year < 1900 || year > 2100) return '';
-        return `${year}-${month}-${day}`;
-    } catch (e) {
-        return '';
-    }
+// Helper function to map fetched data to the formData state
+const mapFetchedToState = (fetchedForm = {}) => {    
+    return {
+        // Section 1
+        STUDENT_NAME: safeValue(fetchedForm.STUDENT_NAME),
+        STUDENT_EMAIL: safeValue(fetchedForm.STUDENT_EMAIL),
+        SCHOOL_RECOMMENDING: safeValue(fetchedForm.SCHOOL_RECOMMENDING),
+        SCHOOL_DEGREE_EARNED: safeValue(fetchedForm.SCHOOL_DEGREE_EARNED),
+        SCHOOL_CODE_RECOMMENDING: safeValue(fetchedForm.SCHOOL_CODE_RECOMMENDING),
+        DSO_NAME_CONTACT: safeValue(fetchedForm.DSO_NAME_CONTACT),
+        STUDENT_SEVIS_ID: safeValue(fetchedForm.STUDENT_SEVIS_ID),
+        STEM_OPT_START_DATE: formatDateForInput(fetchedForm.STEM_OPT_START_DATE),
+        STEM_OPT_END_DATE: formatDateForInput(fetchedForm.STEM_OPT_END_DATE),
+        QUALIFYING_MAJOR_CIP: safeValue(fetchedForm.QUALIFYING_MAJOR_CIP),
+        QUALIFYING_DEGREE_LEVEL: safeValue(fetchedForm.QUALIFYING_DEGREE_LEVEL),
+        QUALIFYING_DEGREE_DATE: formatDateForInput(fetchedForm.QUALIFYING_DEGREE_DATE),
+        BASED_ON_PRIOR_DEGREE: !!fetchedForm.BASED_ON_PRIOR_DEGREE,
+        EMPLOYMENT_AUTH_NUMBER: safeValue(fetchedForm.EMPLOYMENT_AUTH_NUMBER),
+        // Section 2
+        STUDENT_PRINTED_NAME: safeValue(fetchedForm.STUDENT_PRINTED_NAME),
+        STUDENT_SIGNATURE_DATE: formatDateForInput(fetchedForm.STUDENT_SIGNATURE_DATE),
+        // Section 3
+        EMPLOYER_NAME: safeValue(fetchedForm.EMPLOYER_NAME),
+        EMPLOYER_WEBSITE: safeValue(fetchedForm.EMPLOYER_WEBSITE),
+        EMPLOYER_EIN: safeValue(fetchedForm.EMPLOYER_EIN),
+        EMPLOYER_STREET_ADDRESS: safeValue(fetchedForm.EMPLOYER_STREET_ADDRESS),
+        EMPLOYER_SUITE: safeValue(fetchedForm.EMPLOYER_SUITE),
+        EMPLOYER_CITY: safeValue(fetchedForm.EMPLOYER_CITY),
+        EMPLOYER_STATE: safeValue(fetchedForm.EMPLOYER_STATE),
+        EMPLOYER_ZIP: safeValue(fetchedForm.EMPLOYER_ZIP),
+        EMPLOYER_NUM_FT_EMPLOYEES: safeValue(fetchedForm.EMPLOYER_NUM_FT_EMPLOYEES),
+        EMPLOYER_NAICS_CODE: safeValue(fetchedForm.EMPLOYER_NAICS_CODE),
+        OPT_HOURS_PER_WEEK: safeValue(fetchedForm.OPT_HOURS_PER_WEEK),
+        START_DATE_OF_EMPLOYMENT: formatDateForInput(fetchedForm.START_DATE_OF_EMPLOYMENT),
+        SALARY_AMOUNT: safeValue(fetchedForm.SALARY_AMOUNT),
+        SALARY_FREQUENCY: safeValue(fetchedForm.SALARY_FREQUENCY),
+        OTHER_COMPENSATION_1: safeValue(fetchedForm.OTHER_COMPENSATION_1),
+        OTHER_COMPENSATION_2: safeValue(fetchedForm.OTHER_COMPENSATION_2),
+        OTHER_COMPENSATION_3: safeValue(fetchedForm.OTHER_COMPENSATION_3),
+        OTHER_COMPENSATION_4: safeValue(fetchedForm.OTHER_COMPENSATION_4),
+        // Section 4
+        EMPLOYER_OFFICIAL_PRINTED_NAME_TITLE: safeValue(fetchedForm.EMPLOYER_OFFICIAL_PRINTED_NAME_TITLE),
+        EMPLOYER_PRINTED_NAME_ORG: safeValue(fetchedForm.EMPLOYER_PRINTED_NAME_ORG),
+        EMPLOYER_OFFICIAL_SIGNATURE_DATE: formatDateForInput(fetchedForm.EMPLOYER_OFFICIAL_SIGNATURE_DATE) || new Date().toISOString().split('T')[0],
+        // Section 5
+        SEC5_STUDENT_NAME: safeValue(fetchedForm.SEC5_STUDENT_NAME),
+        SEC5_EMPLOYER_NAME: safeValue(fetchedForm.SEC5_EMPLOYER_NAME, fetchedForm.EMPLOYER_NAME),
+        SEC5_SITE_NAME: safeValue(fetchedForm.SEC5_SITE_NAME),
+        SEC5_SITE_ADDRESS: safeValue(fetchedForm.SEC5_SITE_ADDRESS),
+        SEC5_OFFICIAL_NAME: safeValue(fetchedForm.SEC5_OFFICIAL_NAME),
+        SEC5_OFFICIAL_TITLE: safeValue(fetchedForm.SEC5_OFFICIAL_TITLE),
+        SEC5_OFFICIAL_EMAIL: safeValue(fetchedForm.SEC5_OFFICIAL_EMAIL),
+        SEC5_OFFICIAL_PHONE: safeValue(fetchedForm.SEC5_OFFICIAL_PHONE),
+        SEC5_STUDENT_ROLE: safeValue(fetchedForm.SEC5_STUDENT_ROLE),
+        SEC5_GOALS_OBJECTIVES: safeValue(fetchedForm.SEC5_GOALS_OBJECTIVES),
+        SEC5_EMPLOYER_OVERSIGHT: safeValue(fetchedForm.SEC5_EMPLOYER_OVERSIGHT),
+        SEC5_MEASURES_ASSESSMENTS: safeValue(fetchedForm.SEC5_MEASURES_ASSESSMENTS),
+        SEC5_ADDITIONAL_REMARKS: safeValue(fetchedForm.SEC5_ADDITIONAL_REMARKS),
+        // Section 6
+        EMPLOYER_OFFICIAL_SEC6_PRINTED_NAME_TITLE: safeValue(fetchedForm.EMPLOYER_OFFICIAL_SEC6_PRINTED_NAME_TITLE),
+        EMPLOYER_OFFICIAL_SEC6_SIGNATURE_DATE: formatDateForInput(fetchedForm.EMPLOYER_OFFICIAL_SEC6_SIGNATURE_DATE) || new Date().toISOString().split('T')[0],
+        // Eval 1
+        EVAL1_FROM_DATE: formatDateForInput(fetchedForm.EVAL1_FROM_DATE),
+        EVAL1_TO_DATE: formatDateForInput(fetchedForm.EVAL1_TO_DATE),
+        EVAL1_STUDENT_EVALUATION: safeValue(fetchedForm.EVAL1_STUDENT_EVALUATION),
+        EVAL1_STUDENT_SIGNATURE_DATE: formatDateForInput(fetchedForm.EVAL1_STUDENT_SIGNATURE_DATE),
+        EVAL1_EMPLOYER_SIGNATURE_DATE: formatDateForInput(fetchedForm.EVAL1_EMPLOYER_SIGNATURE_DATE) || new Date().toISOString().split('T')[0],
+        // Eval 2
+        EVAL2_FROM_DATE: formatDateForInput(fetchedForm.EVAL2_FROM_DATE),
+        EVAL2_TO_DATE: formatDateForInput(fetchedForm.EVAL2_TO_DATE),
+        EVAL2_STUDENT_EVALUATION: safeValue(fetchedForm.EVAL2_STUDENT_EVALUATION),
+        EVAL2_STUDENT_SIGNATURE_DATE: formatDateForInput(fetchedForm.EVAL2_STUDENT_SIGNATURE_DATE),
+        EVAL2_EMPLOYER_SIGNATURE_DATE: formatDateForInput(fetchedForm.EVAL2_EMPLOYER_SIGNATURE_DATE) || new Date().toISOString().split('T')[0],
+    };
 };
 
 
 const I983VerificationForm = ({
   form, // The full I-983 form data fetched from server
-  verifierEmpId, // The ID of the currently logged-in employer/verifier
+  verifierEmpId,
   orgId,
   orgName,
   onBack,
   onSuccess,
-  onError, // Need onError prop
-  isAdmin // Prop indicating if the user is an admin
+  onError,
+  isAdmin
 }) => {
-     // Log props on render (optional)
-     // console.log('I983VerificationForm rendered. Props:', { form: !!form, verifierEmpId, orgId, orgName, isAdmin });
-
-    // State for employer-editable sections
-    const [employerData, setEmployerData] = useState({
-        // Section 3
-        EMPLOYER_NAME: '', EMPLOYER_WEBSITE: '', EMPLOYER_EIN: '',
-        EMPLOYER_STREET_ADDRESS: '', EMPLOYER_SUITE: '', EMPLOYER_CITY: '',
-        EMPLOYER_STATE: '', EMPLOYER_ZIP: '', EMPLOYER_NUM_FT_EMPLOYEES: '',
-        EMPLOYER_NAICS_CODE: '', OPT_HOURS_PER_WEEK: '', START_DATE_OF_EMPLOYMENT: '',
-        SALARY_AMOUNT: '', SALARY_FREQUENCY: '',
-        OTHER_COMPENSATION_1: '', OTHER_COMPENSATION_2: '',
-        OTHER_COMPENSATION_3: '', OTHER_COMPENSATION_4: '',
-        // Section 4
-        EMPLOYER_OFFICIAL_PRINTED_NAME_TITLE: '', EMPLOYER_PRINTED_NAME_ORG: '',
-        EMPLOYER_OFFICIAL_SIGNATURE_DATE: new Date().toISOString().split('T')[0],
-        // Section 5 (Employer Parts)
-        SEC5_SITE_NAME: '', SEC5_SITE_ADDRESS: '', SEC5_OFFICIAL_NAME: '',
-        SEC5_OFFICIAL_TITLE: '', SEC5_OFFICIAL_EMAIL: '', SEC5_OFFICIAL_PHONE: '',
-        SEC5_EMPLOYER_OVERSIGHT: '', SEC5_MEASURES_ASSESSMENTS: '', SEC5_ADDITIONAL_REMARKS: '',
-        // Section 6
-        EMPLOYER_OFFICIAL_SEC6_PRINTED_NAME_TITLE: '',
-        EMPLOYER_OFFICIAL_SEC6_SIGNATURE_DATE: new Date().toISOString().split('T')[0],
-        // --- Evaluation State (Employer Parts) ---
-        EVAL1_FROM_DATE: '', EVAL1_TO_DATE: '',
-        EVAL1_STUDENT_EVALUATION: '', // Reuse for employer's eval text when initiating
-        EVAL1_EMPLOYER_SIGNATURE_DATE: new Date().toISOString().split('T')[0],
-        EVAL2_FROM_DATE: '', EVAL2_TO_DATE: '',
-        EVAL2_STUDENT_EVALUATION: '', // Reuse for employer's eval text when initiating
-        EVAL2_EMPLOYER_SIGNATURE_DATE: new Date().toISOString().split('T')[0],
-    });
-
+    
+    // Full form data state
+    const [formData, setFormData] = useState(mapFetchedToState());
+    
+    // Store the last fetched data to display read-only info
+    const [existingForm, setExistingForm] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [isGenerating, setIsGenerating] = useState(false); // New state for generate
+    const [currentFormId, setCurrentFormId] = useState(null);
+    const [currentPage, setCurrentPage] = useState(1); // Page 1-5
 
-    // Signature Canvas Refs
+    // Signature Canvases for EMPLOYER
     const sigCanvasSec4 = useRef(null);
     const sigCanvasSec6 = useRef(null);
     const sigCanvasEval1Employer = useRef(null);
     const sigCanvasEval2Employer = useRef(null);
 
-    // Pre-fill employer data from the form prop
+    // --- Data Loading Effect ---
     useEffect(() => {
         if (form) {
-             // console.log("I983VerificationForm - Pre-filling state from form:", form);
-             setEmployerData(prev => ({
-                ...prev, // Keep defaults like current date for signatures if not set in form
-                // Section 3
-                EMPLOYER_NAME: safeValue(form.EMPLOYER_NAME), EMPLOYER_WEBSITE: safeValue(form.EMPLOYER_WEBSITE), EMPLOYER_EIN: safeValue(form.EMPLOYER_EIN),
-                EMPLOYER_STREET_ADDRESS: safeValue(form.EMPLOYER_STREET_ADDRESS), EMPLOYER_SUITE: safeValue(form.EMPLOYER_SUITE), EMPLOYER_CITY: safeValue(form.EMPLOYER_CITY),
-                EMPLOYER_STATE: safeValue(form.EMPLOYER_STATE), EMPLOYER_ZIP: safeValue(form.EMPLOYER_ZIP), EMPLOYER_NUM_FT_EMPLOYEES: safeValue(form.EMPLOYER_NUM_FT_EMPLOYEES),
-                EMPLOYER_NAICS_CODE: safeValue(form.EMPLOYER_NAICS_CODE), OPT_HOURS_PER_WEEK: safeValue(form.OPT_HOURS_PER_WEEK), START_DATE_OF_EMPLOYMENT: formatDateForInput(form.START_DATE_OF_EMPLOYMENT),
-                SALARY_AMOUNT: safeValue(form.SALARY_AMOUNT), SALARY_FREQUENCY: safeValue(form.SALARY_FREQUENCY),
-                OTHER_COMPENSATION_1: safeValue(form.OTHER_COMPENSATION_1), OTHER_COMPENSATION_2: safeValue(form.OTHER_COMPENSATION_2),
-                OTHER_COMPENSATION_3: safeValue(form.OTHER_COMPENSATION_3), OTHER_COMPENSATION_4: safeValue(form.OTHER_COMPENSATION_4),
-                // Section 4
-                EMPLOYER_OFFICIAL_PRINTED_NAME_TITLE: safeValue(form.EMPLOYER_OFFICIAL_PRINTED_NAME_TITLE),
-                EMPLOYER_PRINTED_NAME_ORG: safeValue(form.EMPLOYER_PRINTED_NAME_ORG, orgName), // Default to orgName if empty
-                EMPLOYER_OFFICIAL_SIGNATURE_DATE: formatDateForInput(form.EMPLOYER_OFFICIAL_SIGNATURE_DATE) || new Date().toISOString().split('T')[0],
-                // Section 5 (Employer Parts)
-                SEC5_SITE_NAME: safeValue(form.SEC5_SITE_NAME), SEC5_SITE_ADDRESS: safeValue(form.SEC5_SITE_ADDRESS), SEC5_OFFICIAL_NAME: safeValue(form.SEC5_OFFICIAL_NAME),
-                SEC5_OFFICIAL_TITLE: safeValue(form.SEC5_OFFICIAL_TITLE), SEC5_OFFICIAL_EMAIL: safeValue(form.SEC5_OFFICIAL_EMAIL), SEC5_OFFICIAL_PHONE: safeValue(form.SEC5_OFFICIAL_PHONE),
-                SEC5_EMPLOYER_OVERSIGHT: safeValue(form.SEC5_EMPLOYER_OVERSIGHT), SEC5_MEASURES_ASSESSMENTS: safeValue(form.SEC5_MEASURES_ASSESSMENTS), SEC5_ADDITIONAL_REMARKS: safeValue(form.SEC5_ADDITIONAL_REMARKS),
-                // Section 6
-                EMPLOYER_OFFICIAL_SEC6_PRINTED_NAME_TITLE: safeValue(form.EMPLOYER_OFFICIAL_SEC6_PRINTED_NAME_TITLE),
-                EMPLOYER_OFFICIAL_SEC6_SIGNATURE_DATE: formatDateForInput(form.EMPLOYER_OFFICIAL_SEC6_SIGNATURE_DATE) || new Date().toISOString().split('T')[0],
-                // Evaluations (Employer Parts)
-                EVAL1_FROM_DATE: formatDateForInput(form.EVAL1_FROM_DATE), EVAL1_TO_DATE: formatDateForInput(form.EVAL1_TO_DATE),
-                EVAL1_STUDENT_EVALUATION: safeValue(form.EVAL1_STUDENT_EVALUATION), // Load existing text
-                EVAL1_EMPLOYER_SIGNATURE_DATE: formatDateForInput(form.EVAL1_EMPLOYER_SIGNATURE_DATE) || new Date().toISOString().split('T')[0],
-                EVAL2_FROM_DATE: formatDateForInput(form.EVAL2_FROM_DATE), EVAL2_TO_DATE: formatDateForInput(form.EVAL2_TO_DATE),
-                EVAL2_STUDENT_EVALUATION: safeValue(form.EVAL2_STUDENT_EVALUATION), // Load existing text
-                EVAL2_EMPLOYER_SIGNATURE_DATE: formatDateForInput(form.EVAL2_EMPLOYER_SIGNATURE_DATE) || new Date().toISOString().split('T')[0],
-            }));
+            // When the 'form' prop (from VerificationContainer) is passed, use it
+            setExistingForm(form);
+            setCurrentFormId(form.ID); // This ID might have a prefix
+            // Load state from the passed 'form' prop
+            setFormData(mapFetchedToState(form));
         }
-    }, [form, orgName]); // Rerun if form data or orgName changes
+    }, [form]); // Depend on the 'form' prop
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
-        setEmployerData(prev => ({
+        setFormData(prev => ({
             ...prev,
             [name]: type === 'checkbox' ? checked : value
         }));
@@ -141,456 +168,486 @@ const I983VerificationForm = ({
         sigRef.current?.clear();
     };
 
-    // Determine editability based on current form status and NEW statuses
-    const status = form?.FORM_STATUS;
-    const canEditSec3_4 = status === 'PAGE1_COMPLETE';
-    const canEditSec5Site = status === 'PAGE3_SEC5_NAMES_COMPLETE';
-    const canEditSec5Oversight = status === 'PAGE3_SEC5_TRAINING_COMPLETE'; // Verifier fills oversight/measures/remarks
-    const canEditSec6 = status === 'PAGE3_SEC5_OVERSIGHT_COMPLETE';
-    // --- UPDATED Evaluation Edit Flags ---
-    const canEditEval1Initiate = status === 'PAGE4_SEC6_COMPLETE'; // Verifier initiates Eval 1 (dates/text)
-    const canEditEval1Sign = status === 'EVAL1_PENDING_EMPLOYER_SIGNATURE'; // Verifier signs after student
-    const canEditEval2Initiate = status === 'EVAL1_COMPLETE'; // Verifier initiates Eval 2 (dates/text)
-    const canEditEval2Sign = status === 'EVAL2_PENDING_EMPLOYER_SIGNATURE'; // Verifier signs after student
+    // --- Server Action Handlers ---
 
-
-    // Get signature from the currently active step's canvas
-    const getActiveSignatureData = () => {
-        if (canEditSec3_4 && sigCanvasSec4.current && !sigCanvasSec4.current.isEmpty()) return sigCanvasSec4.current.toDataURL('image/png');
-        if (canEditSec6 && sigCanvasSec6.current && !sigCanvasSec6.current.isEmpty()) return sigCanvasSec6.current.toDataURL('image/png');
-        if (canEditEval1Sign && sigCanvasEval1Employer.current && !sigCanvasEval1Employer.current.isEmpty()) return sigCanvasEval1Employer.current.toDataURL('image/png');
-        if (canEditEval2Sign && sigCanvasEval2Employer.current && !sigCanvasEval2Employer.current.isEmpty()) return sigCanvasEval2Employer.current.toDataURL('image/png');
-        return null; // No active signature canvas relevant to the current step
-    };
-
-    const handleSubmitStep = async () => {
-        if (typeof onError !== 'function') {
-             console.error("handleSubmitStep: onError prop is not a function!");
-             alert("Internal error: Cannot submit form."); return;
+    const handleSave = async (showSuccess = true) => {
+        onError(null); // Clear any existing errors
+        // Do not call onSuccess('') as that is the prop that closes the form
+        
+        setIsSaving(true);
+        let success = false;
+        
+        // Ensure currentFormId is the numeric ID
+        const numericFormId = parseInt(String(currentFormId).replace('I983-', ''));
+        if (isNaN(numericFormId)) {
+            onError("Invalid Form ID.");
+            setIsSaving(false);
+            return { success: false, formId: null };
         }
-        onError(null); setIsSaving(true);
 
         try {
-            const signatureData = getActiveSignatureData();
-            let requiresSignature = false;
-
-            // Determine if the *current active step* requires a signature
-            if (canEditSec3_4 || canEditSec6 || canEditEval1Sign || canEditEval2Sign) requiresSignature = true;
-
-            // --- Validation ---
-            if (requiresSignature && !signatureData) {
-                let sectionName = '';
-                if (canEditSec3_4) sectionName = 'Section 4'; else if (canEditSec6) sectionName = 'Section 6';
-                else if (canEditEval1Sign) sectionName = 'Evaluation 1 Employer'; else if (canEditEval2Sign) sectionName = 'Evaluation 2 Employer';
-                throw new Error(`Signature is required to submit ${sectionName}.`);
-            }
-            // Add validation for required fields based on the current step
-            if (canEditSec3_4) {
-                 if (!employerData.EMPLOYER_NAME || !employerData.EMPLOYER_EIN /* ... other required sec 3 fields */) throw new Error("Please complete required fields in Section 3.");
-                 if (!employerData.EMPLOYER_OFFICIAL_PRINTED_NAME_TITLE) throw new Error("Employer Official Name/Title (Sec 4) is required.");
-            }
-            if (canEditSec5Site && (!employerData.SEC5_SITE_NAME || !employerData.SEC5_SITE_ADDRESS /* ... */)) throw new Error("Please complete required Site Information fields (Sec 5).");
-            if (canEditSec5Oversight && (!employerData.SEC5_EMPLOYER_OVERSIGHT || !employerData.SEC5_MEASURES_ASSESSMENTS)) throw new Error("Please complete Oversight and Measures/Assessments fields (Sec 5).");
-            if (canEditSec6 && !employerData.EMPLOYER_OFFICIAL_SEC6_PRINTED_NAME_TITLE) throw new Error("Employer Official Name/Title (Sec 6) is required.");
-            // Evaluation Initiation Validation
-            if (canEditEval1Initiate) {
-                if (!employerData.EVAL1_FROM_DATE || !employerData.EVAL1_TO_DATE) throw new Error("Evaluation 1 date range is required.");
-                if (!employerData.EVAL1_STUDENT_EVALUATION) throw new Error("Employer Evaluation/Comments for Eval 1 are required."); // Check if reusing student field is intended
-            }
-             if (canEditEval2Initiate) {
-                 if (!employerData.EVAL2_FROM_DATE || !employerData.EVAL2_TO_DATE) throw new Error("Evaluation 2 date range is required.");
-                 if (!employerData.EVAL2_STUDENT_EVALUATION) throw new Error("Employer Evaluation/Comments for Eval 2 are required."); // Check if reusing student field is intended
-             }
-
-            // Prepare payload including ALL form data + current employer edits
             const payload = {
-                ...form, // Start with existing form data (important!)
-                ...employerData, // Overwrite with current state of employer fields
-                orgid: orgId, // Pass necessary IDs
-                emp_id: form.EMP_ID,
-                // verifier_id is handled by backend using JWT
-                action: 'submit', // Explicitly set action
-                signature_data: signatureData, // Pass the relevant signature (or null)
+                ...formData,
+                orgid: orgId, // Use orgId from props
+                emp_id: form.EMP_ID, // Use emp_id from original form prop
+                action: 'save',
             };
 
-            console.log("Submitting I-983 step payload:", { ...payload, signature_data: signatureData ? 'Sig Present' : 'No Sig' });
+            // Conditionally add EMPLOYER signatures ONLY if they were drawn
+            if (sigCanvasSec4.current && !sigCanvasSec4.current.isEmpty()) {
+                payload.signature_data_sec4 = sigCanvasSec4.current.toDataURL('image/png');
+                sigCanvasSec4.current.clear();
+            }
+            if (sigCanvasSec6.current && !sigCanvasSec6.current.isEmpty()) {
+                payload.signature_data_sec6 = sigCanvasSec6.current.toDataURL('image/png');
+                sigCanvasSec6.current.clear();
+            }
+            if (sigCanvasEval1Employer.current && !sigCanvasEval1Employer.current.isEmpty()) {
+                payload.signature_data_eval1_employer = sigCanvasEval1Employer.current.toDataURL('image/png');
+                sigCanvasEval1Employer.current.clear();
+            }
+            if (sigCanvasEval2Employer.current && !sigCanvasEval2Employer.current.isEmpty()) {
+                payload.signature_data_eval2_employer = sigCanvasEval2Employer.current.toDataURL('image/png');
+                sigCanvasEval2Employer.current.clear();
+            }
 
-            const numericFormId = parseInt(String(form.ID).replace('I983-', ''));
-            const result = await saveOrUpdateI983Form(payload, numericFormId); // Use combined action
+            console.log("Calling saveOrUpdateI983Form (Save)...");
+            const result = await saveOrUpdateI983Form(payload, numericFormId);
 
             if (result.success) {
-                onSuccess(result.message || 'Form step submitted successfully!');
-                // Parent component (VerificationContainer) handles refresh via onSuccess callback
-            } else { throw new Error(result.error || 'Failed to submit form step.'); }
+                if (showSuccess) {
+                    // We can't call onSuccess, so we'll just clear the error
+                    // to indicate success.
+                    onError(null); 
+                }
+                
+                // Re-fetch data to update 'existingForm' with new sig URLs
+                const updatedForm = await getI983FormDetails(result.id);
+                setExistingForm(updatedForm);
+                // Re-set formData to match the fetched data
+                setFormData(mapFetchedToState(updatedForm));
+                success = true;
+            } else {
+                throw new Error(result.error);
+            }
         } catch (err) {
-            onError(err.message); console.error("Error submitting I-983 step:", err);
-        } finally { setIsSaving(false); }
+            onError(err.message || 'Failed to save I-983 form.');
+            console.error('Error during save:', err);
+        } finally {
+            setIsSaving(false);
+            return { success, formId: numericFormId }; // Return success state and ID
+        }
+    };
+
+    const handleGenerate = async () => {
+        onError(null);
+        onSuccess(''); // Clear any previous success message
+        
+        // 1. Save any pending changes first
+        setIsGenerating(true);
+        const { success: saveSuccess, formId: savedFormId } = await handleSave(false); // Save without success message
+        
+        if (!saveSuccess || !savedFormId) {
+            onError("Failed to save changes. Cannot generate PDF.");
+            setIsGenerating(false);
+            return;
+        }
+        
+        // 2. If save was successful, generate PDF
+        console.log(`Generating PDF for Form ID: ${savedFormId}`);
+        try {
+            // FIX: Clear any non-blocking save errors
+            onError(null);
+            
+            const result = await generateI983Pdf(savedFormId, verifierEmpId);
+            
+            if (result.success) {
+                // This call IS supposed to close the form and refresh the list.
+                onSuccess("PDF Generated successfully! Returning to list...");
+                
+                // No need for timeout, onSuccess handles the navigation.
+                // onBack() is called by the parent's handleVerificationSuccess
+            } else {
+                throw new Error(result.error);
+            }
+        } catch (err) {
+             onError(err.message || 'Failed to generate PDF.');
+             console.error('Error during generate:', err);
+             setIsGenerating(false); // Stop loading if generate fails
+        }
+        // Don't set isGenerating to false here if successful,
+        // as the component is about to unmount.
     };
 
 
-    // --- Render Functions for Sections ---
-
-    const renderReadOnlySection1_2 = () => (
-        <div className={styles.formSection}>
-            <h3>Section 1 & 2: Student Information (Read-Only)</h3>
-            <div className={styles.infoGrid}>
-                <div className={styles.infoItem}><label>Student Name:</label><span>{safeValue(form?.STUDENT_NAME)}</span></div>
-                <div className={styles.infoItem}><label>Student Email:</label><span>{safeValue(form?.STUDENT_EMAIL)}</span></div>
-                <div className={styles.infoItem}><label>School Recommending:</label><span>{safeValue(form?.SCHOOL_RECOMMENDING)}</span></div>
-                <div className={styles.infoItem}><label>Degree School:</label><span>{safeValue(form?.SCHOOL_DEGREE_EARNED)}</span></div>
-                <div className={styles.infoItem}><label>School Code:</label><span>{safeValue(form?.SCHOOL_CODE_RECOMMENDING)}</span></div>
-                <div className={styles.infoItem}><label>SEVIS ID:</label><span>{safeValue(form?.STUDENT_SEVIS_ID)}</span></div>
-                <div className={styles.infoItem}><label>STEM OPT Dates:</label><span>{formatDateDisplay(form?.STEM_OPT_START_DATE)} to {formatDateDisplay(form?.STEM_OPT_END_DATE)}</span></div>
-                <div className={styles.infoItem}><label>Major/CIP:</label><span>{safeValue(form?.QUALIFYING_MAJOR_CIP)}</span></div>
-                <div className={styles.infoItem}><label>Degree Level:</label><span>{safeValue(form?.QUALIFYING_DEGREE_LEVEL)}</span></div>
-                <div className={styles.infoItem}><label>Date Awarded:</label><span>{formatDateDisplay(form?.QUALIFYING_DEGREE_DATE)}</span></div>
-                <div className={styles.infoItem}><label>Based on Prior Degree:</label><span>{form?.BASED_ON_PRIOR_DEGREE ? 'Yes' : 'No'}</span></div>
-                <div className={styles.infoItem}><label>Auth. Number:</label><span>{safeValue(form?.EMPLOYMENT_AUTH_NUMBER)}</span></div>
-                <div className={`${styles.infoItem} ${styles.infoItemFullWidth}`}><label>DSO Info:</label><span>{safeValue(form?.DSO_NAME_CONTACT)}</span></div>
-                 {/* Section 2 Display */}
-                 <div className={styles.infoItem}><label>Student Printed Name (Sec 2):</label><span>{safeValue(form?.STUDENT_PRINTED_NAME)}</span></div>
-                 <div className={styles.infoItem}><label>Student Signature Date (Sec 2):</label><span>{formatDateDisplay(form?.STUDENT_SIGNATURE_DATE)}</span></div>
-                 {form?.STUDENT_SIGNATURE_URL && (
-                    <div className={`${styles.infoItem} ${styles.infoItemFullWidth}`}>
-                        <label>Student Signature (Sec 2):</label>
-                        <div className={styles.signatureDisplay}>
-                            <img src={form.STUDENT_SIGNATURE_URL} alt="Student Signature" style={{ maxHeight: '80px', border: '1px solid #ccc' }}/>
-                        </div>
-                    </div>
-                 )}
+    // --- Render Read-Only Signature ---
+    const renderReadOnlySignature = (label, sigUrl, date, name) => {
+        if (!sigUrl) {
+            return (
+                <div className={i983_styles.i983_formGroup}>
+                    <label>{label}</label>
+                    <div className={i983_styles.i983_infoGrid}><span style={{ fontStyle: 'italic' }}>Not Signed</span></div>
+                </div>
+            );
+        }
+        return (
+            <div className={i983_styles.i983_formGroup}>
+                <label>{label}</label>
+                <div className={i983_styles.i983_infoGrid}>
+                    <div className={i983_styles.i983_infoItem}><label>Name:</label><span>{safeValue(name, 'N/A')}</span></div>
+                    <div className={i983_styles.i983_infoItem}><label>Date Signed:</label><span>{formatDateDisplay(date)}</span></div>
+                </div>
+                <div className={i983_styles.i983_signatureDisplay} style={{ marginTop: '10px' }}>
+                    <img src={sigUrl} alt={label} style={{ maxHeight: '80px', border: '1px solid #ccc', borderRadius: '4px' }}/>
+                </div>
             </div>
+        );
+    };
+
+    // --- Render Page Buttons ---
+    const renderPageButtons = () => (
+        <div className={i983_styles.i983_formButtons}>
+            <button 
+                type="button" 
+                className={`${i983_styles.i983_button} ${i983_styles.i983_buttonSave}`} 
+                onClick={() => handleSave(true)} 
+                disabled={isSaving || isGenerating} // Disable if saving OR generating
+            >
+                {isSaving ? 'Saving...' : 'Save Changes'}
+            </button>
         </div>
     );
 
-     const renderSection3_4 = () => {
-        const disabled = !canEditSec3_4;
-        if (status === 'DRAFT') return null; // Don't show if draft
-
-        return (
-            <div className={styles.formSection}>
-                <h3>Section 3 & 4: Employer Information & Certification</h3>
-                {canEditSec3_4 ? (
-                    <>
-                        {/* Section 3 Inputs */}
-                        <h4>Section 3: Employer Information</h4>
-                        <div className={styles.formRow}> <div className={styles.formGroup}><label>Employer Name*</label><input name="EMPLOYER_NAME" value={safeValue(employerData.EMPLOYER_NAME)} onChange={handleChange} disabled={disabled} required /></div> <div className={styles.formGroup}><label>Employer Website</label><input name="EMPLOYER_WEBSITE" value={safeValue(employerData.EMPLOYER_WEBSITE)} onChange={handleChange} disabled={disabled} /></div> <div className={styles.formGroup}><label>Employer EIN*</label><input name="EMPLOYER_EIN" value={safeValue(employerData.EMPLOYER_EIN)} onChange={handleChange} disabled={disabled} required placeholder="XX-XXXXXXX"/></div> </div>
-                         <div className={styles.formRow}> <div className={styles.formGroup}><label>Street Address*</label><input name="EMPLOYER_STREET_ADDRESS" value={safeValue(employerData.EMPLOYER_STREET_ADDRESS)} onChange={handleChange} disabled={disabled} required/></div> <div className={styles.formGroup}><label>Suite</label><input name="EMPLOYER_SUITE" value={safeValue(employerData.EMPLOYER_SUITE)} onChange={handleChange} disabled={disabled} /></div> </div>
-                         <div className={styles.formRow}> <div className={styles.formGroup}><label>City*</label><input name="EMPLOYER_CITY" value={safeValue(employerData.EMPLOYER_CITY)} onChange={handleChange} disabled={disabled} required/></div> <div className={styles.formGroup}><label>State*</label><input name="EMPLOYER_STATE" value={safeValue(employerData.EMPLOYER_STATE)} onChange={handleChange} disabled={disabled} required/></div> <div className={styles.formGroup}><label>ZIP Code*</label><input name="EMPLOYER_ZIP" value={safeValue(employerData.EMPLOYER_ZIP)} onChange={handleChange} disabled={disabled} required/></div> </div>
-                         <div className={styles.formRow}> <div className={styles.formGroup}><label># Full-Time Employees (US)*</label><input type="number" name="EMPLOYER_NUM_FT_EMPLOYEES" value={safeValue(employerData.EMPLOYER_NUM_FT_EMPLOYEES)} onChange={handleChange} disabled={disabled} required min="0"/></div> <div className={styles.formGroup}><label>NAICS Code*</label><input name="EMPLOYER_NAICS_CODE" value={safeValue(employerData.EMPLOYER_NAICS_CODE)} onChange={handleChange} disabled={disabled} required/></div> <div className={styles.formGroup}><label>OPT Hours/Week* (min 20)</label><input type="number" name="OPT_HOURS_PER_WEEK" value={safeValue(employerData.OPT_HOURS_PER_WEEK)} onChange={handleChange} disabled={disabled} required min="20"/></div> </div>
-                         <div className={styles.formRow}> <div className={styles.formGroup}><label>Start Date of Employment*</label><input type="date" name="START_DATE_OF_EMPLOYMENT" value={safeValue(employerData.START_DATE_OF_EMPLOYMENT)} onChange={handleChange} disabled={disabled} required/></div> <div className={styles.formGroup}><label>Salary Amount*</label><input type="number" step="0.01" name="SALARY_AMOUNT" value={safeValue(employerData.SALARY_AMOUNT)} onChange={handleChange} disabled={disabled} required min="0"/></div> <div className={styles.formGroup}><label>Salary Frequency*</label><input name="SALARY_FREQUENCY" value={safeValue(employerData.SALARY_FREQUENCY)} onChange={handleChange} disabled={disabled} required placeholder="e.g., Monthly"/></div> </div>
-                         <h4>Other Compensation</h4>
-                         <div className={styles.formRow}> <div className={styles.formGroup}><label>1.</label><input name="OTHER_COMPENSATION_1" value={safeValue(employerData.OTHER_COMPENSATION_1)} onChange={handleChange} disabled={disabled} /></div> <div className={styles.formGroup}><label>2.</label><input name="OTHER_COMPENSATION_2" value={safeValue(employerData.OTHER_COMPENSATION_2)} onChange={handleChange} disabled={disabled} /></div> <div className={styles.formGroup}><label>3.</label><input name="OTHER_COMPENSATION_3" value={safeValue(employerData.OTHER_COMPENSATION_3)} onChange={handleChange} disabled={disabled} /></div> <div className={styles.formGroup}><label>4.</label><input name="OTHER_COMPENSATION_4" value={safeValue(employerData.OTHER_COMPENSATION_4)} onChange={handleChange} disabled={disabled} /></div> </div>
-
-                        {/* Section 4 Inputs */}
-                        <h4 style={{marginTop: '20px'}}>Section 4: Employer Certification</h4>
-                         <div className={styles.formRow}> <div className={styles.formGroup}> <label>Printed Name and Title of Employer Official*</label> <input name="EMPLOYER_OFFICIAL_PRINTED_NAME_TITLE" value={safeValue(employerData.EMPLOYER_OFFICIAL_PRINTED_NAME_TITLE)} onChange={handleChange} disabled={disabled} required/> </div> <div className={styles.formGroup}> <label>Printed Name of Employing Organization</label> <input name="EMPLOYER_PRINTED_NAME_ORG" value={safeValue(employerData.EMPLOYER_PRINTED_NAME_ORG)} onChange={handleChange} disabled={disabled} /> </div> </div>
-                         <div className={styles.formRow}> <div className={styles.formGroup}> <label>Date*</label> <input type="date" name="EMPLOYER_OFFICIAL_SIGNATURE_DATE" value={safeValue(employerData.EMPLOYER_OFFICIAL_SIGNATURE_DATE)} onChange={handleChange} disabled={disabled} required/> </div> </div>
-                         <div className={styles.formGroup}> <label>Signature of Employer Official*</label> <div className={styles.signatureCanvasWrapper}> <SignatureCanvas ref={sigCanvasSec4} canvasProps={{ className: styles.signatureCanvas }} /> </div> <button type="button" onClick={() => clearSignature(sigCanvasSec4)} className={`${styles.button} ${styles.clearButton}`}>Clear Signature</button> </div>
-                         <div className={styles.formButtons}> <button onClick={handleSubmitStep} className={`${styles.button} ${styles.saveButton}`} disabled={isSaving}> {isSaving ? 'Submitting...' : 'Submit Section 3 & 4'} </button> <button type="button" onClick={onBack} className={`${styles.button} ${styles.cancelButton}`} disabled={isSaving}> Cancel </button> </div>
-                    </>
-                 ) : ( // Read-only view
-                     <div className={styles.infoGrid}>
-                         {/* Section 3 Read-only */}
-                         <div className={styles.infoItem}><label>Employer Name:</label><span>{safeValue(form?.EMPLOYER_NAME)}</span></div> <div className={styles.infoItem}><label>EIN:</label><span>{safeValue(form?.EMPLOYER_EIN)}</span></div> <div className={`${styles.infoItem} ${styles.infoItemFullWidth}`}><label>Address:</label><span>{`${safeValue(form?.EMPLOYER_STREET_ADDRESS)} ${safeValue(form?.EMPLOYER_SUITE)}, ${safeValue(form?.EMPLOYER_CITY)}, ${safeValue(form?.EMPLOYER_STATE)} ${safeValue(form?.EMPLOYER_ZIP)}`}</span></div> <div className={styles.infoItem}><label>Start Date:</label><span>{formatDateDisplay(form?.START_DATE_OF_EMPLOYMENT)}</span></div> <div className={styles.infoItem}><label>Salary:</label><span>{`${safeValue(form?.SALARY_AMOUNT)} ${safeValue(form?.SALARY_FREQUENCY)}`}</span></div>
-                         {/* ... other Sec 3 read-only fields ... */}
-                         {/* Section 4 Read-only */}
-                         <div className={styles.infoItem}><label>Official Name/Title:</label><span>{safeValue(form?.EMPLOYER_OFFICIAL_PRINTED_NAME_TITLE)}</span></div> <div className={styles.infoItem}><label>Organization Name:</label><span>{safeValue(form?.EMPLOYER_PRINTED_NAME_ORG)}</span></div> <div className={styles.infoItem}><label>Signature Date:</label><span>{formatDateDisplay(form?.EMPLOYER_OFFICIAL_SIGNATURE_DATE)}</span></div>
-                         {form?.EMPLOYER_OFFICIAL_SIGNATURE_URL && ( <div className={`${styles.infoItem} ${styles.infoItemFullWidth}`}> <label>Official Signature:</label> <div className={styles.signatureDisplay}> <img src={form.EMPLOYER_OFFICIAL_SIGNATURE_URL} alt="Employer Signature" style={{ maxHeight: '80px', border: '1px solid #ccc' }}/> </div> </div> )}
-                    </div>
-                 )}
+    // --- Page Render Functions ---
+    const renderPage1 = () => (
+        <>
+            <div className={i983_styles.i983_formSection}>
+                {/* --- Section 1: Student Information --- */}
+                <h3>Section 1: Student Information</h3>
+                <div className={i983_styles.i983_formRow}>
+                    <div className={i983_styles.i983_formGroup}><label>Student Name</label><input name="STUDENT_NAME" value={safeValue(formData.STUDENT_NAME)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                    <div className={i983_styles.i983_formGroup}><label>Student Email</label><input type="email" name="STUDENT_EMAIL" value={safeValue(formData.STUDENT_EMAIL)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                </div>
+                {/* ... (all other Section 1 fields) ... */}
+                <div className={i983_styles.i983_formRow}>
+                    <div className={i983_styles.i983_formGroup}><label>School Recommending STEM OPT</label><input name="SCHOOL_RECOMMENDING" value={safeValue(formData.SCHOOL_RECOMMENDING)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                    <div className={i983_styles.i983_formGroup}><label>School Where STEM Degree Was Earned</label><input name="SCHOOL_DEGREE_EARNED" value={safeValue(formData.SCHOOL_DEGREE_EARNED)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                </div>
+                <div className={i983_styles.i983_formRow}>
+                    <div className={i983_styles.i983_formGroup}><label>SEVIS School Code (Recommending)</label><input name="SCHOOL_CODE_RECOMMENDING" value={safeValue(formData.SCHOOL_CODE_RECOMMENDING)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                    <div className={i983_styles.i983_formGroup}><label>Student SEVIS ID No.</label><input name="STUDENT_SEVIS_ID" value={safeValue(formData.STUDENT_SEVIS_ID)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                </div>
+                <div className={i983_styles.i983_formGroup}>
+                    <label>DSO Name and Contact Information</label>
+                    <textarea name="DSO_NAME_CONTACT" value={safeValue(formData.DSO_NAME_CONTACT)} onChange={handleChange} disabled={isSaving || isGenerating} rows={3} />
+                </div>
+                <div className={i983_styles.i983_formRow}>
+                    <div className={i983_styles.i983_formGroup}><label>STEM OPT Period: From</label><input type="date" name="STEM_OPT_START_DATE" value={safeValue(formData.STEM_OPT_START_DATE)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                    <div className={i983_styles.i983_formGroup}><label>STEM OPT Period: To</label><input type="date" name="STEM_OPT_END_DATE" value={safeValue(formData.STEM_OPT_END_DATE)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                </div>
+                <div className={i983_styles.i983_formGroup}>
+                    <label>Qualifying Major and CIP Code</label>
+                    <input name="QUALIFYING_MAJOR_CIP" value={safeValue(formData.QUALIFYING_MAJOR_CIP)} onChange={handleChange} disabled={isSaving || isGenerating} />
+                </div>
+                <div className={i983_styles.i983_formRow}>
+                    <div className={i983_styles.i983_formGroup}><label>Level/Type of Qualifying Degree</label><input name="QUALIFYING_DEGREE_LEVEL" value={safeValue(formData.QUALIFYING_DEGREE_LEVEL)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                    <div className={i983_styles.i983_formGroup}><label>Date Awarded</label><input type="date" name="QUALIFYING_DEGREE_DATE" value={safeValue(formData.QUALIFYING_DEGREE_DATE)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                </div>
+                <div className={i983_styles.i983_formRow}>
+                    <div className={i983_styles.i983_formGroup}><label><input type="checkbox" name="BASED_ON_PRIOR_DEGREE" checked={!!formData.BASED_ON_PRIOR_DEGREE} onChange={handleChange} disabled={isSaving || isGenerating} className={i983_styles.i983_formCheckbox} /> Based on Prior Degree?</label></div>
+                    <div className={i983_styles.i983_formGroup}><label>Employment Authorization Number</label><input name="EMPLOYMENT_AUTH_NUMBER" value={safeValue(formData.EMPLOYMENT_AUTH_NUMBER)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                </div>
             </div>
-        );
-     };
 
-     const renderReadOnlySection5Student = () => (
-         // Show if status is past student submitting names/training
-        (status === 'PAGE3_SEC5_SITE_COMPLETE' || status === 'PAGE3_SEC5_TRAINING_COMPLETE' || status === 'PAGE3_SEC5_OVERSIGHT_COMPLETE' || status === 'PAGE4_SEC6_COMPLETE' || status?.startsWith('EVAL') || status === 'FORM_COMPLETED') && (
-             <div style={{marginTop: '20px', paddingTop:'15px', borderTop: '1px dashed #ccc'}}>
-                 <h4>Section 5: Training Plan (Student Input - Read-Only)</h4>
-                 <div className={styles.infoGrid}>
-                    <div className={styles.infoItem}><label>Student Name (Sec 5):</label><span>{safeValue(form?.SEC5_STUDENT_NAME)}</span></div>
-                    <div className={styles.infoItem}><label>Employer Name (Sec 5):</label><span>{safeValue(form?.SEC5_EMPLOYER_NAME)}</span></div>
-                    <div className={`${styles.infoItem} ${styles.infoItemFullWidth}`}><label>Student Role:</label><span style={{whiteSpace: 'pre-wrap'}}>{safeValue(form?.SEC5_STUDENT_ROLE) || 'N/A'}</span></div>
-                    <div className={`${styles.infoItem} ${styles.infoItemFullWidth}`}><label>Goals and Objectives:</label><span style={{whiteSpace: 'pre-wrap'}}>{safeValue(form?.SEC5_GOALS_OBJECTIVES) || 'N/A'}</span></div>
-                 </div>
-             </div>
-        )
-     );
+            {/* --- Section 2: Student Certification (Read-Only) --- */}
+            <div className={i983_styles.i983_formSection}>
+                <h3>Section 2: Student Certification</h3>
+                <div className={i983_styles.i983_formRow}>
+                    <div className={i983_styles.i983_formGroup}><label>Printed Name</label><input name="STUDENT_PRINTED_NAME" value={safeValue(formData.STUDENT_PRINTED_NAME)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                    <div className={i983_styles.i983_formGroup}><label>Date</label><input type="date" name="STUDENT_SIGNATURE_DATE" value={safeValue(formData.STUDENT_SIGNATURE_DATE)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                </div>
+                {renderReadOnlySignature(
+                    "Student Signature (Read-Only)",
+                    existingForm?.STUDENT_SIGNATURE_URL,
+                    existingForm?.STUDENT_SIGNATURE_DATE,
+                    existingForm?.STUDENT_PRINTED_NAME
+                )}
+            </div>
+            {renderPageButtons()}
+        </>
+    );
 
-     const renderSection5Employer = () => {
-        const disabledSite = !canEditSec5Site;
-        const disabledOversight = !canEditSec5Oversight;
-         // Show section container if status >= PAGE3_SEC5_NAMES_COMPLETE
-         if (status === 'DRAFT' || status === 'PAGE1_COMPLETE' || status === 'PAGE2_COMPLETE') return null;
+    const renderPage2 = () => (
+        <>
+            {/* --- Section 3: Employer Information --- */}
+            <div className={i983_styles.i983_formSection}>
+                <h3>Section 3: Employer Information</h3>
+                <div className={i983_styles.i983_formRow}>
+                    <div className={i983_styles.i983_formGroup}><label>Employer Name</label><input name="EMPLOYER_NAME" value={safeValue(formData.EMPLOYER_NAME)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                    <div className={i983_styles.i983_formGroup}><label>Employer Website</label><input name="EMPLOYER_WEBSITE" value={safeValue(formData.EMPLOYER_WEBSITE)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                    <div className={i983_styles.i983_formGroup}><label>Employer EIN</label><input name="EMPLOYER_EIN" value={safeValue(formData.EMPLOYER_EIN)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                </div>
+                {/* ... (all other Section 3 fields) ... */}
+                <div className={i983_styles.i983_formRow}>
+                    <div className={i983_styles.i983_formGroup}><label>Street Address</label><input name="EMPLOYER_STREET_ADDRESS" value={safeValue(formData.EMPLOYER_STREET_ADDRESS)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                    <div className={i983_styles.i983_formGroup}><label>Suite</label><input name="EMPLOYER_SUITE" value={safeValue(formData.EMPLOYER_SUITE)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                </div>
+                <div className={i983_styles.i983_formRow}>
+                    <div className={i983_styles.i983_formGroup}><label>City</label><input name="EMPLOYER_CITY" value={safeValue(formData.EMPLOYER_CITY)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                    <div className={i983_styles.i983_formGroup}><label>State</label><input name="EMPLOYER_STATE" value={safeValue(formData.EMPLOYER_STATE)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                    <div className={i983_styles.i983_formGroup}><label>ZIP Code</label><input name="EMPLOYER_ZIP" value={safeValue(formData.EMPLOYER_ZIP)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                </div>
+                <div className={i983_styles.i983_formRow}>
+                    <div className={i983_styles.i983_formGroup}><label># Full-Time Employees (US)</label><input type="number" name="EMPLOYER_NUM_FT_EMPLOYEES" value={safeValue(formData.EMPLOYER_NUM_FT_EMPLOYEES)} onChange={handleChange} disabled={isSaving || isGenerating} min="0"/></div>
+                    <div className={i983_styles.i983_formGroup}><label>NAICS Code</label><input name="EMPLOYER_NAICS_CODE" value={safeValue(formData.EMPLOYER_NAICS_CODE)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                    <div className={i983_styles.i983_formGroup}><label>OPT Hours/Week (min 20)</label><input type="number" name="OPT_HOURS_PER_WEEK" value={safeValue(formData.OPT_HOURS_PER_WEEK)} onChange={handleChange} disabled={isSaving || isGenerating} min="20"/></div>
+                </div>
+                <div className={i983_styles.i983_formRow}>
+                    <div className={i983_styles.i983_formGroup}><label>Start Date of Employment</label><input type="date" name="START_DATE_OF_EMPLOYMENT" value={safeValue(formData.START_DATE_OF_EMPLOYMENT)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                    <div className={i983_styles.i983_formGroup}><label>Salary Amount</label><input type="number" step="0.01" name="SALARY_AMOUNT" value={safeValue(formData.SALARY_AMOUNT)} onChange={handleChange} disabled={isSaving || isGenerating} min="0"/></div>
+                    <div className={i983_styles.i983_formGroup}><label>Salary Frequency</label><input name="SALARY_FREQUENCY" value={safeValue(formData.SALARY_FREQUENCY)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                </div>
+                <h4>Other Compensation</h4>
+                <div className={i983_styles.i983_formRow}>
+                    <div className={i983_styles.i983_formGroup}><label>1.</label><input name="OTHER_COMPENSATION_1" value={safeValue(formData.OTHER_COMPENSATION_1)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                    <div className={i983_styles.i983_formGroup}><label>2.</label><input name="OTHER_COMPENSATION_2" value={safeValue(formData.OTHER_COMPENSATION_2)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                    <div className={i983_styles.i983_formGroup}><label>3.</label><input name="OTHER_COMPENSATION_3" value={safeValue(formData.OTHER_COMPENSATION_3)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                    <div className={i983_styles.i983_formGroup}><label>4.</label><input name="OTHER_COMPENSATION_4" value={safeValue(formData.OTHER_COMPENSATION_4)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                </div>
+            </div>
 
-         return (
-             <div className={styles.formSection}>
-                 <h3>Section 5: Employer Site & Training Info</h3>
-
-                {/* Site Information - Editable at PAGE3_SEC5_NAMES_COMPLETE */}
-                {(status === 'PAGE3_SEC5_NAMES_COMPLETE' || canEditSec5Site || status === 'PAGE3_SEC5_SITE_COMPLETE' || status === 'PAGE3_SEC5_TRAINING_COMPLETE' || status === 'PAGE3_SEC5_OVERSIGHT_COMPLETE' || status === 'PAGE4_SEC6_COMPLETE' || status?.startsWith('EVAL') || status === 'FORM_COMPLETED') && (
-                 <>
-                    <h4>Site Information</h4>
-                    {canEditSec5Site ? (
-                        <>
-                            <div className={styles.formRow}> <div className={styles.formGroup}><label>Site Name*</label><input name="SEC5_SITE_NAME" value={safeValue(employerData.SEC5_SITE_NAME)} onChange={handleChange} disabled={disabledSite} required/></div> </div>
-                            <div className={styles.formGroup}> <label>Site Address (Street, City, State, ZIP)*</label> <textarea name="SEC5_SITE_ADDRESS" value={safeValue(employerData.SEC5_SITE_ADDRESS)} onChange={handleChange} disabled={disabledSite} required rows="3"/> </div>
-                            <div className={styles.formRow}> <div className={styles.formGroup}><label>Name of Official*</label><input name="SEC5_OFFICIAL_NAME" value={safeValue(employerData.SEC5_OFFICIAL_NAME)} onChange={handleChange} disabled={disabledSite} required/></div> <div className={styles.formGroup}><label>Official's Title*</label><input name="SEC5_OFFICIAL_TITLE" value={safeValue(employerData.SEC5_OFFICIAL_TITLE)} onChange={handleChange} disabled={disabledSite} required/></div> </div>
-                            <div className={styles.formRow}> <div className={styles.formGroup}><label>Official's Email*</label><input type="email" name="SEC5_OFFICIAL_EMAIL" value={safeValue(employerData.SEC5_OFFICIAL_EMAIL)} onChange={handleChange} disabled={disabledSite} required/></div> <div className={styles.formGroup}><label>Official's Phone Number*</label><input type="tel" name="SEC5_OFFICIAL_PHONE" value={safeValue(employerData.SEC5_OFFICIAL_PHONE)} onChange={handleChange} disabled={disabledSite} required/></div> </div>
-                            <div className={styles.formButtons}> <button onClick={handleSubmitStep} className={`${styles.button} ${styles.saveButton}`} disabled={isSaving}> {isSaving ? 'Submitting...' : 'Submit Section 5 Site Info'} </button> <button type="button" onClick={onBack} className={`${styles.button} ${styles.cancelButton}`} disabled={isSaving}> Cancel </button> </div>
-                        </>
-                    ) : ( // Read-only Site Info
-                        <div className={styles.infoGrid}>
-                            <div className={styles.infoItem}><label>Site Name:</label><span>{safeValue(form?.SEC5_SITE_NAME)}</span></div> <div className={`${styles.infoItem} ${styles.infoItemFullWidth}`}><label>Site Address:</label><span>{safeValue(form?.SEC5_SITE_ADDRESS)}</span></div> <div className={styles.infoItem}><label>Official Name:</label><span>{safeValue(form?.SEC5_OFFICIAL_NAME)}</span></div> <div className={styles.infoItem}><label>Official Title:</label><span>{safeValue(form?.SEC5_OFFICIAL_TITLE)}</span></div> <div className={styles.infoItem}><label>Official Email:</label><span>{safeValue(form?.SEC5_OFFICIAL_EMAIL)}</span></div> <div className={styles.infoItem}><label>Official Phone:</label><span>{safeValue(form?.SEC5_OFFICIAL_PHONE)}</span></div>
+            {/* --- Section 4: Employer Certification (Live) --- */}
+            <div className={i983_styles.i983_formSection}>
+                <h3>Section 4: Employer Certification</h3>
+                <div className={i983_styles.i983_formRow}>
+                    <div className={i983_styles.i983_formGroup}><label>Printed Name and Title of Employer Official</label><input name="EMPLOYER_OFFICIAL_PRINTED_NAME_TITLE" value={safeValue(formData.EMPLOYER_OFFICIAL_PRINTED_NAME_TITLE)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                    <div className={i983_styles.i983_formGroup}><label>Printed Name of Employing Organization</label><input name="EMPLOYER_PRINTED_NAME_ORG" value={safeValue(formData.EMPLOYER_PRINTED_NAME_ORG, orgName)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                </div>
+                <div className={i983_styles.i983_formRow}>
+                    <div className={i983_styles.i983_formGroup}><label>Date</label><input type="date" name="EMPLOYER_OFFICIAL_SIGNATURE_DATE" value={safeValue(formData.EMPLOYER_OFFICIAL_SIGNATURE_DATE)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                </div>
+                <div className={i983_styles.i983_formGroup}>
+                    <label>Signature of Employer Official*</label>
+                    {existingForm?.EMPLOYER_OFFICIAL_SIGNATURE_URL && (
+                        <div className={i983_styles.i983_signatureDisplay} style={{ marginBottom: '10px' }}>
+                            <p>Current Signature:</p>
+                            <img src={existingForm.EMPLOYER_OFFICIAL_SIGNATURE_URL} alt="Current Sig" style={{ maxHeight: '60px', border: '1px solid #ccc' }}/>
                         </div>
                     )}
-                  </>
-                 )}
-
-                 {/* Render student read-only parts after site info */}
-                 {renderReadOnlySection5Student()}
-
-                 {/* Training Oversight & Measures - Editable at PAGE3_SEC5_TRAINING_COMPLETE */}
-                  {(status === 'PAGE3_SEC5_TRAINING_COMPLETE' || canEditSec5Oversight || status === 'PAGE3_SEC5_OVERSIGHT_COMPLETE' || status === 'PAGE4_SEC6_COMPLETE' || status?.startsWith('EVAL') || status === 'FORM_COMPLETED') && (
-                    <>
-                        <h4 style={{marginTop: '30px'}}>Training Oversight, Measures, and Remarks</h4>
-                        {canEditSec5Oversight ? (
-                            <>
-                                 <div className={styles.formGroup}> <label>Employer Oversight*</label> <textarea name="SEC5_EMPLOYER_OVERSIGHT" value={safeValue(employerData.SEC5_EMPLOYER_OVERSIGHT)} onChange={handleChange} disabled={disabledOversight} required rows="5" /> </div>
-                                 <div className={styles.formGroup}> <label>Measures and Assessments*</label> <textarea name="SEC5_MEASURES_ASSESSMENTS" value={safeValue(employerData.SEC5_MEASURES_ASSESSMENTS)} onChange={handleChange} disabled={disabledOversight} required rows="5" /> </div>
-                                 <div className={styles.formGroup}> <label>Additional Remarks (Optional)</label> <textarea name="SEC5_ADDITIONAL_REMARKS" value={safeValue(employerData.SEC5_ADDITIONAL_REMARKS)} onChange={handleChange} disabled={disabledOversight} rows="4" /> </div>
-
-                                 <div className={styles.formButtons}> <button onClick={handleSubmitStep} className={`${styles.button} ${styles.saveButton}`} disabled={isSaving}> {isSaving ? 'Submitting...' : 'Submit Section 5 Oversight/Measures'} </button> <button type="button" onClick={onBack} className={`${styles.button} ${styles.cancelButton}`} disabled={isSaving}> Cancel </button> </div>
-                            </>
-                         ) : ( // Read-only Oversight/Measures/Remarks
-                             <div className={styles.infoGrid}>
-                                 <div className={`${styles.infoItem} ${styles.infoItemFullWidth}`}><label>Employer Oversight:</label><span style={{whiteSpace: 'pre-wrap'}}>{safeValue(form?.SEC5_EMPLOYER_OVERSIGHT) || 'N/A'}</span></div>
-                                 <div className={`${styles.infoItem} ${styles.infoItemFullWidth}`}><label>Measures and Assessments:</label><span style={{whiteSpace: 'pre-wrap'}}>{safeValue(form?.SEC5_MEASURES_ASSESSMENTS) || 'N/A'}</span></div>
-                                 <div className={`${styles.infoItem} ${styles.infoItemFullWidth}`}><label>Additional Remarks:</label><span style={{whiteSpace: 'pre-wrap'}}>{safeValue(form?.SEC5_ADDITIONAL_REMARKS) || 'N/A'}</span></div>
-                             </div>
-                         )}
-                    </>
-                )}
-             </div>
-        );
-     };
-
-     const renderSection6 = () => {
-         const disabled = !canEditSec6;
-         // Render if status >= PAGE3_SEC5_OVERSIGHT_COMPLETE
-          if (status === 'DRAFT' || status === 'PAGE1_COMPLETE' || status === 'PAGE2_COMPLETE' || status === 'PAGE3_SEC5_NAMES_COMPLETE' || status === 'PAGE3_SEC5_SITE_COMPLETE' || status === 'PAGE3_SEC5_TRAINING_COMPLETE') return null;
-
-         return (
-            <div className={styles.formSection}>
-                 <h3>Section 6: Employer Official Certification</h3>
-                {canEditSec6 ? (
-                    <>
-                         {/* Additional remarks already covered in Sec 5 */}
-                         <div className={styles.formRow}>
-                            <div className={styles.formGroup}> <label>Printed Name and Title of Employer Official*</label> <input name="EMPLOYER_OFFICIAL_SEC6_PRINTED_NAME_TITLE" value={safeValue(employerData.EMPLOYER_OFFICIAL_SEC6_PRINTED_NAME_TITLE)} onChange={handleChange} disabled={disabled} required/> </div>
-                             <div className={styles.formGroup}> <label>Date*</label> <input type="date" name="EMPLOYER_OFFICIAL_SEC6_SIGNATURE_DATE" value={safeValue(employerData.EMPLOYER_OFFICIAL_SEC6_SIGNATURE_DATE)} onChange={handleChange} disabled={disabled} required/> </div>
-                         </div>
-                         <div className={styles.formGroup}> <label>Signature of Employer Official*</label> <div className={styles.signatureCanvasWrapper}> <SignatureCanvas ref={sigCanvasSec6} canvasProps={{ className: styles.signatureCanvas }} /> </div> <button type="button" onClick={() => clearSignature(sigCanvasSec6)} className={`${styles.button} ${styles.clearButton}`}>Clear Signature</button> </div>
-                         <div className={styles.formButtons}> <button onClick={handleSubmitStep} className={`${styles.button} ${styles.saveButton}`} disabled={isSaving}> {isSaving ? 'Submitting...' : 'Submit Section 6'} </button> <button type="button" onClick={onBack} className={`${styles.button} ${styles.cancelButton}`} disabled={isSaving}> Cancel </button> </div>
-                    </>
-                 ) : ( // Read-only Sec 6
-                     <div className={styles.infoGrid}>
-                         <div className={styles.infoItem}><label>Official Name/Title:</label><span>{safeValue(form?.EMPLOYER_OFFICIAL_SEC6_PRINTED_NAME_TITLE)}</span></div>
-                         <div className={styles.infoItem}><label>Signature Date:</label><span>{formatDateDisplay(form?.EMPLOYER_OFFICIAL_SEC6_SIGNATURE_DATE)}</span></div>
-                         {form?.EMPLOYER_OFFICIAL_SEC6_SIGNATURE_URL && ( <div className={`${styles.infoItem} ${styles.infoItemFullWidth}`}> <label>Official Signature (Sec 6):</label> <div className={styles.signatureDisplay}> <img src={form.EMPLOYER_OFFICIAL_SEC6_SIGNATURE_URL} alt="Section 6 Signature" style={{ maxHeight: '80px', border: '1px solid #ccc' }}/> </div> </div> )}
-                     </div>
-                 )}
+                    <div className={i983_styles.i983_signatureCanvasWrapper}><SignatureCanvas ref={sigCanvasSec4} canvasProps={{ className: i983_styles.i983_signatureCanvas }} /></div>
+                    <button type="button" onClick={() => clearSignature(sigCanvasSec4)} className={`${i983_styles.i983_button} ${i983_styles.i983_clearButton}`}>Clear Signature</button>
+                </div>
             </div>
-        );
-     }
+            {renderPageButtons()}
+        </>
+    );
+    
+    const renderPage3 = () => (
+        <>
+            {/* --- Section 5: Training Plan --- */}
+            <div className={i983_styles.i983_formSection}>
+                <h3>Section 5: Training Plan</h3>
+                <div className={i983_styles.i983_formRow}>
+                    <div className={i983_styles.i983_formGroup}><label>Student Name (Sec 5)</label><input name="SEC5_STUDENT_NAME" value={safeValue(formData.SEC5_STUDENT_NAME)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                    <div className={i983_styles.i983_formGroup}><label>Employer Name (Sec 5)</label><input name="SEC5_EMPLOYER_NAME" value={safeValue(formData.SEC5_EMPLOYER_NAME)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                </div>
+                <h4>Employer Site Information</h4>
+                <div className={i983_styles.i983_formRow}>
+                    <div className={i983_styles.i983_formGroup}><label>Site Name</label><input name="SEC5_SITE_NAME" value={safeValue(formData.SEC5_SITE_NAME)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                </div>
+                <div className={i983_styles.i983_formGroup}>
+                    <label>Site Address (Street, City, State, ZIP)</label>
+                    <textarea name="SEC5_SITE_ADDRESS" value={safeValue(formData.SEC5_SITE_ADDRESS)} onChange={handleChange} disabled={isSaving || isGenerating} rows={3}/>
+                </div>
+                <div className={i983_styles.i983_formRow}>
+                    <div className={i983_styles.i983_formGroup}><label>Name of Official</label><input name="SEC5_OFFICIAL_NAME" value={safeValue(formData.SEC5_OFFICIAL_NAME)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                    <div className={i983_styles.i983_formGroup}><label>Official's Title</label><input name="SEC5_OFFICIAL_TITLE" value={safeValue(formData.SEC5_OFFICIAL_TITLE)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                </div>
+                <div className={i983_styles.i983_formRow}>
+                    <div className={i983_styles.i983_formGroup}><label>Official's Email</label><input type="email" name="SEC5_OFFICIAL_EMAIL" value={safeValue(formData.SEC5_OFFICIAL_EMAIL)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                    <div className={i983_styles.i983_formGroup}><label>Official's Phone Number</label><input type="tel" name="SEC5_OFFICIAL_PHONE" value={safeValue(formData.SEC5_OFFICIAL_PHONE)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                </div>
+                
+                <h4 style={{marginTop: '20px'}}>Training Details</h4>
+                <div className={i983_styles.i983_formGroup}>
+                    <label>Student Role</label>
+                    <textarea name="SEC5_STUDENT_ROLE" value={safeValue(formData.SEC5_STUDENT_ROLE)} onChange={handleChange} disabled={isSaving || isGenerating} rows={4} />
+                </div>
+                <div className={i983_styles.i983_formGroup}>
+                    <label>Goals and Objectives</label>
+                    <textarea name="SEC5_GOALS_OBJECTIVES" value={safeValue(formData.SEC5_GOALS_OBJECTIVES)} onChange={handleChange} disabled={isSaving || isGenerating} rows={6} />
+                </div>
+                <div className={i983_styles.i983_formGroup}>
+                    <label>Employer Oversight</label>
+                    <textarea name="SEC5_EMPLOYER_OVERSIGHT" value={safeValue(formData.SEC5_EMPLOYER_OVERSIGHT)} onChange={handleChange} disabled={isSaving || isGenerating} rows={5} />
+                </div>
+                <div className={i983_styles.i983_formGroup}>
+                    <label>Measures and Assessments</label>
+                    <textarea name="SEC5_MEASURES_ASSESSMENTS" value={safeValue(formData.SEC5_MEASURES_ASSESSMENTS)} onChange={handleChange} disabled={isSaving || isGenerating} rows={5} />
+                </div>
+            </div>
+            {renderPageButtons()}
+        </>
+    );
 
-     // --- UPDATED Evaluation Rendering ---
-     const renderEvaluations = () => {
-         // Show Eval sections container if status is at or beyond the start of Eval 1
-         const showEvalContainer = status === 'PAGE4_SEC6_COMPLETE' || status?.startsWith('EVAL') || status === 'FORM_COMPLETED';
-         if (!showEvalContainer) return null;
+    const renderPage4 = () => (
+        <>
+            {/* --- Section 5 (cont.): Additional Remarks --- */}
+            <div className={i983_styles.i983_formSection}>
+                <h3>Section 5: Additional Remarks</h3>
+                <div className={i983_styles.i983_formGroup}>
+                    <label>Additional Remarks (Optional)</label>
+                    <textarea name="SEC5_ADDITIONAL_REMARKS" value={safeValue(formData.SEC5_ADDITIONAL_REMARKS)} onChange={handleChange} disabled={isSaving || isGenerating} rows={4} />
+                </div>
+            </div>
 
-         const renderSingleEvaluation = (evalNumber, canEditInitiate, canEditSign, sigRef) => {
-             const fromDateKey = `EVAL${evalNumber}_FROM_DATE`;
-             const toDateKey = `EVAL${evalNumber}_TO_DATE`;
-             // Assuming EVALx_STUDENT_EVALUATION stores employer's comments during initiation, student's after they sign
-             const evalTextKey = `EVAL${evalNumber}_STUDENT_EVALUATION`;
-             const studentSigUrlKey = `EVAL${evalNumber}_STUDENT_SIGNATURE_URL`;
-             const studentSigDateKey = `EVAL${evalNumber}_STUDENT_SIGNATURE_DATE`;
-             const employerSigDateKey = `EVAL${evalNumber}_EMPLOYER_SIGNATURE_DATE`;
-             const employerSigUrlKey = `EVAL${evalNumber}_EMPLOYER_SIGNATURE_URL`;
-             // Attempt to reuse Sec 6 name/title, otherwise use Sec 4? Needs confirmation which official signs Evals. Assuming Sec 6 official for now.
-             const employerPrintedNameKey = 'EMPLOYER_OFFICIAL_SEC6_PRINTED_NAME_TITLE';
-             const title = evalNumber === 1 ? "First Evaluation" : "Final Evaluation";
-             const studentStatusPending = `EVAL${evalNumber}_PENDING_STUDENT_SIGNATURE`;
-             const employerStatusPending = `EVAL${evalNumber}_PENDING_EMPLOYER_SIGNATURE`;
-             const completeStatus = evalNumber === 1 ? 'EVAL1_COMPLETE' : 'FORM_COMPLETED';
-
-             // Determine visibility
-             const showThisEval = (
-                evalNumber === 1 && (status === 'PAGE4_SEC6_COMPLETE' || status.startsWith('EVAL1') || status.startsWith('EVAL2') || status === 'FORM_COMPLETED')
-             ) || (
-                evalNumber === 2 && (status === 'EVAL1_COMPLETE' || status.startsWith('EVAL2') || status === 'FORM_COMPLETED')
-             );
-
-             if (!showThisEval) return null;
-
-             return (
-                 <div style={{ border: '1px solid #eee', padding: '15px', borderRadius: '5px', marginBottom: '20px' }}>
-                     <h4>{title}</h4>
-
-                     {/* Verifier Inputs: Date Range & Text (Only editable when initiating) */}
-                     {canEditInitiate ? (
-                         <>
-                             <div className={styles.formRow}>
-                                 <div className={styles.formGroup}> <label>Evaluation Period From*</label> <input type="date" name={fromDateKey} value={safeValue(employerData[fromDateKey])} onChange={handleChange} required /> </div>
-                                 <div className={styles.formGroup}> <label>Evaluation Period To*</label> <input type="date" name={toDateKey} value={safeValue(employerData[toDateKey])} onChange={handleChange} required /> </div>
-                             </div>
-                             <div className={styles.formGroup}>
-                                <label>Employer Evaluation / Comments*</label>
-                                <textarea name={evalTextKey} // Reusing field for employer comments
-                                    value={safeValue(employerData[evalTextKey])}
-                                    onChange={handleChange} required rows="5"
-                                    placeholder="Enter evaluation comments regarding student progress for this period."
-                                />
-                             </div>
-                              <div className={styles.formButtons}>
-                                 <button onClick={handleSubmitStep} className={`${styles.button} ${styles.saveButton}`} disabled={isSaving}> {isSaving ? 'Submitting...' : `Initiate ${title} (Send to Student)`} </button>
-                                  <button type="button" onClick={onBack} className={`${styles.button} ${styles.cancelButton}`} disabled={isSaving}>Cancel</button>
-                              </div>
-                         </>
-                     ) : (
-                         // Read-only Dates & Employer Text if already submitted/past this stage
-                          (form?.[fromDateKey] || form?.[toDateKey] || form?.[evalTextKey]) && ( // Show if any data exists
-                             <>
-                                <div className={styles.infoGrid}>
-                                    <div className={styles.infoItem}><label>Eval Period From:</label><span>{formatDateDisplay(form[fromDateKey])}</span></div>
-                                    <div className={styles.infoItem}><label>Eval Period To:</label><span>{formatDateDisplay(form[toDateKey])}</span></div>
-                                </div>
-                                {/* Display Employer's initial comments read-only IF student hasn't signed yet */}
-                                {/* If student HAS signed, their text might overwrite this field depending on backend logic */}
-                                
-                                    <div className={styles.formGroup} style={{marginTop: '15px'}}>
-                                        <label>Employer Evaluation / Comments (Read-Only)</label>
-                                        <textarea value={safeValue(form[evalTextKey])} disabled rows="5"/>
-                                    </div>
-                               
-                            </>
-                          )
-                     )}
-
-                     {/* Student Evaluation & Signature (Read-Only for Verifier) - Show if student has signed */}
-                     {(status === employerStatusPending || status === completeStatus || (evalNumber === 1 && status.startsWith('EVAL2'))) && form?.[studentSigUrlKey] && (
-                        <div style={{ marginTop:'15px', paddingTop: '15px', borderTop:'1px dashed #ccc' }}>
-                             <label style={{fontWeight:'bold'}}>Student Signature (Read-Only)</label>
-                             {/* Display student's eval text (assuming it's in the same field) */}
-                             {/* <div className={styles.formGroup} style={{marginTop: '10px'}}>
-                                 <textarea value={safeValue(form[evalTextKey])} disabled rows="5"/>
-                             </div> */}
-                             <div className={styles.infoGrid}>
-                                <div className={styles.infoItem}><label>Date Signed by Student:</label><span>{formatDateDisplay(form[studentSigDateKey])}</span></div>
-                             </div>
-                            <div className={styles.formGroup} style={{marginTop: '10px'}}>
-                                <label>Student Signature:</label>
-                                <div className={styles.signatureDisplay}>
-                                    <img src={form[studentSigUrlKey]} alt={`Eval ${evalNumber} Student Sig`} style={{maxHeight: '60px', border: '1px solid #ccc'}}/>
-                                </div>
-                            </div>
+            {/* --- Section 6: Employer Official Certification (Live) --- */}
+            <div className={i983_styles.i983_formSection}>
+                <h3>Section 6: Employer Official Certification</h3>
+                <div className={i983_styles.i983_formRow}>
+                    <div className={i983_styles.i983_formGroup}><label>Printed Name and Title of Employer Official</label><input name="EMPLOYER_OFFICIAL_SEC6_PRINTED_NAME_TITLE" value={safeValue(formData.EMPLOYER_OFFICIAL_SEC6_PRINTED_NAME_TITLE)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                    <div className={i983_styles.i983_formGroup}><label>Date</label><input type="date" name="EMPLOYER_OFFICIAL_SEC6_SIGNATURE_DATE" value={safeValue(formData.EMPLOYER_OFFICIAL_SEC6_SIGNATURE_DATE)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                </div>
+                <div className={i983_styles.i983_formGroup}>
+                    <label>Signature of Employer Official*</label>
+                    {existingForm?.EMPLOYER_OFFICIAL_SEC6_SIGNATURE_URL && (
+                        <div className={i983_styles.i983_signatureDisplay} style={{ marginBottom: '10px' }}>
+                            <p>Current Signature:</p>
+                            <img src={existingForm.EMPLOYER_OFFICIAL_SEC6_SIGNATURE_URL} alt="Current Sig" style={{ maxHeight: '60px', border: '1px solid #ccc' }}/>
                         </div>
-                     )}
-
-                     {/* Employer Signature Area - Show when student has signed */}
-                     {(status === employerStatusPending || canEditSign || status === completeStatus || (evalNumber === 1 && status.startsWith('EVAL2'))) && (
-                          canEditSign ? ( // Verifier needs to sign
-                            <div className={styles.formGroup} style={{marginTop: '15px', paddingTop: '15px', borderTop:'1px dashed #ccc'}}>
-                                <label style={{fontWeight:'bold'}}>Employer Signature ({title})*</label>
-                                <div className={styles.formRow}>
-                                     <div className={styles.formGroup}>
-                                         <label>Printed Name & Title</label>
-                                         {/* Use data from state first, fallback to form data from previous steps */}
-                                         <input value={safeValue(employerData[employerPrintedNameKey] || form?.[employerPrintedNameKey])} disabled/>
-                                     </div>
-                                     <div className={styles.formGroup}>
-                                        <label>Date*</label>
-                                        <input type="date" name={employerSigDateKey} value={safeValue(employerData[employerSigDateKey])} onChange={handleChange} required/>
-                                     </div>
-                                 </div>
-                                 <div className={styles.signatureCanvasWrapper} style={{marginTop: '10px'}}>
-                                     <SignatureCanvas ref={sigRef} canvasProps={{ className: styles.signatureCanvas }} />
-                                 </div>
-                                 <button type="button" onClick={() => clearSignature(sigRef)} className={`${styles.button} ${styles.clearButton}`}>Clear</button>
-                                 <div className={styles.formButtons}>
-                                     <button onClick={handleSubmitStep} className={`${styles.button} ${styles.saveButton}`} disabled={isSaving}> {isSaving ? 'Submitting...' : `Submit ${title} Signature`} </button>
-                                     <button type="button" onClick={onBack} className={`${styles.button} ${styles.cancelButton}`} disabled={isSaving}>Cancel</button>
-                                 </div>
-                            </div>
-                         ) : ( // Read-only Employer Signature
-                            form?.[employerSigUrlKey] && (
-                                <div className={styles.formGroup} style={{marginTop: '15px', borderTop:'1px dashed #ccc', paddingTop:'15px'}}>
-                                    <label>Employer Signature ({title})</label>
-                                    <div className={styles.infoGrid}>
-                                        {/* Display the name/title used when signing */}
-                                        <div className={styles.infoItem}><label>Printed Name & Title:</label><span>{safeValue(form[employerPrintedNameKey])}</span></div>
-                                        <div className={styles.infoItem}><label>Date Signed:</label><span>{formatDateDisplay(form[employerSigDateKey])}</span></div>
-                                    </div>
-                                    <div className={styles.signatureDisplay} style={{marginTop:'10px'}}>
-                                        <img src={form[employerSigUrlKey]} alt={`Eval ${evalNumber} Employer Sig`} style={{maxHeight: '80px', border: '1px solid #ccc'}}/>
-                                    </div>
-                                </div>
-                            )
-                         )
-                     )}
-
-                     {/* Message if waiting for student signature */}
-                     {status === studentStatusPending && (
-                         <p style={{fontStyle: 'italic', color: '#555', marginTop: '15px'}}>Waiting for student signature before proceeding.</p>
-                     )}
-                 </div>
-             );
-         };
-
-         return (
-             <div className={styles.formSection}>
-                 <h3>Evaluations</h3>
-                 {renderSingleEvaluation(1, canEditEval1Initiate, canEditEval1Sign, sigCanvasEval1Employer)}
-                 {renderSingleEvaluation(2, canEditEval2Initiate, canEditEval2Sign, sigCanvasEval2Employer)}
-             </div>
-         );
-     };
-
-
-    // --- Main Return ---
-    return (
-        <div className={styles.verificationFormContainer}>
-            {/* Display errors passed from parent using the onError prop */}
-            {/* {error && <div className={styles.errorMessage}><strong>Error:</strong> {error}</div>} */}
-
-            <div className={styles.headerSection}>
-                <h2 className={styles.title}>Verify I-983 Form ({status || 'Loading...'})</h2>
-                <button className={`${styles.button} ${styles.backButton}`} onClick={onBack} disabled={isSaving}>
-                    Back to List
-                </button>
+                    )}
+                    <div className={i983_styles.i983_signatureCanvasWrapper}><SignatureCanvas ref={sigCanvasSec6} canvasProps={{ className: i983_styles.i983_signatureCanvas }} /></div>
+                    <button type="button" onClick={() => clearSignature(sigCanvasSec6)} className={`${i983_styles.i983_button} ${i983_styles.i983_clearButton}`}>Clear Signature</button>
+                </div>
             </div>
+            {renderPageButtons()}
+        </>
+    );
 
-            <div className={styles.formSections}>
-                {renderReadOnlySection1_2()}
-                {renderSection3_4()}
-                {renderSection5Employer()}
-                {renderSection6()}
-                {renderEvaluations()} {/* Render the evaluation section */}
-
-                 {/* Fallback Message if waiting for student */}
-                 {(status === 'PAGE2_COMPLETE' || status === 'PAGE3_SEC5_SITE_COMPLETE') && (
-                    <div className={styles.formSection}>
-                         <p style={{fontStyle: 'italic', color: '#555'}}>Waiting for student action before proceeding.</p>
-                    </div>
+    const renderPage5 = () => (
+        <>
+            {/* --- Evaluation 1 --- */}
+            <div className={i983_styles.i983_formSection}>
+                <h3>Evaluation on Student Progress</h3>
+                <div className={i983_styles.i983_formRow}>
+                    <div className={i983_styles.i983_formGroup}><label>Evaluation Period From</label><input type="date" name="EVAL1_FROM_DATE" value={safeValue(formData.EVAL1_FROM_DATE)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                    <div className={i983_styles.i983_formGroup}><label>Evaluation Period To</label><input type="date" name="EVAL1_TO_DATE" value={safeValue(formData.EVAL1_TO_DATE)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                </div>
+                <div className={i983_styles.i983_formGroup}>
+                    <label>Evaluation Text (Student/Employer)</label>
+                    <textarea name="EVAL1_STUDENT_EVALUATION" value={safeValue(formData.EVAL1_STUDENT_EVALUATION)} onChange={handleChange} disabled={isSaving || isGenerating} rows={6} />
+                </div>
+                
+                {/* Student Signature (Read-Only) */}
+                {renderReadOnlySignature(
+                    "Student Signature (Eval 1) (Read-Only)",
+                    existingForm?.EVAL1_STUDENT_SIGNATURE_URL,
+                    existingForm?.EVAL1_STUDENT_SIGNATURE_DATE,
+                    existingForm?.STUDENT_PRINTED_NAME
                 )}
 
-                 {status === 'FORM_COMPLETED' && (
-                     <div className={styles.formSection}>
-                         <p style={{fontWeight: 'bold', color: 'green'}}>This form has been fully completed.</p>
-                     </div>
-                 )}
+                {/* Employer Signature (Live) */}
+                <div className={i983_styles.i983_formRow} style={{marginTop: '15px'}}>
+                    <div className={i983_styles.i983_formGroup}><label>Printed Name (Employer)</label><input name="EMPLOYER_OFFICIAL_PRINTED_NAME_TITLE" value={safeValue(formData.EMPLOYER_OFFICIAL_PRINTED_NAME_TITLE)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                    <div className={i983_styles.i983_formGroup}><label>Date (Employer)</label><input type="date" name="EVAL1_EMPLOYER_SIGNATURE_DATE" value={safeValue(formData.EVAL1_EMPLOYER_SIGNATURE_DATE)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                </div>
+                <div className={i983_styles.i983_formGroup}>
+                    <label>Employer Signature (Eval 1)</label>
+                    {existingForm?.EVAL1_EMPLOYER_SIGNATURE_URL && (
+                        <div className={i983_styles.i983_signatureDisplay} style={{ marginBottom: '10px' }}><p>Current Signature:</p><img src={existingForm.EVAL1_EMPLOYER_SIGNATURE_URL} alt="Current Eval 1 Sig" style={{ maxHeight: '60px', border: '1px solid #ccc' }}/></div>
+                    )}
+                    <div className={i983_styles.i983_signatureCanvasWrapper}><SignatureCanvas ref={sigCanvasEval1Employer} canvasProps={{ className: i983_styles.i983_signatureCanvas }} /></div>
+                    <button type="button" onClick={() => clearSignature(sigCanvasEval1Employer)} className={`${i983_styles.i983_button} ${i983_styles.i983_clearButton}`}>Clear</button>
+                </div>
+            </div>
+
+            {/* --- Evaluation 2 --- */}
+            <div className={i983_styles.i983_formSection}>
+                <h3>Final Evaluation on Student Progress</h3>
+                <div className={i983_styles.i983_formRow}>
+                    <div className={i983_styles.i983_formGroup}><label>Evaluation Period From</label><input type="date" name="EVAL2_FROM_DATE" value={safeValue(formData.EVAL2_FROM_DATE)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                    <div className={i983_styles.i983_formGroup}><label>Evaluation Period To</label><input type="date" name="EVAL2_TO_DATE" value={safeValue(formData.EVAL2_TO_DATE)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                </div>
+                <div className={i983_styles.i983_formGroup}>
+                    <label>Evaluation Text (Student/Employer)</label>
+                    <textarea name="EVAL2_STUDENT_EVALUATION" value={safeValue(formData.EVAL2_STUDENT_EVALUATION)} onChange={handleChange} disabled={isSaving || isGenerating} rows={6} />
+                </div>
+                
+                {/* Student Signature (Read-Only) */}
+                {renderReadOnlySignature(
+                    "Student Signature (Eval 2) (Read-Only)",
+                    existingForm?.EVAL2_STUDENT_SIGNATURE_URL,
+                    existingForm?.EVAL2_STUDENT_SIGNATURE_DATE,
+                    existingForm?.STUDENT_PRINTED_NAME
+                )}
+
+                {/* Employer Signature (Live) */}
+                <div className={i983_styles.i983_formRow} style={{marginTop: '15px'}}>
+                    <div className={i983_styles.i983_formGroup}><label>Printed Name (Employer)</label><input name="EMPLOYER_OFFICIAL_PRINTED_NAME_TITLE" value={safeValue(formData.EMPLOYER_OFFICIAL_PRINTED_NAME_TITLE)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                    <div className={i983_styles.i983_formGroup}><label>Date (Employer)</label><input type="date" name="EVAL2_EMPLOYER_SIGNATURE_DATE" value={safeValue(formData.EVAL2_EMPLOYER_SIGNATURE_DATE)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
+                </div>
+                <div className={i983_styles.i983_formGroup}>
+                    <label>Employer Signature (Eval 2)</label>
+                    {existingForm?.EVAL2_EMPLOYER_SIGNATURE_URL && (
+                        <div className={i983_styles.i983_signatureDisplay} style={{ marginBottom: '10px' }}><p>Current Signature:</p><img src={existingForm.EVAL2_EMPLOYER_SIGNATURE_URL} alt="Current Eval 2 Sig" style={{ maxHeight: '60px', border: '1px solid #ccc' }}/></div>
+                    )}
+                    <div className={i983_styles.i983_signatureCanvasWrapper}><SignatureCanvas ref={sigCanvasEval2Employer} canvasProps={{ className: i983_styles.i983_signatureCanvas }} /></div>
+                    <button type="button" onClick={() => clearSignature(sigCanvasEval2Employer)} className={`${i983_styles.i983_button} ${i983_styles.i983_clearButton}`}>Clear</button>
+                </div>
+            </div>
+            {renderPageButtons()}
+        </>
+    );
+    
+    // --- Main Render ---
+    if (!form) { 
+        return <div className={i983_styles.i983_loading}>Loading form data...</div>;
+    }
+
+    const status = existingForm?.FORM_STATUS || 'DRAFT';
+
+    return (
+        <div className={i983_styles.i983_formContainer}>
+            {/* REMOVED: Error and Success messages are now shown by the parent component (VerificationContainer.jsx)
+              The parent component (VerificationContainer) already renders {error} and {successMessage}
+            */}
+            
+            <div className={i983_styles.i983_headerSection}>
+                <h2 className={i983_styles.i983_title}>
+                    Verify I-983 Form ({status})
+                </h2>
+                <div>
+                    {/* MOVED: Generate PDF button is here */}
+                    <button
+                        className={`${i983_styles.i983_button} ${i983_styles.i983_buttonGenerate}`}
+                        onClick={handleGenerate}
+                        disabled={isSaving || isGenerating} // Disable if saving or generating
+                        style={{ marginLeft: '10px' }}
+                    >
+                        {isGenerating ? 'Generating...' : 'Generate PDF'}
+                    </button>
+                    <button className={`${i983_styles.i983_button} ${i983_styles.i983_buttonBack}`} onClick={onBack} disabled={isSaving || isGenerating} style={{ marginLeft: '10px' }}>
+                        {/* Back button now has no text, only icon via CSS */}
+                    </button>
+                </div>
+            </div>
+            
+            {/* Pagination Controls */}
+            <div className={i983_styles.i983_submenu_bar}>
+                <button onClick={() => setCurrentPage(1)} className={`${currentPage === 1 ? i983_styles.i983_submenu_button_active : i983_styles.i983_submenu_button}`} disabled={isSaving || isGenerating}>Page 1 (Sec 1-2)</button>
+                <button onClick={() => setCurrentPage(2)} className={`${currentPage === 2 ? i983_styles.i983_submenu_button_active : i983_styles.i983_submenu_button}`} disabled={isSaving || isGenerating}>Page 2 (Sec 3-4)</button>
+                <button onClick={() => setCurrentPage(3)} className={`${currentPage === 3 ? i983_styles.i983_submenu_button_active : i983_styles.i983_submenu_button}`} disabled={isSaving || isGenerating}>Page 3 (Sec 5)</button>
+                <button onClick={() => setCurrentPage(4)} className={`${currentPage === 4 ? i983_styles.i983_submenu_button_active : i983_styles.i983_submenu_button}`} disabled={isSaving || isGenerating}>Page 4 (Sec 6)</button>
+                <button onClick={() => setCurrentPage(5)} className={`${currentPage === 5 ? i983_styles.i983_submenu_button_active : i983_styles.i983_submenu_button}`} disabled={isSaving || isGenerating}>Page 5 (Evals)</button>
+            </div>
+
+            {/* Page Content */}
+            <div className={i983_styles.i983_pageContent}>
+                {currentPage === 1 && renderPage1()}
+                {currentPage === 2 && renderPage2()}
+                {currentPage === 3 && renderPage3()}
+                {currentPage === 4 && renderPage4()}
+                {currentPage === 5 && renderPage5()}
             </div>
         </div>
     );

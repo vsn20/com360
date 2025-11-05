@@ -256,23 +256,17 @@ const EditJobTitle = ({ selectedjobid, orgid, empid }) => {
           ) : (
             <div className="jobtitles_view-details">
               <div className="jobtitles_details-row">
-                <div className="jobtitles_details-g">
+                {/* <div className="jobtitles_details-g">
                   <label>Job ID</label>
                   <p>{getdisplayprojectid(form.jobid)}</p>
-                </div>
+                </div> */}
                 <div className="jobtitles_details-g">
                   <label>Job Title</label>
                   <p>{form.jobtitle || '-'}</p>
                 </div>
-              </div>
-              <div className="jobtitles_details-row">
-                <div className="jobtitles_details-g">
+                 <div className="jobtitles_details-g">
                   <label>Status</label>
                   <p>{form.status}</p>
-                </div>
-                <div className="jobtitles_details-g">
-                  <label>Minimum Salary</label>
-                  <p>{form.minsalary || '-'}</p>
                 </div>
               </div>
               <div className="jobtitles_details-row">
@@ -280,6 +274,13 @@ const EditJobTitle = ({ selectedjobid, orgid, empid }) => {
                   <label>Maximum Salary</label>
                   <p>{form.maxsalary || '-'}</p>
                 </div>
+                <div className="jobtitles_details-g">
+                  <label>Minimum Salary</label>
+                  <p>{form.minsalary || '-'}</p>
+                </div>
+              </div>
+              <div className="jobtitles_details-row">
+               
                 <div className="jobtitles_details-g">
                   <label>Level</label>
                   <p>{form.level || '-'}</p>

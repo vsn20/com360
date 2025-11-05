@@ -135,6 +135,16 @@ const Overview = ({ orgid, empid, expectedjobtitles, expectedepartment, expected
     setJobsPerPageInput(e.target.value);
   };
 
+  const getjobtypeName = (jobtypeid) => {
+    const jobtypeObj = jobtype.find((jt) => String(jt.id) === String(jobtypeid));
+    return jobtypeObj ? jobtypeObj.Name : '';
+  }
+
+  const getjobtitleName = (jobtitleid) => {
+    const jobtitleObj = expectedjobtitles.find((jt) => String(jt.job_title_id) === String(jobtitleid));
+    return jobtitleObj ? jobtitleObj.job_title : '';
+  }
+
   const handleJobsPerPageInputKeyPress = (e) => {
     if (e.key === 'Enter') {
       const value = parseInt(e.target.value, 10);
@@ -245,15 +255,18 @@ const Overview = ({ orgid, empid, expectedjobtitles, expectedepartment, expected
                     <col />
                     <col />
                     <col />
+                    <col/>
                   </colgroup>
                   <thead>
                     <tr>
-                      <th className={sortConfig.column === 'jobid' ? `externaljobs_sortable externaljobs_sort-${sortConfig.direction}` : 'externaljobs_sortable'} onClick={() => requestSort('jobid')}>
+                      {/* <th className={sortConfig.column === 'jobid' ? `externaljobs_sortable externaljobs_sort-${sortConfig.direction}` : 'externaljobs_sortable'} onClick={() => requestSort('jobid')}>
                         Job ID
-                      </th>
+                      </th> */}
                       <th className={sortConfig.column === 'display_job_name' ? `externaljobs_sortable externaljobs_sort-${sortConfig.direction}` : 'externaljobs_sortable'} onClick={() => requestSort('display_job_name')}>
                         Job Name
                       </th>
+                      <th>Job Type</th>
+                      <th>Expected Job Title</th>
                       <th className={sortConfig.column === 'no_of_vacancies' ? `externaljobs_sortable externaljobs_sort-${sortConfig.direction}` : 'externaljobs_sortable'} onClick={() => requestSort('no_of_vacancies')}>
                         Vacancies
                       </th>
@@ -267,9 +280,10 @@ const Overview = ({ orgid, empid, expectedjobtitles, expectedepartment, expected
                       <tr key={job.jobid} onClick={() => handleRowClick(job)} className={selectedJob && selectedJob.jobid === job.jobid ? 'externaljobs_selected-row' : ''}>
                         <td className="externaljobs_id-cell">
                          <span className={job.active==1 ? 'externaljobs_role-indicator' : 'externaljobs_role-indicatorinactiver'}></span>
-                          {getdisplayprojectid(job.jobid)}
+                          {job.display_job_name || '-'}
                         </td>
-                        <td>{job.display_job_name || '-'}</td>
+                        <td>{getjobtypeName(job.job_type) || '-'}</td>
+                        <td>{getjobtitleName(job.expected_job_title)}</td>
                         <td>{job.no_of_vacancies || '-'}</td>
                         <td className={job.active==1 ? 'externaljobs_status-badge externaljobs_active' : 'externaljobs_status-badge externaljobs_inactive'}>{job.active==1?'Active':"Inactive"||'-'}</td>
                       </tr>

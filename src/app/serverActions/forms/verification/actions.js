@@ -22,9 +22,9 @@ export async function getEmployeeFormsForVerification(empId, orgId) {
              f.CREATED_AT, f.UPDATED_AT,
              -- Use EMPLOYEE_SIGNATURE_DATE or CREATED_AT for sorting I-9
              COALESCE(f.EMPLOYEE_SIGNATURE_DATE, f.CREATED_AT) as SORT_DATE
-      FROM C_FORMS f
-      LEFT JOIN C_EMP v ON f.VERIFIER_ID = v.empid AND f.ORG_ID = v.orgid
-      WHERE f.EMP_ID = ? AND f.ORG_ID = ?`,
+       FROM C_FORMS f
+       LEFT JOIN C_EMP v ON f.VERIFIER_ID = v.empid AND f.ORG_ID = v.orgid
+       WHERE f.EMP_ID = ? AND f.ORG_ID = ?`,
       [empId, orgId]
     );
      console.log(`Found ${i9Forms.length} I-9 forms.`);
@@ -38,8 +38,8 @@ export async function getEmployeeFormsForVerification(empId, orgId) {
              CREATED_AT, UPDATED_AT,
              -- Use SUBMITTED_AT or CREATED_AT for sorting W-9
              COALESCE(SUBMITTED_AT, CREATED_AT) as SORT_DATE
-      FROM C_FORM_W9 w9
-      WHERE w9.EMP_ID = ? AND w9.ORG_ID = ?`,
+       FROM C_FORM_W9 w9
+       WHERE w9.EMP_ID = ? AND w9.ORG_ID = ?`,
       [empId, orgId]
     );
      console.log(`Found ${w9Forms.length} W-9 forms.`);
@@ -53,9 +53,9 @@ export async function getEmployeeFormsForVerification(empId, orgId) {
              CREATED_AT, UPDATED_AT,
               -- Use SUBMITTED_AT or CREATED_AT for sorting W-4
              COALESCE(SUBMITTED_AT, CREATED_AT) as SORT_DATE
-      FROM C_FORM_W4 w4
-      LEFT JOIN C_EMP v ON w4.VERIFIER_ID = v.empid AND w4.ORG_ID = v.orgid
-      WHERE w4.EMP_ID = ? AND w4.ORG_ID = ?`,
+       FROM C_FORM_W4 w4
+       LEFT JOIN C_EMP v ON w4.VERIFIER_ID = v.empid AND w4.ORG_ID = v.orgid
+       WHERE w4.EMP_ID = ? AND w4.ORG_ID = ?`,
       [empId, orgId]
     );
      console.log(`Found ${w4Forms.length} W-4 forms.`);
@@ -71,8 +71,8 @@ export async function getEmployeeFormsForVerification(empId, orgId) {
              -- Use UPDATED_AT as the primary date for display/sorting I-983
              f.UPDATED_AT as SUBMITTED_DATE,
              f.UPDATED_AT as SORT_DATE
-      FROM C_FORM_I983 f
-      WHERE f.EMP_ID = ? AND f.ORG_ID = ?`,
+       FROM C_FORM_I983 f
+       WHERE f.EMP_ID = ? AND f.ORG_ID = ?`,
       [empId, orgId]
     );
      console.log(`Found ${i983Forms.length} I-983 forms.`);
@@ -213,7 +213,7 @@ export async function getPendingW4Approvals(orgId, currentEmpId, isAdmin, hasAll
          return [];
       }
     } else {
-        console.log("Admin fetching all pending W-4s.");
+       console.log("Admin fetching all pending W-4s.");
     }
 
 
@@ -230,6 +230,7 @@ export async function getPendingW4Approvals(orgId, currentEmpId, isAdmin, hasAll
 
 /**
  * Fetches I-983 forms pending employer action based on user permissions.
+ * UPDATED: "Pending" now means 'DRAFT' as all other steps are removed.
  */
 export async function getPendingI983Approvals(orgId, currentEmpId, isAdmin, hasAllData, subordinateIds) {
   try {
@@ -237,29 +238,10 @@ export async function getPendingI983Approvals(orgId, currentEmpId, isAdmin, hasA
      console.log(`Verification: Fetching PENDING I-983 for OrgID: ${orgId}, User: ${currentEmpId}, isAdmin: ${isAdmin}, hasAll: ${hasAllData}`);
 
     // Define statuses where employer action is needed
+    // In the new workflow, only 'DRAFT' is a pending state.
     const employerActionStatuses = [
-        'PAGE1_COMPLETE',                   // Verifier needs Sec 3/4
-        'PAGE3_SEC5_NAMES_COMPLETE',        // Verifier needs Sec 5 Site Info
-        'PAGE3_SEC5_TRAINING_COMPLETE',     // Verifier needs Sec 5 Oversight/Measures
-        'PAGE3_SEC5_OVERSIGHT_COMPLETE',    // Verifier needs Sec 6
-        'PAGE4_SEC6_COMPLETE',              // Verifier needs to initiate Eval 1
-        'EVAL1_PENDING_EMPLOYER_SIGNATURE', // Verifier needs to sign Eval 1
-        'EVAL1_COMPLETE',                   // Verifier needs to initiate Eval 2
-        'EVAL2_PENDING_EMPLOYER_SIGNATURE', // Verifier needs to sign Eval 2
-        // Add old statuses for backward compatibility
-        'STUDENT_SEC1_2_COMPLETE',
-        'STUDENT_SEC5_NAMES_COMPLETE',
-        'STUDENT_SEC5_TRAINING_COMPLETE',
-        'EMPLOYER_SEC5_EVAL_COMPLETE',
-        'EMPLOYER_SEC6_COMPLETE' // Maps to EVAL1_PENDING_STUDENT_SIGNATURE
+        'DRAFT'
     ];
-
-     // Add statuses where the verifier completes an eval
-     // These might be needed if the *same* verifier does the next step
-     // Or remove if Eval completion moves it out of 'pending' for this user
-     // employerActionStatuses.push('EMPLOYER_SEC6_COMPLETE'); // If verifier does Eval 1
-     // employerActionStatuses.push('EVAL1_COMPLETE'); // If verifier does Eval 2
-
 
     let query = `
       SELECT f.ID, 'I983' as FORM_TYPE, f.FORM_STATUS, f.UPDATED_AT as SUBMITTED_DATE,
@@ -294,13 +276,13 @@ export async function getPendingI983Approvals(orgId, currentEmpId, isAdmin, hasA
          return [];
       }
     } else {
-        console.log("Admin fetching all pending I-983s.");
+       console.log("Admin fetching all pending I-983s.");
     }
 
     query += ` ORDER BY SORT_DATE DESC`;
 
     const [forms] = await pool.query(query, params);
-     console.log(`Found ${forms.length} pending I-983 forms.`);
+     console.log(`Found ${forms.length} pending I-983 forms (DRAFT).`);
     return forms;
   } catch (error) {
     console.error('Error fetching pending I-983 approvals:', error);
@@ -327,10 +309,10 @@ export async function getI9FormDetails(formId) {
              v.EMP_FST_NAME as VERIFIER_FIRST_NAME,
              v.EMP_LAST_NAME as VERIFIER_LAST_NAME,
              v.JOB_TITLE as VERIFIER_TITLE
-      FROM C_FORMS f
-      INNER JOIN C_EMP e ON f.EMP_ID = e.empid AND f.ORG_ID = e.orgid
-      LEFT JOIN C_EMP v ON f.VERIFIER_ID = v.empid AND f.ORG_ID = v.orgid
-      WHERE f.ID = ?`,
+       FROM C_FORMS f
+       INNER JOIN C_EMP e ON f.EMP_ID = e.empid AND f.ORG_ID = e.orgid
+       LEFT JOIN C_EMP v ON f.VERIFIER_ID = v.empid AND f.ORG_ID = v.orgid
+       WHERE f.ID = ?`,
       [numericFormId]
     );
 
@@ -364,9 +346,9 @@ export async function getW9FormDetails(formId) {
              NULL as VERIFIER_FIRST_NAME,
              NULL as VERIFIER_LAST_NAME,
              NULL as VERIFIER_TITLE
-      FROM C_FORM_W9 w9
-      JOIN C_EMP e ON w9.EMP_ID = e.empid AND w9.ORG_ID = e.orgid
-      WHERE w9.ID = ?`,
+       FROM C_FORM_W9 w9
+       JOIN C_EMP e ON w9.EMP_ID = e.empid AND w9.ORG_ID = e.orgid
+       WHERE w9.ID = ?`,
       [numericFormId]
     );
 
@@ -399,10 +381,10 @@ export async function getW4FormDetails(formId) {
              v.EMP_FST_NAME as VERIFIER_FIRST_NAME,
              v.EMP_LAST_NAME as VERIFIER_LAST_NAME,
              v.JOB_TITLE as VERIFIER_TITLE
-      FROM C_FORM_W4 w4
-      JOIN C_EMP e ON w4.EMP_ID = e.empid AND w4.ORG_ID = e.orgid
-      LEFT JOIN C_EMP v ON w4.VERIFIER_ID = v.empid AND w4.ORG_ID = v.orgid
-      WHERE w4.ID = ?`,
+       FROM C_FORM_W4 w4
+       JOIN C_EMP e ON w4.EMP_ID = e.empid AND w4.ORG_ID = e.orgid
+       LEFT JOIN C_EMP v ON w4.VERIFIER_ID = v.empid AND w4.ORG_ID = v.orgid
+       WHERE w4.ID = ?`,
       [numericFormId]
     );
 
@@ -430,4 +412,3 @@ export async function getI983FormDetails(formId) {
      // Call the actual function using the numeric ID
      return fetchI983Details(numericFormId);
 }
-
