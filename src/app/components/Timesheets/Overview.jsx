@@ -9,6 +9,8 @@ import {
   removeAttachment,
   fetchSuperiorName,
   approveTimesheet,
+  fetchCopyableWeeks,
+  fetchTimesheetDataForCopy,
 } from "@/app/serverActions/Timesheets/Overview";
 import "./Overview.css";
 import ApprovalPending from "./ApprovalPending";
@@ -25,16 +27,26 @@ const Overview = () => {
   const [selectedEmployee, setSelectedEmployee] = useState("");
   const [attachments, setAttachments] = useState({});
   const [noAttachmentFlag, setNoAttachmentFlag] = useState(true);
+  
+  const [newFileCount, setNewFileCount] = useState(0);
+
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
   const [selectedComment, setSelectedComment] = useState({ timesheetId: null, day: null });
   const [superiorName, setSuperiorName] = useState("");
-  const [isSuperior, setIsSuperior] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef(null);
   const [isClient, setIsClient] = useState(false);
   const [currentUserEmpId, setCurrentUserEmpId] = useState("");
   const [ispending, setispending] = useState(false);
+
+  const [manageableEmpIds, setManageableEmpIds] = useState([]);
+  const [canManage, setCanManage] = useState(false);
+
+  // Copy feature state
+  const [copyDropdownOpen, setCopyDropdownOpen] = useState(null); // Will store { key, employeeId, projectId }
+  const [copyableWeeks, setCopyableWeeks] = useState([]);
+  const [isCopyLoading, setIsCopyLoading] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
@@ -63,11 +75,15 @@ const Overview = () => {
     setSuccess(false);
     setSelectedComment({ timesheetId: null, day: null });
     setSuperiorName("");
-    setIsSuperior(false);
+    setManageableEmpIds([]);
+    setCanManage(false);
     setispending(false);
+    setNewFileCount(0);
+    setCopyDropdownOpen(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
 
     const weekStart = getWeekStartDate(new Date().toISOString().split("T")[0]);
+    let newManageableIds = [];
     const individualResult = await fetchTimesheetAndProjects(weekStart);
     if (individualResult.error) {
       setError(individualResult.error);
@@ -77,6 +93,8 @@ const Overview = () => {
       setAttachments(individualResult.attachments || {});
       setNoAttachmentFlag(Object.values(individualResult.attachments || {}).every((atts) => !atts.length));
       setCurrentUserEmpId(individualResult.currentUserEmpId || "");
+      newManageableIds = individualResult.manageableEmpIds || [];
+      setManageableEmpIds(newManageableIds);
     }
 
     const superiorResult = await fetchTimesheetsForSuperior(weekStart);
@@ -93,8 +111,10 @@ const Overview = () => {
         setNoAttachmentFlag(Object.values(newAttachments).every((atts) => !atts.length));
         return newAttachments;
       });
-      setIsSuperior(superiorResult.employees.length > 0);
-      setCurrentUserEmpId(superiorResult.currentUserEmpId || "");
+      const allManageableIds = [...new Set([...newManageableIds, ...(superiorResult.manageableEmpIds || [])])];
+      setManageableEmpIds(allManageableIds);
+      setCanManage(allManageableIds.length > 0);
+      setCurrentUserEmpId(superiorResult.currentUserEmpId || superiorResult.currentUserEmpId);
     }
   };
 
@@ -102,7 +122,7 @@ const Overview = () => {
     if (searchParams.get('refresh')) {
       resetToInitialState();
     }
-  }, [searchParams.get('refresh')]);
+  }, [searchParams]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -112,8 +132,12 @@ const Overview = () => {
       setAttachments({});
       setSelectedComment({ timesheetId: null, day: null });
       setSuperiorName("");
+      setNewFileCount(0); 
+      setCopyDropdownOpen(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
       const weekStart = getWeekStartDate(selectedDate);
+      
+      let newManageableIds = [];
 
       const individualResult = await fetchTimesheetAndProjects(weekStart);
       if (individualResult.error) {
@@ -131,6 +155,7 @@ const Overview = () => {
           if (data.superiorName) setSuperiorName(data.superiorName);
         }
         setCurrentUserEmpId(individualResult.currentUserEmpId || "");
+        newManageableIds = individualResult.manageableEmpIds || [];
       }
 
       const superiorResult = await fetchTimesheetsForSuperior(weekStart);
@@ -147,34 +172,49 @@ const Overview = () => {
           setNoAttachmentFlag(Object.values(newAttachments).every((atts) => !atts.length));
           return newAttachments;
         });
-        setIsSuperior(superiorResult.employees.length > 0);
         if (selectedEmployee && superiorResult.C_TIMESHEETS?.length > 0 && superiorResult.C_TIMESHEETS.some((ts) => ts.is_approved === 1)) {
           const data = await fetchSuperiorName(selectedEmployee);
           if (data.superiorName) setSuperiorName(data.superiorName);
         }
-        setCurrentUserEmpId(superiorResult.currentUserEmpId || "");
+        setCurrentUserEmpId(individualResult.currentUserEmpId || superiorResult.currentUserEmpId);
+        
+        const allManageableIds = [...new Set([...newManageableIds, ...(superiorResult.manageableEmpIds || [])])];
+        setManageableEmpIds(allManageableIds);
+        setCanManage(allManageableIds.length > 0);
       }
     };
     fetchData();
   }, [selectedDate, selectedEmployee]);
 
-  const formatDate = (date) => (date && !isNaN(new Date(date)) ? new Date(date).toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" }).replace(/(\d+)\/(\d+)\/(\d+)/, "$1/$2/$3") : "");
+  const formatDate = (date) => {
+    if (!date || isNaN(new Date(date))) return '';
+    const d = new Date(date);
+    return d.toLocaleDateString("en-US", {
+      month: "2-digit",
+      day: "2-digit",
+      year: "numeric",
+      timeZone: "UTC"
+    });
+  };
 
   const getDateForDay = (baseDate, dayOffset) => {
     const d = new Date(baseDate);
-    d.setDate(d.getDate() + dayOffset);
-    return d.toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", weekday: "short" }).replace(/(\d+)\/(\d+)\/(\d+)/, "$1/$2 $3");
+    d.setUTCDate(d.getUTCDate() + dayOffset);
+    return d.toLocaleDateString("en-US", { 
+      month: "2-digit", 
+      day: "2-digit", 
+      weekday: "short",
+      timeZone: "UTC" 
+    });
   };
 
   const handleDateChange = (e) => {
     setSelectedDate(e.target.value);
-    setError(null);
-    setSuccess(false);
-    setAttachments({});
-    setNoAttachmentFlag(true);
-    setSelectedComment({ timesheetId: null, day: null });
-    setSuperiorName("");
-    setispending(false);
+    setError(null); setSuccess(false); setAttachments({});
+    setNoAttachmentFlag(true); setSelectedComment({ timesheetId: null, day: null });
+    setSuperiorName(""); setispending(false);
+    setNewFileCount(0); 
+    setCopyDropdownOpen(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -182,13 +222,11 @@ const Overview = () => {
     const newDate = new Date(selectedDate);
     newDate.setDate(newDate.getDate() - 7);
     setSelectedDate(newDate.toISOString().split("T")[0]);
-    setError(null);
-    setSuccess(false);
-    setAttachments({});
-    setNoAttachmentFlag(true);
-    setSelectedComment({ timesheetId: null, day: null });
-    setSuperiorName("");
-    setispending(false);
+    setError(null); setSuccess(false); setAttachments({});
+    setNoAttachmentFlag(true); setSelectedComment({ timesheetId: null, day: null });
+    setSuperiorName(""); setispending(false);
+    setNewFileCount(0); 
+    setCopyDropdownOpen(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -196,25 +234,24 @@ const Overview = () => {
     const newDate = new Date(selectedDate);
     newDate.setDate(newDate.getDate() + 7);
     setSelectedDate(newDate.toISOString().split("T")[0]);
-    setError(null);
-    setSuccess(false);
-    setAttachments({});
-    setNoAttachmentFlag(true);
-    setSelectedComment({ timesheetId: null, day: null });
-    setSuperiorName("");
-    setispending(false);
+    setError(null); setSuccess(false); setAttachments({});
+    setNoAttachmentFlag(true); setSelectedComment({ timesheetId: null, day: null });
+    setSuperiorName(""); setispending(false);
+    setNewFileCount(0); 
+    setCopyDropdownOpen(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleInputChange = (e, timesheetId, empId = null, day = null) => {
     const { name, value } = e.target;
-    const isEmployee = !empId && !selectedEmployee;
     const targetTimesheets = selectedEmployee ? employeeTimesheets : C_TIMESHEETS;
     const ts = targetTimesheets.find((t) => t.timesheet_id === timesheetId || t.temp_key === timesheetId);
     if (ts) {
+      const canManageThisEmployee = manageableEmpIds.includes(ts.employee_id);
       const isOwner = currentUserEmpId === ts.employee_id;
-      const canEdit = !isOwner || (!ts.is_submitted && !ts.is_approved);
-      if (canEdit) {
+      const isLocked = isOwner && !canManageThisEmployee && (ts.is_submitted === 1 || ts.is_approved === 1);
+      
+      if (!isLocked) {
         const updateTimesheets = (prev) =>
           prev.map((t) => (t.timesheet_id === timesheetId || t.temp_key === timesheetId ? { ...t, [name]: value === "" ? null : value } : t));
         if (empId || selectedEmployee) setEmployeeTimesheets(updateTimesheets);
@@ -228,15 +265,17 @@ const Overview = () => {
 
   const handleNoAttachmentChange = (checked) => {
     setNoAttachmentFlag(checked);
-    if (checked && fileInputRef.current) fileInputRef.current.value = "";
+    if (checked) {
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      setNewFileCount(0);
+    }
   };
 
   const handleApprovedChange = async (e, empId) => {
     if (isSaving) return;
     setIsSaving(true);
     const isApproved = e.target.checked ? 1 : 0;
-    const weekStart = getWeekStartDate(selectedDate);
-    const targetTimesheets = employeeTimesheets.filter((t) => t.employee_id === empId);
+    const targetTimesheets = employeeTimesheets.filter((t) => t.employee_id === parseInt(empId, 10));
 
     try {
       for (const ts of targetTimesheets) {
@@ -251,6 +290,8 @@ const Overview = () => {
           if (isApproved) {
             const data = await fetchSuperiorName(empId);
             if (data.superiorName) setSuperiorName(data.superiorName);
+          } else {
+            setSuperiorName("");
           }
         }
       }
@@ -264,24 +305,30 @@ const Overview = () => {
   const handleSave = async (isSubmit = false) => {
     if (isSaving) return;
     setIsSaving(true);
+    setError(null);
+    setSuccess(false);
+    
     const weekStart = getWeekStartDate(selectedDate);
     const targetTimesheets = selectedEmployee
-      ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee)
+      ? employeeTimesheets.filter((t) => t.employee_id === parseInt(selectedEmployee, 10))
       : C_TIMESHEETS;
 
+    const hasExistingAttachments = Object.values(attachments).flat().filter(att => currentViewTimesheets.some(ts => ts.timesheet_id === att.timesheet_id)).length > 0;
+    const hasNewAttachments = newFileCount > 0;
+    const hasAnyAttachments = hasExistingAttachments || hasNewAttachments;
+    
     if (isSubmit) {
       if (!window.confirm("Once you submit, you cannot edit this timesheet. Are you sure?")) {
         setIsSaving(false);
         return;
       }
-      if (!noAttachmentFlag) {
-        const hasAnyAttachment = Object.values(attachments).some((atts) => atts.length > 0);
-        if (!hasAnyAttachment && !fileInputRef.current?.files.length) {
+      
+      if (!noAttachmentFlag && !hasAnyAttachments) {
           setError("No attachments found. Please check 'No Attachment' or upload at least one attachment.");
           setIsSaving(false);
           return;
-        }
       }
+
       const invalidTimesheets = targetTimesheets.filter((ts) =>
         ["sun", "mon", "tue", "wed", "thu", "fri", "sat"].some(
           (day) => parseFloat(ts[`${day}_hours`] || 0) > 0 && (!ts[`${day}_comment`] || ts[`${day}_comment`].trim() === "")
@@ -300,7 +347,7 @@ const Overview = () => {
         const formData = new FormData();
         formData.append("C_TIMESHEETS[project_id]", ts.project_id);
         formData.append("C_TIMESHEETS[week_start_date]", weekStart);
-        formData.append("C_TIMESHEETS[year]", ts.year);
+        formData.append("C_TIMESHEETS[year]", ts.year || new Date(weekStart).getFullYear());
         formData.append("C_TIMESHEETS[timesheet_id]", ts.timesheet_id || "");
         formData.append("C_TIMESHEETS[employee_id]", ts.employee_id);
         formData.append("C_TIMESHEETS[is_approved]", ts.is_approved || 0);
@@ -311,64 +358,68 @@ const Overview = () => {
         formData.append("C_TIMESHEETS[is_submitted]", isSubmit ? 1 : ts.is_submitted || 0);
 
         for (let [key, value] of formData.entries()) {
-          formDataWithFiles.append(`C_TIMESHEETS[${index}][${key.split("C_TIMESHEETS[")[1]}`, value);
+          formDataWithFiles.append(`C_TIMESHEETS[${index}][${key.split("[")[1]}`, value);
         }
       });
 
       const files = fileInputRef.current?.files || [];
-      if (files.length > 0 && !noAttachmentFlag) {
+      if (newFileCount > 0 && !noAttachmentFlag) {
         Array.from(files).forEach((file) => formDataWithFiles.append("attachment", file));
       }
+
+      formDataWithFiles.append("noAttachmentFlag", (noAttachmentFlag && !hasAnyAttachments) ? "1" : "0");
 
       const result = await saveTimesheet(formDataWithFiles);
       if (result.error) {
         setError(result.error || "Failed to save C_TIMESHEETS.");
       } else {
-        setAttachments((prev) => {
-          const newAttachments = { ...prev };
-          if (result.attachments && result.timesheetIds) {
-            result.timesheetIds.forEach((timesheetId, idx) => {
-              newAttachments[timesheetId] = result.attachments.filter((a) => a.timesheet_id === timesheetId) || [];
-            });
-          }
-          setNoAttachmentFlag(Object.values(newAttachments).every((atts) => !atts.length));
-          return newAttachments;
-        });
-
-        const updatedResult = selectedEmployee
-          ? await fetchTimesheetsForSuperior(weekStart)
-          : await fetchTimesheetAndProjects(weekStart);
-        if (updatedResult.error) {
-          setError(updatedResult.error);
+        let newManageableIds = [];
+        const individualResult = await fetchTimesheetAndProjects(weekStart);
+        if (individualResult.error) {
+            setError(individualResult.error);
         } else {
-          if (selectedEmployee) {
-            setEmployeeTimesheets(updatedResult.C_TIMESHEETS || []);
-            setEmployeeProjects(updatedResult.projects || {});
-            setAttachments(updatedResult.attachments || {});
-            setNoAttachmentFlag(Object.values(updatedResult.attachments || {}).every((atts) => !atts.length));
-            if (updatedResult.C_TIMESHEETS?.some((ts) => ts.is_approved === 1)) {
-              const data = await fetchSuperiorName(selectedEmployee);
-              if (data.superiorName) setSuperiorName(data.superiorName);
+            setTimesheets(individualResult.C_TIMESHEETS || []);
+            setProjects(individualResult.projects || []);
+            setAttachments(individualResult.attachments || {});
+            setNoAttachmentFlag(Object.values(individualResult.attachments || {}).every((atts) => !atts.length));
+            newManageableIds = individualResult.manageableEmpIds || [];
+            if (!selectedEmployee && individualResult.C_TIMESHEETS?.some((ts) => ts.is_approved === 1)) {
+                const employeeId = individualResult.C_TIMESHEETS[0].employee_id;
+                const data = await fetchSuperiorName(employeeId);
+                if (data.superiorName) setSuperiorName(data.superiorName);
             }
-            setIsSuperior(updatedResult.employees.length > 0);
-          } else {
-            setTimesheets(updatedResult.C_TIMESHEETS || []);
-            setProjects(updatedResult.projects || []);
-            setAttachments(updatedResult.attachments || {});
-            setNoAttachmentFlag(Object.values(updatedResult.attachments || {}).every((atts) => !atts.length));
-            if (!isSuperior && updatedResult.C_TIMESHEETS?.some((ts) => ts.is_approved === 1)) {
-              const employeeId = updatedResult.C_TIMESHEETS[0].employee_id;
-              const data = await fetchSuperiorName(employeeId);
-              if (data.superiorName) setSuperiorName(data.superiorName);
-            }
-          }
-          setSuccess(true);
         }
+        
+        const superiorResult = await fetchTimesheetsForSuperior(weekStart);
+        if (superiorResult.error) {
+            // handle error if needed
+        } else {
+            setEmployeeTimesheets(superiorResult.C_TIMESHEETS || []);
+            setEmployeeProjects(superiorResult.projects || {});
+            setAttachments((prev) => ({ ...prev, ...superiorResult.attachments }));
+            
+            const currentViewAttachments = selectedEmployee 
+                ? (superiorResult.attachments || {})
+                : (individualResult.attachments || {});
+            setNoAttachmentFlag(Object.values(currentViewAttachments).every((atts) => !atts.length));
+
+            if (selectedEmployee && superiorResult.C_TIMESHEETS?.some((ts) => ts.is_approved === 1)) {
+                const data = await fetchSuperiorName(selectedEmployee);
+                if (data.superiorName) setSuperiorName(data.superiorName);
+            }
+            const allManageableIds = [...new Set([...newManageableIds, ...(superiorResult.manageableEmpIds || [])])];
+            setManageableEmpIds(allManageableIds);
+            setCanManage(allManageableIds.length > 0);
+        }
+        
+        setSuccess(true);
+        setTimeout(() => setSuccess(false), 3000);
       }
     } catch (error) {
       setError(error.message || "Failed to process C_TIMESHEETS.");
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = "";
+      setNewFileCount(0); 
       setIsSaving(false);
     }
   };
@@ -379,30 +430,99 @@ const Overview = () => {
       setAttachments((prev) => {
         const newAttachments = { ...prev };
         for (let key in newAttachments) newAttachments[key] = newAttachments[key].filter((a) => a.attachment_id !== attachmentId);
-        setNoAttachmentFlag(Object.values(newAttachments).every((atts) => !atts.length));
+        
+        const hasExisting = !Object.values(newAttachments).every((atts) => !atts.length);
+        if (!hasExisting && newFileCount === 0) {
+          setNoAttachmentFlag(true);
+        }
+        
         return newAttachments;
       });
-      if (fileInputRef.current) fileInputRef.current.value = "";
       setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
     } else setError(result.error || "Failed to remove attachment.");
   };
 
   const handlePendingApproveSheet = () => {
     setSelectedDate(new Date().toISOString().split("T")[0]);
-    setTimesheets([]);
-    setProjects([]);
-    setEmployees([]);
-    setEmployeeTimesheets([]);
-    setEmployeeProjects({});
-    setSelectedEmployee("");
-    setAttachments({});
-    setNoAttachmentFlag(true);
-    setError(null);
-    setSuccess(false);
+    setTimesheets([]); setProjects([]); setEmployees([]);
+    setEmployeeTimesheets([]); setEmployeeProjects({});
+    setSelectedEmployee(""); setAttachments({});
+    setNoAttachmentFlag(true); setError(null); setSuccess(false);
     setSelectedComment({ timesheetId: null, day: null });
     setSuperiorName("");
-    setIsSuperior(false);
+    setManageableEmpIds([]);
+    setCanManage(false);
     setispending(true);
+  };
+
+  // Handler to open copy modal and fetch weeks
+  const handleCopyClick = async (ts) => {
+    const key = ts.timesheet_id || ts.temp_key;
+    
+    // Close if already open
+    if (copyDropdownOpen?.key === key) {
+      setCopyDropdownOpen(null);
+      return;
+    }
+
+    setCopyDropdownOpen({ key, employeeId: ts.employee_id, projectId: ts.project_id });
+    setIsCopyLoading(true);
+    setError(null);
+
+    const result = await fetchCopyableWeeks(ts.employee_id, ts.project_id);
+    if (result.error) {
+      setError(result.error);
+      setCopyableWeeks([]);
+    } else {
+      const currentWeekStart = getWeekStartDate(selectedDate);
+      setCopyableWeeks(result.weeks.filter(w => w.week_start_date !== currentWeekStart));
+    }
+    setIsCopyLoading(false);
+  };
+
+  // Handler to select a week and apply its data
+  const handleCopyWeekSelect = async (sourceWeekStartDate) => {
+    if (!copyDropdownOpen) return;
+
+    const { key, employeeId, projectId } = copyDropdownOpen;
+    setIsCopyLoading(true);
+    setError(null);
+
+    const result = await fetchTimesheetDataForCopy(employeeId, projectId, sourceWeekStartDate);
+
+    if (result.error) {
+      setError(result.error);
+    } else {
+      const sourceData = result.sourceTimesheet;
+      const updateTimesheets = (prev) =>
+        prev.map((t) =>
+          (t.timesheet_id === key || t.temp_key === key)
+            ? {
+              ...t,
+              sun_hours: sourceData.sun_hours, sun_comment: sourceData.sun_comment,
+              mon_hours: sourceData.mon_hours, mon_comment: sourceData.mon_comment,
+              tue_hours: sourceData.tue_hours, tue_comment: sourceData.tue_comment,
+              wed_hours: sourceData.wed_hours, wed_comment: sourceData.wed_comment,
+              thu_hours: sourceData.thu_hours, thu_comment: sourceData.thu_comment,
+              fri_hours: sourceData.fri_hours, fri_comment: sourceData.fri_comment,
+              sat_hours: sourceData.sat_hours, sat_comment: sourceData.sat_comment,
+            }
+            : t
+        );
+
+      if (selectedEmployee) {
+        setEmployeeTimesheets(updateTimesheets);
+      } else {
+        setTimesheets(updateTimesheets);
+      }
+      setSuccess("Week data copied successfully!");
+      setTimeout(() => setSuccess(false), 3000);
+    }
+
+    setIsCopyLoading(false);
+    setCopyDropdownOpen(null);
+    setCopyableWeeks([]);
   };
 
   const isAnySubmittedOrApproved = (targetTimesheets) => targetTimesheets.some((ts) => ts.is_submitted === 1 || ts.is_approved === 1);
@@ -412,8 +532,62 @@ const Overview = () => {
 
   if (!isClient) return null;
 
+  const currentViewTimesheets = selectedEmployee 
+    ? employeeTimesheets.filter((t) => t.employee_id === parseInt(selectedEmployee, 10))
+    : C_TIMESHEETS;
+  
+  const isCurrentViewLocked = isAnySubmittedOrApproved(currentViewTimesheets);
+
+  const currentViewAttachments = Object.values(attachments).flat()
+    .filter(att => currentViewTimesheets.some(ts => ts.timesheet_id === att.timesheet_id));
+  const hasExistingAttachments = currentViewAttachments.length > 0;
+  const hasNewAttachments = newFileCount > 0;
+  const hasAnyAttachments = hasExistingAttachments || hasNewAttachments;
+
   return (
     <div className="timesheets_container">
+      {/* Modal backdrop for copy dropdown */}
+      {copyDropdownOpen && (
+        <div 
+          className="timesheets_copy-modal-backdrop"
+          onClick={() => setCopyDropdownOpen(null)}
+        >
+          <div 
+            className="timesheets_copy-dropdown"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="timesheets_copy-dropdown-header">
+              <span>Copy from week...</span>
+              <button
+                type="button"
+                className="timesheets_copy-close-btn"
+                onClick={() => setCopyDropdownOpen(null)}
+              >
+                &times;
+              </button>
+            </div>
+            <div className="timesheets_copy-dropdown-content">
+              {isCopyLoading ? (
+                <p>Loading...</p>
+              ) : copyableWeeks.length === 0 ? (
+                <p>No past weeks found.</p>
+              ) : (
+                <ul>
+                  {copyableWeeks.map(week => (
+                    <li
+                      key={week.week_start_date}
+                      onClick={() => handleCopyWeekSelect(week.week_start_date)}
+                    >
+                      {formatDate(week.week_start_date)}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {ispending ? (
         <div>
           <ApprovalPending onBack={resetToInitialState} />
@@ -428,7 +602,7 @@ const Overview = () => {
               <input type="date" value={selectedDate} onChange={handleDateChange} className="timesheets_date-input" />
               <button className="timesheets_nav-button" onClick={handleNextWeek}>Next</button>
             </div>
-            {isSuperior && (
+            {canManage && (
               <button type="button" className="timesheets_pending-approve-button" onClick={handlePendingApproveSheet}>
                 Pending Approvals
               </button>
@@ -443,11 +617,26 @@ const Overview = () => {
                   <select
                     value={selectedEmployee}
                     onChange={(e) => {
-                      setSelectedEmployee(e.target.value);
+                      const newEmpId = e.target.value;
+                      setSelectedEmployee(newEmpId);
                       setError(null);
                       setSuccess(false);
                       setSelectedComment({ timesheetId: null, day: null });
-                      setNoAttachmentFlag(Object.values(attachments).every((atts) => !atts.length));
+                      setCopyDropdownOpen(null);
+
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                      setNewFileCount(0);
+
+                      const empTimesheets = newEmpId
+                        ? employeeTimesheets.filter(t => t.employee_id === parseInt(newEmpId, 10))
+                        : C_TIMESHEETS;
+                      const empTimesheetIds = empTimesheets.map(t => t.timesheet_id || t.temp_key);
+                      
+                      let hasAttachments = false;
+                      if(empTimesheetIds.length > 0) {
+                        hasAttachments = Object.values(attachments).flat().some(att => empTimesheetIds.includes(att.timesheet_id));
+                      }
+                      setNoAttachmentFlag(!hasAttachments);
                     }}
                     className="timesheets_employee-dropdown"
                   >
@@ -459,18 +648,18 @@ const Overview = () => {
                 </div>
               </div>
 
-              {!selectedEmployee && !isSuperior && C_TIMESHEETS.some((ts) => ts.is_approved === 1) && superiorName && (
+              {!selectedEmployee && !canManage && C_TIMESHEETS.some((ts) => ts.is_approved === 1) && superiorName && (
                 <p className="timesheets_approval-message">Approved by {superiorName}</p>
               )}
 
-              {((!selectedEmployee && C_TIMESHEETS.length > 0) || (selectedEmployee && employeeTimesheets.filter((t) => t.employee_id === selectedEmployee).length > 0)) && (
+              {(currentViewTimesheets.length > 0) && (
                 <div className="timesheets_above-table-actions">
-                  {selectedEmployee && employeeTimesheets.filter((t) => t.employee_id === selectedEmployee).length > 0 && (
+                  {selectedEmployee && manageableEmpIds.includes(parseInt(selectedEmployee, 10)) && (
                     <div className="timesheets_approve-section">
                       <label>
                         <input
                           type="checkbox"
-                          checked={employeeTimesheets.filter((t) => t.employee_id === selectedEmployee).every((ts) => ts.is_approved)}
+                          checked={currentViewTimesheets.every((ts) => ts.is_approved)}
                           onChange={(e) => handleApprovedChange(e, selectedEmployee)}
                           disabled={isSaving}
                         />
@@ -485,7 +674,7 @@ const Overview = () => {
                         type="button"
                         className="timesheets_submit-button"
                         onClick={() => handleSave(true)}
-                        disabled={isSaving || isAnySubmittedOrApproved(C_TIMESHEETS)}
+                        disabled={isSaving || isCurrentViewLocked}
                       >
                         {isSaving ? 'Submitting...' : 'Submit'}
                       </button>
@@ -494,19 +683,20 @@ const Overview = () => {
                 </div>
               )}
 
-              {((!selectedEmployee && C_TIMESHEETS.length > 0) || (selectedEmployee && employeeTimesheets.filter((t) => t.employee_id === selectedEmployee).length > 0)) && (
+              {(currentViewTimesheets.length > 0) && (
                 <div>
                   <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
                     <table className="timesheets_table">
                       <colgroup>
-                         <col style={{ width: '20%' }} />
-                         <col style={{ width: '11.43%' }} />
-                         <col style={{ width: '11.43%' }} />
-                         <col style={{ width: '11.43%' }} />
-                         <col style={{ width: '11.43%' }} />
-                         <col style={{ width: '11.43%' }} />
-                         <col style={{ width: '11.43%' }} />
-                         <col style={{ width: '11.43%' }} />
+                        <col style={{ width: '15%' }} />
+                        <col style={{ width: '10.71%' }} />
+                        <col style={{ width: '10.71%' }} />
+                        <col style={{ width: '10.71%' }} />
+                        <col style={{ width: '10.71%' }} />
+                        <col style={{ width: '10.71%' }} />
+                        <col style={{ width: '10.71%' }} />
+                        <col style={{ width: '10.71%' }} />
+                        <col style={{ width: '10%' }} />
                       </colgroup>
                       <thead>
                         <tr>
@@ -514,15 +704,19 @@ const Overview = () => {
                           {["sun", "mon", "tue", "wed", "thu", "fri", "sat"].map((day, index) => (
                             <th key={day}>{getDateForDay(getWeekStartDate(selectedDate), index)}</th>
                           ))}
+                          <th>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {(selectedEmployee ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee) : C_TIMESHEETS).map((ts) => {
+                        {currentViewTimesheets.map((ts) => {
                           const project = selectedEmployee
                             ? (employeeProjects[selectedEmployee] || []).find((p) => p.PRJ_ID === ts.project_id)
                             : projects.find((p) => p.PRJ_ID === ts.project_id);
+                          
+                          const canManageThisEmployee = manageableEmpIds.includes(ts.employee_id);
                           const isOwner = currentUserEmpId === ts.employee_id;
-                          const isLocked = isOwner && (ts.is_submitted === 1 || ts.is_approved === 1);
+                          const isLocked = isOwner && !canManageThisEmployee && (ts.is_submitted === 1 || ts.is_approved === 1);
+                          
                           return (
                             <tr key={ts.timesheet_id || ts.temp_key}>
                               <td>{project?.PRJ_NAME || "Unnamed Project"}</td>
@@ -550,6 +744,16 @@ const Overview = () => {
                                   </div>
                                 </td>
                               ))}
+                              <td className="timesheets_copy-action-cell">
+                                <button
+                                  type="button"
+                                  className="timesheets_copy-button"
+                                  onClick={() => handleCopyClick(ts)}
+                                  disabled={isLocked || isSaving}
+                                >
+                                  Copy
+                                </button>
+                              </td>
                             </tr>
                           );
                         })}
@@ -568,8 +772,10 @@ const Overview = () => {
                           const newValue = e.target.value;
                           const ts = getTimesheetById(selectedComment.timesheetId);
                           if (ts) {
+                              const canManageThisEmployee = manageableEmpIds.includes(ts.employee_id);
                               const isOwner = currentUserEmpId === ts.employee_id;
-                              const isLocked = isOwner && (ts.is_submitted === 1 || ts.is_approved === 1);
+                              const isLocked = isOwner && !canManageThisEmployee && (ts.is_submitted === 1 || ts.is_approved === 1);
+                              
                               if (!isLocked) {
                                   const updateTimesheets = (prev) =>
                                       prev.map((t) =>
@@ -583,7 +789,16 @@ const Overview = () => {
                         }}
                         className="timesheets_comment-display-textarea"
                         placeholder="Select a comment in the table to edit it here..."
-                        disabled={!selectedComment.timesheetId || !selectedComment.day || (getTimesheetById(selectedComment.timesheetId)?.is_submitted === 1 && getTimesheetById(selectedComment.timesheetId)?.is_approved === 1)}
+                        disabled={
+                          !selectedComment.timesheetId || !selectedComment.day || 
+                          (() => {
+                              const ts = getTimesheetById(selectedComment.timesheetId);
+                              if (!ts) return true;
+                              const canManageThisEmployee = manageableEmpIds.includes(ts.employee_id);
+                              const isOwner = currentUserEmpId === ts.employee_id;
+                              return isOwner && !canManageThisEmployee && (ts.is_submitted === 1 || ts.is_approved === 1);
+                          })()
+                        }
                       />
                     </div>
 
@@ -594,25 +809,29 @@ const Overview = () => {
                         ref={fileInputRef}
                         className="timesheets_file-input"
                         multiple
-                        disabled={isAnySubmittedOrApproved(selectedEmployee ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee) : C_TIMESHEETS)}
-                        onChange={() => setNoAttachmentFlag(false)}
+                        disabled={isCurrentViewLocked}
+                        onChange={(e) => {
+                          setNewFileCount(e.target.files.length);
+                          if (e.target.files.length > 0) {
+                            setNoAttachmentFlag(false);
+                          }
+                        }}
                       />
                       <label className="timesheets_no-attachment-label">
                         <input
                           type="checkbox"
-                          checked={noAttachmentFlag}
+                          checked={noAttachmentFlag && !hasAnyAttachments}
+                          disabled={isCurrentViewLocked || hasAnyAttachments}
                           onChange={(e) => handleNoAttachmentChange(e.target.checked)}
-                          disabled={isAnySubmittedOrApproved(selectedEmployee ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee) : C_TIMESHEETS)}
                         />
                         No Attachment
                       </label>
-                      {Object.values(attachments).some((atts) => atts.length > 0) && (
+                      
+                      {hasAnyAttachments && (
                         <div className="timesheets_attached-files">
                           <h5>Attached Files:</h5>
                           <ul>
-                            {[...new Set(Object.values(attachments).flat().map((a) => a.attachment_id))].map((attachmentId) => {
-                              const attachment = Object.values(attachments).flat().find((a) => a.attachment_id === attachmentId);
-                              return (
+                            {currentViewAttachments.map((attachment) => (
                                 <li key={attachment.attachment_id}>
                                   <a href={attachment.file_path} target="_blank" rel="noopener noreferrer" className="timesheets_attachment-link">
                                     {attachment.file_name}
@@ -621,13 +840,23 @@ const Overview = () => {
                                     type="button"
                                     className="timesheets_remove-button"
                                     onClick={() => handleRemoveAttachment(attachment.attachment_id, attachment.timesheet_id)}
-                                    disabled={isAnySubmittedOrApproved(selectedEmployee ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee) : C_TIMESHEETS)}
+                                    disabled={(() => {
+                                        const ts = getTimesheetById(attachment.timesheet_id);
+                                        if (!ts) return false;
+                                        const canManageThisEmployee = manageableEmpIds.includes(ts.employee_id);
+                                        const isOwner = currentUserEmpId === ts.employee_id;
+                                        return isOwner && !canManageThisEmployee && (ts.is_submitted === 1 || ts.is_approved === 1);
+                                    })()}
                                   >
                                     Remove
                                   </button>
                                 </li>
-                              );
-                            })}
+                              ))}
+                            {Array.from(fileInputRef.current?.files || []).map((file, index) => (
+                              <li key={`new-${index}`} style={{ backgroundColor: '#ecfdf5' }}>
+                                <span className="timesheets_attachment-link">{file.name} (new)</span>
+                              </li>
+                            ))}
                           </ul>
                         </div>
                       )}
@@ -638,14 +867,14 @@ const Overview = () => {
                         type="button"
                         className="timesheets_save-button"
                         onClick={() => handleSave()}
-                        disabled={isSaving || isAnySubmittedOrApproved(selectedEmployee ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee) : C_TIMESHEETS)}
+                        disabled={isSaving || isCurrentViewLocked}
                       >
                         {isSaving ? 'Saving...' : 'Save'}
                       </button>
                     </div>
 
                     {error && <p className="timesheets_error-message">{error}</p>}
-                    {success && <p className="timesheets_success-message">Action successful!</p>}
+                    {success && <p className="timesheets_success-message">{typeof success === 'string' ? success : 'Action successful!'}</p>}
                   </form>
                 </div>
               )}
