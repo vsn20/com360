@@ -6,7 +6,7 @@ import fs from "fs/promises";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
 
-// --- START: Core Helper Functions ---
+// --- START: CRITICAL FIX FOR TIMEZONE ISSUES ---
 
 const decodeJwt = (token) => {
   try {
@@ -20,64 +20,76 @@ const decodeJwt = (token) => {
 };
 
 /**
- * FIXED: Properly handles week start date calculation regardless of timezone
- * Always returns Sunday as week start in YYYY-MM-DD format
+ * CRITICAL FIX: Timezone-agnostic week start calculation
+ * This function MUST return Sunday regardless of server timezone
+ * Input: "2025-01-13" (any day of week)
+ * Output: "2025-01-12" (the Sunday of that week)
  */
-const getWeekStartDate = (date) => {
+const getWeekStartDate = (dateString) => {
   try {
-    // Parse the date string as local date (not UTC)
-    // This prevents timezone shifts
-    const parts = date.split('-');
-    if (parts.length !== 3) throw new Error("Invalid date format");
+    // Extract year, month, day from string WITHOUT creating Date object
+    // This prevents ANY timezone conversion
+    const [yearStr, monthStr, dayStr] = dateString.split('-');
+    const year = parseInt(yearStr, 10);
+    const month = parseInt(monthStr, 10);
+    const day = parseInt(dayStr, 10);
     
-    const year = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
-    const day = parseInt(parts[2], 10);
+    if (!year || !month || !day || month < 1 || month > 12 || day < 1 || day > 31) {
+      throw new Error("Invalid date components");
+    }
     
-    // Create date object in local timezone
-    const d = new Date(year, month, day);
+    // Create date at noon UTC to avoid any daylight saving issues
+    const dateUTC = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
     
-    if (isNaN(d.getTime())) throw new Error("Invalid date");
+    if (isNaN(dateUTC.getTime())) {
+      throw new Error("Invalid date");
+    }
     
-    // Get the day of week (0 = Sunday, 6 = Saturday)
-    const dayOfWeek = d.getDay();
+    // Get day of week in UTC (0 = Sunday, 6 = Saturday)
+    const dayOfWeek = dateUTC.getUTCDay();
     
-    // Calculate days to subtract to get to Sunday
-    const daysToSubtract = dayOfWeek;
+    // Calculate Sunday of this week by subtracting days
+    const sundayUTC = new Date(dateUTC);
+    sundayUTC.setUTCDate(dateUTC.getUTCDate() - dayOfWeek);
     
-    // Subtract days to get to Sunday
-    d.setDate(d.getDate() - daysToSubtract);
+    // Format as YYYY-MM-DD using UTC components
+    const weekStart = `${sundayUTC.getUTCFullYear()}-${String(sundayUTC.getUTCMonth() + 1).padStart(2, '0')}-${String(sundayUTC.getUTCDate()).padStart(2, '0')}`;
     
-    // Format as YYYY-MM-DD
-    const weekStart = d.toISOString().split("T")[0];
-    
-    console.log(`getWeekStartDate: Input=${date}, DayOfWeek=${dayOfWeek}, WeekStart=${weekStart}`);
+    console.log(`[SERVER] getWeekStartDate: Input="${dateString}", DayOfWeek=${dayOfWeek}, WeekStart="${weekStart}"`);
     
     return weekStart;
   } catch (error) {
-    console.error("Invalid date error:", error, "Input date:", date);
+    console.error("[SERVER] Invalid date error:", error, "Input:", dateString);
     // Fallback to current week's Sunday
-    const today = new Date();
-    const dayOfWeek = today.getDay();
-    today.setDate(today.getDate() - dayOfWeek);
-    return today.toISOString().split("T")[0];
+    const now = new Date();
+    const dayOfWeek = now.getUTCDay();
+    const sunday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - dayOfWeek, 12, 0, 0));
+    return `${sunday.getUTCFullYear()}-${String(sunday.getUTCMonth() + 1).padStart(2, '0')}-${String(sunday.getUTCDate()).padStart(2, '0')}`;
   }
 };
 
 /**
- * FIXED: Calculates week end date (Saturday) from week start
+ * Calculate Saturday (week end) from Sunday (week start)
  */
-const getWeekEndDate = (weekStart) => {
-  const parts = weekStart.split('-');
-  const year = parseInt(parts[0], 10);
-  const month = parseInt(parts[1], 10) - 1;
-  const day = parseInt(parts[2], 10);
-  
-  const d = new Date(year, month, day);
-  d.setDate(d.getDate() + 6); // Add 6 days to get Saturday
-  
-  return d.toISOString().split("T")[0];
+const getWeekEndDate = (weekStartString) => {
+  try {
+    const [yearStr, monthStr, dayStr] = weekStartString.split('-');
+    const year = parseInt(yearStr, 10);
+    const month = parseInt(monthStr, 10);
+    const day = parseInt(dayStr, 10);
+    
+    const sundayUTC = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+    const saturdayUTC = new Date(sundayUTC);
+    saturdayUTC.setUTCDate(sundayUTC.getUTCDate() + 6);
+    
+    return `${saturdayUTC.getUTCFullYear()}-${String(saturdayUTC.getUTCMonth() + 1).padStart(2, '0')}-${String(saturdayUTC.getUTCDate()).padStart(2, '0')}`;
+  } catch (error) {
+    console.error("[SERVER] Error calculating week end:", error);
+    return weekStartString; // Fallback
+  }
 };
+
+// --- END: CRITICAL FIX FOR TIMEZONE ISSUES ---
 
 const getSubordinateIds = async (pool, superiorEmpId) => {
   if (!superiorEmpId) return [];
@@ -127,8 +139,6 @@ const getUserPermissionLevel = async (pool, empId, orgId) => {
     return 'none';
   }
 };
-
-// --- END: Core Helper Functions ---
 
 export async function getTimesheetManagementScope(pool, currentEmpId, orgid) {
   let viewableEmpIds = new Set([currentEmpId]);
@@ -224,9 +234,9 @@ export async function fetchTimesheetAndProjects(selectedDate) {
   const orgid = userRows[0].orgid;
   const weekStart = getWeekStartDate(selectedDate);
   const weekEnd = getWeekEndDate(weekStart);
-  const year = new Date(weekStart).getFullYear();
+  const year = new Date(weekStart + 'T12:00:00Z').getUTCFullYear();
 
-  console.log(`fetchTimesheetAndProjects: selectedDate=${selectedDate}, weekStart=${weekStart}, weekEnd=${weekEnd}`);
+  console.log(`[SERVER] fetchTimesheetAndProjects: selectedDate="${selectedDate}", weekStart="${weekStart}", weekEnd="${weekEnd}"`);
 
   const [projRows] = await pool.execute(
     `SELECT pe.PRJ_ID, COALESCE(p.PRJ_NAME, 'Unnamed Project') AS PRJ_NAME, pe.BILL_RATE, pe.BILL_TYPE 
@@ -291,9 +301,9 @@ export async function fetchTimesheetsForSuperior(selectedDate) {
   const orgid = userRows[0].orgid;
   const weekStart = getWeekStartDate(selectedDate);
   const weekEnd = getWeekEndDate(weekStart);
-  const year = new Date(weekStart).getFullYear();
+  const year = new Date(weekStart + 'T12:00:00Z').getUTCFullYear();
 
-  console.log(`fetchTimesheetsForSuperior: selectedDate=${selectedDate}, weekStart=${weekStart}, weekEnd=${weekEnd}`);
+  console.log(`[SERVER] fetchTimesheetsForSuperior: selectedDate="${selectedDate}", weekStart="${weekStart}", weekEnd="${weekEnd}"`);
 
   const { viewableEmpIds, manageableEmpIds } = await getTimesheetManagementScope(pool, superiorEmpId, orgid);
   const employeeIdsToFetch = viewableEmpIds.filter(id => id !== superiorEmpId);
@@ -392,10 +402,15 @@ export async function saveTimesheet(formData) {
     const timesheetId = formData.get(`C_TIMESHEETS[${index}][timesheet_id]`) || null;
     const employeeId = formData.get(`C_TIMESHEETS[${index}][employee_id]`);
     const projectId = formData.get(`C_TIMESHEETS[${index}][project_id]`);
-    const weekStartDate = formData.get(`C_TIMESHEETS[${index}][week_start_date]`);
+    let weekStartDate = formData.get(`C_TIMESHEETS[${index}][week_start_date]`);
     const year = formData.get(`C_TIMESHEETS[${index}][year]`);
     
-    console.log(`saveTimesheet: index=${index}, weekStartDate=${weekStartDate}, employeeId=${employeeId}`);
+    // CRITICAL: Recalculate week start on server to ensure it's always Sunday
+    if (weekStartDate) {
+      weekStartDate = getWeekStartDate(weekStartDate);
+    }
+    
+    console.log(`[SERVER] saveTimesheet: index=${index}, originalWeekStart=${formData.get(`C_TIMESHEETS[${index}][week_start_date]`)}, recalculatedWeekStart="${weekStartDate}", employeeId=${employeeId}`);
     
     if (!projectId || !weekStartDate || !employeeId) continue;
 
@@ -471,7 +486,7 @@ export async function saveTimesheet(formData) {
     timesheetsData.push({ timesheetId: finalTimesheetId, employeeId, weekStartDate, year, isSubmitted });
   }
 
-  // --- Attachment Handling ---
+  // Attachment handling
   const attachmentFiles = formData.getAll("attachment");
   const firstTimesheetId = timesheetsData.length > 0 ? timesheetsData[0].timesheetId : null;
   const employeeId = timesheetsData.length > 0 ? timesheetsData[0].employeeId : null;
@@ -636,10 +651,6 @@ export async function approveTimesheet(timesheetId, employeeId, isApproved) {
 
   return { success: true, timesheetId, isApproved: updatedRows[0].is_approved, approvedBy: updatedRows[0].approved_by };
 }
-
-// =============================================
-// COPY WEEK FEATURE FUNCTIONS
-// =============================================
 
 export async function fetchCopyableWeeks(employeeId, projectId) {
   const token = cookies().get("jwt_token")?.value;
