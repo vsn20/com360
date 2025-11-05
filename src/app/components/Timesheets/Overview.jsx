@@ -48,6 +48,7 @@ const Overview = () => {
   const [copyableWeeks, setCopyableWeeks] = useState([]);
   const [isCopyLoading, setIsCopyLoading] = useState(false);
 
+
   useEffect(() => {
     setIsClient(true);
   }, []);
@@ -114,7 +115,7 @@ const Overview = () => {
       const allManageableIds = [...new Set([...newManageableIds, ...(superiorResult.manageableEmpIds || [])])];
       setManageableEmpIds(allManageableIds);
       setCanManage(allManageableIds.length > 0);
-      setCurrentUserEmpId(superiorResult.currentUserEmpId || superiorResult.currentUserEmpId);
+      setCurrentUserEmpId(superiorResult.currentUserEmpId || individualResult.currentUserEmpId);
     }
   };
 
@@ -275,23 +276,32 @@ const Overview = () => {
     if (isSaving) return;
     setIsSaving(true);
     const isApproved = e.target.checked ? 1 : 0;
-    const targetTimesheets = employeeTimesheets.filter((t) => t.employee_id === parseInt(empId, 10));
+    
+    const targetEmployeeId = empId || currentUserEmpId;
+    
+    const targetTimesheets = selectedEmployee
+      ? employeeTimesheets.filter((t) => t.employee_id === targetEmployeeId)
+      : C_TIMESHEETS.filter((t) => t.employee_id === targetEmployeeId);
 
     try {
       for (const ts of targetTimesheets) {
-        const result = await approveTimesheet(ts.timesheet_id, empId, isApproved);
-        if (result.error) {
-          setError(result.error || "Failed to approve timesheet.");
-        } else {
-          setEmployeeTimesheets((prev) =>
-            prev.map((t) => (t.timesheet_id === ts.timesheet_id ? { ...t, is_approved: result.isApproved, approved_by: result.approvedBy } : t))
-          );
-          setSuccess(true);
-          if (isApproved) {
-            const data = await fetchSuperiorName(empId);
-            if (data.superiorName) setSuperiorName(data.superiorName);
+        if (ts.timesheet_id) { // **FIX**: Only approve saved timesheets
+          const result = await approveTimesheet(ts.timesheet_id, targetEmployeeId, isApproved); 
+          if (result.error) {
+            setError(result.error || "Failed to approve timesheet.");
           } else {
-            setSuperiorName("");
+            const updater = selectedEmployee ? setEmployeeTimesheets : setTimesheets;
+            updater((prev) =>
+              prev.map((t) => (t.timesheet_id === ts.timesheet_id ? { ...t, is_approved: result.isApproved, approved_by: result.approvedBy } : t))
+            );
+            
+            setSuccess(true);
+            if (isApproved) {
+              const data = await fetchSuperiorName(targetEmployeeId);
+              if (data.superiorName) setSuperiorName(data.superiorName);
+            } else {
+              setSuperiorName("");
+            }
           }
         }
       }
@@ -309,8 +319,9 @@ const Overview = () => {
     setSuccess(false);
     
     const weekStart = getWeekStartDate(selectedDate);
+    
     const targetTimesheets = selectedEmployee
-      ? employeeTimesheets.filter((t) => t.employee_id === parseInt(selectedEmployee, 10))
+      ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee)
       : C_TIMESHEETS;
 
     const hasExistingAttachments = Object.values(attachments).flat().filter(att => currentViewTimesheets.some(ts => ts.timesheet_id === att.timesheet_id)).length > 0;
@@ -454,6 +465,8 @@ const Overview = () => {
     setManageableEmpIds([]);
     setCanManage(false);
     setispending(true);
+    setNewFileCount(0);
+    setCopyDropdownOpen(null);
   };
 
   // Handler to open copy modal and fetch weeks
@@ -470,7 +483,7 @@ const Overview = () => {
     setIsCopyLoading(true);
     setError(null);
 
-    const result = await fetchCopyableWeeks(ts.employee_id, ts.project_id);
+    const result = await fetchCopyableWeeks(ts.employee_id, ts.project_id); 
     if (result.error) {
       setError(result.error);
       setCopyableWeeks([]);
@@ -489,7 +502,7 @@ const Overview = () => {
     setIsCopyLoading(true);
     setError(null);
 
-    const result = await fetchTimesheetDataForCopy(employeeId, projectId, sourceWeekStartDate);
+    const result = await fetchTimesheetDataForCopy(employeeId, projectId, sourceWeekStartDate); 
 
     if (result.error) {
       setError(result.error);
@@ -533,10 +546,16 @@ const Overview = () => {
   if (!isClient) return null;
 
   const currentViewTimesheets = selectedEmployee 
-    ? employeeTimesheets.filter((t) => t.employee_id === parseInt(selectedEmployee, 10))
+    ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee)
     : C_TIMESHEETS;
   
   const isCurrentViewLocked = isAnySubmittedOrApproved(currentViewTimesheets);
+
+  // **START: FIX 1 (Save Button Logic)**
+  const isManagingCurrentView = selectedEmployee 
+    ? manageableEmpIds.includes(selectedEmployee)
+    : manageableEmpIds.includes(currentUserEmpId);
+  // **END: FIX 1**
 
   const currentViewAttachments = Object.values(attachments).flat()
     .filter(att => currentViewTimesheets.some(ts => ts.timesheet_id === att.timesheet_id));
@@ -628,7 +647,7 @@ const Overview = () => {
                       setNewFileCount(0);
 
                       const empTimesheets = newEmpId
-                        ? employeeTimesheets.filter(t => t.employee_id === parseInt(newEmpId, 10))
+                        ? employeeTimesheets.filter(t => t.employee_id === newEmpId)
                         : C_TIMESHEETS;
                       const empTimesheetIds = empTimesheets.map(t => t.timesheet_id || t.temp_key);
                       
@@ -654,7 +673,11 @@ const Overview = () => {
 
               {(currentViewTimesheets.length > 0) && (
                 <div className="timesheets_above-table-actions">
-                  {selectedEmployee && manageableEmpIds.includes(parseInt(selectedEmployee, 10)) && (
+                  
+                  {/* **FIX 1**: Combined logic for Approve checkbox (allows self-approve) */}
+                  {( (selectedEmployee && manageableEmpIds.includes(selectedEmployee)) ||
+                     (!selectedEmployee && manageableEmpIds.includes(currentUserEmpId)) 
+                  ) && (
                     <div className="timesheets_approve-section">
                       <label>
                         <input
@@ -749,7 +772,7 @@ const Overview = () => {
                                   type="button"
                                   className="timesheets_copy-button"
                                   onClick={() => handleCopyClick(ts)}
-                                  disabled={isLocked || isSaving}
+                                  disabled={isLocked || isSaving || isCopyLoading}
                                 >
                                   Copy
                                 </button>
@@ -867,7 +890,8 @@ const Overview = () => {
                         type="button"
                         className="timesheets_save-button"
                         onClick={() => handleSave()}
-                        disabled={isSaving || isCurrentViewLocked}
+                        // **FIX 1**: Updated disabled logic
+                        disabled={isSaving || (isCurrentViewLocked && !isManagingCurrentView)}
                       >
                         {isSaving ? 'Saving...' : 'Save'}
                       </button>
