@@ -6,7 +6,7 @@ const pool = mysql.createPool({
   port: 3306, // default MySQL port
   user: 'saichand',
   password: 'SAIchand$8393',
-  database: 'COM360_VIEW',
+  database: 'com360',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,

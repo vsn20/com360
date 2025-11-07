@@ -6,6 +6,8 @@ import {
   fetchLeaveAssignments, 
   updateEmployee,
   fetchdocumentsbyid ,
+  fetchPafDocumentsById,
+  fetchFdnsDocumentsById,
   uploadProfilePhoto,
   deleteProfilePhoto
 } from '@/app/serverActions/Employee/overview';
@@ -19,7 +21,9 @@ import EmployeeExperience from './EmployeeExperience';
 import Image from 'next/image';
 import ReactCrop, { centerCrop, makeAspectCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
-
+import PAFDocument from './PAFDocument';
+import FDNS_Document from './FDNS_Document';
+import { set } from 'mongoose';
 // Your CustomSelect and MultiSelectRoles components remain the same...
 const CustomSelect = ({ name, value, onChange, options, placeholder, disabled }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -251,6 +255,12 @@ const Overview = ({
   const [sortConfig, setSortConfig] = useState({ column: 'empid', direction: 'asc' });
   const [experiencedetails, setexperiencedetails] = useState(null);
   const [educationdetails, seteducationdetails] = useState(null);
+  const [pafdocument,setpafdocument]=useState(null);
+  const [fdnsdocument,setfdnsdocument]=useState(null);
+
+  // NEW STATE for PAF/FDNS documents
+  const [pafDocuments, setPafDocuments] = useState([]);
+  const [fdnsDocuments, setFdnsDocuments] = useState([]);
 
   useEffect(() => {
     setHasMounted(true);
@@ -313,6 +323,8 @@ const Overview = ({
         setLeaveAssignments({});
         setSelectedRoles([]);
         setemployeedocuments([]); 
+        setPafDocuments([]); // Reset new state
+        setFdnsDocuments([]); // Reset new state
         setFormData({
           empid: '',
           orgid: orgid || '',
@@ -375,12 +387,16 @@ const Overview = ({
         return;
       }
       try {
-        const [employee, leaveData,docs] = await Promise.all([
+        const [employee, leaveData, docs, pafDocs, fdnsDocs] = await Promise.all([
           fetchEmployeeById(selectedEmpId),
           fetchLeaveAssignments(selectedEmpId),
           fetchdocumentsbyid(selectedEmpId),
+          fetchPafDocumentsById(selectedEmpId), // Add this
+          fetchFdnsDocumentsById(selectedEmpId), // Add this
         ]);
         console.log("documentssssss",docs);
+        console.log("paf documents", pafDocs);
+        console.log("fdns documents", fdnsDocs);
         console.log('Fetched employee data:', employee);
         if (!employee.orgid) {
           console.error('Employee data missing orgid for empid:', selectedEmpId);
@@ -389,8 +405,9 @@ const Overview = ({
         }
         setEmployeeDetails(employee);
         setLeaveAssignments(leaveData);
-        setemployeedocuments(docs);
         setemployeedocuments(Array.isArray(docs) ? docs : []);
+        setPafDocuments(Array.isArray(pafDocs) ? pafDocs : []); // Set new state
+        setFdnsDocuments(Array.isArray(fdnsDocs) ? fdnsDocs : []); // Set new state
         setSelectedRoles(employee.roleids || []);
         setFormData({
           empid: employee.empid || '',
@@ -459,6 +476,8 @@ const Overview = ({
         setLeaveAssignments({});
         setSelectedRoles([]);
         setemployeedocuments([]);
+        setPafDocuments([]); // Reset on error
+        setFdnsDocuments([]); // Reset on error
         setFormLeaves({});
       }
     };
@@ -482,6 +501,10 @@ const Overview = ({
     setemployementdetails(null);
     setexperiencedetails(null);
     seteducationdetails(null);
+    setpafdocument(null);
+    setfdnsdocument(null);
+    // setPafDocuments([]); // Reset
+    // setFdnsDocuments([]); // Reset
     console.log('Selected employee:', empid);
     setImgSrc(`/uploads/profile_photos/${empid}.png?${new Date().getTime()}`);
   };
@@ -504,6 +527,10 @@ const Overview = ({
     setSelectedRoles([]);
     setError(null);
     setisadd(false);
+    setpafdocument(null);
+    setfdnsdocument(null);
+    setPafDocuments([]); // Reset
+    setFdnsDocuments([]); // Reset
     router.refresh();
     console.log('Back to employee list');
   };
@@ -523,6 +550,8 @@ const Overview = ({
     setemployementdetails(null);
     setworkdetails(null);
     setisadd(true);
+    setPafDocuments([]); // Reset
+    setFdnsDocuments([]); // Reset
     console.log('Back to employee list');
   };
 
@@ -539,9 +568,15 @@ const Overview = ({
     setEditingWorkAddress(false);
     setEditingHomeAddress(false);
     setEditingEmergencyContact(false);
+    setexperiencedetails(null);
+    seteducationdetails(null);
+    setpafdocument(null);
+    setfdnsdocument(null);
     setSelectedRoles([]);
     setError(null);
     setisadd(false);
+    // setPafDocuments([]); // Reset
+    // setFdnsDocuments([]); // Reset
     router.refresh();
   }
   const [personaldetails,setpersonaldetails]=useState(null);
@@ -558,9 +593,15 @@ const Overview = ({
     setEditingWorkAddress(false);
     setEditingHomeAddress(false);
     setEditingEmergencyContact(false);
+    setexperiencedetails(null);
+    seteducationdetails(null);
+    setpafdocument(null);
+    setfdnsdocument(null);
     setSelectedRoles([]);
     setError(null);
     setisadd(false);
+    // setPafDocuments([]); // Reset
+    // setFdnsDocuments([]); // Reset
     router.refresh();
   }
 const [employementdetails,setemployementdetails]=useState(null);
@@ -577,9 +618,15 @@ const [employementdetails,setemployementdetails]=useState(null);
     setEditingWorkAddress(false);
     setEditingHomeAddress(false);
     setEditingEmergencyContact(false);
+    setexperiencedetails(null);
+    seteducationdetails(null);
+    setpafdocument(null);
+    setfdnsdocument(null);
     setSelectedRoles([]);
     setError(null);
     setisadd(false);
+    // setPafDocuments([]); // Reset
+    // setFdnsDocuments([]); // Reset
     router.refresh();
    }
    const [workdetails,setworkdetails]=useState(null);
@@ -596,9 +643,15 @@ const [employementdetails,setemployementdetails]=useState(null);
     setEditingWorkAddress(false);
     setEditingHomeAddress(false);
     setEditingEmergencyContact(false);
+    setexperiencedetails(null);
+    seteducationdetails(null);
+    setpafdocument(null);
+    setfdnsdocument(null);
     setSelectedRoles([]);
     setError(null);
     setisadd(false);
+    // setPafDocuments([]); // Reset
+    // setFdnsDocuments([]); // Reset
     router.refresh();
    }
 
@@ -609,8 +662,9 @@ const experiencedetailsselecting = (id) => {
   setActiveTab('experience');
   setexperiencedetails(id);
   setworkdetails(null);
+  setpafdocument(null);
+  setfdnsdocument(null);
   seteducationdetails(null);
-  router.refresh();
   setEditingPersonal(false);
   setEditingEmployment(false);
   setEditingLeaves(false);
@@ -620,6 +674,8 @@ const experiencedetailsselecting = (id) => {
   setSelectedRoles([]);
   setError(null);
   setisadd(false);
+  // setPafDocuments([]); // Reset
+  // setFdnsDocuments([]); // Reset
   router.refresh();
 };
 
@@ -633,6 +689,8 @@ const educationdetailsselecting = (id) => {
   seteducationdetails(id);
   router.refresh();
   setEditingPersonal(false);
+  setpafdocument(null);
+  setfdnsdocument(null);
   setEditingEmployment(false);
   setEditingLeaves(false);
   setEditingWorkAddress(false);
@@ -641,8 +699,61 @@ const educationdetailsselecting = (id) => {
   setSelectedRoles([]);
   setError(null);
   setisadd(false);
+  // setPafDocuments([]); // Reset
+  // setFdnsDocuments([]); // Reset
   router.refresh();
 };
+
+const pafdocumentselecting = (id) => {
+  setselecteddocument(null);
+  setpersonaldetails(null);
+  setemployementdetails(null);
+  setActiveTab('paf');
+  setexperiencedetails(null);
+  setworkdetails(null);
+  seteducationdetails(null);
+  router.refresh();
+  setEditingPersonal(false);
+  setpafdocument(id);
+  setfdnsdocument(null);
+  setEditingEmployment(false);
+  setEditingLeaves(false);
+  setEditingWorkAddress(false);
+  setEditingHomeAddress(false);
+  setEditingEmergencyContact(false);
+  setSelectedRoles([]);
+  setError(null);
+  setisadd(false);
+  // setPafDocuments([]); // No need to reset, this is where it's shown
+  // setFdnsDocuments([]); // Reset
+  router.refresh();
+  console.log('paf document selected:', id);
+ }
+const fdnsdocumentselecting = (id) => { 
+setselecteddocument(null);
+  setpersonaldetails(null);
+  setemployementdetails(null);
+  setActiveTab('fdns');
+  setexperiencedetails(null);
+  setworkdetails(null);
+  seteducationdetails(null);
+  router.refresh();
+  setEditingPersonal(false);
+  setpafdocument(null);
+  setfdnsdocument(id);
+  setEditingEmployment(false);
+  setEditingLeaves(false);
+  setEditingWorkAddress(false);
+  setEditingHomeAddress(false);
+  setEditingEmergencyContact(false);
+  setSelectedRoles([]);
+  setError(null);
+  setisadd(false);
+  // setPafDocuments([]); // Reset
+  // setFdnsDocuments([]); // No need to reset, this is where it's shown
+  router.refresh();
+  console.log('fdns document selected:', id);
+}
 
 const handleProfilePhotoUpload = (e) => {
   setPhotoModalError(null); 
@@ -759,6 +870,36 @@ function onImageLoad(e) {
     }
   }
 };
+
+  // NEW: Add handler for PAF document updates
+  const handlePafDocumentsUpdate = async () => {
+    if (selectedEmpId) {
+      try {
+        const updatedDocuments = await fetchPafDocumentsById(selectedEmpId);
+        setPafDocuments(updatedDocuments);
+        setError(null);
+        console.log('PAF Documents updated for empid:', selectedEmpId);
+      } catch (err) {
+        console.error('Error updating PAF documents:', err);
+        setError('Failed to refresh PAF documents.');
+      }
+    }
+  };
+
+  // NEW: Add handler for FDNS document updates
+  const handleFdnsDocumentsUpdate = async () => {
+    if (selectedEmpId) {
+      try {
+        const updatedDocuments = await fetchFdnsDocumentsById(selectedEmpId);
+        setFdnsDocuments(updatedDocuments);
+        setError(null);
+        console.log('FDNS Documents updated for empid:', selectedEmpId);
+      } catch (err) {
+        console.error('Error updating FDNS documents:', err);
+        setError('Failed to refresh FDNS documents.');
+      }
+    }
+  };
 
   const ensureOrgId = async () => {
     if (!formData.orgid || formData.orgid === '') {
@@ -2120,20 +2261,29 @@ const handleRoleToggle = (roleid) => {
         >
           Documents
         </button>
+        <button
+          className={activeTab === 'paf' ? 'active' : ''}
+          onClick={() => pafdocumentselecting(employeeDetails.empid)}
+          >
+            PAF Document
+          </button>
+          <button
+          className={activeTab === 'fdns' ? 'active' : ''}
+          onClick={() => fdnsdocumentselecting(employeeDetails.empid)}>FDNS Document</button>
       </div>
 
                 <br />
-                {selecteddocument&&!personaldetails&&!employementdetails&&!workdetails&&(
+                {selecteddocument&&!personaldetails&&!employementdetails&&!workdetails&&!pafdocument&&!fdnsdocument&&(
                  <EmplopyeeDocument id={employeeDetails.empid}
                  documents={employeedocuments}
                  onDocumentsUpdate={handleDocumentsUpdate}
                  document_types={document_types}
-      document_purposes={document_purposes}
-      document_subtypes={document_subtypes}/>
+                 document_purposes={document_purposes}
+                 document_subtypes={document_subtypes}/>
                  )}
 
             {/* Personal Details Section */}
-            {!employementdetails&&personaldetails&&!workdetails&&(
+            {!employementdetails&&personaldetails&&!workdetails&&!pafdocument&&!fdnsdocument&&(
                 <div className="role-details-block96">
               <h3>Personal Details</h3>
               {editingPersonal ? (
@@ -2297,7 +2447,7 @@ const handleRoleToggle = (roleid) => {
             )}
             
             {/* Employment Details Section */}
-            {employementdetails&&!workdetails&&(
+            {employementdetails&&!workdetails&&!pafdocument&&!fdnsdocument&&(
               <>
                 <div className="role-details-block96">
               <h3>Employment Details</h3>
@@ -2596,7 +2746,7 @@ const handleRoleToggle = (roleid) => {
             
             {/* Work Address Section */}
 
-            {workdetails&&(
+            {workdetails&&!pafdocument&&!fdnsdocument&&(
              <>
                <div className="role-details-block96">
               <h3>Work Address</h3>
@@ -2973,6 +3123,27 @@ const handleRoleToggle = (roleid) => {
                 countries={countries}
                 states={states}
                 canEdit={canEdit('personal')}
+              />
+            )}
+
+            {pafdocument && !workdetails && !employementdetails && !personaldetails && !experiencedetails && !educationdetails && !selecteddocument&&(
+              <PAFDocument 
+                id={employeeDetails.empid}
+                documents={pafDocuments}
+                onDocumentsUpdate={handlePafDocumentsUpdate}
+                document_types={document_types}
+                document_purposes={document_purposes}
+                document_subtypes={document_subtypes}
+              />
+            )}
+            {fdnsdocument && !workdetails && !employementdetails && !personaldetails && !experiencedetails && !educationdetails && !selecteddocument&&(
+              <FDNS_Document 
+                id={employeeDetails.empid}
+                documents={fdnsDocuments}
+                onDocumentsUpdate={handleFdnsDocumentsUpdate}
+                document_types={document_types}
+                document_purposes={document_purposes}
+                document_subtypes={document_subtypes}
               />
             )}
           </div>            
