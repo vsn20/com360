@@ -330,7 +330,7 @@ const ReportOverview = () => {
           <li>Project Profit = Revenue (from client) - Cost (paid to employee)</li>
           <li>Employee expenses are tracked separately and not allocated to specific projects</li>
           <li>Net Profit = Total Project Profit - Total Employee Expenses</li>
-          <li><strong>Date Calculation:</strong> Reports search timesheets from the Sunday before the start date to the Saturday after the end date, but only count hours within the selected period</li>
+          <li>expenses are included if end date of expense is included in the selected date range</li>
         </ul>
       </div>
 
@@ -623,7 +623,7 @@ const ReportOverview = () => {
           {/* Employee Expenses Section */}
           <div className={styles.report_project_section} style={{ marginTop: "30px", border: "2px solid #dc2626" }}>
             <div className={styles.report_project_header} style={{ backgroundColor: "#dc2626", color: "white" }}>
-              <div>💰 Employee Expenses (Separate from Projects)</div>
+              <div>💰 Employee Expenses</div>
               <div style={{ fontSize: "14px", fontWeight: "normal", marginTop: "4px" }}>
                 These expenses are subtracted from total profit
               </div>

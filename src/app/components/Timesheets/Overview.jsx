@@ -43,21 +43,60 @@ const Overview = () => {
   const [manageableEmpIds, setManageableEmpIds] = useState([]);
   const [canManage, setCanManage] = useState(false);
 
-  // Copy feature state
-  const [copyDropdownOpen, setCopyDropdownOpen] = useState(null); // Will store { key, employeeId, projectId }
+  const [copyDropdownOpen, setCopyDropdownOpen] = useState(null);
   const [copyableWeeks, setCopyableWeeks] = useState([]);
   const [isCopyLoading, setIsCopyLoading] = useState(false);
-
 
   useEffect(() => {
     setIsClient(true);
   }, []);
 
-  const getWeekStartDate = (date) => {
-    const d = new Date(date);
-    const day = d.getDay();
-    d.setDate(d.getDate() - day);
-    return d.toISOString().split("T")[0];
+  /**
+   * CRITICAL FIX: Timezone-agnostic week start calculation for FRONTEND
+   * This ensures the frontend ALWAYS calculates Sunday correctly
+   * Input: "2025-01-13" (Monday)
+   * Output: "2025-01-12" (Sunday)
+   */
+  const getWeekStartDate = (dateString) => {
+    try {
+      // Parse date components WITHOUT timezone conversion
+      const [yearStr, monthStr, dayStr] = dateString.split('-');
+      const year = parseInt(yearStr, 10);
+      const month = parseInt(monthStr, 10);
+      const day = parseInt(dayStr, 10);
+      
+      if (!year || !month || !day) {
+        throw new Error("Invalid date format");
+      }
+      
+      // Create date at noon UTC to avoid DST issues
+      const dateUTC = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+      
+      if (isNaN(dateUTC.getTime())) {
+        throw new Error("Invalid date");
+      }
+      
+      // Get day of week (0 = Sunday, 6 = Saturday)
+      const dayOfWeek = dateUTC.getUTCDay();
+      
+      // Calculate Sunday by subtracting days
+      const sundayUTC = new Date(dateUTC);
+      sundayUTC.setUTCDate(dateUTC.getUTCDate() - dayOfWeek);
+      
+      // Format as YYYY-MM-DD using UTC components
+      const weekStart = `${sundayUTC.getUTCFullYear()}-${String(sundayUTC.getUTCMonth() + 1).padStart(2, '0')}-${String(sundayUTC.getUTCDate()).padStart(2, '0')}`;
+      
+      console.log(`[FRONTEND] getWeekStartDate: Input="${dateString}", DayOfWeek=${dayOfWeek}, WeekStart="${weekStart}"`);
+      
+      return weekStart;
+    } catch (error) {
+      console.error("[FRONTEND] Error calculating week start:", error, "Input:", dateString);
+      // Fallback to current week's Sunday
+      const now = new Date();
+      const dayOfWeek = now.getUTCDay();
+      const sunday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - dayOfWeek, 12, 0, 0));
+      return `${sunday.getUTCFullYear()}-${String(sunday.getUTCMonth() + 1).padStart(2, '0')}-${String(sunday.getUTCDate()).padStart(2, '0')}`;
+    }
   };
 
   const resetToInitialState = async () => {
@@ -138,6 +177,8 @@ const Overview = () => {
       if (fileInputRef.current) fileInputRef.current.value = "";
       const weekStart = getWeekStartDate(selectedDate);
       
+      console.log(`[FRONTEND] fetchData: selectedDate="${selectedDate}", weekStart="${weekStart}"`);
+      
       let newManageableIds = [];
 
       const individualResult = await fetchTimesheetAndProjects(weekStart);
@@ -189,7 +230,9 @@ const Overview = () => {
 
   const formatDate = (date) => {
     if (!date || isNaN(new Date(date))) return '';
-    const d = new Date(date);
+    // FIXED: Use UTC parsing for consistent display
+    const [year, month, day] = date.split('-');
+    const d = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day), 12, 0, 0));
     return d.toLocaleDateString("en-US", {
       month: "2-digit",
       day: "2-digit",
@@ -199,7 +242,9 @@ const Overview = () => {
   };
 
   const getDateForDay = (baseDate, dayOffset) => {
-    const d = new Date(baseDate);
+    // FIXED: Parse base date consistently
+    const [year, month, day] = baseDate.split('-');
+    const d = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day), 12, 0, 0));
     d.setUTCDate(d.getUTCDate() + dayOffset);
     return d.toLocaleDateString("en-US", { 
       month: "2-digit", 
@@ -220,9 +265,12 @@ const Overview = () => {
   };
 
   const handlePrevWeek = () => {
-    const newDate = new Date(selectedDate);
-    newDate.setDate(newDate.getDate() - 7);
-    setSelectedDate(newDate.toISOString().split("T")[0]);
+    // FIXED: Calculate previous week correctly
+    const [year, month, day] = selectedDate.split('-');
+    const currentDate = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day), 12, 0, 0));
+    currentDate.setUTCDate(currentDate.getUTCDate() - 7);
+    const newDate = `${currentDate.getUTCFullYear()}-${String(currentDate.getUTCMonth() + 1).padStart(2, '0')}-${String(currentDate.getUTCDate()).padStart(2, '0')}`;
+    setSelectedDate(newDate);
     setError(null); setSuccess(false); setAttachments({});
     setNoAttachmentFlag(true); setSelectedComment({ timesheetId: null, day: null });
     setSuperiorName(""); setispending(false);
@@ -232,9 +280,12 @@ const Overview = () => {
   };
 
   const handleNextWeek = () => {
-    const newDate = new Date(selectedDate);
-    newDate.setDate(newDate.getDate() + 7);
-    setSelectedDate(newDate.toISOString().split("T")[0]);
+    // FIXED: Calculate next week correctly
+    const [year, month, day] = selectedDate.split('-');
+    const currentDate = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day), 12, 0, 0));
+    currentDate.setUTCDate(currentDate.getUTCDate() + 7);
+    const newDate = `${currentDate.getUTCFullYear()}-${String(currentDate.getUTCMonth() + 1).padStart(2, '0')}-${String(currentDate.getUTCDate()).padStart(2, '0')}`;
+    setSelectedDate(newDate);
     setError(null); setSuccess(false); setAttachments({});
     setNoAttachmentFlag(true); setSelectedComment({ timesheetId: null, day: null });
     setSuperiorName(""); setispending(false);
@@ -285,7 +336,7 @@ const Overview = () => {
 
     try {
       for (const ts of targetTimesheets) {
-        if (ts.timesheet_id) { // **FIX**: Only approve saved timesheets
+        if (ts.timesheet_id) {
           const result = await approveTimesheet(ts.timesheet_id, targetEmployeeId, isApproved); 
           if (result.error) {
             setError(result.error || "Failed to approve timesheet.");
@@ -319,6 +370,8 @@ const Overview = () => {
     setSuccess(false);
     
     const weekStart = getWeekStartDate(selectedDate);
+    
+    console.log(`[FRONTEND] handleSave: selectedDate="${selectedDate}", calculatedWeekStart="${weekStart}", isSubmit=${isSubmit}`);
     
     const targetTimesheets = selectedEmployee
       ? employeeTimesheets.filter((t) => t.employee_id === selectedEmployee)
@@ -357,8 +410,8 @@ const Overview = () => {
       targetTimesheets.forEach((ts, index) => {
         const formData = new FormData();
         formData.append("C_TIMESHEETS[project_id]", ts.project_id);
-        formData.append("C_TIMESHEETS[week_start_date]", weekStart);
-        formData.append("C_TIMESHEETS[year]", ts.year || new Date(weekStart).getFullYear());
+        formData.append("C_TIMESHEETS[week_start_date]", weekStart); // CRITICAL: Send calculated week start
+        formData.append("C_TIMESHEETS[year]", ts.year || new Date(weekStart + 'T12:00:00Z').getUTCFullYear());
         formData.append("C_TIMESHEETS[timesheet_id]", ts.timesheet_id || "");
         formData.append("C_TIMESHEETS[employee_id]", ts.employee_id);
         formData.append("C_TIMESHEETS[is_approved]", ts.is_approved || 0);
@@ -469,11 +522,9 @@ const Overview = () => {
     setCopyDropdownOpen(null);
   };
 
-  // Handler to open copy modal and fetch weeks
   const handleCopyClick = async (ts) => {
     const key = ts.timesheet_id || ts.temp_key;
     
-    // Close if already open
     if (copyDropdownOpen?.key === key) {
       setCopyDropdownOpen(null);
       return;
@@ -494,7 +545,6 @@ const Overview = () => {
     setIsCopyLoading(false);
   };
 
-  // Handler to select a week and apply its data
   const handleCopyWeekSelect = async (sourceWeekStartDate) => {
     if (!copyDropdownOpen) return;
 
@@ -551,11 +601,9 @@ const Overview = () => {
   
   const isCurrentViewLocked = isAnySubmittedOrApproved(currentViewTimesheets);
 
-  // **START: FIX 1 (Save Button Logic)**
   const isManagingCurrentView = selectedEmployee 
     ? manageableEmpIds.includes(selectedEmployee)
     : manageableEmpIds.includes(currentUserEmpId);
-  // **END: FIX 1**
 
   const currentViewAttachments = Object.values(attachments).flat()
     .filter(att => currentViewTimesheets.some(ts => ts.timesheet_id === att.timesheet_id));
@@ -565,7 +613,6 @@ const Overview = () => {
 
   return (
     <div className="timesheets_container">
-      {/* Modal backdrop for copy dropdown */}
       {copyDropdownOpen && (
         <div 
           className="timesheets_copy-modal-backdrop"
@@ -674,7 +721,6 @@ const Overview = () => {
               {(currentViewTimesheets.length > 0) && (
                 <div className="timesheets_above-table-actions">
                   
-                  {/* **FIX 1**: Combined logic for Approve checkbox (allows self-approve) */}
                   {( (selectedEmployee && manageableEmpIds.includes(selectedEmployee)) ||
                      (!selectedEmployee && manageableEmpIds.includes(currentUserEmpId)) 
                   ) && (
@@ -890,7 +936,6 @@ const Overview = () => {
                         type="button"
                         className="timesheets_save-button"
                         onClick={() => handleSave()}
-                        // **FIX 1**: Updated disabled logic
                         disabled={isSaving || (isCurrentViewLocked && !isManagingCurrentView)}
                       >
                         {isSaving ? 'Saving...' : 'Save'}

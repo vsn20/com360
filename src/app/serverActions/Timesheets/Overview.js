@@ -6,7 +6,7 @@ import fs from "fs/promises";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
 
-// --- START: Core Helper Functions ---
+// --- START: CRITICAL FIX FOR TIMEZONE ISSUES ---
 
 const decodeJwt = (token) => {
   try {
@@ -19,28 +19,77 @@ const decodeJwt = (token) => {
   }
 };
 
-const getWeekStartDate = (date) => {
+/**
+ * CRITICAL FIX: Timezone-agnostic week start calculation
+ * This function MUST return Sunday regardless of server timezone
+ * Input: "2025-01-13" (any day of week)
+ * Output: "2025-01-12" (the Sunday of that week)
+ */
+const getWeekStartDate = (dateString) => {
   try {
-    const d = new Date(`${date}T00:00:00Z`);
-    if (isNaN(d)) throw new Error("Invalid date");
-    const day = d.getUTCDay();
-    d.setUTCDate(d.getUTCDate() - day);
-    return d.toISOString().split("T")[0];
+    // Extract year, month, day from string WITHOUT creating Date object
+    // This prevents ANY timezone conversion
+    const [yearStr, monthStr, dayStr] = dateString.split('-');
+    const year = parseInt(yearStr, 10);
+    const month = parseInt(monthStr, 10);
+    const day = parseInt(dayStr, 10);
+    
+    if (!year || !month || !day || month < 1 || month > 12 || day < 1 || day > 31) {
+      throw new Error("Invalid date components");
+    }
+    
+    // Create date at noon UTC to avoid any daylight saving issues
+    const dateUTC = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+    
+    if (isNaN(dateUTC.getTime())) {
+      throw new Error("Invalid date");
+    }
+    
+    // Get day of week in UTC (0 = Sunday, 6 = Saturday)
+    const dayOfWeek = dateUTC.getUTCDay();
+    
+    // Calculate Sunday of this week by subtracting days
+    const sundayUTC = new Date(dateUTC);
+    sundayUTC.setUTCDate(dateUTC.getUTCDate() - dayOfWeek);
+    
+    // Format as YYYY-MM-DD using UTC components
+    const weekStart = `${sundayUTC.getUTCFullYear()}-${String(sundayUTC.getUTCMonth() + 1).padStart(2, '0')}-${String(sundayUTC.getUTCDate()).padStart(2, '0')}`;
+    
+    console.log(`[SERVER] getWeekStartDate: Input="${dateString}", DayOfWeek=${dayOfWeek}, WeekStart="${weekStart}"`);
+    
+    return weekStart;
   } catch (error) {
-    console.error("Invalid date error:", error);
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0);
-    const day = today.getUTCDay();
-    today.setUTCDate(today.getUTCDate() - day);
-    return today.toISOString().split("T")[0];
+    console.error("[SERVER] Invalid date error:", error, "Input:", dateString);
+    // Fallback to current week's Sunday
+    const now = new Date();
+    const dayOfWeek = now.getUTCDay();
+    const sunday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - dayOfWeek, 12, 0, 0));
+    return `${sunday.getUTCFullYear()}-${String(sunday.getUTCMonth() + 1).padStart(2, '0')}-${String(sunday.getUTCDate()).padStart(2, '0')}`;
   }
 };
 
-const getWeekEndDate = (weekStart) => {
-  const d = new Date(`${weekStart}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + 6);
-  return d.toISOString().split("T")[0];
+/**
+ * Calculate Saturday (week end) from Sunday (week start)
+ */
+const getWeekEndDate = (weekStartString) => {
+  try {
+    const [yearStr, monthStr, dayStr] = weekStartString.split('-');
+    const year = parseInt(yearStr, 10);
+    const month = parseInt(monthStr, 10);
+    const day = parseInt(dayStr, 10);
+    
+    const sundayUTC = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+    const saturdayUTC = new Date(sundayUTC);
+    saturdayUTC.setUTCDate(sundayUTC.getUTCDate() + 6);
+    
+    return `${saturdayUTC.getUTCFullYear()}-${String(saturdayUTC.getUTCMonth() + 1).padStart(2, '0')}-${String(saturdayUTC.getUTCDate()).padStart(2, '0')}`;
+  } catch (error) {
+    console.error("[SERVER] Error calculating week end:", error);
+    return weekStartString; // Fallback
+  }
 };
+
+// --- END: CRITICAL FIX FOR TIMEZONE ISSUES ---
 
 const getSubordinateIds = async (pool, superiorEmpId) => {
   if (!superiorEmpId) return [];
@@ -90,8 +139,6 @@ const getUserPermissionLevel = async (pool, empId, orgId) => {
     return 'none';
   }
 };
-
-// --- END: Core Helper Functions ---
 
 export async function getTimesheetManagementScope(pool, currentEmpId, orgid) {
   let viewableEmpIds = new Set([currentEmpId]);
@@ -152,7 +199,6 @@ export async function getTimesheetManagementScope(pool, currentEmpId, orgid) {
 }
 
 export async function fetchSuperiorName(empId) {
-  // ... (This function is unchanged)
   if (!empId) return { error: "Employee ID is required." };
   try {
     const pool = await DBconnection();
@@ -174,7 +220,6 @@ export async function fetchSuperiorName(empId) {
 }
 
 export async function fetchTimesheetAndProjects(selectedDate) {
-  // ... (This function is unchanged)
   const token = cookies().get("jwt_token")?.value;
   if (!token) return { error: "No token found. Please log in." };
 
@@ -189,7 +234,9 @@ export async function fetchTimesheetAndProjects(selectedDate) {
   const orgid = userRows[0].orgid;
   const weekStart = getWeekStartDate(selectedDate);
   const weekEnd = getWeekEndDate(weekStart);
-  const year = new Date(weekStart).getFullYear();
+  const year = new Date(weekStart + 'T12:00:00Z').getUTCFullYear();
+
+  console.log(`[SERVER] fetchTimesheetAndProjects: selectedDate="${selectedDate}", weekStart="${weekStart}", weekEnd="${weekEnd}"`);
 
   const [projRows] = await pool.execute(
     `SELECT pe.PRJ_ID, COALESCE(p.PRJ_NAME, 'Unnamed Project') AS PRJ_NAME, pe.BILL_RATE, pe.BILL_TYPE 
@@ -240,7 +287,6 @@ export async function fetchTimesheetAndProjects(selectedDate) {
 }
 
 export async function fetchTimesheetsForSuperior(selectedDate) {
-  // ... (This function is unchanged)
   const token = cookies().get("jwt_token")?.value;
   if (!token) return { error: "No token found. Please log in." };
 
@@ -255,7 +301,9 @@ export async function fetchTimesheetsForSuperior(selectedDate) {
   const orgid = userRows[0].orgid;
   const weekStart = getWeekStartDate(selectedDate);
   const weekEnd = getWeekEndDate(weekStart);
-  const year = new Date(weekStart).getFullYear();
+  const year = new Date(weekStart + 'T12:00:00Z').getUTCFullYear();
+
+  console.log(`[SERVER] fetchTimesheetsForSuperior: selectedDate="${selectedDate}", weekStart="${weekStart}", weekEnd="${weekEnd}"`);
 
   const { viewableEmpIds, manageableEmpIds } = await getTimesheetManagementScope(pool, superiorEmpId, orgid);
   const employeeIdsToFetch = viewableEmpIds.filter(id => id !== superiorEmpId);
@@ -322,9 +370,6 @@ export async function fetchTimesheetsForSuperior(selectedDate) {
   };
 }
 
-/**
- * **MODIFIED**: Saves timesheet data with permission checks
- */
 export async function saveTimesheet(formData) {
   if (!formData) return { error: "Invalid form data received." };
 
@@ -355,11 +400,19 @@ export async function saveTimesheet(formData) {
 
   for (const index of timesheetIndices) {
     const timesheetId = formData.get(`C_TIMESHEETS[${index}][timesheet_id]`) || null;
-    const employeeId = formData.get(`C_TIMESHEETS[${index}][employee_id]`); // FIX: Removed parseInt
+    const employeeId = formData.get(`C_TIMESHEETS[${index}][employee_id]`);
     const projectId = formData.get(`C_TIMESHEETS[${index}][project_id]`);
-    const weekStartDate = formData.get(`C_TIMESHEETS[${index}][week_start_date]`);
+    let weekStartDate = formData.get(`C_TIMESHEETS[${index}][week_start_date]`);
     const year = formData.get(`C_TIMESHEETS[${index}][year]`);
-    if (!projectId || !weekStartDate || !employeeId) continue; 
+    
+    // CRITICAL: Recalculate week start on server to ensure it's always Sunday
+    if (weekStartDate) {
+      weekStartDate = getWeekStartDate(weekStartDate);
+    }
+    
+    console.log(`[SERVER] saveTimesheet: index=${index}, originalWeekStart=${formData.get(`C_TIMESHEETS[${index}][week_start_date]`)}, recalculatedWeekStart="${weekStartDate}", employeeId=${employeeId}`);
+    
+    if (!projectId || !weekStartDate || !employeeId) continue;
 
     let existingTimesheet = null;
     if (timesheetId) {
@@ -433,13 +486,12 @@ export async function saveTimesheet(formData) {
     timesheetsData.push({ timesheetId: finalTimesheetId, employeeId, weekStartDate, year, isSubmitted });
   }
 
-  // --- Attachment Handling ---
+  // Attachment handling
   const attachmentFiles = formData.getAll("attachment");
   const firstTimesheetId = timesheetsData.length > 0 ? timesheetsData[0].timesheetId : null;
   const employeeId = timesheetsData.length > 0 ? timesheetsData[0].employeeId : null;
   const noAttachmentFlag = formData.get("noAttachmentFlag") === "1";
   
-  // **FIX 1: Save attachments first, if they exist and are allowed**
   if (attachmentFiles.length > 0 && attachmentFiles[0].size > 0 && employeeId && !noAttachmentFlag) {
     const allowedTypes = ["image/jpeg", "image/png", "application/pdf", "text/plain"];
     const maxFileSize = 5 * 1024 * 1024;
@@ -478,22 +530,17 @@ export async function saveTimesheet(formData) {
     }
   } 
   
-  // **FIX 2: THEN, validate attachments if this is a SUBMIT action**
   if (timesheetsData.length > 0 && formData.get("C_TIMESHEETS[0][is_submitted]") === "1") {
-    // If "No Attachment" is NOT checked, we must have attachments.
     if (!noAttachmentFlag) {
-      // Check if files were *just* uploaded OR if they *already* exist
       const [existingAttachments] = await pool.execute(
         "SELECT COUNT(*) as count FROM C_TIMESHEETS_ATTACHMENTS WHERE employee_id = ? AND week_start_date = ?",
         [employeeId || currentUserEmpId, timesheetsData[0].weekStartDate]
       );
       
-      // If no new files were uploaded AND no existing files are found
       if (attachmentFiles.length === 0 && existingAttachments[0].count === 0) {
           return { error: "No attachments found. Please check 'No Attachment' or upload at least one attachment." };
       }
     }
-    // If noAttachmentFlag is TRUE, we skip this check and allow submission.
   }
 
   const attachmentRows = timesheetsData.length > 0
@@ -510,9 +557,7 @@ export async function saveTimesheet(formData) {
   };
 }
 
-
 export async function removeAttachment(attachmentId, timesheetId) {
-  // ... (This function is unchanged)
   const token = cookies().get("jwt_token")?.value;
   if (!token) return { error: "No token found. Please log in." };
 
@@ -566,7 +611,6 @@ export async function removeAttachment(attachmentId, timesheetId) {
 }
 
 export async function approveTimesheet(timesheetId, employeeId, isApproved) {
-  // ... (This function is unchanged)
   const token = cookies().get("jwt_token")?.value;
   if (!token) return { error: "No token found. Please log in." };
 
@@ -608,13 +652,6 @@ export async function approveTimesheet(timesheetId, employeeId, isApproved) {
   return { success: true, timesheetId, isApproved: updatedRows[0].is_approved, approvedBy: updatedRows[0].approved_by };
 }
 
-// =============================================
-// NEW FUNCTIONS FOR COPY WEEK FEATURE
-// =============================================
-
-/**
- * Fetches a list of past submitted weeks for a specific employee and project.
- */
 export async function fetchCopyableWeeks(employeeId, projectId) {
   const token = cookies().get("jwt_token")?.value;
   if (!token) return { error: "No token found. Please log in." };
@@ -629,13 +666,11 @@ export async function fetchCopyableWeeks(employeeId, projectId) {
   const currentUserEmpId = userRows[0].empid;
   const orgid = userRows[0].orgid;
 
-  // Check if user is allowed to *see* this employeeId's data
   const { viewableEmpIds } = await getTimesheetManagementScope(pool, currentUserEmpId, orgid);
   if (!viewableEmpIds.includes(employeeId)) {
     return { error: "You are not authorized to view this data." };
   }
 
-  // If auth passes, run the query
   try {
     const [rows] = await pool.execute(
       `SELECT DISTINCT week_start_date 
@@ -652,9 +687,6 @@ export async function fetchCopyableWeeks(employeeId, projectId) {
   }
 }
 
-/**
- * Fetches the hours and comments for a specific timesheet to be copied.
- */
 export async function fetchTimesheetDataForCopy(employeeId, projectId, weekStartDate) {
   const token = cookies().get("jwt_token")?.value;
   if (!token) return { error: "No token found. Please log in." };
@@ -669,7 +701,6 @@ export async function fetchTimesheetDataForCopy(employeeId, projectId, weekStart
   const currentUserEmpId = userRows[0].empid;
   const orgid = userRows[0].orgid;
 
-  // Check if user is allowed to *see* this employeeId's data
   const { viewableEmpIds } = await getTimesheetManagementScope(pool, currentUserEmpId, orgid);
   if (!viewableEmpIds.includes(employeeId)) {
     return { error: "You are not authorized to view this data." };
