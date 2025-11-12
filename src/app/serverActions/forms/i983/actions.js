@@ -480,7 +480,9 @@ export async function deleteI983Form(formId) {
     }
 }
 
-// *** UPDATED PDF Generation Function (Unconditional Filling) ***
+// *** UPDATED PDF Generation Function (with Improved Multiline Support) ***
+// *** UPDATED PDF Generation Function (with Complete Multiline Support) ***
+// *** UPDATED PDF Generation Function (with Fixed Evaluation Sections) ***
 async function generateI983PDF(formData) {
     try {
       console.log("\n--- Starting I-983 PDF Generation (Unconditional) ---");
@@ -495,31 +497,91 @@ async function generateI983PDF(formData) {
       const currentStatus = formData.FORM_STATUS;
       console.log(`Generating PDF from data with status: ${currentStatus}`);
 
-
       // --- Helper Functions ---
-      const setSafeText = (fieldName, value) => { try { form.getTextField(fieldName).setText(String(value || '')); } catch { console.warn(`PDF Field Missing: ${fieldName}`) } };
+      const setSafeText = (fieldName, value) => { 
+          try { 
+              form.getTextField(fieldName).setText(String(value || '')); 
+          } catch { 
+              console.warn(`PDF Field Missing: ${fieldName}`) 
+          } 
+      };
       
-      // --- START: MULTILINE FIX ---
+      // --- IMPROVED MULTILINE TEXT HANDLING ---
       const setSafeMultilineText = (fieldName, value, options = {}) => {
           try {
-              const { fontSize = 9 } = options; // Default to 9pt font
+              const { fontSize = 8, lineHeight = 10 } = options;
               const field = form.getTextField(fieldName);
               
-              // Enable multiline
+              // Enable multiline and set appearance
               field.enableMultiline();
-              
-              // Set font size (optional, but good for large text)
               field.setFontSize(fontSize);
               
-              // Set text
-              field.setText(String(value || ''));
+              // Handle text with proper line breaks
+              const text = String(value || '');
               
-              // console.log(`  ✓ Set Multiline ${fieldName} (Font: ${fontSize}pt)`);
+              // Replace multiple spaces and ensure proper formatting
+              const formattedText = text
+                  .replace(/\n\s*\n/g, '\n\n') // Normalize multiple newlines
+                  .replace(/  +/g, ' ')         // Replace multiple spaces with single space
+                  .trim();
+              
+              field.setText(formattedText);
+              
+              console.log(`  ✓ Set Multiline ${fieldName} (${text.length} chars, Font: ${fontSize}pt)`);
           } catch (err) {
               console.warn(`  ⚠️ PDF Multiline Field Missing: ${fieldName} (${err.message})`);
           }
       };
-      // --- END: MULTILINE FIX ---
+
+      // Helper function to draw wrapped text manually
+      // Helper function to draw wrapped text manually
+const drawWrappedText = (page, text, x, y, maxWidth, maxLines, font) => {
+    if (!text) return;
+    
+    const fontSize = 8;
+    const lineHeight = 10;
+    const lines = [];
+    
+    // Split text by newlines first, then wrap each line
+    const paragraphs = text.split('\n');
+    
+    paragraphs.forEach(paragraph => {
+        const words = paragraph.split(' ');
+        let currentLine = words[0] || '';
+        
+        for (let i = 1; i < words.length; i++) {
+            const word = words[i];
+            const testLine = currentLine + ' ' + word;
+            const testWidth = font.widthOfTextAtSize(testLine, fontSize);
+            
+            if (testWidth > maxWidth && currentLine !== '') {
+                lines.push(currentLine);
+                currentLine = word;
+            } else {
+                currentLine = testLine;
+            }
+        }
+        if (currentLine !== '') {
+            lines.push(currentLine);
+        }
+    });
+
+    // Draw lines (up to maxLines)
+    const linesToDraw = lines.slice(0, maxLines);
+    linesToDraw.forEach((line, index) => {
+        if (line.trim()) {
+            page.drawText(line, {
+                x: x,
+                y: y - (index * lineHeight),
+                size: fontSize,
+                font: font,
+                color: rgb(0, 0, 0)
+            });
+        }
+    });
+    
+    console.log(`  ✓ Manual text drawn: ${linesToDraw.length} lines`);
+};
 
       const checkSafeRadio = (groupName, dbValue) => {
           try {
@@ -527,19 +589,23 @@ async function generateI983PDF(formData) {
               if (pdfValue) form.getRadioGroup(groupName).select(pdfValue);
           } catch { console.warn(`PDF Radio Missing: ${groupName}`) }
       };
+
       const embedSafeSignature = async (page, sigUrl, x, y, w, h) => {
           if (!sigUrl) return;
           try {
-              const sigPath = path.join(process.cwd(), "public", sigUrl); await fs.access(sigPath);
-              const sigBytes = await fs.readFile(sigPath); const sigImage = await pdfDoc.embedPng(sigBytes);
+              const sigPath = path.join(process.cwd(), "public", sigUrl); 
+              await fs.access(sigPath);
+              const sigBytes = await fs.readFile(sigPath); 
+              const sigImage = await pdfDoc.embedPng(sigBytes);
               page.drawImage(sigImage, { x, y, width: w, height: h });
               console.log(`  ✅ Sig embedded: ${sigUrl}`);
-          } catch (err) { console.warn(`  ⚠️ Sig embed failed: ${sigUrl} - ${err.message}`); }
+          } catch (err) { 
+              console.warn(`  ⚠️ Sig embed failed: ${sigUrl} - ${err.message}`); 
+          }
       };
-      
-      // --- START: MULTILINE FIX ---
-      const multilineOptions = { fontSize: 9 }; // Use 9pt font for text areas
-      // --- END: MULTILINE FIX ---
+
+      // Multiline configuration
+      const multilineOptions = { fontSize: 8, lineHeight: 10 };
 
       console.log("Filling PDF fields...");
       
@@ -564,7 +630,7 @@ async function generateI983PDF(formData) {
       console.log("Filling Section 2...");
       setSafeText('Printed Name of Student', formData.STUDENT_PRINTED_NAME);
       setSafeText('Date mmddyyyy', formatPdfDate(formData.STUDENT_SIGNATURE_DATE));
-      await embedSafeSignature(pages[0], formData.STUDENT_SIGNATURE_URL, 130, 195, 150,30);
+      await embedSafeSignature(pages[0], formData.STUDENT_SIGNATURE_URL, 130, 195, 150, 30);
       
       // --- Section 3 & 4 (Always Fill) ---
       console.log("Filling Section 3...");
@@ -581,16 +647,17 @@ async function generateI983PDF(formData) {
       setSafeText('OPT Hours Per Week must be at least 20 hoursweek', formData.OPT_HOURS_PER_WEEK);
       setSafeText('Start Date of Employment mmddyyyy', formatPdfDate(formData.START_DATE_OF_EMPLOYMENT));
       setSafeText('A Salary Amount and Frequency', `${formData.SALARY_AMOUNT || ''} ${formData.SALARY_FREQUENCY || ''}`.trim());
-      setSafeText('1 1', formData.OTHER_COMPENSATION_1); setSafeText('1 2', formData.OTHER_COMPENSATION_2);
-      setSafeText('3', formData.OTHER_COMPENSATION_3); setSafeText('4', formData.OTHER_COMPENSATION_4);
+      setSafeText('1 1', formData.OTHER_COMPENSATION_1); 
+      setSafeText('1 2', formData.OTHER_COMPENSATION_2);
+      setSafeText('3', formData.OTHER_COMPENSATION_3); 
+      setSafeText('4', formData.OTHER_COMPENSATION_4);
       
       console.log("Filling Section 4...");
       setSafeText('Printed Name and Title of Employer Official with Signatory Authority', formData.EMPLOYER_OFFICIAL_PRINTED_NAME_TITLE);
       setSafeText('Printed Name of Employing Organization', formData.EMPLOYER_PRINTED_NAME_ORG);
       setSafeText('Date mmddyyyy_2', formatPdfDate(formData.EMPLOYER_OFFICIAL_SIGNATURE_DATE));
-      await embedSafeSignature(pages[1], formData.EMPLOYER_OFFICIAL_SIGNATURE_URL, 300,115,150,30);
+      await embedSafeSignature(pages[1], formData.EMPLOYER_OFFICIAL_SIGNATURE_URL, 300, 115, 150, 30);
       
-
       // --- Section 5 (Always Fill) ---
       console.log("Filling Section 5 (All parts)...");
       setSafeText('Student Name SurnamePrimary Name Given Name_2', formData.SEC5_STUDENT_NAME);
@@ -602,14 +669,36 @@ async function generateI983PDF(formData) {
       setSafeText('Official s Email', formData.SEC5_OFFICIAL_EMAIL);
       setSafeText('Official s Phone Number', formData.SEC5_OFFICIAL_PHONE);
       
-      // --- START: MULTILINE FIX ---
-      // Use the helper for the long text fields
-      setSafeMultilineText('Student Role Describe the students role with the employer and how that role is directly related to enhancing the student s knowledge obtained through his or her qualifying STEM degree', formData.SEC5_STUDENT_ROLE, multilineOptions);
-      setSafeMultilineText('Goals and Objectives Describe how the assignments with the employer will help the student achieve his or her specific objectives for workbased learning related to his or her STEM degree The description must both specify the students goals regarding specific knowledge skills or techniques as well as the means by which they will be achieved', formData.SEC5_GOALS_OBJECTIVES, multilineOptions);
-      setSafeMultilineText('Employer Oversight Explain how the employer provides oversight and supervision of individuals filling positions such as that being filled by the named F1 student If the employer has a training program or related policy in place that controls such oversight and supervision please describe', formData.SEC5_EMPLOYER_OVERSIGHT, multilineOptions);
-      setSafeMultilineText('Measures and Assessments Explain how the employer measures and confirms whether individuals filling positions such as that being filled by the named F1 student are acquiring new knowledge and skills If the employer has a training program or related policy in place that controls such measures and assessments please describe', formData.SEC5_MEASURES_ASSESSMENTS, multilineOptions);
-      setSafeMultilineText('Additional Remarks optional Provide additional information pertinent to the Plan', formData.SEC5_ADDITIONAL_REMARKS, multilineOptions);
-      // --- END: MULTILINE FIX ---
+      // --- MULTILINE FIELDS WITH IMPROVED HANDLING ---
+      console.log("Filling Section 5 Multiline Fields...");
+      setSafeMultilineText(
+          'Student Role Describe the students role with the employer and how that role is directly related to enhancing the student s knowledge obtained through his or her qualifying STEM degree', 
+          formData.SEC5_STUDENT_ROLE, 
+          multilineOptions
+      );
+      setSafeMultilineText(
+          'Goals and Objectives Describe how the assignments with the employer will help the student achieve his or her specific objectives for workbased learning related to his or her STEM degree The description must both specify the students goals regarding specific knowledge skills or techniques as well as the means by which they will be achieved', 
+          formData.SEC5_GOALS_OBJECTIVES, 
+          multilineOptions
+      );
+      setSafeMultilineText(
+          'Employer Oversight Explain how the employer provides oversight and supervision of individuals filling positions such as that being filled by the named F1 student If the employer has a training program or related policy in place that controls such oversight and supervision please describe', 
+          formData.SEC5_EMPLOYER_OVERSIGHT, 
+          multilineOptions
+      );
+      setSafeMultilineText(
+          'Measures and Assessments Explain how the employer measures and confirms whether individuals filling positions such as that being filled by the named F1 student are acquiring new knowledge and skills If the employer has a training program or related policy in place that controls such measures and assessments please describe', 
+          formData.SEC5_MEASURES_ASSESSMENTS, 
+          multilineOptions
+      );
+      
+      // --- ADDITIONAL REMARKS with Multiline Support ---
+      console.log("Filling Additional Remarks...");
+      setSafeMultilineText(
+          'Additional Remarks optional Provide additional information pertinent to the Plan', 
+          formData.SEC5_ADDITIONAL_REMARKS, 
+          multilineOptions
+      );
 
       // --- Section 6 (Always Fill) ---
       console.log("Filling Section 6...");
@@ -617,46 +706,50 @@ async function generateI983PDF(formData) {
       setSafeText('Date mmddyyyy_3', formatPdfDate(formData.EMPLOYER_OFFICIAL_SEC6_SIGNATURE_DATE));
       await embedSafeSignature(pages[3], formData.EMPLOYER_OFFICIAL_SEC6_SIGNATURE_URL, 260, 460, 150, 30);
 
-      // --- Evaluation 1 (Always Fill) ---
-      console.log("Filling Evaluation 1...");
-      setSafeText('undefined_3', formatPdfDate(formData.EVAL1_FROM_DATE)); // 'Range of Evaluation Dates: From'
-      setSafeText('undefined_4', formatPdfDate(formData.EVAL1_TO_DATE));   // 'Range of Evaluation Dates: To'
-      
-      const eval1Text = formData.EVAL1_STUDENT_EVALUATION || '';
-      if (eval1Text) {
-          pages[4].drawText(eval1Text, { 
-              x: 50, y: 670, size: 9, font: helveticaFont, 
-              color: rgb(0, 0, 0), maxWidth: 500, lineHeight: 11 
-          });
-      }
-      setSafeText('Printed Name of Student_2', formData.STUDENT_PRINTED_NAME);
-      setSafeText('Date mmddyyyy_4', formatPdfDate(formData.EVAL1_STUDENT_SIGNATURE_DATE));
-      await embedSafeSignature(pages[4], formData.EVAL1_STUDENT_SIGNATURE_URL, 150, 480, 150, 30);
-      
-      setSafeText('Printed Name of Employer Official with Signatory Authority', formData.EMPLOYER_OFFICIAL_PRINTED_NAME_TITLE); // Reused field?
-      setSafeText('Date mmddyyyy_5', formatPdfDate(formData.EVAL1_EMPLOYER_SIGNATURE_DATE));
-      await embedSafeSignature(pages[4], formData.EVAL1_EMPLOYER_SIGNATURE_URL, 300, 430, 150, 30);
+      // --- Evaluation 1 with Manual Text Drawing ---
+      // --- Evaluation 1 with Manual Text Drawing ---
+console.log("Filling Evaluation 1...");
+setSafeText('undefined_3', formatPdfDate(formData.EVAL1_FROM_DATE)); // 'Range of Evaluation Dates: From'
+setSafeText('undefined_4', formatPdfDate(formData.EVAL1_TO_DATE));   // 'Range of Evaluation Dates: To'
 
-      // --- Evaluation 2 (Always Fill) ---
-      console.log("Filling Evaluation 2...");
-      setSafeText('undefined_5', formatPdfDate(formData.EVAL2_FROM_DATE)); // 'Range of Evaluation Dates: From_2'
-      setSafeText('undefined_6', formatPdfDate(formData.EVAL2_TO_DATE));   // 'Range of Evaluation Dates: To_2'
-      
-      const eval2Text = formData.EVAL2_STUDENT_EVALUATION || '';
-      if (eval2Text) {
-          pages[4].drawText(eval2Text, { 
-              x: 50, y: 325, size: 9, font: helveticaFont, 
-              color: rgb(0, 0, 0), maxWidth: 500, lineHeight: 11 
-          });
-      }
-      setSafeText('Printed Name of Student_3', formData.STUDENT_PRINTED_NAME);
-      setSafeText('Date mmddyyyy_6', formatPdfDate(formData.EVAL2_STUDENT_SIGNATURE_DATE));
-      await embedSafeSignature(pages[4], formData.EVAL2_STUDENT_SIGNATURE_URL, 120, 140, 150, 30);
-      
-      setSafeText('ty', formData.EMPLOYER_OFFICIAL_PRINTED_NAME_TITLE); // Verify 'ty' field name
-      setSafeText('Date mmddyyyy_7', formatPdfDate(formData.EVAL2_EMPLOYER_SIGNATURE_DATE));
-      await embedSafeSignature(pages[4], formData.EVAL2_EMPLOYER_SIGNATURE_URL, 370, 95, 150, 30);
-      
+// MANUAL TEXT DRAWING for Evaluation 1 - Adjusted coordinates to move left
+console.log("Drawing Evaluation 1 text manually...");
+const eval1Text = formData.EVAL1_STUDENT_EVALUATION || '';
+if (eval1Text) {
+    // Draw evaluation text in the first evaluation section - moved left from 50 to 40
+    drawWrappedText(pages[4], eval1Text, 35, 670, 520, 15, helveticaFont);
+    console.log(`  ✓ Evaluation 1 text drawn: ${eval1Text.length} chars`);
+}
+
+setSafeText('Printed Name of Student_2', formData.STUDENT_PRINTED_NAME);
+setSafeText('Date mmddyyyy_4', formatPdfDate(formData.EVAL1_STUDENT_SIGNATURE_DATE));
+await embedSafeSignature(pages[4], formData.EVAL1_STUDENT_SIGNATURE_URL, 150, 480, 150, 30);
+
+setSafeText('Printed Name of Employer Official with Signatory Authority', formData.EMPLOYER_OFFICIAL_PRINTED_NAME_TITLE);
+setSafeText('Date mmddyyyy_5', formatPdfDate(formData.EVAL1_EMPLOYER_SIGNATURE_DATE));
+await embedSafeSignature(pages[4], formData.EVAL1_EMPLOYER_SIGNATURE_URL, 300, 430, 150, 30);
+
+// --- Evaluation 2 with Manual Text Drawing ---
+console.log("Filling Evaluation 2...");
+setSafeText('undefined_5', formatPdfDate(formData.EVAL2_FROM_DATE)); // 'Range of Evaluation Dates: From_2'
+setSafeText('undefined_6', formatPdfDate(formData.EVAL2_TO_DATE));   // 'Range of Evaluation Dates: To_2'
+
+// MANUAL TEXT DRAWING for Evaluation 2 - Adjusted coordinates to move left
+console.log("Drawing Evaluation 2 text manually...");
+const eval2Text = formData.EVAL2_STUDENT_EVALUATION || '';
+if (eval2Text) {
+    // Draw evaluation text in the second evaluation section - moved left from 50 to 40
+    drawWrappedText(pages[4], eval2Text, 35, 325, 520, 15, helveticaFont);
+    console.log(`  ✓ Evaluation 2 text drawn: ${eval2Text.length} chars`);
+}
+
+setSafeText('Printed Name of Student_3', formData.STUDENT_PRINTED_NAME);
+setSafeText('Date mmddyyyy_6', formatPdfDate(formData.EVAL2_STUDENT_SIGNATURE_DATE));
+await embedSafeSignature(pages[4], formData.EVAL2_STUDENT_SIGNATURE_URL, 120, 140, 150, 30);
+
+setSafeText('ty', formData.EMPLOYER_OFFICIAL_PRINTED_NAME_TITLE);
+setSafeText('Date mmddyyyy_7', formatPdfDate(formData.EVAL2_EMPLOYER_SIGNATURE_DATE));
+await embedSafeSignature(pages[4], formData.EVAL2_EMPLOYER_SIGNATURE_URL, 370, 95, 150, 30);
 
       // --- Finalize PDF ---
       console.log("Finalizing PDF...");

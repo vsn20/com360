@@ -1071,3 +1071,146 @@ export async function deleteProfilePhoto(empId) {
     throw new Error('Failed to delete profile photo.');
   }
 }
+
+// Add these functions to app/serverActions/Employee/overview.js
+
+export async function fetchPafDocumentsById(empid) {
+  try {
+    const cookieStore = cookies();
+    const token = cookieStore.get('jwt_token')?.value;
+
+    if (!token) {
+      console.log('No token found');
+      throw new Error('No token found. Please log in.');
+    }
+
+    const decoded = decodeJwt(token);
+    if (!decoded || !decoded.orgid) {
+      console.log('Invalid token or orgid not found');
+      throw new Error('Invalid token or orgid not found.');
+    }
+
+    const orgId = decoded.orgid;
+    if (!orgId) {
+      console.log('orgId is undefined or invalid');
+      throw new Error('Organization ID is missing or invalid.');
+    }
+
+    if (!empid) {
+      console.log('empid is missing');
+      throw new Error('Employee ID is required.');
+    }
+
+    const pool = await DBconnection();
+    console.log("MySQL connection pool acquired");
+    const [rows] = await pool.query(
+      `SELECT ed.id, ed.empid, ed.orgid, ed.document_name, 
+              ed.document_type as document_type_id,
+              COALESCE(gv_type.Name, ed.document_type) as document_type_name,
+              ed.document_path, 
+              ed.document_purpose as document_purpose_id,
+              COALESCE(gv_purpose.Name, ed.document_purpose) as document_purpose_name,
+              ed.created_by, ed.updated_by, ed.created_date, ed.last_updated_date,
+              ed.subtype as subtype_id,
+              COALESCE(gv_subtype.Name, ed.subtype) as subtype_name,
+              ed.startdate, ed.enddate, ed.comments 
+       FROM C_EMP_PAF ed
+       LEFT JOIN C_GENERIC_VALUES gv_type ON ed.document_type = gv_type.id AND gv_type.g_id = 18 AND gv_type.orgid = ed.orgid
+       LEFT JOIN C_GENERIC_VALUES gv_purpose ON ed.document_purpose = gv_purpose.id AND gv_purpose.g_id = 20 AND gv_purpose.orgid = ed.orgid
+       LEFT JOIN C_GENERIC_VALUES gv_subtype ON ed.subtype = gv_subtype.id AND gv_subtype.g_id = 19 AND gv_subtype.orgid = ed.orgid
+       WHERE ed.empid = ? AND ed.orgid = ?`,
+      [empid, orgId]
+    );
+
+    if (rows.length === 0) {
+      console.log('No PAF documents found for empid:', empid);
+      return [];
+    }
+
+    // Map over rows to format last_updated_date, startdate, and enddate for each document
+    const formattedDocuments = rows.map((doc) => ({
+      ...doc,
+      last_updated_date: formatDate(doc.last_updated_date),
+      startdate: formatDateToInput(doc.startdate),
+      enddate: formatDateToInput(doc.enddate),
+    }));
+
+    console.log("Formatted PAF document rows:", formattedDocuments);
+    return formattedDocuments;
+  } catch (error) {
+    console.error('Error fetching employee PAF documents:', error.message);
+    throw new Error(`Failed to fetch employee PAF documents: ${error.message}`);
+  }
+}
+
+export async function fetchFdnsDocumentsById(empid) {
+  try {
+    const cookieStore = cookies();
+    const token = cookieStore.get('jwt_token')?.value;
+
+    if (!token) {
+      console.log('No token found');
+      throw new Error('No token found. Please log in.');
+    }
+
+    const decoded = decodeJwt(token);
+    if (!decoded || !decoded.orgid) {
+      console.log('Invalid token or orgid not found');
+      throw new Error('Invalid token or orgid not found.');
+    }
+
+    const orgId = decoded.orgid;
+    if (!orgId) {
+      console.log('orgId is undefined or invalid');
+      throw new Error('Organization ID is missing or invalid.');
+    }
+
+    if (!empid) {
+      console.log('empid is missing');
+      throw new Error('Employee ID is required.');
+    }
+
+    const pool = await DBconnection();
+    console.log("MySQL connection pool acquired");
+    const [rows] = await pool.query(
+      `SELECT ed.id, ed.empid, ed.orgid, ed.document_name, 
+              ed.document_type as document_type_id,
+              COALESCE(gv_type.Name, ed.document_type) as document_type_name,
+              ed.document_path, 
+              ed.document_purpose as document_purpose_id,
+              COALESCE(gv_purpose.Name, ed.document_purpose) as document_purpose_name,
+              ed.created_by, ed.updated_by, ed.created_date, ed.last_updated_date,
+              ed.subtype as subtype_id,
+              COALESCE(gv_subtype.Name, ed.subtype) as subtype_name,
+              ed.startdate, ed.enddate, ed.comments 
+       FROM C_EMP_FDNS ed
+       LEFT JOIN C_GENERIC_VALUES gv_type ON ed.document_type = gv_type.id AND gv_type.g_id = 18 AND gv_type.orgid = ed.orgid
+       LEFT JOIN C_GENERIC_VALUES gv_purpose ON ed.document_purpose = gv_purpose.id AND gv_purpose.g_id = 20 AND gv_purpose.orgid = ed.orgid
+       LEFT JOIN C_GENERIC_VALUES gv_subtype ON ed.subtype = gv_subtype.id AND gv_subtype.g_id = 19 AND gv_subtype.orgid = ed.orgid
+       WHERE ed.empid = ? AND ed.orgid = ?`,
+      [empid, orgId]
+    );
+
+    if (rows.length === 0) {
+      console.log('No FDNS documents found for empid:', empid);
+      return [];
+    }
+
+    // Map over rows to format last_updated_date, startdate, and enddate for each document
+    const formattedDocuments = rows.map((doc) => ({
+      ...doc,
+      last_updated_date: formatDate(doc.last_updated_date),
+      startdate: formatDateToInput(doc.startdate),
+      enddate: formatDateToInput(doc.enddate),
+    }));
+
+    console.log("Formatted FDNS document rows:", formattedDocuments);
+    return formattedDocuments;
+  } catch (error) {
+    console.error('Error fetching employee FDNS documents:', error.message);
+    throw new Error(`Failed to fetch employee FDNS documents: ${error.message}`);
+  }
+}
+
+// ... also make sure the existing fetchdocumentsbyid and other functions are still there ...
+// ... and that all functions, including the new ones, are exported.
