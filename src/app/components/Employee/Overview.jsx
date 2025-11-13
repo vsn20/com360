@@ -704,7 +704,7 @@ const educationdetailsselecting = (id) => {
   router.refresh();
 };
 
-const pafdocumentselecting = (id) => {
+const pafdocumentselecting = async (id) => {
   setselecteddocument(null);
   setpersonaldetails(null);
   setemployementdetails(null);
@@ -724,13 +724,21 @@ const pafdocumentselecting = (id) => {
   setSelectedRoles([]);
   setError(null);
   setisadd(false);
-  // setPafDocuments([]); // No need to reset, this is where it's shown
-  // setFdnsDocuments([]); // Reset
-  router.refresh();
+  
+  // ADD THIS: Fetch PAF documents when tab is selected
+  try {
+    const pafDocs = await fetchPafDocumentsById(id);
+    setPafDocuments(Array.isArray(pafDocs) ? pafDocs : []);
+  } catch (err) {
+    console.error('Error loading PAF documents:', err);
+    setError('Failed to load PAF documents.');
+  }
+  
   console.log('paf document selected:', id);
- }
-const fdnsdocumentselecting = (id) => { 
-setselecteddocument(null);
+}
+
+const fdnsdocumentselecting = async (id) => { 
+  setselecteddocument(null);
   setpersonaldetails(null);
   setemployementdetails(null);
   setActiveTab('fdns');
@@ -749,12 +757,17 @@ setselecteddocument(null);
   setSelectedRoles([]);
   setError(null);
   setisadd(false);
-  // setPafDocuments([]); // Reset
-  // setFdnsDocuments([]); // No need to reset, this is where it's shown
-  router.refresh();
+  
+  // ADD THIS: Fetch FDNS documents when tab is selected
+  try {
+    const fdnsDocs = await fetchFdnsDocumentsById(id);
+    setFdnsDocuments(Array.isArray(fdnsDocs) ? fdnsDocs : []);
+  } catch (err) {
+    console.error('Error loading FDNS documents:', err);
+    setError('Failed to load FDNS documents.');
+  }
   console.log('fdns document selected:', id);
 }
-
 const handleProfilePhotoUpload = (e) => {
   setPhotoModalError(null); 
   if (e.target.files && e.target.files.length > 0) {
