@@ -1,0 +1,408 @@
+/* Button disabled state */
+.Employee_Reviews_button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.Employee_Reviews_button:hover:not(:disabled) {
+  background-color: #0CB25A;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  color: black !important;
+}
+
+/* Save and Cancel buttons */
+.Employee_Reviews_save,
+.Employee_Reviews_cancel {
+  color: white !important;
+  padding: 8px 16px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: Arial, sans-serif;
+  transition: background-color 0.3s ease, transform 0.1s ease, color 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  text-decoration: none !important;
+  border-radius: 4px;
+}
+
+.Employee_Reviews_save {
+  background-color: #0FD46C;
+}
+
+.Employee_Reviews_save:hover {
+  background-color: #0CB25A;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  color: black !important;
+}
+
+.Employee_Reviews_cancel {
+  background-color: #F44336;
+}
+
+.Employee_Reviews_cancel:hover {
+  background-color: #D32F2F;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  color: black !important;
+}
+
+/* Title */
+.Employee_Reviews_title {
+  font-size: 20px;
+  color: #1f2937;
+  margin: 0;
+  padding-bottom: 10px;
+  font-weight: 600;
+}
+
+/* Header section */
+.Employee_Reviews_header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+/* Table styles */
+.Employee_Reviews_table-wrapper {
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  margin-top: 20px;
+}
+
+.Employee_Reviews_table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #fff;
+}
+
+.Employee_Reviews_table th {
+  background-color: #f8fafc;
+  padding: 16px 20px;
+  text-align: left;
+  border-bottom: 2px solid #e5e7eb;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  position: relative;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.Employee_Reviews_table th:hover {
+  background-color: #f1f5f9;
+}
+
+.Employee_Reviews_table td {
+  padding: 16px 20px;
+  text-align: left;
+  border-bottom: 1px solid #f3f4f6;
+  color: #374151;
+  vertical-align: middle;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  max-width: 400px;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+.Employee_Reviews_table tbody tr {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  cursor: pointer;
+}
+
+.Employee_Reviews_table tbody tr:hover {
+  background: linear-gradient(135deg, #f8fafc, #f0f9ff);
+  transform: translateX(4px);
+  box-shadow: 4px 0 12px rgba(15, 212, 108, 0.1);
+}
+
+.Employee_Reviews_empty-state {
+  text-align: center;
+  padding: 48px 20px;
+  color: #6b7280;
+}
+
+/* Filter styles - UPDATED to match Goals */
+.Employee_Reviews_search-filter-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 20px;
+  align-items: center;
+}
+
+.Employee_Reviews_search-input,
+.Employee_Reviews_filter-select {
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.Employee_Reviews_search-input:focus,
+.Employee_Reviews_filter-select:focus {
+  outline: none;
+  border-color: #0fd46c;
+  box-shadow: 0 0 0 2px rgba(15, 212, 108, 0.25);
+}
+
+.Employee_Reviews_search-input {
+  width: 250px;
+}
+
+.Employee_Reviews_filter-select {
+  min-width: 200px;
+}
+
+/* --- Modal Styles (for Add/Edit) --- */
+.Employee_Reviews_modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1050;
+  animation: Employee_Reviews_fadeIn 0.3s;
+}
+
+.Employee_Reviews_modal-content {
+  background-color: #fff;
+  padding: 25px 30px;
+  border-radius: 8px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  position: relative;
+  width: 90%;
+  max-width: 700px;
+  animation: Employee_Reviews_slideIn 0.3s;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.Employee_Reviews_modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 15px;
+  margin-bottom: 20px;
+}
+
+.Employee_Reviews_modal-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.Employee_Reviews_modal-close-button {
+  background: none;
+  border: none;
+  font-size: 28px;
+  line-height: 1;
+  color: #6c757d;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.Employee_Reviews_modal-close-button:hover {
+  color: #343a40;
+}
+
+/* Form styles inside modal */
+.Employee_Reviews_form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.Employee_Reviews_form-row {
+  display: flex;
+  gap: 20px;
+}
+
+.Employee_Reviews_form-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.Employee_Reviews_form-group label {
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.Employee_Reviews_form-group input,
+.Employee_Reviews_form-group select,
+.Employee_Reviews_form-group textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+  font-size: 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.Employee_Reviews_form-group input:focus,
+.Employee_Reviews_form-group select:focus,
+.Employee_Reviews_form-group textarea:focus {
+  outline: none;
+  border-color: #0fd46c;
+  box-shadow: 0 0 0 2px rgba(15, 212, 108, 0.25);
+}
+
+.Employee_Reviews_form-group input:disabled,
+.Employee_Reviews_form-group select:disabled,
+.Employee_Reviews_form-group textarea:disabled {
+  background-color: #e9ecef;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.Employee_Reviews_form-group textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.Employee_Reviews_form-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 15px;
+  padding-top: 20px;
+  border-top: 1px solid #e9ecef;
+  justify-content: flex-end;
+}
+
+/* Error/Success messages */
+.Employee_Reviews_error-message {
+  color: #dc3545;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+  padding: 10px 15px;
+  margin-bottom: 15px;
+  font-size: 14px;
+  text-align: center;
+}
+
+.Employee_Reviews_success-message {
+  color: #155724;
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  border-radius: 4px;
+  padding: 10px 15px;
+  margin-bottom: 15px;
+  font-size: 14px;
+  text-align: center;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .Employee_Reviews_form-row {
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .Employee_Reviews_search-filter-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .Employee_Reviews_search-input,
+  .Employee_Reviews_filter-select {
+    width: 100%;
+  }
+
+  .Employee_Reviews_modal-content {
+    width: 95%;
+    padding: 20px;
+  }
+}
+
+/* Animations */
+@keyframes Employee_Reviews_fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes Employee_Reviews_slideIn {
+  from { transform: translateY(-30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* --- Pagination & Rows Per Page Styles --- */
+.Employee_Reviews_pagination-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 20px;
+  gap: 10px;
+}
+
+.Employee_Reviews_pagination-input {
+  width: 40px;
+  text-align: center;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 4px;
+  font-size: 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.Employee_Reviews_pagination-input:focus {
+  outline: none;
+  border-color: #0fd46c;
+  box-shadow: 0 0 0 2px rgba(15, 212, 108, 0.25);
+}
+
+.Employee_Reviews_pagination-text {
+  font-size: 14px;
+  color: #333;
+}
+
+.Employee_Reviews_rows-per-page-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+  justify-content: flex-start;
+}
+
+.Employee_Reviews_rows-per-page-label {
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+}
+
+.Employee_Reviews_rows-per-page-input {
+  width: 60px;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  text-align: center;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.Employee_Reviews_rows-per-page-input:focus {
+  outline: none;
+  border-color: #0fd46c;
+  box-shadow: 0 0 0 2px rgba(15, 212, 108, 0.25);
+}
+
+.Employee_Reviews_rows-per-page-input:disabled {
+  background-color: #f0f0f0;
+  cursor: not-allowed;
+}

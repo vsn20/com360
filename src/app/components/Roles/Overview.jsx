@@ -345,6 +345,7 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
         if (menuid === 9 && submenuid === null) newPerm.individualdata = 1;
         if (menuid === 2 && submenuid === 3) newPerm.individualdata = 1;
         if (menuid === 7 && submenuid === null) newPerm.individualdata = 1;
+        if (menuid === 19 && submenuid === null) newPerm.individualdata = 1; // <-- ADD THIS
         if (menuid === 15 && submenuid === 20) newPerm.teamdata = 1;
         if (menuid === 11 && submenuid === null) newPerm.alldata = prev.find(p => p.menuid === 11 && !p.submenuid)?.alldata || 0;
         if (menuid === 12 && submenuid === 17) newPerm.alldata = prev.find(p => p.menuid === 12 && p.submenuid === 17)?.alldata || 0;
@@ -382,7 +383,7 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
     setTempPermissions(prev => prev.map(p => {
       if (p.menuid === menuid && p.submenuid === submenuid) {
         const newPerm = { ...p };
-        if ((menuid === 9 && submenuid === null) || (menuid === 2 && submenuid === 3) || (menuid === 7 && submenuid === null)) {
+        if ((menuid === 9 && submenuid === null) || (menuid === 2 && submenuid === 3) || (menuid === 7 && submenuid === null)||(menuid === 19 && submenuid === null)) {
           newPerm.individualdata = scope === 'individual' ? 1 : 0;
           newPerm.teamdata = scope === 'team' ? 1 : 0;
           newPerm.alldata = scope === 'all' ? 1 : 0;
@@ -501,6 +502,7 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
             if (menuid === 2 && submenuid === 3) newPerm.individualdata = 1;
             if (menuid === 7 && submenuid === null) newPerm.individualdata = 1;
             if (menuid === 15 && submenuid === 20) newPerm.teamdata = 1;
+            if (menuid === 19 && submenuid === null) newPerm.individualdata = 1;
             if (menuid === 11 && submenuid === null) newPerm.alldata = prev.find(p => p.menuid === 11 && !p.submenuid)?.alldata || 0;
             if (menuid === 12 && submenuid === 17) newPerm.alldata = prev.find(p => p.menuid === 12 && p.submenuid === 17)?.alldata || 0;
             // **NEW**: Default 'expenses verification' (16/22) to 'alldata'
@@ -538,7 +540,7 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
     addform_setPermissions(prev => prev.map(p => {
         if (p.menuid === menuid && p.submenuid === submenuid) {
             const newPerm = { ...p };
-            if ((menuid === 9 && submenuid === null) || (menuid === 2 && submenuid === 3) || (menuid === 7 && submenuid === null)) {
+            if ((menuid === 9 && submenuid === null) || (menuid === 2 && submenuid === 3) || (menuid === 7 && submenuid === null)|| (menuid === 19 && submenuid === null)) {
                 newPerm.individualdata = scope === 'individual' ? 1 : 0;
                 newPerm.teamdata = scope === 'team' ? 1 : 0;
                 newPerm.alldata = scope === 'all' ? 1 : 0;
@@ -994,8 +996,24 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
                             </label>
                         </div>
                       )}
-                    </div>
-                  ))}
+                      {C_MENU.menuid === 19 && permissionsToUse.some(p => p.menuid === 19 && !p.submenuid) && (
+                         <div style={{ marginLeft: '20px', marginTop: '5px' }}>
+                           <label className="roles_submenu-label">
+                              <span className="roles_submenu-name">Individual Data</span>
+                                <input type="checkbox" className="roles_permission-checkbox" checked={permissionsToUse.find(p => p.menuid === 19 && !p.submenuid)?.individualdata === 1} onChange={() => currentDataScopeHandler(19, null, 'individual')} disabled={!isEditing} />
+                               </label>
+                                <label className="roles_submenu-label">
+                                <span className="roles_submenu-name">Team Data</span>
+                                <input type="checkbox" className="roles_permission-checkbox" checked={permissionsToUse.find(p => p.menuid === 19 && !p.submenuid)?.teamdata === 1} onChange={() => currentDataScopeHandler(19, null, 'team')} disabled={!isEditing} />
+                                </label>
+                              <label className="roles_submenu-label">
+                               <span className="roles_submenu-name">All Data</span>
+                               <input type="checkbox" className="roles_permission-checkbox" checked={permissionsToUse.find(p => p.menuid === 19 && !p.submenuid)?.alldata === 1} onChange={() => currentDataScopeHandler(19, null, 'all')} disabled={!isEditing} />
+                            </label>
+                          </div>
+                      )}
+                    </div>                   
+                  ))}                  
                 </div>
               ))}
             </div>
@@ -1140,9 +1158,20 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
                           <label className="roles_submenu-label"><span className="roles_submenu-name">All Data</span><input type="checkbox" className="roles_permission-checkbox" checked={addform_permissions.find(p=>p.menuid===7 && !p.submenuid)?.alldata===1} onChange={()=>addform_handleDataScopeToggle(7,null,'all')} /></label>
                         </div>
                       )}
+                       {C_MENU.menuid === 19 && addform_permissions.some(p => p.menuid === 19 && !p.submenuid) && (
+                          <div style={{ marginLeft: '20px', marginTop: '5px' }}>
+                          <label className="roles_submenu-label"><span className="roles_submenu-name">Individual Data</span><input type="checkbox" className="roles_permission-checkbox" checked={addform_permissions.find(p=>p.menuid===19 && !p.submenuid)?.individualdata===1} onChange={()=>addform_handleDataScopeToggle(19,null,'individual')} /></label>
+                          <label className="roles_submenu-label"><span className="roles_submenu-name">Team Data</span><input type="checkbox" className="roles_permission-checkbox" checked={addform_permissions.find(p=>p.menuid===19 && !p.submenuid)?.teamdata===1} onChange={()=>addform_handleDataScopeToggle(19,null,'team')} /></label>
+                          <label className="roles_submenu-label"><span className="roles_submenu-name">All Data</span><input type="checkbox" className="roles_permission-checkbox" checked={addform_permissions.find(p=>p.menuid===19 && !p.submenuid)?.alldata===1} onChange={()=>addform_handleDataScopeToggle(19,null,'all')} /></label>
+                         </div>
+                      )}
+                      
                     </div>
+                    
                   ))}
+                  
                 </div>
+                
               ))}
             </div>
           </div>
