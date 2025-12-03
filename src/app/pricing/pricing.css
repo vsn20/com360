@@ -124,3 +124,33 @@
   .pricingTable { font-size: 0.95rem; }
   .planPrice { font-size: 1.3rem; }
 }
+/* Select Plan Link/Button */
+.selectPlanButton {
+  display: inline-block;
+  background: linear-gradient(135deg, #0FD46C, #00C853);
+  color: #ffffff;
+  text-decoration: none;
+  padding: 12px 28px;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(15, 212, 108, 0.2);
+}
+
+.selectPlanButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(15, 212, 108, 0.35);
+  background: linear-gradient(135deg, #00C853, #0FD46C);
+  color: #ffffff;
+}
+
+.selectPlanButton:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 10px rgba(15, 212, 108, 0.25);
+}
+
+.selectPlanButton:visited {
+  color: #ffffff;
+}

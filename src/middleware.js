@@ -30,6 +30,8 @@ export async function middleware(request) {
     '/login',
     '/register',
     '/jobs/jobslogin',
+    '/FeePayment',
+    '/Subscriber/SubscribeSignup'
   ];
 
   const { pathname } = request.nextUrl;
