@@ -1,0 +1,171 @@
+/* SubscribeSignup.css */
+
+/* Page Container */
+.subscribersignupContainer {
+  width: 100%;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #e0f8eb 0%, #ffffff 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 24px;
+  font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* Form Card */
+.subscribersignupCard {
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+  padding: 60px 70px;
+  border: 1px solid #f0f0f0;
+  max-width: 550px;
+  width: 100%;
+  animation: subscribersignupFadeIn 0.8s ease-out forwards;
+}
+
+/* Animation */
+@keyframes subscribersignupFadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Title */
+.subscribersignupTitle {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #1a1a1a;
+  margin-bottom: 12px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  text-align: center;
+}
+
+/* Subtitle */
+.subscribersignupSubtitle {
+  font-size: 1.1rem;
+  color: #666;
+  margin-bottom: 40px;
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* Form */
+.subscribersignupForm {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Input Group */
+.subscribersignupInputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Label */
+.subscribersignupLabel {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 4px;
+}
+
+/* Input Field */
+.subscribersignupInput {
+  width: 100%;
+  padding: 14px 18px;
+  font-size: 1rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+  font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  background: #ffffff;
+  color: #333;
+  box-sizing: border-box;
+}
+
+.subscribersignupInput:focus {
+  outline: none;
+  border-color: #0FD46C;
+  box-shadow: 0 0 0 3px rgba(15, 212, 108, 0.1);
+}
+
+.subscribersignupInput::placeholder {
+  color: #999;
+}
+
+/* Submit Button */
+.subscribersignupButton {
+  background: linear-gradient(135deg, #0FD46C, #00C853);
+  color: #ffffff;
+  border: none;
+  padding: 16px 32px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 6px 20px rgba(15, 212, 108, 0.25);
+  margin-top: 16px;
+}
+
+.subscribersignupButton:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(15, 212, 108, 0.4);
+  background: linear-gradient(135deg, #00C853, #0FD46C);
+}
+
+.subscribersignupButton:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 15px rgba(15, 212, 108, 0.3);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .subscribersignupCard {
+    padding: 40px 32px;
+  }
+  
+  .subscribersignupTitle {
+    font-size: 2rem;
+  }
+  
+  .subscribersignupSubtitle {
+    font-size: 1rem;
+  }
+  
+  .subscribersignupInput {
+    padding: 12px 16px;
+  }
+  
+  .subscribersignupButton {
+    padding: 14px 28px;
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .subscribersignupCard {
+    padding: 32px 24px;
+  }
+  
+  .subscribersignupTitle {
+    font-size: 1.8rem;
+  }
+  
+  .subscribersignupSubtitle {
+    font-size: 0.95rem;
+  }
+  
+  .subscribersignupInput {
+    padding: 11px 14px;
+    font-size: 0.95rem;
+  }
+  
+  .subscribersignupButton {
+    padding: 12px 24px;
+    font-size: 0.95rem;
+  }
+}

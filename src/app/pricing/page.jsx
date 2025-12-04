@@ -1,7 +1,7 @@
 'use client'
 import React, { useEffect, useRef, useState } from 'react';
 import './pricing.css';
-
+import Link from 'next/link';
 const useInView = (options) => {
   const ref = useRef(null);
   const [isInView, setIsInView] = useState(false);
@@ -65,6 +65,7 @@ const Page = () => {
                   <th>Plan</th>
                   <th>Monthly Price</th>
                   <th>Per User (After 25)</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -72,21 +73,25 @@ const Page = () => {
                   <td className="planName">Starter</td>
                   <td className="planPrice">$49/mo</td>
                   <td className="planDetails">($1.99/month/user)</td>
+                  <td><Link className="selectPlanButton" href="/FeePayment">Select Plan</Link></td>
                 </tr>
                 <tr className="pricingRow">
                   <td className="planName">Pro</td>
                   <td className="planPrice">$99/mo</td>
                   <td className="planDetails">($3.99/month/user)</td>
+                  <td><Link className="selectPlanButton" href="/FeePayment">Select Plan</Link></td>
                 </tr>
                 <tr className="pricingRow">
                   <td className="planName">Growth</td>
                   <td className="planPrice">$199/mo</td>
                   <td className="planDetails">($7.99/month/user)</td>
+                  <td><Link className="selectPlanButton" href="/FeePayment">Select Plan</Link></td>
                 </tr>
                 <tr className="pricingRow">
                   <td className="planName">Enterprise</td>
                   <td className="planPrice">$299+</td>
                   <td className="planDetails">($9.99/month/user)</td>
+                 <td><Link className="selectPlanButton" href="/FeePayment">Select Plan</Link></td>
                 </tr>
               </tbody>
             </table>

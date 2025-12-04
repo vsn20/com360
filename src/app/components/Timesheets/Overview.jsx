@@ -229,18 +229,45 @@ const Overview = () => {
   }, [selectedDate, selectedEmployee]);
 
   const formatDate = (date) => {
-    if (!date || isNaN(new Date(date))) return '';
-    // FIXED: Use UTC parsing for consistent display
-    const [year, month, day] = date.split('-');
-    const d = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day), 12, 0, 0));
-    return d.toLocaleDateString("en-US", {
+    if (!date) return '';
+
+    // FIX: Handle if 'date' is already a JS Date object
+    if (date instanceof Date) {
+      return date.toLocaleDateString("en-US", {
+        month: "2-digit",
+        day: "2-digit",
+        year: "numeric",
+        timeZone: "UTC"
+      });
+    }
+
+    // FIX: Ensure it is a string before splitting
+    if (typeof date === 'string') {
+      // Remove time component if present (e.g. "2025-01-01T00:00:00.000Z" -> "2025-01-01")
+      const dateStr = date.includes('T') ? date.split('T')[0] : date;
+      const [year, month, day] = dateStr.split('-');
+      
+      // Ensure we have valid parts
+      if (year && month && day) {
+        const d = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day), 12, 0, 0));
+        return d.toLocaleDateString("en-US", {
+          month: "2-digit",
+          day: "2-digit",
+          year: "numeric",
+          timeZone: "UTC"
+        });
+      }
+    }
+
+    // Fallback if formatting fails but it's a valid date value
+    const d = new Date(date);
+    return isNaN(d) ? '' : d.toLocaleDateString("en-US", {
       month: "2-digit",
       day: "2-digit",
       year: "numeric",
       timeZone: "UTC"
     });
   };
-
   const getDateForDay = (baseDate, dayOffset) => {
     // FIXED: Parse base date consistently
     const [year, month, day] = baseDate.split('-');
