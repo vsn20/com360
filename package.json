@@ -21,7 +21,6 @@
     "mongoose": "^8.15.1",
     "mysql2": "^3.14.1",
     "next": "^15.3.3",
-    "node-latex": "^3.1.0",
     "nodemailer": "^7.0.6",
     "openai": "^6.7.0",
     "pdf-lib": "^1.17.1",
