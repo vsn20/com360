@@ -381,10 +381,10 @@ async function uploadPDFToDocuments(pdfBytes, empId, orgId, formId, userId) {
         empId, 
         orgId, 
         `I-9 Form (Verified ${new Date().toLocaleDateString()})`,
-        65, // document_type
-        68, // subtype
+        1, // document_type
+        4, // subtype
         documentPath,
-        63, // document_purpose
+        5, // document_purpose
         `Automatically uploaded after form verification. Form ID: ${formId}`,
         userId,
         userId

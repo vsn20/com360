@@ -1,10 +1,10 @@
 'use server';
 
-import DBconnection from '@/app/utils/config/db';
+import DBconnection from '@/app/utils/config/db'; // 🔹 Imported MetaDBconnection
 import { cookies } from 'next/headers';
 import fs from 'fs/promises';
 import path from 'path';
-import { start } from 'repl';
+import { MetaDBconnection } from '@/app/utils/config/db';
 
 const decodeJwt = (token) => {
   try {
@@ -17,7 +17,6 @@ const decodeJwt = (token) => {
     return null;
   }
 };
-
 
 const formatDate = (date) => {
     if (!date || isNaN(new Date(date))) return '';
@@ -36,7 +35,108 @@ const formatDateToInput = (date) => {
   return `${year}-${month}-${day}`;
 };
 
+// 🔹 HELPER: Sync Employee to Meta Database
+// 🔹 HELPER: Sync Employee to Meta Database
+// 🔹 HELPER: Sync Employee to Meta Database
+async function syncEmployeeToMeta(empid, orgid, tenantPool, currentUsername) {
+  let metaConnection;
+  try {
+    console.log(`\n--- 🚀 STARTING META SYNC ---`);
+    console.log(`Target EmpID: ${empid}, OrgID: ${orgid}`);
+    console.log(`Executed By: ${currentUsername}`);
 
+    // Get Meta Pool from db.js export
+    const metaPool = MetaDBconnection(); 
+    metaConnection = await metaPool.getConnection();
+    console.log(`✅ STEP 1: Connected to Meta DB`);
+
+    // 1. Get Current User's Plan Number and OrgID from Meta DB
+    console.log(`🔍 STEP 2: Looking up admin '${currentUsername}' in Meta DB...`);
+    
+    const [currentUserRows] = await metaConnection.query(
+      `SELECT plan_number, org_id FROM C_EMP WHERE username = ? OR email = ?`,
+      [currentUsername, currentUsername]
+    );
+
+    console.log(`📄 STEP 2 Result: Found ${currentUserRows.length} rows`);
+
+    if (currentUserRows.length === 0) {
+      console.error(`❌ FAILURE: Admin user '${currentUsername}' not found in Meta DB.`);
+      return; 
+    }
+
+    const { plan_number, org_id: metaOrgId } = currentUserRows[0];
+    console.log(`✅ Admin Details Found -> OrgID: ${metaOrgId}, Plan: ${plan_number}`);
+
+    // 2. Get Target Employee Data from Tenant DB
+    console.log(`🔍 STEP 3: Fetching new employee data from Tenant DB...`);
+    
+    const [empRows] = await tenantPool.query(
+      `SELECT EMP_FST_NAME, EMP_MID_NAME, EMP_LAST_NAME, email, STATUS 
+       FROM C_EMP WHERE empid = ? AND orgid = ?`,
+      [empid, orgid]
+    );
+
+    if (empRows.length === 0) {
+      console.error('❌ FAILURE: Target employee not found in Tenant DB.');
+      return;
+    }
+
+    const targetEmp = empRows[0];
+    console.log(`✅ Employee Found: ${targetEmp.EMP_FST_NAME} (${targetEmp.email})`);
+    
+    // 3. Resolve Status ID to 'Y' or 'N'
+    let isActive = 'Y';
+    // if (targetEmp.STATUS) {
+    //  if (targetEmp.STATUS=="ACTIVE"||targetEmp.STATUS=="Active"||targetEmp.STATUS=="active") {
+    //     isActive = 'Y';
+    //  }
+    // }
+    console.log(`✅ Status Resolved: ${isActive}`);
+
+    // 4. Upsert into Meta C_EMP
+    console.log(`🚀 STEP 4: Attempting INSERT into Meta C_EMP...`);
+    console.log(`Payload:`, {
+        first: targetEmp.EMP_FST_NAME,
+        email: targetEmp.email,
+        username: targetEmp.email, // Using email as username
+        org: metaOrgId,
+        plan: plan_number
+    });
+
+    // 🔴 CRITICAL FIX: The INSERT statement now includes 'username'
+    await metaConnection.query(
+      `INSERT INTO C_EMP 
+        (emp_first_name, emp_middle_name, org_id, plan_number, email, active, username)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE 
+        emp_first_name = VALUES(emp_first_name),
+        emp_middle_name = VALUES(emp_middle_name),
+        org_id = VALUES(org_id),
+        plan_number = VALUES(plan_number),
+        active = VALUES(active),
+        username = VALUES(username)`, 
+      [
+        targetEmp.EMP_FST_NAME,
+        targetEmp.EMP_MID_NAME || null,
+        metaOrgId,   
+        plan_number, 
+        targetEmp.email,
+        isActive,
+        targetEmp.email // 👈 THIS IS REQUIRED because username cannot be NULL
+      ]
+    );
+
+    console.log(`✅ SUCCESS: Meta Sync Completed for ${targetEmp.email}`);
+    console.log(`--- 🏁 END META SYNC ---\n`);
+
+  } catch (error) {
+    console.error('❌ CRITICAL ERROR in Meta Sync:', error);
+    if (error.sqlMessage) console.error('SQL Error:', error.sqlMessage);
+  } finally {
+    if (metaConnection) metaConnection.release();
+  }
+}
 export async function updateEmployee(prevState, formData) {
   try {
     const empid = formData.get('empid');
@@ -51,7 +151,7 @@ export async function updateEmployee(prevState, formData) {
       formData: Object.fromEntries(formData),
     });
 
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const token = cookieStore.get('jwt_token')?.value;
 
     if (!token) {
@@ -66,6 +166,8 @@ export async function updateEmployee(prevState, formData) {
     }
 
     const jwtOrgId = decoded.orgid;
+    const currentUsername = decoded.username; // 🔹 Needed for Meta Sync
+
     console.log(`JWT orgid: ${jwtOrgId}, type: ${typeof jwtOrgId}`);
 
     const pool = await DBconnection();
@@ -189,11 +291,19 @@ export async function updateEmployee(prevState, formData) {
           'system', empid, orgid,
         ]
       );
-      const [updat_email_in_cusers]=await pool.query(
-        `update C_USER SET email=? where empid=?`,[email,empid]
+      
+      const [updat_email_in_cusers] = await pool.query(
+        `update C_USER SET email=? where empid=?`, [email, empid]
       );
+
       affectedRows += result.affectedRows;
       console.log(`Personal details update result: ${result.affectedRows} rows affected for empid ${empid}`);
+
+      // 🔹 TRIGGER META SYNC (Personal Details change)
+      if (affectedRows > 0) {
+        await syncEmployeeToMeta(empid, orgid, pool, currentUsername);
+      }
+
     } else if (section === 'employment') {
       // Handle both single roleid and multiple roleids
       const roleids = formData.getAll('roleids').length > 0 
@@ -383,6 +493,12 @@ export async function updateEmployee(prevState, formData) {
         affectedRows += roleAssignResult.affectedRows;
         console.log(`Assigned role ${roleid} to employee ${empid}, affectedRows: ${roleAssignResult.affectedRows}`);
       }
+
+      // 🔹 TRIGGER META SYNC (Employment details/Status change)
+      if (affectedRows > 0) {
+        await syncEmployeeToMeta(empid, orgid, pool, currentUsername);
+      }
+
     } else if (section === 'leaves') {
       const leaves = {};
       for (let [key, value] of formData.entries()) {
@@ -1211,6 +1327,3 @@ export async function fetchFdnsDocumentsById(empid) {
     throw new Error(`Failed to fetch employee FDNS documents: ${error.message}`);
   }
 }
-
-// ... also make sure the existing fetchdocumentsbyid and other functions are still there ...
-// ... and that all functions, including the new ones, are exported.

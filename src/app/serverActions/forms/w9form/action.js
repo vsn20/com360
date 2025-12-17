@@ -425,8 +425,8 @@ async function uploadPDFToDocuments(pdfBytes, empId, orgId, formId, userId) {
         // --- Step 3: Check for existing document in C_SUB_ORG_DOCUMENTS ---
         // Let's use suborgid, orgid, and document_purpose to identify if it exists
         // Assuming 'W9-Form' is a suitable purpose identifier
-        const documentPurpose = 'Compliance';
-        const documentName = `Form W-9 (Submitted ${new Date().toLocaleDateString()})`; // Add date for uniqueness if needed
+        const documentPurpose = 5;
+        const documentName = `W-9 Form (Submitted ${new Date().toLocaleDateString()})`; // Add date for uniqueness if needed
 
         const [existingDocs] = await pool.query(
             `SELECT id FROM C_SUB_ORG_DOCUMENTS
@@ -464,7 +464,7 @@ async function uploadPDFToDocuments(pdfBytes, empId, orgId, formId, userId) {
                     subOrgId,
                     orgId,
                     documentName,
-                    'W-9', // Example document type, adjust as needed
+                    6, // Example document type, adjust as needed
                     documentPath,
                     documentPurpose,
                     userId,

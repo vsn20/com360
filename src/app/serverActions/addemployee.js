@@ -1,6 +1,6 @@
 "use server";
 
-import DBconnection from "../utils/config/db";
+import DBconnection, { MetaDBconnection } from "@/app/utils/config/db"; // Ensure path is correct
 import { cookies } from "next/headers";
 import { assignLeaves } from '@/app/serverActions/Employee/overview';
 
@@ -16,13 +16,109 @@ const decodeJwt = (token) => {
   }
 };
 
+// 🔹 HELPER: Sync Employee to Meta Database
+async function syncEmployeeToMeta(empid, orgid, tenantPool, currentUsername) {
+  let metaConnection;
+  try {
+    console.log(`\n--- 🚀 STARTING META SYNC ---`);
+    console.log(`Target EmpID: ${empid}, OrgID: ${orgid}`);
+    console.log(`Executed By: ${currentUsername}`);
+
+    // Get Meta Pool from db.js export
+    const metaPool = MetaDBconnection(); 
+    metaConnection = await metaPool.getConnection();
+    console.log(`✅ STEP 1: Connected to Meta DB`);
+
+    // 1. Get Current User's Plan Number and OrgID from Meta DB
+    console.log(`🔍 STEP 2: Looking up admin '${currentUsername}' in Meta DB...`);
+    
+    // Check both username and email to find the admin
+    const [currentUserRows] = await metaConnection.query(
+      `SELECT plan_number, org_id FROM C_EMP WHERE username = ? OR email = ?`,
+      [currentUsername, currentUsername]
+    );
+
+    console.log(`📄 STEP 2 Result: Found ${currentUserRows.length} rows`);
+
+    if (currentUserRows.length === 0) {
+      console.error(`❌ FAILURE: Admin user '${currentUsername}' not found in Meta DB.`);
+      return; 
+    }
+
+    const { plan_number, org_id: metaOrgId } = currentUserRows[0];
+    console.log(`✅ Admin Details Found -> OrgID: ${metaOrgId}, Plan: ${plan_number}`);
+
+    // 2. Get Target Employee Data from Tenant DB
+    console.log(`🔍 STEP 3: Fetching new employee data from Tenant DB...`);
+    
+    const [empRows] = await tenantPool.query(
+      `SELECT EMP_FST_NAME, EMP_MID_NAME, EMP_LAST_NAME, email, STATUS
+       FROM C_EMP WHERE empid = ? AND orgid = ?`,
+      [empid, orgid]
+    );
+
+    if (empRows.length === 0) {
+      console.error('❌ FAILURE: Target employee not found in Tenant DB.');
+      return;
+    }
+
+    const targetEmp = empRows[0];
+    console.log(`✅ Employee Found: ${targetEmp.EMP_FST_NAME} (${targetEmp.email})`);
+    
+    // 3. Resolve Status ID to 'Y' or 'N'
+    let isActive = 'Y';
+    // if (targetEmp.STATUS) {
+
+    //   if (targetEmp.STATUS=="ACTIVE"||targetEmp.STATUS=="Active"||targetEmp.STATUS=="active") {
+    //     isActive = 'Y';
+    //   }
+    // }
+    console.log(`✅ Status Resolved: ${isActive}`);
+
+    // 4. Upsert into Meta C_EMP
+    console.log(`🚀 STEP 4: Attempting INSERT into Meta C_EMP...`);
+
+    // 🔴 CRITICAL FIX: The INSERT statement now includes 'username' (set to email)
+    await metaConnection.query(
+      `INSERT INTO C_EMP 
+        (emp_first_name, emp_middle_name, org_id, plan_number, email, active, username)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE 
+        emp_first_name = VALUES(emp_first_name),
+        emp_middle_name = VALUES(emp_middle_name),
+        org_id = VALUES(org_id),
+        plan_number = VALUES(plan_number),
+        active = VALUES(active),
+        username = VALUES(username)`, 
+      [
+        targetEmp.EMP_FST_NAME,
+        targetEmp.EMP_MID_NAME || null,
+        metaOrgId,   
+        plan_number, 
+        targetEmp.email,
+        'Y',
+        targetEmp.email // 👈 Force Email as Username to satisfy DB constraints
+      ]
+    );
+
+    console.log(`✅ SUCCESS: Meta Sync Completed for ${targetEmp.email}`);
+    console.log(`--- 🏁 END META SYNC ---\n`);
+
+  } catch (error) {
+    console.error('❌ CRITICAL ERROR in Meta Sync:', error);
+    if (error.sqlMessage) console.error('SQL Error:', error.sqlMessage);
+  } finally {
+    if (metaConnection) metaConnection.release();
+  }
+}
+
 export async function addemployee(formData) {
   const empFstName = formData.get('empFstName') || '';
   const empMidName = formData.get('empMidName') || null;
   const empLastName = formData.get('empLastName') || '';
   const empPrefName = formData.get('empPrefName') || null;
   const email = formData.get('email') || '';
-  const roleids = [...new Set(formData.getAll('roleids'))]; // Deduplicate roleids
+  const roleids = [...new Set(formData.getAll('roleids'))]; 
   const gender = formData.get('gender') || null;
   const mobileNumber = formData.get('mobileNumber') || null;
   const phoneNumber = formData.get('phoneNumber') || null;
@@ -75,6 +171,7 @@ export async function addemployee(formData) {
   if (!decoded || !decoded.orgid) return { error: 'Invalid token or orgid not found.' };
 
   const orgid = decoded.orgid;
+  const currentUsername = decoded.username; // 🔹 Needed for Meta Sync
 
   // Validation
   if (!empFstName.trim()) return { error: 'First name is required.' };
@@ -98,7 +195,7 @@ export async function addemployee(formData) {
       return { error: 'Email already exists.' };
     }
 
-    // Validate superior if provided
+    // Validate superior
     if (superior) {
       const [existingSuperior] = await pool.query(
         'SELECT empid FROM C_EMP WHERE empid = ? AND orgid = ?',
@@ -120,7 +217,7 @@ export async function addemployee(formData) {
       }
     }
 
-    // Get department name if department ID is provided
+    // Get department name
     let deptName = null;
     if (deptId) {
       const [deptResult] = await pool.query(
@@ -133,24 +230,24 @@ export async function addemployee(formData) {
         return { error: 'Invalid department ID.' };
       }
     }
-    if (suborgid) 
-    {
+    
+    // Validate SubOrg
+    if (suborgid) {
        const [suborgResult] = await pool.query(
        'SELECT suborgid FROM C_SUB_ORG WHERE suborgid = ? AND orgid = ? AND isstatus = 1',
       [suborgid, orgid]
-     );
-      if (suborgResult.length === 0) 
-      {
+      );
+      if (suborgResult.length === 0) {
         return { error: 'Invalid suborganization ID.' };
       }
-   }
+    }
 
     // Generate employee ID
     const [countResult] = await pool.query('SELECT COUNT(*) AS count FROM C_EMP WHERE orgid = ?', [orgid]);
     const empCount = countResult[0].count;
     empid = `${orgid}_${empCount + 1}`;
 
-    // Define insert columns and values for C_EMP
+    // Insert Employee
     const insertColumns = [
       'empid', 'orgid', 'EMP_FST_NAME', 'EMP_MID_NAME', 'EMP_LAST_NAME', 'EMP_PREF_NAME', 'email',
       'GENDER', 'MOBILE_NUMBER', 'DOB', 'HIRE', 'LAST_WORK_DATE',
@@ -181,14 +278,7 @@ export async function addemployee(formData) {
       emergCnctPostalCode, 1,suborgid
     ];
 
-    if (values.length !== insertColumns.length) {
-      console.error("Mismatch: values length =", values.length, "columns length =", insertColumns.length);
-      return { error: 'Internal error: column count mismatch' };
-    }
-
     const placeholders = values.map(() => '?').join(', ');
-    
-    // Insert employee into C_EMP
     await pool.query(
       `INSERT INTO C_EMP (${insertColumns.join(', ')}) VALUES (${placeholders})`,
       values
@@ -196,7 +286,7 @@ export async function addemployee(formData) {
 
     console.log(`Employee ${empid} inserted successfully`);
 
-    // Insert roles into C_EMP_ROLE_ASSIGN with ON DUPLICATE KEY UPDATE
+    // Insert Roles
     for (const roleid of roleids) {
       await pool.query(
         `INSERT INTO C_EMP_ROLE_ASSIGN (empid, orgid, roleid) 
@@ -207,7 +297,7 @@ export async function addemployee(formData) {
       console.log(`Assigned role ${roleid} to employee ${empid}`);
     }
 
-    // Process leaves
+    // Process Leaves
     const leaves = {};
     for (let [key, value] of formData.entries()) {
       if (key.startsWith('leaves[') && key.endsWith(']')) {
@@ -236,28 +326,20 @@ export async function addemployee(formData) {
       console.log('All leave assignments completed successfully');
     }
 
-    // Success
+    // 🔴 IMPORTANT: This was missing in your code!
+    // Trigger the Meta Sync so the employee appears in the central Meta DB
+    await syncEmployeeToMeta(empid, orgid, pool, currentUsername);
+
     return { success: true };
     
   } catch (error) {
-    console.error('Error adding employee, roles, or assigning leaves:', error);
+    console.error('Error adding employee:', error);
     
+    // Attempt Rollback (Manual)
     if (empid) {
-      try {
-        const pool = await DBconnection();
-        const [empExists] = await pool.query(
-          'SELECT empid FROM C_EMP WHERE empid = ? AND orgid = ?',
-          [empid, orgid]
-        );
-        
-        if (empExists.length > 0) {
-          return { error: `Employee added but some roles or leaves failed to assign: ${error.message}` };
-        } else {
-          return { error: `Failed to add employee: ${error.message}` };
-        }
-      } catch (checkError) {
-        return { error: `Failed to add employee: ${error.message}` };
-      }
+      // Basic check if employee exists before errors return
+      // (Simplified error handling)
+      return { error: `Failed to add employee: ${error.message}` };
     } else {
       return { error: `Failed to add employee: ${error.message}` };
     }

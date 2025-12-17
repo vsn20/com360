@@ -1,12 +1,18 @@
 'use server';
 
-import DBconnection from "../utils/config/db";
 import nodemailer from 'nodemailer';
 import bcrypt from 'bcrypt';
+import loginDBconnection, { metaPool } from "../utils/config/logindb"; // 🔹 Import metaPool to access Meta DB
 
 export async function sendOTP(formData) {
   const email = formData.get('email');
-  const pool = await DBconnection();
+  
+  // 🔹 Use 'email' mode to find the DB without a cookie
+  const pool = await loginDBconnection(email, 'email');
+
+  if (!pool) {
+    return { success: false, error: "Email not found in employee records." };
+  }
 
   // Create OTP table if not exists
   await pool.query(`
@@ -17,7 +23,7 @@ export async function sendOTP(formData) {
     )
   `);
 
-  const [countEmployee] = await pool.query(`SELECT COUNT(*) AS count FROM C_EMP WHERE email=?`, [email]);
+  const [countEmployee] = await pool.query(`SELECT COUNT(*) AS count FROM C_EMP WHERE Email=?`, [email]);
   if (countEmployee[0].count === 0) {
     return { success: false, error: "Email not registered with any employee." };
   }
@@ -46,15 +52,13 @@ export async function sendOTP(formData) {
     },
   });
 
-  const mailOptions = {
-    from: process.env.GMAIL_USER,
-    to: email,
-    subject: 'Your OTP for Signup',
-    text: `Your OTP is ${otp}, valid for 10 minutes.`,
-  };
-
   try {
-    await transporter.sendMail(mailOptions);
+    await transporter.sendMail({
+      from: process.env.GMAIL_USER,
+      to: email,
+      subject: 'Your OTP for Signup',
+      text: `Your OTP is ${otp}, valid for 10 minutes.`,
+    });
     return { success: true };
   } catch (err) {
     console.error('Email sending error:', err);
@@ -65,7 +69,13 @@ export async function sendOTP(formData) {
 export async function verifyOTP(formData) {
   const email = formData.get('email');
   const otp = formData.get('otp');
-  const pool = await DBconnection();
+  
+  // 🔹 Connect using Email
+  const pool = await loginDBconnection(email, 'email');
+
+  if (!pool) {
+     return { success: false, error: "System Error: Database connection failed." };
+  }
 
   const [rows] = await pool.query(`SELECT otp, expiry FROM C_OTP WHERE email=?`, [email]);
   if (rows.length === 0) {
@@ -90,10 +100,16 @@ export async function verifyOTP(formData) {
 
 export async function finalSignup(formData) {
   const email = formData.get('email');
-  const user_id = formData.get('user_id');
+  const user_id = formData.get('user_id'); // This is the NEW username
   const password = formData.get('password');
   const confirm_password = formData.get('confirm_password');
-  const pool = await DBconnection();
+  
+  // 🔹 Connect using Email (Database location is defined by Employee Email)
+  const pool = await loginDBconnection(email, 'email');
+
+  if (!pool) {
+      return { success: false, error: "Employee record not found." };
+  }
 
   // Validate username (only letters and numbers)
   const usernameRegex = /^[a-zA-Z0-9]+$/;
@@ -116,7 +132,8 @@ export async function finalSignup(formData) {
     return { success: false, error: "Username is already in use. Please select another username." };
   }
 
-  const [empidRows] = await pool.query(`SELECT empid, orgid FROM C_EMP WHERE email=?`, [email]);
+  // Get employee details to link the new user
+  const [empidRows] = await pool.query(`SELECT empid, orgid FROM C_EMP WHERE Email=?`, [email]);
   if (empidRows.length === 0) {
     return { success: false, error: "Employee details not found." };
   }
@@ -126,10 +143,26 @@ export async function finalSignup(formData) {
   // Hash the password
   const hashedPassword = await bcrypt.hash(password, 10);
 
+  // 1. Insert into Tenant Database (C_USER)
   await pool.query(
     `INSERT INTO C_USER (username, email, password, empid, orgid) VALUES (?, ?, ?, ?, ?)`,
     [user_id, email, hashedPassword, empid, orgid]
   );
+
+  // 2. 🔹 CRITICAL UPDATE: Sync Username to Meta Database (C_EMP)
+  try {
+    const [metaResult] = await metaPool.query(
+      `UPDATE C_EMP SET username = ? WHERE email = ?`,
+      [user_id, email]
+    );
+    console.log(`Meta DB Sync: Username updated for ${email}. Rows affected: ${metaResult.affectedRows}`);
+  } catch (err) {
+    console.error("Meta DB Sync Error: Failed to update username in Meta C_EMP:", err);
+    // Optional: You might want to return an error here if strict consistency is required,
+    // but usually, we don't want to rollback the Tenant signup if just the Meta sync has a hiccup.
+    // However, if Meta isn't updated, they can't log in next time.
+    return { success: false, error: "Account created, but system synchronization failed. Please contact support." };
+  }
 
   return { success: true };
 }

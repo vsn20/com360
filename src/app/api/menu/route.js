@@ -39,12 +39,14 @@ export async function GET(request) {
 
     // Fetch isadmin for any of the roles
     let isAdmin = false;
+    let issuperadmin = false;
     try {
       const [adminRows] = await pool.query(
-        'SELECT isadmin FROM C_ORG_ROLE_TABLE WHERE roleid IN (?) AND orgid = ?',
+        'SELECT isadmin,issuperadmin FROM C_ORG_ROLE_TABLE WHERE roleid IN (?) AND orgid = ?',
         [roleids, orgid]
       );
       isAdmin = adminRows.some(row => row.isadmin === 1);
+      issuperadmin = adminRows.some(row => row.issuperadmin === 1);
     } catch (error) {
       console.error('Error fetching isadmin from C_ORG_ROLE_TABLE:', error.message);
       isAdmin = false;
@@ -120,6 +122,14 @@ export async function GET(request) {
       menuItems.push({
         title: 'Priority Setting',
         href: '/userscreens/prioritysetting',
+        C_SUBMENU: [],
+      });
+    }
+
+    if(issuperadmin){
+      menuItems.push({
+        title: 'New Organization',
+        href: '/userscreens/neworganization',
         C_SUBMENU: [],
       });
     }

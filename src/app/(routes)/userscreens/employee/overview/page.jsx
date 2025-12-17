@@ -75,8 +75,12 @@ export default async function OverviewPage({ searchParams }) {
   let document_types = [];
   let document_purposes = [];
   let document_subtypes = [];
-  let employmentTypes = []; // Added employmentTypes
+  let employmentTypes = []; 
+  let immigrationStatuses = [];     
+  let immigrationDocTypes = [];     
+  let immigrationDocSubtypes = [];  
   let timestamp = new Date().getTime();
+  let organizationName = '';
 
   try {
     const pool = await DBconnection();
@@ -106,7 +110,6 @@ export default async function OverviewPage({ searchParams }) {
 
     orgid = decoded.orgid;
     const username = decoded.userId;
-    console.log(`[DEBUG] 1. Decoded from JWT -> username: ${username}, orgid: ${orgid}`);
 
     const [userRows] = await pool.execute("SELECT empid FROM C_USER WHERE username = ? AND orgid = ?", [username, orgid]);
     if (userRows.length === 0) {
@@ -119,14 +122,12 @@ export default async function OverviewPage({ searchParams }) {
         );
     }
     empid = userRows[0].empid;
-    console.log(`[DEBUG] 2. Looked up User -> Found empid: ${empid}`);
 
     const [userRoles] = await pool.query(
       'SELECT roleid FROM C_EMP_ROLE_ASSIGN WHERE empid = ? AND orgid = ?',
       [empid, orgid]
     );
     const roleIds = userRoles.map(r => r.roleid);
-    console.log(`[DEBUG] 3. Looked up Roles for empid ${empid} -> Found roleIds:`, roleIds);
 
     if (roleIds.length === 0) {
         console.warn(`[DEBUG] WARNING: No roles found for empid ${empid} in C_EMP_ROLE_ASSIGN. Permission will default to 'none'.`);
@@ -158,7 +159,6 @@ export default async function OverviewPage({ searchParams }) {
     } else if (hasIndividualData) {
       permissionLevel = 'individual';
     }
-    console.log(`[DEBUG] 4. Calculated Permission Level -> ${permissionLevel}`);
     
     // Fetch employment types
     [employmentTypes] = await pool.query(
@@ -180,26 +180,19 @@ export default async function OverviewPage({ searchParams }) {
     if (permissionLevel === 'team') {
         const subordinateIds = await getSubordinates(pool, empid, orgid);
         const visibleEmpIds = [empid, ...subordinateIds];
-        console.log(`[DEBUG] 5. Team Data -> Found subordinates: [${subordinateIds.join(', ')}]. Total visible IDs: [${visibleEmpIds.join(', ')}]`);
         
         employeeQuery += ` AND e.empid IN (?)`;
         queryParams.push(visibleEmpIds);
 
     } else if (permissionLevel === 'individual') {
-        console.log(`[DEBUG] 5. Individual Data -> Restricting to self (empid: ${empid})`);
         employeeQuery += ` AND e.empid = ?`;
         queryParams.push(empid);
 
     } else if (permissionLevel === 'none') {
-        console.log(`[DEBUG] 5. No Permissions -> Query will return no results.`);
         employeeQuery += ` AND 1=0`;
-    } else {
-        console.log(`[DEBUG] 5. All Data -> No additional employee filter needed.`);
-    }
+    } 
     
     employeeQuery += ` GROUP BY e.empid`;
-
-    console.log("[DEBUG] 6. Final SQL Query:", pool.format(employeeQuery, queryParams));
 
     const [employeeRows] = await pool.query(employeeQuery, queryParams);
 
@@ -209,8 +202,6 @@ export default async function OverviewPage({ searchParams }) {
       formattedHireDate: formatDateForDisplay(emp.HIRE)
     }));
     
-    console.log(`[DEBUG] 7. Fetched Employees -> Found ${employees.length} record(s).`);
-
     [departments] = await pool.query('SELECT id, name FROM C_ORG_DEPARTMENTS WHERE orgid = ? AND isactive = 1', [orgid]);
     [payFrequencies] = await pool.query('SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 4 AND orgid = ? AND isactive = 1', [orgid]);
     [jobTitles] = await pool.query('SELECT job_title_id,job_title, level, min_salary, max_salary FROM C_ORG_JOBTITLES WHERE orgid = ? AND is_active = 1', [orgid]);
@@ -219,9 +210,44 @@ export default async function OverviewPage({ searchParams }) {
     [states] = await pool.query('SELECT ID, VALUE FROM C_STATE WHERE ACTIVE = 1');
     [workerCompClasses] = await pool.query('SELECT class_code, phraseology FROM C_WORK_COMPENSATION_CLASS');
     [suborgs] = await pool.query('SELECT suborgid, suborgname FROM C_SUB_ORG WHERE orgid = ? AND isstatus = 1', [orgid]);
-    [document_types] = await pool.query('SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 18 AND orgid = ? AND isactive = 1', [orgid]);
-    [document_purposes] = await pool.query('SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 20 AND orgid = ? AND isactive = 1', [orgid]);
-    [document_subtypes] = await pool.query('SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 19 AND orgid = ? AND isactive = 1', [orgid]);
+    
+    [document_types] = await pool.query(
+      'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 18 AND isactive = 1 AND (orgid = ? OR orgid = -1)',
+      [orgid]
+    );
+
+    [document_purposes] = await pool.query(
+      'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 20 AND isactive = 1 AND (orgid = ? OR orgid = -1)',
+      [orgid]
+    );
+
+    [document_subtypes] = await pool.query(
+      'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 19 AND isactive = 1 AND (orgid = ? OR orgid = -1)',
+      [orgid]
+    );
+
+    // --- IMMIGRATION FETCHES ---
+    [immigrationStatuses] = await pool.query(
+      'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 29 AND isactive = 1 AND (orgid = ? OR orgid = -1)',
+      [orgid]
+    );
+
+    [immigrationDocTypes] = await pool.query(
+      'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 30 AND isactive = 1 AND (orgid = ? OR orgid = -1)',
+      [orgid]
+    );
+
+    [immigrationDocSubtypes] = await pool.query(
+      'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 31 AND isactive = 1 AND (orgid = ? OR orgid = -1)',
+      [orgid]
+    );
+
+  const [orgnizations]=await pool.query(
+      'SELECT orgname FROM C_ORG WHERE orgid = ?',
+      [orgid]
+    );
+     organizationName = orgnizations.length > 0 ? orgnizations[0].orgname : ''; 
+    // ---------------------------
 
     const { success, roles: fetchedRoles, error: fetchError } = await getAllroles();
     if (!success) {
@@ -267,7 +293,12 @@ export default async function OverviewPage({ searchParams }) {
       document_types={document_types}
       document_purposes={document_purposes}
       document_subtypes={document_subtypes}
-      employmentTypes={employmentTypes} // Added employmentTypes
+      employmentTypes={employmentTypes}
+      // New Immigration Props
+      immigrationStatuses={immigrationStatuses}
+      immigrationDocTypes={immigrationDocTypes}
+      immigrationDocSubtypes={immigrationDocSubtypes}
+      org_name={organizationName}
     />
   );
 }

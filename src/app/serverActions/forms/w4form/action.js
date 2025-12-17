@@ -655,7 +655,7 @@ if (w4Data.EMPLOYEE_SIGNATURE_URL) {
     console.error(`❌ ERROR embedding employee signature: ${err.message}`);
   }
 } else {
-  console.log("ℹ️ No employee signature URL found.");
+  console.log(" No employee signature URL found.");
 }
 
     // --- "Employers Only" Section ---
@@ -716,24 +716,24 @@ export async function uploadPDFToDocuments(pdfBytes, empId, orgId, formId, userI
         const documentPath = `/uploads/documents/${filename}`;
         const pool = await DBconnection();
 
-        const subtype = 68; // W-4 Subtype ID
+        const subtype = 4; // W-4 Subtype ID
         const [existingDocs] = await pool.query(
             `SELECT id FROM C_EMP_DOCUMENTS WHERE empid = ? AND orgid = ? AND subtype = ? AND comments LIKE ?`,
             [empId, orgId, subtype, `%Form ID: ${formId}%`]
         );
-
-        const docName = `Form W-4 (${statusName})`;
+        const timestamp = Date.now();
+        const docName = `W-4 Form (${statusName} ${new Date().toLocaleDateString()})`;
         const comments = `${statusName} W-4 Form. Form ID: ${formId}`;
-        const document_type = 66; // 'Tax Forms'
-        const document_purpose = 63; // 'Compliance'
+        const document_type = 2; // 'Tax Forms'
+        const document_purpose = 5; // 'Compliance'
 
         if (existingDocs.length > 0) {
             const [updateResult] = await pool.query(
                 `UPDATE C_EMP_DOCUMENTS SET
-                 document_name = ?, document_path = ?, comments = ?,
+                 document_name = ?, document_path = ?, comments = ?,subtype=?,
                  updated_by = ?, last_updated_date = NOW()
                  WHERE id = ?`,
-                [docName, documentPath, comments, userId, existingDocs[0].id]
+                [docName, documentPath, comments, subtype,userId, existingDocs[0].id]
             );
              if (updateResult && updateResult.affectedRows > 0) {
                  console.log(`Updated W4 document record ${existingDocs[0].id} for Form ID ${formId}`);

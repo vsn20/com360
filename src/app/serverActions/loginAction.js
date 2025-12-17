@@ -4,6 +4,7 @@ import DBconnection from "../utils/config/db";
 import jwt from "jsonwebtoken";
 import bcrypt from 'bcrypt';
 import { cookies } from "next/headers";
+import loginDBconnection from "../utils/config/logindb";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -16,7 +17,7 @@ export async function loginaction(logindetails) {
   console.log("Login attempt for username:", username);
 
   try {
-    const pool = await DBconnection();
+    const pool = await loginDBconnection(username);
     console.log("MySQL connection established");
     let usernameemail = [];
     if (username.includes('@')) {

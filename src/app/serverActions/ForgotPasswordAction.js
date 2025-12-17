@@ -1,13 +1,22 @@
 'use server';
 
-import DBconnection from "../utils/config/db";
+// 🔹 CHANGED: Import the dynamic loginDBconnection instead of the cookie-based one
+import loginDBconnection from "../utils/config/logindb";
 import nodemailer from 'nodemailer';
 import bcrypt from 'bcrypt';
 
 export async function sendForgotOTP(formData) {
-  const type = formData.get('type');
+  const type = formData.get('type'); // This will be 'email' or 'username'
   const identifier = formData.get('identifier');
-  const pool = await DBconnection();
+
+  // 🔹 CHANGED: Use dynamic connection based on input type
+  // If type is 'username', it looks up by username. If 'email', it looks up by email.
+  const pool = await loginDBconnection(identifier, type);
+
+  // If pool is null, the user/email does not exist in the META database
+  if (!pool) {
+    return { success: false, error: "Account not found in system records." };
+  }
 
   // Log environment variables for debugging
   console.log('GMAIL_USER:', process.env.GMAIL_USER);
@@ -107,7 +116,13 @@ export async function sendForgotOTP(formData) {
 export async function verifyForgotOTP(formData) {
   const email = formData.get('email');
   const otp = formData.get('otp');
-  const pool = await DBconnection();
+
+  // 🔹 CHANGED: Connect using 'email' type since we have the email now
+  const pool = await loginDBconnection(email, 'email');
+
+  if (!pool) {
+     return { success: false, error: "System Error: Database connection failed." };
+  }
 
   const [rows] = await pool.query(`SELECT otp, expiry FROM C_FORGOTOTP WHERE email=?`, [email]);
   if (rows.length === 0) {
@@ -134,7 +149,13 @@ export async function resetPassword(formData) {
   const email = formData.get('email');
   const password = formData.get('password');
   const confirm_password = formData.get('confirm_password');
-  const pool = await DBconnection();
+
+  // 🔹 CHANGED: Connect using 'email' type
+  const pool = await loginDBconnection(email, 'email');
+
+  if (!pool) {
+     return { success: false, error: "System Error: Database connection failed." };
+  }
 
   // Validate password strength
   const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{6,}$/;

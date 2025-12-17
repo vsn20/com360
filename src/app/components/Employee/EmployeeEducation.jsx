@@ -2,15 +2,21 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  fetchEducationByEmpId, 
   addEducation, 
   updateEducation, 
   deleteEducation 
 } from '@/app/serverActions/Employee/experienceEducation';
 import './overview.css';
 
-const EmployeeEducation = ({ empid, countries, states, canEdit }) => {
-  const [educationList, setEducationList] = useState([]);
+const EmployeeEducation = ({ 
+  empid, 
+  countries, 
+  states, 
+  canEdit, 
+  educationList: initialEducationList,
+  onUpdate
+}) => {
+  const [educationList, setEducationList] = useState(Array.isArray(initialEducationList) ? initialEducationList : []);
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState(null);
@@ -31,16 +37,15 @@ const EmployeeEducation = ({ empid, countries, states, canEdit }) => {
   });
 
   useEffect(() => {
-    loadEducation();
-  }, [empid]);
+    setEducationList(Array.isArray(initialEducationList) ? initialEducationList : []);
+  }, [initialEducationList]);
 
-  const loadEducation = async () => {
-    try {
-      const data = await fetchEducationByEmpId(empid);
-      setEducationList(data);
-    } catch (err) {
-      setError('Failed to load education records');
-    }
+  const formatDateForDisplay = (date) => {
+    if (!date || isNaN(new Date(date))) return '';
+    const d = new Date(date);
+    const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(d.getUTCDate()).padStart(2, '0');
+    return `${month}/${day}/${d.getUTCFullYear()}`;
   };
 
   const handleInputChange = (e) => {
@@ -55,6 +60,11 @@ const EmployeeEducation = ({ empid, countries, states, canEdit }) => {
     e.preventDefault();
     const data = new FormData();
     data.append('employee_id', empid);
+    
+    if (editingId) {
+      data.append('id', editingId);
+    }
+    
     Object.keys(formData).forEach(key => {
       data.append(key, formData[key]);
     });
@@ -66,7 +76,7 @@ const EmployeeEducation = ({ empid, countries, states, canEdit }) => {
     if (result.error) {
       setError(result.error);
     } else {
-      await loadEducation();
+      if (onUpdate) await onUpdate();
       resetForm();
     }
   };
@@ -96,7 +106,9 @@ const EmployeeEducation = ({ empid, countries, states, canEdit }) => {
     if (!confirm('Delete this education record?')) return;
     const result = await deleteEducation(id);
     if (result.success) {
-      await loadEducation();
+      if (onUpdate) await onUpdate();
+    } else {
+      setError(result.error || 'Failed to delete record');
     }
   };
 
@@ -133,7 +145,7 @@ const EmployeeEducation = ({ empid, countries, states, canEdit }) => {
 
   return (
     <div className="role-details-block96">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="section-header-with-button">
         <h3>Education</h3>
         {canEdit && !isAdding && (
           <button className="button" onClick={() => setIsAdding(true)}>
@@ -145,18 +157,19 @@ const EmployeeEducation = ({ empid, countries, states, canEdit }) => {
       {error && <p className="error-message">{error}</p>}
 
       {isAdding && (
-        <form onSubmit={handleSubmit} style={{ marginTop: '20px', border: '1px solid #ddd', padding: '15px', borderRadius: '5px' }}>
+        <form onSubmit={handleSubmit} className="add-edit-form-container">
           <h4>{editingId ? 'Edit Education' : 'Add Education'}</h4>
           
           <div className="form-row">
             <div className="form-group">
-              <label>Degree Name</label>
+              <label>Degree Name *</label>
               <input
                 type="text"
                 name="degree_name"
                 value={formData.degree_name}
                 onChange={handleInputChange}
                 placeholder="e.g., Bachelor of Science"
+                required
               />
             </div>
             <div className="form-group">
@@ -173,13 +186,14 @@ const EmployeeEducation = ({ empid, countries, states, canEdit }) => {
 
           <div className="form-row">
             <div className="form-group">
-              <label>Institution</label>
+              <label>Institution *</label>
               <input
                 type="text"
                 name="institution"
                 value={formData.institution}
                 onChange={handleInputChange}
                 placeholder="University name"
+                required
               />
             </div>
             <div className="form-group">
@@ -189,6 +203,7 @@ const EmployeeEducation = ({ empid, countries, states, canEdit }) => {
                 name="location_city"
                 value={formData.location_city}
                 onChange={handleInputChange}
+                placeholder="City"
               />
             </div>
           </div>
@@ -228,19 +243,21 @@ const EmployeeEducation = ({ empid, countries, states, canEdit }) => {
                 value={formData.custom_state_name}
                 onChange={handleInputChange}
                 disabled={formData.country === '185'}
+                placeholder="For non-US locations"
               />
             </div>
           </div>
 
           <div className="form-row">
             <div className="form-group">
-              <label>Start Date</label>
+              <label>Start Date *</label>
               <input
                 type="date"
                 name="start_date"
                 value={formData.start_date}
                 onChange={handleInputChange}
                 className="date-input"
+                required
               />
             </div>
             <div className="form-group">
@@ -288,19 +305,20 @@ const EmployeeEducation = ({ empid, countries, states, canEdit }) => {
                 name="transcript_url"
                 value={formData.transcript_url}
                 onChange={handleInputChange}
+                placeholder="https://example.com/transcript"
               />
             </div>
           </div>
 
           <div className="form-row">
-            <div className="form-group">
+            <div className="form-group" style={{ flex: '1 1 100%' }}>
               <label>Notes</label>
               <textarea
                 name="notes"
                 value={formData.notes}
                 onChange={handleInputChange}
                 rows="3"
-                style={{ width: '100%', padding: '8px' }}
+                placeholder="Additional information about this education"
               />
             </div>
           </div>
@@ -318,10 +336,10 @@ const EmployeeEducation = ({ empid, countries, states, canEdit }) => {
 
       <div style={{ marginTop: '20px' }}>
         {educationList.length === 0 ? (
-          <p>No education records found.</p>
+          <p className="empty-records-message">No education records found.</p>
         ) : (
           educationList.map((edu) => (
-            <div key={edu.id} className="view-details" style={{ marginBottom: '15px', borderBottom: '1px solid #eee', paddingBottom: '15px' }}>
+            <div key={edu.id} className="experience-record-card">
               <div className="details-row">
                 <div className="details-g">
                   <label>Degree</label>
@@ -332,6 +350,7 @@ const EmployeeEducation = ({ empid, countries, states, canEdit }) => {
                   <p>{edu.major || '-'}</p>
                 </div>
               </div>
+              
               <div className="details-row">
                 <div className="details-g">
                   <label>Institution</label>
@@ -342,42 +361,65 @@ const EmployeeEducation = ({ empid, countries, states, canEdit }) => {
                   <p>
                     {edu.location_city && `${edu.location_city}, `}
                     {edu.state ? getStateName(edu.state) : edu.custom_state_name || ''}
-                    {edu.country && `, ${getCountryName(edu.country)}`}
+                    {(edu.state || edu.custom_state_name) && edu.country && ', '}
+                    {edu.country && getCountryName(edu.country)}
                   </p>
                 </div>
               </div>
+              
               <div className="details-row">
                 <div className="details-g">
                   <label>Duration</label>
-                  <p>
-                    {edu.start_date && new Date(edu.start_date).toLocaleDateString()} - 
-                    {edu.end_date ? new Date(edu.end_date).toLocaleDateString() : 'Present'}
+                  <p className="date-range-display">
+                    {formatDateForDisplay(edu.start_date)} - 
+                    {edu.end_date ? ` ${formatDateForDisplay(edu.end_date)}` : ' Present'}
                   </p>
                 </div>
                 <div className="details-g">
                   <label>Graduated</label>
-                  <p>{edu.graduated ? 'Yes' : 'No'}</p>
+                  <p>
+                    {edu.graduated ? 'Yes' : 'No'}
+                    {edu.graduated && (
+                      <span className="status-badge-small success">Completed</span>
+                    )}
+                  </p>
                 </div>
               </div>
+              
               {edu.honors && (
                 <div className="details-row">
-                  <div className="details-g">
-                    <label>Honors</label>
+                  <div className="details-g" style={{ flex: '1 1 100%' }}>
+                    <label>Honors/Awards</label>
                     <p>{edu.honors}</p>
                   </div>
                 </div>
               )}
+              
+              {edu.transcript_url && (
+                <div className="details-row">
+                  <div className="details-g" style={{ flex: '1 1 100%' }}>
+                    <label>Transcript</label>
+                    <p>
+                      <a href={edu.transcript_url} target="_blank" rel="noopener noreferrer" className="url-link">
+                        View Transcript
+                      </a>
+                    </p>
+                  </div>
+                </div>
+              )}
+              
               {edu.notes && (
                 <div className="details-row">
-                  <div className="details-g">
+                  <div className="details-g" style={{ flex: '1 1 100%' }}>
                     <label>Notes</label>
                     <p>{edu.notes}</p>
                   </div>
                 </div>
               )}
+              
               {canEdit && (
-                <div style={{ marginTop: '10px' }}>
-                  <button className="button" onClick={() => handleEdit(edu)} style={{ marginRight: '10px' }}>
+                <div className="record-actions">
+                  <button className="button" onClick={() => handleEdit(edu)}>
                     Edit
                   </button>
                   <button className="button cancel" onClick={() => handleDelete(edu.id)}>

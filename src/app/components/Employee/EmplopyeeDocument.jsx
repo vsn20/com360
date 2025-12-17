@@ -35,6 +35,16 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate,
   const MAX_FILE_SIZE_BYTES = 1 * 1024 * 1024; // 1 MB
 
   /**
+   * Helper to look up Name by ID from the provided lists
+   */
+  const getNameById = (list, id) => {
+    if (!list || !id) return 'N/A';
+    // Ensure we compare strings to avoid type mismatches (e.g. number vs string)
+    const item = list.find((item) => String(item.id) === String(id));
+    return item ? item.Name : 'N/A';
+  };
+
+  /**
    * A single, robust function to format dates.
    * @param {string | Date} dateStr - The date string or Date object.
    * @param {'input' | 'display'} formatType - 'input' for YYYY-MM-DD, 'display' for MM/DD/YYYY.
@@ -247,16 +257,19 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate,
         bValue = (b.document_name || '').toLowerCase();
         return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
       case 'document_type':
-        aValue = (a.document_type_name || '').toLowerCase();
-        bValue = (b.document_type_name || '').toLowerCase();
+        // Use helper to sort by Name instead of ID
+        aValue = getNameById(document_types, a.document_type_id).toLowerCase();
+        bValue = getNameById(document_types, b.document_type_id).toLowerCase();
         return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
       case 'subtype':
-        aValue = (a.subtype_name || '').toLowerCase();
-        bValue = (b.subtype_name || '').toLowerCase();
+        // Use helper to sort by Name instead of ID
+        aValue = getNameById(document_subtypes, a.subtype_id).toLowerCase();
+        bValue = getNameById(document_subtypes, b.subtype_id).toLowerCase();
         return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
       case 'document_purpose':
-        aValue = (a.document_purpose_name || '').toLowerCase();
-        bValue = (b.document_purpose_name || '').toLowerCase();
+        // Use helper to sort by Name instead of ID
+        aValue = getNameById(document_purposes, a.document_purpose_id).toLowerCase();
+        bValue = getNameById(document_purposes, b.document_purpose_id).toLowerCase();
         return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
       case 'startdate':
         aValue = a.startdate ? new Date(formatDate(a.startdate)) : new Date(0);
@@ -711,8 +724,17 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate,
                         setIsViewOnly(true); 
                       }} style={{ cursor: 'pointer' }}>
                         <td className={styles.tableCell}>{d.document_name || 'N/A'}</td>
-                        <td className={styles.tableCell}>{d.document_type_name || 'N/A'}</td>
-                        <td className={styles.tableCell}>{d.subtype_name || 'N/A'}</td>
+                        
+                        {/* Display Name instead of ID for Type */}
+                        <td className={styles.tableCell}>
+                            {getNameById(document_types, d.document_type_id)}
+                        </td>
+                        
+                        {/* Display Name instead of ID for Subtype */}
+                        <td className={styles.tableCell}>
+                            {getNameById(document_subtypes, d.subtype_id)}
+                        </td>
+
                         <td
                           className={styles.tableCell}
                           onClick={(e) => {
@@ -728,7 +750,12 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate,
                             'N/A'
                           )}
                         </td>
-                        <td className={styles.tableCell}>{d.document_purpose_name || 'N/A'}</td>
+
+                        {/* Display Name instead of ID for Purpose */}
+                        <td className={styles.tableCell}>
+                            {getNameById(document_purposes, d.document_purpose_id)}
+                        </td>
+
                         <td className={styles.tableCell}>{formatDate(d.startdate, 'display')}</td>
                         <td className={styles.tableCell}>{formatDate(d.enddate, 'display')}</td>
                       </tr>

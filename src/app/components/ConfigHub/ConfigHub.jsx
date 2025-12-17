@@ -27,9 +27,11 @@ const ConfigHub = () => {
   const [parentValueId, setParentValueId] = useState(null);
   const [navigationStack, setNavigationStack] = useState([]);
 
+  // UPDATED CATEGORIES LIST
   const categories = [
     { id: 'company', name: 'Company', dbCategory: null },
     { id: 'employment', name: 'Employment', dbCategory: 'Employment' },
+    { id: 'immigration', name: 'Immigration', dbCategory: 'Immigration' }, // Added Immigration
     { id: 'documents', name: 'Documents', dbCategory: 'Documents' },
     { id: 'account', name: 'Account', dbCategory: 'Account' },
     { id: 'expense', name: 'Expense', dbCategory: 'Expense' },

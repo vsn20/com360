@@ -480,9 +480,6 @@ export async function deleteI983Form(formId) {
     }
 }
 
-// *** UPDATED PDF Generation Function (with Improved Multiline Support) ***
-// *** UPDATED PDF Generation Function (with Complete Multiline Support) ***
-// *** UPDATED PDF Generation Function (with Fixed Evaluation Sections) ***
 async function generateI983PDF(formData) {
     try {
       console.log("\n--- Starting I-983 PDF Generation (Unconditional) ---");
@@ -781,7 +778,7 @@ async function uploadI983PDFToDocuments(pdfBytes, empId, orgId, formId, userId, 
         const filePath = path.join(uploadDir, filename);
         await fs.writeFile(filePath, pdfBytes); console.log(`I-983 PDF (${statusName}) saved: ${filePath}`);
         const documentPath = `/uploads/documents/${filename}`; const pool = await DBconnection();
-        const subtype = 70; // Unique subtype for I-983
+        const subtype = 4; // Unique subtype for I-983
 
         // --- Find existing document record based on formId in comments ---
         const [existingDocs] = await pool.query(
@@ -789,10 +786,10 @@ async function uploadI983PDFToDocuments(pdfBytes, empId, orgId, formId, userId, 
              [empId, orgId, subtype, `%Form ID: ${formId}%`]
         );
 
-        const docName = `Form I-983 (${statusName})`; // Use status in doc name
+        const docName = `I-983 Form (${statusName} ${new Date().toLocaleDateString()})`; // Use status in doc name
         const comments = `Generated I-983 Form PDF (Status: ${statusName}). Form ID: ${formId}`;
-        const document_type = 66; // Tax/Compliance Forms category ID
-        const document_purpose = 63; // Compliance Purpose ID
+        const document_type = 3; // Tax/Compliance Forms category ID
+        const document_purpose = 5; // Compliance Purpose ID
 
         if (existingDocs.length > 0) {
             // --- UPDATE the existing document record ---

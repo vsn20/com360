@@ -15,13 +15,45 @@ const decodeJwt = (token) => {
   }
 };
 
+const formatDateForDB = (dateStr) => {
+  if (!dateStr) return null;
+  // Parse the date string and create a date using UTC to avoid timezone shifts
+  const date = new Date(dateStr + 'T00:00:00Z');
+  if (isNaN(date.getTime())) return null;
+  
+  // Format as YYYY-MM-DD using UTC methods
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  
+  return `${year}-${month}-${day}`;
+};
+
 // ============ EDUCATION FUNCTIONS ============
 
 export async function fetchEducationByEmpId(empid) {
   try {
     const pool = await DBconnection();
     const [rows] = await pool.execute(
-      `SELECT * FROM C_EMPLOYEE_EDUCATION WHERE employee_id = ? ORDER BY start_date DESC`,
+      `SELECT 
+        id,
+        employee_id,
+        degree_name,
+        major,
+        institution,
+        country,
+        state,
+        custom_state_name,
+        location_city,
+        DATE_FORMAT(start_date, '%Y-%m-%d') as start_date,
+        DATE_FORMAT(end_date, '%Y-%m-%d') as end_date,
+        graduated,
+        honors,
+        transcript_url,
+        notes
+      FROM C_EMPLOYEE_EDUCATION 
+      WHERE employee_id = ? 
+      ORDER BY start_date DESC`,
       [empid]
     );
     return rows;
@@ -50,8 +82,8 @@ export async function addEducation(formData) {
     const state = formData.get('state') || null;
     const custom_state_name = formData.get('custom_state_name')?.trim() || null;
     const location_city = formData.get('location_city')?.trim() || null;
-    const start_date = formData.get('start_date') || null;
-    const end_date = formData.get('end_date') || null;
+    const start_date = formatDateForDB(formData.get('start_date'));
+    const end_date = formatDateForDB(formData.get('end_date'));
     const graduated = formData.get('graduated') === 'true' ? 1 : 0;
     const honors = formData.get('honors')?.trim() || null;
     const transcript_url = formData.get('transcript_url')?.trim() || null;
@@ -85,8 +117,8 @@ export async function updateEducation(formData) {
     const state = formData.get('state') || null;
     const custom_state_name = formData.get('custom_state_name')?.trim() || null;
     const location_city = formData.get('location_city')?.trim() || null;
-    const start_date = formData.get('start_date') || null;
-    const end_date = formData.get('end_date') || null;
+    const start_date = formatDateForDB(formData.get('start_date'));
+    const end_date = formatDateForDB(formData.get('end_date'));
     const graduated = formData.get('graduated') === 'true' ? 1 : 0;
     const honors = formData.get('honors')?.trim() || null;
     const transcript_url = formData.get('transcript_url')?.trim() || null;
@@ -125,7 +157,23 @@ export async function fetchExperienceByEmpId(empid) {
   try {
     const pool = await DBconnection();
     const [rows] = await pool.execute(
-      `SELECT * FROM C_EMPLOYEE_EXPERIENCE WHERE employee_id = ? ORDER BY start_date DESC`,
+      `SELECT 
+        id,
+        employee_id,
+        location_city,
+        location_country,
+        DATE_FORMAT(start_date, '%Y-%m-%d') as start_date,
+        DATE_FORMAT(end_date, '%Y-%m-%d') as end_date,
+        currently_working,
+        description,
+        achievements,
+        supervisor_name,
+        supervisor_email,
+        created_at,
+        updated_at
+      FROM C_EMPLOYEE_EXPERIENCE 
+      WHERE employee_id = ? 
+      ORDER BY start_date DESC`,
       [empid]
     );
     return rows;
@@ -149,8 +197,8 @@ export async function addExperience(formData) {
     const employee_id = formData.get('employee_id');
     const location_city = formData.get('location_city')?.trim() || null;
     const location_country = formData.get('location_country') || null;
-    const start_date = formData.get('start_date') || null;
-    const end_date = formData.get('end_date') || null;
+    const start_date = formatDateForDB(formData.get('start_date'));
+    const end_date = formatDateForDB(formData.get('end_date'));
     const currently_working = formData.get('currently_working') === 'true' ? 1 : 0;
     const description = formData.get('description')?.trim() || null;
     const achievements = formData.get('achievements')?.trim() || null;
@@ -180,8 +228,8 @@ export async function updateExperience(formData) {
     const id = formData.get('id');
     const location_city = formData.get('location_city')?.trim() || null;
     const location_country = formData.get('location_country') || null;
-    const start_date = formData.get('start_date') || null;
-    const end_date = formData.get('end_date') || null;
+    const start_date = formatDateForDB(formData.get('start_date'));
+    const end_date = formatDateForDB(formData.get('end_date'));
     const currently_working = formData.get('currently_working') === 'true' ? 1 : 0;
     const description = formData.get('description')?.trim() || null;
     const achievements = formData.get('achievements')?.trim() || null;

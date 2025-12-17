@@ -14,7 +14,7 @@ const CompanyForm = () => {
   const [formData, setFormData] = useState({
     // Step 1: Company
     companyName: '',
-    companyUrl: '',
+    // companyUrl: '',
     logo: null,
     // Step 2: Employee
     firstName: '',
@@ -196,13 +196,13 @@ const CompanyForm = () => {
             
             <div className="subscribersignupInputGroup">
               <label className="subscribersignupLabel">Company Name *</label>
-              <input type="text" name="companyName" value={formData.companyName} onChange={handleChange} className="subscribersignupInput" placeholder="e.g. Acme Corp" required />
+              <input type="text" name="companyName" value={formData.companyName} onChange={handleChange} className="subscribersignupInput" placeholder="e.g. Acme Corp" suppressHydrationWarning required />
             </div>
             
-            <div className="subscribersignupInputGroup">
+            {/* <div className="subscribersignupInputGroup">
               <label className="subscribersignupLabel">Company URL</label>
               <input type="url" name="companyUrl" value={formData.companyUrl} onChange={handleChange} className="subscribersignupInput" placeholder="https://acme.com" />
-            </div>
+            </div> */}
 
             <div className="subscribersignupInputGroup">
               <label className="subscribersignupLabel">Company Logo (JPG only)</label>
@@ -214,10 +214,11 @@ const CompanyForm = () => {
                 onChange={handleFileChange} 
                 className="subscribersignupInput" 
                 style={{padding: '10px'}} 
+                suppressHydrationWarning
               />
             </div>
 
-            <button type="submit" className="subscribersignupButton" disabled={loading}>
+            <button type="submit" className="subscribersignupButton" disabled={loading} suppressHydrationWarning>
               {loading ? 'Checking...' : 'Next'}
             </button>
           </form>
