@@ -156,7 +156,12 @@ const PersonalDetails = ({
             </div>
             <div className="details-g">
               <label>SSN</label>
-              <p>{employeeDetails.SSN || '-'}</p>
+              {/* CHANGE HERE: Masking logic applied */}
+              <p>
+                {employeeDetails.SSN 
+                  ? `xxxxxx${employeeDetails.SSN.slice(-3)}` 
+                  : '-'}
+              </p>
             </div>
           </div>
           <div className="details-row">
