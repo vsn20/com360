@@ -1,6 +1,6 @@
 'use server';
 
-import DBconnection from '@/app/utils/config/db'; // 🔹 Imported MetaDBconnection
+import DBconnection from '@/app/utils/config/db'; 
 import { cookies } from 'next/headers';
 import fs from 'fs/promises';
 import path from 'path';
@@ -35,8 +35,6 @@ const formatDateToInput = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-// 🔹 HELPER: Sync Employee to Meta Database
-// 🔹 HELPER: Sync Employee to Meta Database
 // 🔹 HELPER: Sync Employee to Meta Database
 async function syncEmployeeToMeta(empid, orgid, tenantPool, currentUsername) {
   let metaConnection;
@@ -137,6 +135,7 @@ async function syncEmployeeToMeta(empid, orgid, tenantPool, currentUsername) {
     if (metaConnection) metaConnection.release();
   }
 }
+
 export async function updateEmployee(prevState, formData) {
   try {
     const empid = formData.get('empid');
@@ -356,7 +355,7 @@ export async function updateEmployee(prevState, formData) {
       // Validate superior
       if (superior) {
         const [existingSuperior] = await pool.execute(
-          'SELECT empid FROM C_EMP WHERE empid = ? AND orgid = ? AND LAST_WORK_DATE IS NULL AND TERMINATED_DATE IS NULL',
+          'SELECT empid FROM C_EMP WHERE empid = ? AND orgid = ?',
           [superior, orgid]
         );
         if (existingSuperior.length === 0) {
@@ -1185,6 +1184,32 @@ export async function deleteProfilePhoto(empId) {
     }
     console.error('Error deleting profile photo:', error);
     throw new Error('Failed to delete profile photo.');
+  }
+}
+
+// -----------------------------------------------------------
+// 🔹 NEW: Upload Signature Function
+// -----------------------------------------------------------
+export async function uploadSignature(formData) {
+  const file = formData.get('file');
+  const empId = formData.get('empId');
+
+  if (!file || !empId) {
+    throw new Error('File or employee ID is missing.');
+  }
+
+  const uploadDir = path.join(process.cwd(), 'public/uploads/signatures');
+  // Use .jpg as requested
+  const filePath = path.join(uploadDir, `${empId}.jpg`); 
+
+  try {
+    await fs.mkdir(uploadDir, { recursive: true });
+    const arrayBuffer = await file.arrayBuffer();
+    await fs.writeFile(filePath, Buffer.from(arrayBuffer));
+    return { success: true, message: 'Signature uploaded successfully.' };
+  } catch (error) {
+    console.error('Error uploading signature:', error);
+    throw new Error('Failed to upload signature.');
   }
 }
 

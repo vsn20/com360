@@ -2,6 +2,11 @@
 
 import DBconnection from '@/app/utils/config/db';
 import { cookies } from 'next/headers';
+import fs from "fs";
+import path from "path";
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+
+// ============ HELPER FUNCTIONS ============
 
 const decodeJwt = (token) => {
   try {
@@ -17,17 +22,202 @@ const decodeJwt = (token) => {
 
 const formatDateForDB = (dateStr) => {
   if (!dateStr) return null;
-  // Parse the date string and create a date using UTC to avoid timezone shifts
   const date = new Date(dateStr + 'T00:00:00Z');
   if (isNaN(date.getTime())) return null;
   
-  // Format as YYYY-MM-DD using UTC methods
   const year = date.getUTCFullYear();
   const month = String(date.getUTCMonth() + 1).padStart(2, '0');
   const day = String(date.getUTCDate()).padStart(2, '0');
   
   return `${year}-${month}-${day}`;
 };
+
+// Helper to wrap text for PDF generation
+const drawParagraph = (page, text, y, width, margin, font, fontSize, lineGap) => {
+  const lines = [];
+  const maxWidth = width - margin * 2;
+  let currentLine = '';
+  
+  text.split(' ').forEach(word => {
+    const testLine = currentLine + (currentLine ? ' ' : '') + word;
+    const textWidth = font.widthOfTextAtSize(testLine, fontSize);
+    if (textWidth < maxWidth) {
+      currentLine = testLine;
+    } else {
+      lines.push(currentLine);
+      currentLine = word;
+    }
+  });
+  lines.push(currentLine);
+
+  let currentY = y;
+  lines.forEach(line => {
+    page.drawText(line, {
+      x: margin,
+      y: currentY,
+      font: font,
+      size: fontSize,
+      color: rgb(0, 0, 0),
+    });
+    currentY -= (fontSize + 6);
+  });
+
+  // Return the new Y position
+  return currentY - (lineGap - (fontSize + 6)); 
+};
+
+// ============ PDF GENERATION FUNCTION ============
+
+export async function generateExperienceLetterPDF(data) {
+  try {
+    const { 
+      employeeName, 
+      orgid, 
+      orgName,
+      jobTitle, 
+      startDate, 
+      endDate, 
+      gender, 
+      supervisorName, 
+      supervisorEmail,
+      superiorRole 
+    } = data;
+
+    const cookieStore = cookies();
+    const token = cookieStore.get("jwt_token")?.value;
+    if (!token) return { success: false, error: 'Authentication required' };
+
+    // Decode token to get current user info for signature lookup
+    const decoded = decodeJwt(token);
+    if (!decoded || !decoded.userId) return { success: false, error: 'Invalid token' };
+
+    const pool = await DBconnection();
+
+    // Fetch the logged-in user's EMPID to find their signature
+    const [userRows] = await pool.execute(
+      'SELECT empid FROM C_USER WHERE username = ? AND orgid = ?',
+      [decoded.userId, orgid]
+    );
+    
+    // Default to the user ID from token if C_USER lookup fails (fallback)
+    const signerEmpId = userRows.length > 0 ? userRows[0].empid : decoded.userId; 
+
+    // 1. Create PDF
+    const pdfDoc = await PDFDocument.create();
+    const timesRomanFont = await pdfDoc.embedFont(StandardFonts.TimesRoman);
+    const timesRomanBoldFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
+    
+    const page = pdfDoc.addPage();
+    const { width, height } = page.getSize();
+    const fontSize = 11;
+    const margin = 50;
+    let y = height - margin;
+
+    // 2. Embed Logo
+    const logoPath = path.join(process.cwd(), 'public', 'uploads', 'orglogos', `${orgid}.jpg`);
+    try {
+      if (fs.existsSync(logoPath)) {
+        const logoBytes = fs.readFileSync(logoPath);
+        const logoImage = await pdfDoc.embedJpg(logoBytes);
+        const logoWidth = 50;
+        const logoHeight = (logoImage.height / logoImage.width) * logoWidth;
+        page.drawImage(logoImage, { x: margin, y: y - logoHeight, width: logoWidth, height: logoHeight });
+        y -= (logoHeight + 30);
+      }
+    } catch (error) {
+      console.error('Error loading logo:', error.message);
+    }
+
+    // 3. Prepare Text
+    const isFemale = gender && gender.toLowerCase().trim() === 'female';
+    const title = isFemale ? 'Ms.' : 'Mr.';
+    const hisHer = isFemale ? 'her' : 'his';     
+    const himHer = isFemale ? 'her' : 'him';    
+    const himselfHerself = isFemale ? 'herself' : 'himself';
+    // Get last name safely
+    const nameParts = employeeName.trim().split(' ');
+    const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : employeeName;
+    const today = new Date().toLocaleDateString('en-GB'); // DD/MM/YYYY format
+
+    // 4. Draw Content
+    const drawLine = (text, isBold = false) => {
+      page.drawText(text, {
+        x: margin,
+        y: y,
+        font: isBold ? timesRomanBoldFont : timesRomanFont,
+        size: fontSize,
+        color: rgb(0, 0, 0),
+      });
+      y -= (fontSize + 8);
+    };
+
+    y -= 10;
+    drawLine(`Date: ${today}`, true);
+    y -= 20;
+    drawLine(`To Whom It May Concern,`);
+    y -= 20;
+
+    const lineGap = 18;
+    
+    let text = `This is to certify that ${employeeName} was employed with ${orgName} as a ${jobTitle} from ${startDate} to ${endDate}.`;
+    y = drawParagraph(page, text, y, width, margin, timesRomanFont, fontSize, lineGap);
+
+    text = `During ${hisHer} tenure with ${orgName}, ${title} ${lastName} demonstrated strong technical expertise, professionalism, and dedication across multiple cloud and data engineering initiatives.`;
+    y = drawParagraph(page, text, y, width, margin, timesRomanFont, fontSize, lineGap);
+
+    text = `Throughout ${hisHer} employment, ${title} ${lastName} conducted ${himselfHerself} with integrity and professionalism. ${title === 'Mr.' ? 'His' : 'Her'} contributions were valuable to the growth and success of our engineering initiatives.`;
+    y = drawParagraph(page, text, y, width, margin, timesRomanFont, fontSize, lineGap);
+
+    text = `We thank ${himHer} for ${hisHer} service to ${orgName} and wish ${himHer} continued success in all ${hisHer} future endeavors.`;
+    y = drawParagraph(page, text, y, width, margin, timesRomanFont, fontSize, lineGap);
+
+    text = `For any verification or additional information, you may contact us at ${supervisorEmail || 'hr@company.com'}.`;
+    y = drawParagraph(page, text, y, width, margin, timesRomanFont, fontSize, lineGap);
+
+    y -= 30;
+    drawLine(`Sincerely,`);
+    y -= 10;
+    drawLine(`${orgName}`, true);
+    
+    // 5. Embed Signature
+    // Path matches your reference: public/Uploads/signatures/
+    const signatureJpgPath = path.join(process.cwd(), 'public', 'Uploads', 'signatures', `${signerEmpId}.jpg`);
+    
+    try {
+      if (fs.existsSync(signatureJpgPath)) {
+        const signatureBytes = fs.readFileSync(signatureJpgPath);
+        const signatureImage = await pdfDoc.embedJpg(signatureBytes);
+        const signatureWidth = 50;
+        const signatureHeight = (signatureImage.height / signatureImage.width) * signatureWidth;
+        
+        // Ensure signature doesn't go off page
+        if (y - signatureHeight < 20) {
+            page.addPage();
+            y = height - margin;
+        }
+        
+        page.drawImage(signatureImage, { x: margin, y: y - signatureHeight, width: signatureWidth, height: signatureHeight });
+        y -= (signatureHeight + 10);
+      } else {
+        // Leave space if signature missing
+        y -= 40; 
+      }
+    } catch (error) {
+      console.error('Error loading signature:', error.message);
+      y -= 40;
+    }
+
+    drawLine(`${supervisorName || 'Authorized Signatory'}`);
+    drawLine(`${superiorRole || 'Manager'}`);
+
+    const pdfBytes = await pdfDoc.save();
+    return { success: true, pdfBase64: Buffer.from(pdfBytes).toString('base64') };
+
+  } catch (error) {
+    console.error('Error generating PDF:', error);
+    return { success: false, error: 'Failed to generate PDF' };
+  }
+}
 
 // ============ EDUCATION FUNCTIONS ============
 

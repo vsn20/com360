@@ -214,11 +214,11 @@ export async function completeSubscription(formData) {
 
     // 1. Create Organization in Tenant (C_ORG)
     const [tenantOrgResult] = await tenantConnection.query(
-      `INSERT INTO C_ORG (orgname, orglogo_url, is_logo_set, org_status, CREATED_BY, LAST_UPDATED_BY) 
-       VALUES (?, NULL, 0, 'ACTIVE', 'SYSTEM', 'SYSTEM')`,
-      [companyName]
+      `INSERT INTO C_ORG (orgid,orgname, orglogo_url, is_logo_set, org_status, CREATED_BY, LAST_UPDATED_BY) 
+       VALUES (?, ?, NULL, 0, 'ACTIVE', 'SYSTEM', 'SYSTEM')`,
+      [metaOrgId,companyName]
     );
-    const tenantOrgId = tenantOrgResult.insertId;
+    const tenantOrgId = metaOrgId;
 
     // 2. Handle Logo Upload
     let logoPath = null;

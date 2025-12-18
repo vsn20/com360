@@ -9,14 +9,15 @@ import {
   fetchPafDocumentsById,
   fetchFdnsDocumentsById,
   uploadProfilePhoto,
-  deleteProfilePhoto
+  deleteProfilePhoto,
+  uploadSignature // 🔹 Imported uploadSignature
 } from '@/app/serverActions/Employee/overview';
 // IMPORT FETCH IMMIGRATION DATA
 import { fetchImmigrationData } from '@/app/serverActions/Employee/Immigration'; 
 // IMPORT FETCH EXPERIENCE AND EDUCATION DATA
 import { 
   fetchExperienceByEmpId, 
-  fetchEducationByEmpId // Added import
+  fetchEducationByEmpId 
 } from '@/app/serverActions/Employee/experienceEducation';
 
 import './overview.css';
@@ -74,6 +75,14 @@ const EditEmployee = ({
       ? `/uploads/profile_photos/${selectedEmpId}.png?${new Date().getTime()}` 
       : "/uploads/profile_photos/default.png"
   );
+  
+  // 🔹 Signature state
+  const [signatureSrc, setSignatureSrc] = useState(
+    selectedEmpId 
+      ? `/uploads/signatures/${selectedEmpId}.jpg?${new Date().getTime()}` 
+      : null
+  );
+  const [signatureFile, setSignatureFile] = useState(null);
 
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const [imageToCrop, setImageToCrop] = useState(null);
@@ -160,12 +169,11 @@ const EditEmployee = ({
   const [fdnsDocuments, setFdnsDocuments] = useState([]);
   const [immigrationData, setImmigrationData] = useState([]); 
   const [experienceData, setExperienceData] = useState([]); 
-  const [educationData, setEducationData] = useState([]); // State for Education Data
+  const [educationData, setEducationData] = useState([]); 
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   useEffect(() => {
-    // Reset all states
     setEditingPersonal(false);
     setEditingEmployment(false);
     setEditingLeaves(false);
@@ -185,10 +193,10 @@ const EditEmployee = ({
     setimmigrationdetails(null);
     setImmigrationData([]); 
     setExperienceData([]); 
-    setEducationData([]); // Reset education data
+    setEducationData([]); 
     
-    console.log('Selected employee:', selectedEmpId);
     setImgSrc(`/uploads/profile_photos/${selectedEmpId}.png?${new Date().getTime()}`);
+    setSignatureSrc(`/uploads/signatures/${selectedEmpId}.jpg?${new Date().getTime()}`);
   }, [selectedEmpId]);
 
   useEffect(() => {
@@ -196,7 +204,6 @@ const EditEmployee = ({
       if (!selectedEmpId) return;
       
       try {
-        // Fetch ALL data including Immigration, Experience, and Education
         const [employee, leaveData, docs, pafDocs, fdnsDocs, immigDocs, expData, eduData] = await Promise.all([
           fetchEmployeeById(selectedEmpId),
           fetchLeaveAssignments(selectedEmpId),
@@ -205,11 +212,10 @@ const EditEmployee = ({
           fetchFdnsDocumentsById(selectedEmpId),
           fetchImmigrationData(selectedEmpId),
           fetchExperienceByEmpId(selectedEmpId),
-          fetchEducationByEmpId(selectedEmpId) // Fetch Education
+          fetchEducationByEmpId(selectedEmpId) 
         ]);
         
         if (!employee.orgid) {
-          console.error('Employee data missing orgid for empid:', selectedEmpId);
           setError('Employee data is missing organization ID.');
           return;
         }
@@ -220,7 +226,7 @@ const EditEmployee = ({
         setFdnsDocuments(Array.isArray(fdnsDocs) ? fdnsDocs : []); 
         setImmigrationData(Array.isArray(immigDocs) ? immigDocs : []); 
         setExperienceData(Array.isArray(expData) ? expData : []); 
-        setEducationData(Array.isArray(eduData) ? eduData : []); // Set Education Data
+        setEducationData(Array.isArray(eduData) ? eduData : []); 
 
         setSelectedRoles(employee.roleids || []);
         
@@ -292,16 +298,12 @@ const EditEmployee = ({
     loadEmployeeDetails();
   }, [selectedEmpId, orgid]);
 
-  // ... [Keep canEdit, documentselecting, etc. functions exactly as they are] ...
-
   const canEdit = (section) => {
     if (!selectedEmpId) return false;
     const restrictedSections = ['employment', 'leaves'];
-
     if (permissionLevel === 'individual') {
         return !restrictedSections.includes(section) && selectedEmpId === loggedInEmpId;
     }
-    
     if (permissionLevel === 'team') {
         if (selectedEmpId === loggedInEmpId) {
             return !restrictedSections.includes(section);
@@ -309,11 +311,7 @@ const EditEmployee = ({
             return true;
         }
     }
-
-    if (permissionLevel === 'all') {
-        return true;
-    }
-
+    if (permissionLevel === 'all') return true;
     return false;
   };
 
@@ -527,7 +525,6 @@ const immigrationselecting = (id) => {
   setError(null);
 }
 
-// ... [Image uploading logic remains same] ...
 const handleProfilePhotoUpload = (e) => {
   setPhotoModalError(null); 
   if (e.target.files && e.target.files.length > 0) {
@@ -666,7 +663,6 @@ function onImageLoad(e) {
     }
   };
   
-  // Handle Experience Data Update
   const handleExperienceUpdate = async () => {
     if (selectedEmpId) {
       try {
@@ -680,7 +676,6 @@ function onImageLoad(e) {
     }
   };
 
-  // NEW FUNCTION: Handle Education Data Update
   const handleEducationUpdate = async () => {
     if (selectedEmpId) {
       try {
@@ -799,8 +794,27 @@ function onImageLoad(e) {
       setLeaveAssignments(updatedLeaveAssignments);
       setemployeedocuments(updatedDocuments);
       setSelectedRoles(updatedEmployee.roleids || []);
+      
       if (section === 'personal') setEditingPersonal(false);
-      if (section === 'employment') setEditingEmployment(false);
+      
+      if (section === 'employment') {
+        setEditingEmployment(false);
+        if (signatureFile) {
+          try {
+            const sigData = new FormData();
+            sigData.append('file', signatureFile);
+            sigData.append('empId', formData.empid);
+            const sigResult = await uploadSignature(sigData);
+            if (sigResult.success) {
+               setSignatureSrc(`/uploads/signatures/${formData.empid}.jpg?${new Date().getTime()}`);
+               setSignatureFile(null); 
+            }
+          } catch (sigErr) {
+            console.error('Failed to upload signature:', sigErr);
+          }
+        }
+      }
+      
       if (section === 'leaves') setEditingLeaves(false);
       if (section === 'workAddress') setEditingWorkAddress(false);
       if (section === 'homeAddress') setEditingHomeAddress(false);
@@ -850,6 +864,11 @@ function onImageLoad(e) {
     return superior ? `${superior.EMP_FST_NAME} ${superior.EMP_LAST_NAME || ''}`.trim() : 'No Superior';
   };
 
+  const getSuperiorEmail = (superiorId) => {
+    const superior = allEmployees.find(emp => emp.empid === superiorId);
+    return superior ? superior.email : '';
+  };
+
   const getStatusName = (statusId) => {
     const status = statuses.find(s => s.Name === statusId);
     return status ? status.Name : 'No Status';
@@ -858,6 +877,11 @@ function onImageLoad(e) {
   const getJobTitleName = (jobTitle) => {
     const job = jobTitles.find(j => j.job_title_id === jobTitle);
     return job ? `${job.job_title} (Level: ${job.level || 'N/A'}, Salary Range: $${job.min_salary || 'N/A'} - $${job.max_salary || 'N/A'})` : 'No Job Title';
+  };
+
+  const getSimpleJobTitle = (jobTitleId) => {
+    const job = jobTitles.find(j => j.job_title_id === jobTitleId);
+    return job ? job.job_title : jobTitleId;
   };
 
   const getPayFrequencyName = (payFrequencyId) => {
@@ -1054,6 +1078,13 @@ function onImageLoad(e) {
                  employmentTypes={employmentTypes}
                  canEdit={canEdit('employment')}
                  helpers={helpers}
+                 // 🔹 Pass Signature props
+                 signatureSrc={signatureSrc}
+                 onSignatureFileChange={(e) => {
+                   if (e.target.files && e.target.files.length > 0) {
+                     setSignatureFile(e.target.files[0]);
+                   }
+                 }}
                />
                           
                <LeaveAssignments 
@@ -1114,24 +1145,25 @@ function onImageLoad(e) {
               <EmployeeExperience 
                 empid={employeeDetails.empid}
                 countries={countries}
-                employeeName={employeeDetails.EMP_FST_NAME}
+                employeeName={`${employeeDetails.EMP_FST_NAME} ${employeeDetails.EMP_LAST_NAME}`}
                 organizationName={org_name}
                 employeeDetails={employeeDetails}
                 superiorName={getSuperiorName(employeeDetails.superior)}
+                superiorEmail={getSuperiorEmail(employeeDetails.superior)}
+                jobTitleName={getSimpleJobTitle(employeeDetails.JOB_TITLE)}
                 canEdit={canEdit('personal')}
                 experienceList={experienceData} 
                 onUpdate={handleExperienceUpdate} 
               />
             )}
-            {/* MODIFIED: Passed educationData as educationList prop and onUpdate handler */}
             {educationdetails && !workdetails && !employementdetails && !personaldetails && !experiencedetails && !selecteddocument && !immigrationdetails&&(
               <EmployeeEducation 
                 empid={employeeDetails.empid}
                 countries={countries}
                 states={states}
                 canEdit={canEdit('personal')}
-                educationList={educationData} // Passed from Parent
-                onUpdate={handleEducationUpdate} // Callback to refresh parent
+                educationList={educationData} 
+                onUpdate={handleEducationUpdate}
               />
             )}
             {pafdocument && !workdetails && !employementdetails && !personaldetails && !experiencedetails && !educationdetails && !selecteddocument && !immigrationdetails&&(

@@ -231,10 +231,10 @@ export async function approveProSubscription(reqData) {
 
     // --- E. TENANT DB INSERTS ---
     const [tenantOrgResult] = await newTenantConnection.query(
-      `INSERT INTO C_ORG (orgname, org_status, CREATED_BY, LAST_UPDATED_BY) VALUES (?, 'ACTIVE', 'SYSTEM', 'SYSTEM')`,
-      [company_name]
+      `INSERT INTO C_ORG (orgid,orgname, org_status, CREATED_BY, LAST_UPDATED_BY) VALUES (?,?, 'ACTIVE', 'SYSTEM', 'SYSTEM')`,
+      [metaOrgId,company_name]
     );
-    const tenantOrgId = tenantOrgResult.insertId;
+    const tenantOrgId = metaOrgId;
 
     // --- HANDLE LOGO (ROBUST VERSION) ---
     if (logo_path) {

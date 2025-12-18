@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 
 const EmploymentDetails = ({
   editing,
@@ -21,7 +22,9 @@ const EmploymentDetails = ({
   suborgs,
   employmentTypes,
   canEdit,
-  helpers // Object containing getRoleNames, getStatusName, etc.
+  helpers, // Object containing getRoleNames, getStatusName, etc.
+  signatureSrc, // 🔹 New Prop
+  onSignatureFileChange // 🔹 New Prop
 }) => {
   const { 
     getRoleNames, 
@@ -208,6 +211,33 @@ const EmploymentDetails = ({
               </select>
             </div>
           </div>
+
+          {/* 🔹 Signature Input (Edit Mode) */}
+          <div className="form-row">
+            <div className="form-group">
+               <label>Signature (Upload .jpg)</label>
+               {/* Display current if exists */}
+               {signatureSrc && (
+                 <div style={{ marginBottom: '10px', border: '1px solid #ccc', display: 'inline-block', padding: '5px' }}>
+                    <Image 
+                      src={signatureSrc} 
+                      alt="Signature" 
+                      width={150} 
+                      height={60} 
+                      unoptimized 
+                      onError={(e) => e.target.style.display = 'none'}
+                    />
+                 </div>
+               )}
+               <input 
+                 type="file" 
+                 accept="image/jpeg, image/jpg" 
+                 onChange={onSignatureFileChange}
+                 className="form-control"
+               />
+            </div>
+          </div>
+
           <div className="form-buttons">
             <button type="submit" className="save">Save</button>
             <button type="button" className="cancel" onClick={() => setEditing(false)}>Cancel</button>
@@ -215,6 +245,7 @@ const EmploymentDetails = ({
         </form>
       ) : (
         <div className="view-details">
+          {/* ... (Existing view details) ... */}
           <div className="details-row">
             <div className="details-g">
               <label>Roles</label>
@@ -281,6 +312,28 @@ const EmploymentDetails = ({
               <p>{employmentTypes.find(t => t.id == employeeDetails.employment_type)?.Name || '-'}</p>
             </div>
           </div>
+
+          {/* 🔹 Signature Display (View Mode) */}
+          <div className="details-row">
+            <div className="details-g">
+              <label>Signature</label>
+              {signatureSrc ? (
+                 <div style={{ marginTop: '5px', border: '1px solid #eee', display: 'inline-block', padding: '5px' }}>
+                    <Image 
+                      src={signatureSrc} 
+                      alt="Signature" 
+                      width={150} 
+                      height={60} 
+                      unoptimized 
+                      onError={(e) => e.target.style.display = 'none'}
+                    />
+                 </div>
+              ) : (
+                <p>-</p>
+              )}
+            </div>
+          </div>
+
           {canEdit && (
             <button className="button" onClick={() => setEditing(true)}>Edit</button>
           )}

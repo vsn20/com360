@@ -4,10 +4,10 @@ import React, { useState, useEffect } from 'react';
 import { 
   addExperience, 
   updateExperience, 
-  deleteExperience 
+  deleteExperience,
+  generateExperienceLetterPDF 
 } from '@/app/serverActions/Employee/experienceEducation';
 import './overview.css';
-
 
 const EmployeeExperience = ({ 
   empid, 
@@ -17,14 +17,16 @@ const EmployeeExperience = ({
   organizationName,
   employeeDetails,
   superiorName,
-  experienceList: initialExperienceList, // Receive from parent
-  onUpdate // Receive callback from parent
+  jobTitleName,
+  superiorEmail,
+  experienceList: initialExperienceList, 
+  onUpdate 
 }) => {
-  // Use prop as initial state or sync via effect
   const [experienceList, setExperienceList] = useState(Array.isArray(initialExperienceList) ? initialExperienceList : []);
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [formData, setFormData] = useState({
     location_city: '',
     location_country: '185',
@@ -37,18 +39,77 @@ const EmployeeExperience = ({
     supervisor_email: ''
   });
 
-  // Sync state when parent prop changes
   useEffect(() => {
     setExperienceList(Array.isArray(initialExperienceList) ? initialExperienceList : []);
   }, [initialExperienceList]);
 
   const formatDateForDisplay = (date) => {
      if (!date || isNaN(new Date(date))) return '';
-  const d = new Date(date);
-  const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(d.getUTCDate()).padStart(2, '0');
-  return `${month}/${day}/${d.getUTCFullYear()}`;
+     const d = new Date(date);
+     const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+     const day = String(d.getUTCDate()).padStart(2, '0');
+     return `${month}/${day}/${d.getUTCFullYear()}`;
+  };
+  
+  const formatDateForLetter = (date) => {
+    if (!date || isNaN(new Date(date))) return 'Present';
+    return new Date(date).toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  };
 
+  const generateWorkExperiencePDF = async () => {
+    setIsGeneratingPdf(true);
+    setError(null);
+
+    try {
+      const jobTitle = jobTitleName || employeeDetails.JOB_TITLE || 'Employee';
+      const startDate = formatDateForLetter(employeeDetails.HIRE);
+      const endDate = employeeDetails.STATUS?.toLowerCase() === 'active' 
+        ? 'Present' 
+        : formatDateForLetter(employeeDetails.TERMINATED_DATE || employeeDetails.LAST_WORK_DATE);
+
+      // Prepare data for server action
+      const pdfData = {
+        employeeName: `${employeeDetails.EMP_FST_NAME} ${employeeDetails.EMP_LAST_NAME}`,
+        orgid: employeeDetails.orgid, 
+        orgName: organizationName || 'Organization',
+        jobTitle: jobTitle,
+        startDate: startDate,
+        endDate: endDate,
+        gender: employeeDetails.GENDER,
+        supervisorName: superiorName || 'Manager',
+        supervisorEmail: superiorEmail,
+        superiorRole: 'Manager', 
+      };
+
+      // Call server action
+      const response = await generateExperienceLetterPDF(pdfData);
+
+      if (response.success && response.pdfBase64) {
+        // Convert Base64 back to PDF Blob
+        const byteCharacters = atob(response.pdfBase64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'application/pdf' });
+        
+        // Open PDF
+        const url = window.URL.createObjectURL(blob);
+        window.open(url, '_blank');
+      } else {
+        setError(response.error || 'Failed to generate PDF.');
+      }
+    } catch (err) {
+      console.error(err);
+      setError('An error occurred while generating the PDF.');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
 
   const handleInputChange = (e) => {
@@ -79,7 +140,6 @@ const EmployeeExperience = ({
     if (result.error) {
       setError(result.error);
     } else {
-      // Call parent update function instead of local fetch
       if (onUpdate) await onUpdate();
       resetForm();
     }
@@ -105,7 +165,6 @@ const EmployeeExperience = ({
     if (!confirm('Delete this experience record?')) return;
     const result = await deleteExperience(id);
     if (result.success) {
-      // Call parent update function instead of local fetch
       if (onUpdate) await onUpdate();
     } else {
       setError(result.error || 'Failed to delete record');
@@ -134,149 +193,29 @@ const EmployeeExperience = ({
     return country ? country.VALUE : '-';
   };
 
-  const generateWorkExperiencePDF = () => {
-    // Create a new window for PDF generation
-    const printWindow = window.open('', '_blank');
-    
-    const htmlContent = `
-      <!DOCTYPE html>
-<html>
-<head>
-  <title>Work Experience - ${employeeName}</title>
-  <style>
-    @media print {
-      @page { margin: 0.5in; }
-    }
-    body {
-      font-family: Arial, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-    .header {
-      text-align: center;
-      border-bottom: 3px solid #0fd46c;
-      padding-bottom: 20px;
-      margin-bottom: 30px;
-    }
-    .header h1 {
-      margin: 0;
-      color: #0fd46c;
-      font-size: 28px;
-    }
-    .header p {
-      margin: 5px 0;
-      color: #666;
-      font-size: 14px;
-    }
-    .company-info {
-      background-color: #f8f9fa;
-      padding: 15px;
-      border-radius: 8px;
-      margin-bottom: 30px;
-      border-left: 4px solid #0fd46c;
-    }
-    .company-info h2 {
-      margin: 0 0 10px 0;
-      color: #333;
-      font-size: 20px;
-    }
-    .company-info p {
-      margin: 5px 0;
-      color: #666;
-    }
-    .experience-record {
-      page-break-inside: avoid;
-      margin-bottom: 30px;
-      padding: 30px;
-      border: 1px solid #e9ecef;
-      border-radius: 8px;
-      background-color: #fff;
-      font-size: 16px;
-      line-height: 2;
-    }
-    .footer {
-      margin-top: 40px;
-      text-align: center;
-      padding-top: 20px;
-      border-top: 1px solid #e9ecef;
-      color: #999;
-      font-size: 12px;
-    }
-    .no-records {
-      text-align: center;
-      padding: 40px;
-      color: #999;
-      font-style: italic;
-    }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <h1>Work Experience Certificate</h1>
-    <p>This document certifies the work experience of</p>
-    <p style="font-size: 18px; font-weight: bold; color: #333;">${employeeName}</p>
-  </div>
-
-  <div class="company-info">
-    <h2>${organizationName || 'Organization'}</h2>
-    <p><strong>Employee:</strong> ${employeeName}</p>
-    <p><strong>Generated Date:</strong> ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
-  </div>
-
-  ${experienceList.length === 0 ? `
-    <div class="no-records">
-      No work experience records available.
-    </div>
-  ` : `
-    <div class="experience-record">
-      <p>
-        <strong>${employeeName}</strong> worked in <strong>${organizationName || 'the organization'}</strong> 
-        from <strong>${formatDateForDisplay(employeeDetails.HIRE)}</strong> 
-        to <strong>${formatDateForDisplay(employeeDetails.LAST_WORK_DATE)}</strong> 
-        in <strong>${employeeDetails.WORK_CITY ? `${employeeDetails.WORK_CITY}, ` : ''}${getCountryName(employeeDetails.WORK_COUNTRY_ID)}</strong>
-        ${employeeDetails.superior ? ` under <strong>${superiorName}</strong>` : ''}.
-      </p>
-    </div>
-  `}
-
-  <div class="footer">
-    <p>This document was generated electronically and is valid without signature.</p>
-    <p>Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
-  </div>
-</body>
-</html>
-    `;
-
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
-    
-    // Wait for content to load then trigger print
-    printWindow.onload = function() {
-      printWindow.focus();
-      printWindow.print();
-    };
-  };
-
   return (
     <div className="role-details-block96">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h3>Work Experience</h3>
         <div style={{ display: 'flex', gap: '10px' }}>
-          {experienceList.length > 0 && (
-            <button 
-              className="button" 
-              onClick={generateWorkExperiencePDF}
-              style={{ backgroundColor: '#3b82f6' }}
-            >
-              Generate PDF
-            </button>
-          )}
+          <button 
+            className="button" 
+            onClick={generateWorkExperiencePDF}
+            disabled={isGeneratingPdf}
+            style={{ 
+              backgroundColor: '#3b82f6', 
+              color: 'white', 
+              border: 'none', 
+              cursor: isGeneratingPdf ? 'wait' : 'pointer',
+              opacity: isGeneratingPdf ? 0.7 : 1
+            }}
+          >
+            {isGeneratingPdf ? 'Generating...' : 'Generate Experience Letter'}
+          </button>
+          
           {canEdit && !isAdding && (
             <button className="button" onClick={() => setIsAdding(true)}>
-              Add Experience
+              Add Past Experience
             </button>
           )}
         </div>
