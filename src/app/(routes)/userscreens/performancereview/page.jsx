@@ -1,7 +1,11 @@
+export const dynamic = 'force-dynamic';
+
 import React from 'react';
 import { cookies } from 'next/headers';
 import DBconnection from '@/app/utils/config/db';
 import Overview from '@/app/components/Performance_Review/Overview';
+
+
 
 // Simple function to decode JWT without verification
 const decodeJwt = (token) => {

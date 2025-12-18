@@ -1,7 +1,11 @@
+
+export const dynamic = 'force-dynamic';
+
 import React from 'react';
 import Overview from '@/app/components/Organizations/Overview';
 import { cookies } from 'next/headers';
 import DBconnection from '@/app/utils/config/db';
+
 
 const decodeJwt = (token) => {
   try {

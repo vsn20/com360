@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import React from 'react';
 import Overview from '@/app/components/Jobs/Interview/Overview';
 import DBconnection from '@/app/utils/config/db';

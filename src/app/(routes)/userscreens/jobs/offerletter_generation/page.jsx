@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import React from 'react'
 import DBconnection from '@/app/utils/config/db';
 import { cookies } from 'next/headers';

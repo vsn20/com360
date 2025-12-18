@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { cookies } from 'next/headers';
 import DBconnection from '@/app/utils/config/db';
 import Overview from '@/app/components/Service Requests/Overview';

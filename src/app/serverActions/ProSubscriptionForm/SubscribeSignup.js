@@ -175,8 +175,8 @@ export async function approveProSubscription(reqData) {
     if (!cpanelResult.success) throw new Error(`DB Creation: ${cpanelResult.error}`);
     await delay(3000);
 
-    // await allowRemoteAccess(process.env.SERVER_IP || '%'); 
-     await allowRemoteAccess('%'); 
+    await allowRemoteAccess(process.env.SERVER_IP || '%'); 
+    //  await allowRemoteAccess('%'); 
     await addPrivilegedUserToDatabase(dbName, 'SAINAMAN'); 
     await delay(2000);
 
