@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import React from 'react'
-import '../Feepayment.css'
+import '../ProFeepayment.css'
 
 const page = () => {
   return (
