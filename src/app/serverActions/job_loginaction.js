@@ -1,6 +1,6 @@
 'use server';
 
-import DBconnection from "../utils/config/db";
+import DBconnection from "../utils/config/olddb";
 import jwt from "jsonwebtoken";
 import bcrypt from 'bcrypt';
 import { cookies } from "next/headers";

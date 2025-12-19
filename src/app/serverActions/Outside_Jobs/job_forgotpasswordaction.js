@@ -1,6 +1,6 @@
 'use server';
 
-import DBconnection from '@/app/utils/config/db';
+import DBconnection from '@/app/utils/config/olddb';
 import nodemailer from 'nodemailer';
 import bcrypt from 'bcrypt';
 

@@ -1,4 +1,4 @@
-import DBconnection from '@/app/utils/config/db';
+import DBconnection from '@/app/utils/config/olddb';
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
 

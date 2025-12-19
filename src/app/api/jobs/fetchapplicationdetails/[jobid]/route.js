@@ -1,4 +1,4 @@
-import DBconnection from '@/app/utils/config/db';
+import DBconnection from '@/app/utils/config/olddb';
 import { verify } from 'jsonwebtoken';
 
 export async function GET(request, { params }) {

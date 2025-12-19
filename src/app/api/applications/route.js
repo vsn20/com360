@@ -1,5 +1,5 @@
 import { verify } from 'jsonwebtoken';
-import DBconnection from '@/app/utils/config/db';
+import DBconnection from '@/app/utils/config/olddb';
 import { cookies } from 'next/headers';
 
 export async function GET(request) {
