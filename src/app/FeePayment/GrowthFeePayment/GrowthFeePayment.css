@@ -1,0 +1,110 @@
+/* GrowthFeePayment.css */
+
+/* FeePayment.css */
+
+/* Page Container */
+.feePaymentContainer {
+  width: 100%;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #e0f8eb 0%, #ffffff 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 24px;
+  font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* Content Wrapper */
+.feePaymentContent {
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+  padding: 60px 80px;
+  text-align: center;
+  border: 1px solid #f0f0f0;
+  max-width: 600px;
+  width: 100%;
+  animation: fadeIn 0.8s ease-out forwards;
+}
+
+/* Animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Title Text */
+.feePaymentTitle {
+  font-size: 3rem;
+  font-weight: 800;
+  color: #1a1a1a;
+  margin-bottom: 40px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, #0FD46C, #00C853);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Free Button Link */
+.freeButton {
+  display: inline-block;
+  background: linear-gradient(135deg, #0FD46C, #00C853);
+  color: #ffffff;
+  text-decoration: none;
+  padding: 16px 48px;
+  font-size: 1.2rem;
+  font-weight: 600;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 6px 20px rgba(15, 212, 108, 0.25);
+}
+
+.freeButton:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(15, 212, 108, 0.4);
+  background: linear-gradient(135deg, #00C853, #0FD46C);
+  color: #ffffff;
+}
+
+.freeButton:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 15px rgba(15, 212, 108, 0.3);
+}
+
+.freeButton:visited {
+  color: #ffffff;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .feePaymentContent {
+    padding: 40px 32px;
+  }
+  
+  .feePaymentTitle {
+    font-size: 2.2rem;
+  }
+  
+  .freeButton {
+    padding: 14px 40px;
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .feePaymentContent {
+    padding: 32px 24px;
+  }
+  
+  .feePaymentTitle {
+    font-size: 1.8rem;
+  }
+  
+  .freeButton {
+    padding: 12px 32px;
+    font-size: 1rem;
+  }
+}

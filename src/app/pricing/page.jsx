@@ -85,13 +85,13 @@ const Page = () => {
                   <td className="planName">Growth</td>
                   <td className="planPrice">$199/mo</td>
                   <td className="planDetails">($7.99/month/user)</td>
-                  <td><Link className="selectPlanButton" href="/FeePayment">Select Plan</Link></td>
+                  <td><Link className="selectPlanButton" href="/FeePayment/GrowthFeePayment">Select Plan</Link></td>
                 </tr>
                 <tr className="pricingRow">
                   <td className="planName">Enterprise</td>
-                  <td className="planPrice">$299+</td>
+                  <td className="planPrice">$299/mo</td>
                   <td className="planDetails">($9.99/month/user)</td>
-                 <td><Link className="selectPlanButton" href="/FeePayment">Select Plan</Link></td>
+                 <td><Link className="selectPlanButton" href="/FeePayment/EnterpriseFeePayment">Select Plan</Link></td>
                 </tr>
               </tbody>
             </table>

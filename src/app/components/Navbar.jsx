@@ -14,7 +14,7 @@ function Navbar() {
   return (
     <>
     <nav id="navid" className={isMenuOpen ? 'menu-open' : ''}>
-      <Link href="/">COM@360</Link>
+      <Link href="/">Com360 View</Link>
       <Link href="/" className={pathname === '/' ? 'active' : ''}>Home</Link>
       <Link href="/about" className={pathname === '/about' ? 'active' : ''}>About</Link>
       <Link href="/jobs" className={pathname === '/jobs' ? 'active' : ''}>Jobs</Link>

@@ -99,6 +99,17 @@ export async function createReview(formData) {
       throw new Error('Missing required fields.');
     }
 
+    // --- DUPLICATE CHECK (SERVER SIDE) ---
+    const [existing] = await pool.query(
+      "SELECT id FROM C_EMP_REVIEWS WHERE orgid = ? AND employee_id = ? AND review_year = ?",
+      [newReview.orgid, newReview.employee_id, newReview.review_year]
+    );
+
+    if (existing.length > 0) {
+      throw new Error(`A review for this employee already exists for the year ${newReview.review_year}.`);
+    }
+    // -------------------------------------
+
     const sql = `
       INSERT INTO C_EMP_REVIEWS 
       (orgid, employee_id, supervisor_id, review_year, review_date, rating, review_text, comments) 
@@ -145,6 +156,18 @@ export async function updateReview(formData) {
       review_text: formData.get('review_text'),
       comments: formData.get('comments') || null,
     };
+
+    // --- DUPLICATE CHECK FOR UPDATE (SERVER SIDE) ---
+    // Ensure we aren't changing the year to one that already exists for this employee
+    const [existing] = await pool.query(
+      "SELECT id FROM C_EMP_REVIEWS WHERE orgid = ? AND employee_id = ? AND review_year = ? AND id != ?",
+      [orgid, updatedReview.employee_id, updatedReview.review_year, reviewId]
+    );
+
+    if (existing.length > 0) {
+      throw new Error(`A review for this employee already exists for the year ${updatedReview.review_year}.`);
+    }
+    // ------------------------------------------------
 
     const sql = `
       UPDATE C_EMP_REVIEWS SET 

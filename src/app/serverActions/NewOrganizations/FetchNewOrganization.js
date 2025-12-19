@@ -145,7 +145,7 @@ export async function approveRequest(requestId) {
 
     let result;
 
-    if (String(plan_id) === '2') {
+    if (String(plan_id) === '2' || String(plan_id) === '3'|| String(plan_id) === '4') {
         result = await approveProSubscription(reqData);
     } 
     else if (String(plan_id) === '1') {

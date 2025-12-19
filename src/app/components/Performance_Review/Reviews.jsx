@@ -138,6 +138,25 @@ const Reviews = ({
     setFormError(null);
     setFormSuccess(null);
 
+    // --- DUPLICATE CHECK LOGIC START ---
+    // Validate that only one review exists per employee per year
+    const targetEmpId = String(formData.employee_id);
+    const targetYear = String(formData.review_year);
+
+    const duplicate = initialReviews.find(r => 
+      String(r.employee_id) === targetEmpId && 
+      String(r.review_year) === targetYear &&
+      // If we are editing, we ignore the current review we are working on
+      (!editingReview || String(r.id) !== String(editingReview.id))
+    );
+
+    if (duplicate) {
+      setFormError(`A review already exists for this employee in ${targetYear}. Please edit the existing review.`);
+      setIsSubmitting(false);
+      return;
+    }
+    // --- DUPLICATE CHECK LOGIC END ---
+
     const formDataObject = new FormData();
     for (const key in formData) {
       if (formData[key] !== null) {

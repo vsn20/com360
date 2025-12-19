@@ -92,7 +92,20 @@ const NewOrganization = ({ initialRequests = [] }) => {
       {requests.length === 0 ? (
         <p style={{ color: '#666' }}>No requests found.</p>
       ) : (
-        <div style={{ overflowX: 'auto', border: '1px solid #e5e7eb', borderRadius: '10px' }}>
+        <div style={{ 
+          overflowX: 'auto', 
+          border: '1px solid #e5e7eb', 
+          borderRadius: '10px',
+          scrollbarWidth: 'none', /* Firefox */
+          msOverflowStyle: 'none' /* IE and Edge */
+        }}>
+          <style>
+            {`
+              div:has(> table)::-webkit-scrollbar {
+                display: none;
+              }
+            `}
+          </style>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '900px' }}>
             <thead style={{ backgroundColor: '#f9fafb' }}>
               <tr>
