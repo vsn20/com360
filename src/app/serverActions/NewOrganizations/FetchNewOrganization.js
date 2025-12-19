@@ -33,7 +33,7 @@ async function sendNotificationEmail(toEmail, status, companyName) {
   let subject = "";
   let htmlContent = "";
   const safeName = companyName || "User"; 
-  const loginLink = `${process.env.NEXT_PUBLIC_BASE_URL}/login`;
+  const loginLink = `https://com360view.com/login`;
 
   if (status === 'APPROVED') {
     subject = "🎉 Organization Approved - Login Ready";
