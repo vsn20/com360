@@ -2,14 +2,137 @@
    Employee Summary Component Styles
    ================================= */
 
-.Employee_Summary_container {
+.employee_summary_container {
   padding: 20px;
   background-color: #ffffff;
   font-family: Arial, sans-serif;
 }
 
-/* --- Header & Filters --- */
-.Employee_Summary_header {
+/* --- NEW STYLES FOR LIST HEADER --- */
+
+/* Replaces old flex row for the main header to allow vertical stacking */
+.employee_summary_list-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+/* Container for Search and Filter (side-by-side) */
+.employee_summary_controls_row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px; /* Increased space between search and filter */
+  align-items: center;
+  margin-top: 10px; /* Adds space below the Title */
+  width: 100%;
+}
+
+/* --- END NEW STYLES --- */
+
+/* Button styles */
+.employee_summary_button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.employee_summary_button:hover:not(:disabled) {
+  background-color: #0CB25A;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  color: black;
+}
+
+/* Save and Cancel buttons */
+.employee_summary_save,
+.employee_summary_cancel {
+  color: white;
+  padding: 8px 16px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: Arial, sans-serif;
+  transition: background-color 0.3s ease, transform 0.1s ease, color 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  text-decoration: none;
+  border-radius: 4px;
+}
+
+.employee_summary_save {
+  background-color: #0FD46C;
+}
+
+.employee_summary_save:hover {
+  background-color: #0CB25A;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  color: black;
+}
+
+.employee_summary_cancel {
+  background-color: #F44336;
+}
+
+.employee_summary_cancel:hover {
+  background-color: #D32F2F;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  color: black;
+}
+
+/* Back button */
+.employee_summary_back-button {
+  padding: 8px 12px 8px 8px;
+  background-color: transparent;
+  color: #6c757d;
+  border: 1px solid #dee2e6;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: Arial, sans-serif;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+}
+
+.employee_summary_back-button::before {
+  content: '‹';
+  font-size: 18px;
+  font-weight: bold;
+  color: #6c757d;
+  transition: color 0.3s ease;
+}
+
+.employee_summary_back-button::after {
+  content: 'Back to List';
+  font-size: 13px;
+}
+
+.employee_summary_back-button:hover {
+  background-color: #f8f9fa;
+  border-color: #6c757d;
+  color: #495057;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transform: translateX(-2px);
+}
+
+.employee_summary_back-button:hover::before {
+  color: #495057;
+}
+
+/* Title */
+.employee_summary_title, .employee_goals_title {
+  font-size: 16px;
+  color: #0fd46c;
+  margin: 0;
+  padding: 10px 0;
+  font-weight: bold;
+}
+
+/* Header & Filters */
+.employee_summary_header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -18,22 +141,15 @@
   margin-bottom: 20px;
 }
 
-.Employee_Summary_title {
-  font-size: 20px;
-  color: #1f2937;
-  margin: 0;
-  font-weight: 600;
-}
-
-.Employee_Summary_filter-container {
+.employee_summary_filter-container {
   display: flex;
   flex-wrap: wrap;
   gap: 20px;
   align-items: center;
 }
 
-/* NEW: Search input */
-.Employee_Summary_search-input {
+/* Search input */
+.employee_summary_search-input {
   padding: 10px 12px;
   border: 1px solid #ccc;
   border-radius: 4px;
@@ -41,14 +157,14 @@
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
   min-width: 240px;
 }
-.Employee_Summary_search-input:focus {
+
+.employee_summary_search-input:focus {
   outline: none;
   border-color: #0fd46c;
   box-shadow: 0 0 0 2px rgba(15, 212, 108, 0.25);
 }
 
-
-.Employee_Summary_filter-select {
+.employee_summary_filter-select {
   padding: 10px 12px;
   border: 1px solid #ccc;
   border-radius: 4px;
@@ -57,86 +173,45 @@
   min-width: 200px;
 }
 
-.Employee_Summary_filter-select:focus {
+.employee_summary_filter-select:focus {
   outline: none;
   border-color: #0fd46c;
   box-shadow: 0 0 0 2px rgba(15, 212, 108, 0.25);
 }
 
-.Employee_Summary_filter-select:disabled {
+.employee_summary_filter-select:disabled {
   background-color: #e9ecef;
   cursor: not-allowed;
 }
 
-/* --- PDF Download Button --- */
-.Employee_Summary_pdf-button {
-  color: white !important;
-  padding: 10px 18px;
+/* PDF Download Button */
+.employee_summary_pdf-button {
+  color: white;
+  padding: 8px 16px;
   border: none;
   cursor: pointer;
   font-size: 14px;
   font-family: Arial, sans-serif;
-  transition: background-color 0.3s ease, transform 0.1s ease, color 0.3s ease;
+  transition: background-color 0.3s ease, transform 0.1s ease;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  text-decoration: none !important;
+  text-decoration: none;
   border-radius: 4px;
-  background-color: #0d6efd; /* Blue for PDF */
+  background-color: #0FD46C;
 }
 
-.Employee_Summary_pdf-button:hover {
-  background-color: #0b5ed7;
+.employee_summary_pdf-button:hover {
+  background-color: #0CB25A;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
-.Employee_Summary_pdf-button:disabled {
+.employee_summary_pdf-button:disabled {
   background-color: #cccccc;
   cursor: not-allowed;
 }
 
-/* NEW: Back Button */
-.Employee_Summary_back-button {
-  color: #374151 !important;
-  padding: 10px 18px;
-  border: 1px solid #d1d5db;
-  cursor: pointer;
-  font-size: 14px;
-  font-family: Arial, sans-serif;
-  transition: background-color 0.3s ease, border-color 0.3s ease;
-  text-decoration: none !important;
-  border-radius: 4px;
-  background-color: #ffffff;
-}
-.Employee_Summary_back-button:hover {
-  background-color: #f8fafc;
-  border-color: #adb5bd;
-}
-
-/* NEW: Simple Pagination Button */
-.Employee_Summary_button-simple {
-  color: #0d6efd !important;
-  padding: 8px 16px;
-  border: 1px solid #0d6efd;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background-color 0.3s ease, color 0.3s ease;
-  text-decoration: none !important;
-  border-radius: 4px;
-  background-color: #ffffff;
-}
-.Employee_Summary_button-simple:hover {
-  background-color: #eef6ff;
-}
-.Employee_Summary_button-simple:disabled {
-  color: #6c757d !important;
-  border-color: #ced4da;
-  background-color: #f8f9fa;
-  cursor: not-allowed;
-}
-
-
-/* --- Loading & Error States --- */
-.Employee_Summary_loading,
-.Employee_Summary_error {
+/* Loading & Error States */
+.employee_summary_loading,
+.employee_summary_error {
   text-align: center;
   padding: 60px 20px;
   font-size: 16px;
@@ -147,14 +222,14 @@
   border: 1px dashed #e5e7eb;
 }
 
-.Employee_Summary_error {
+.employee_summary_error {
   color: #dc3545;
   background-color: #f8d7da;
   border-color: #f5c6cb;
 }
 
-/* --- Summary Cards Layout --- */
-.Employee_Summary_card {
+/* Summary Cards Layout */
+.employee_summary_card {
   background-color: #fff;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
@@ -163,7 +238,7 @@
   border: 1px solid #e5e7eb;
 }
 
-.Employee_Summary_card-header {
+.employee_summary_card-header {
   font-size: 18px;
   font-weight: 600;
   color: #1f2937;
@@ -172,31 +247,30 @@
   background-color: #f8fafc;
 }
 
-.Employee_Summary_card-body {
+.employee_summary_card-body {
   padding: 24px;
 }
 
-/* --- Employee Details Card --- */
-.Employee_Summary_details-grid {
+/* Employee Details Card */
+.employee_summary_details-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 20px;
 }
 
-.Employee_Summary_detail-item {
+.employee_summary_detail-item {
   display: flex;
   flex-direction: column;
 }
 
-.Employee_Summary_detail-item label {
+.employee_summary_detail-item label {
   font-size: 13px;
   font-weight: 500;
   color: #6b7280;
   margin-bottom: 4px;
-  text-transform: uppercase;
 }
 
-.Employee_Summary_detail-item p {
+.employee_summary_detail-item p {
   font-size: 15px;
   color: #1f2937;
   margin: 0;
@@ -204,40 +278,44 @@
   word-break: break-word;
 }
 
-.Employee_Summary_detail-item p.rating {
+.employee_summary_detail-item p.rating {
   font-size: 20px;
   font-weight: 600;
   color: #0fd46c;
 }
 
-.Employee_Summary_detail-item p.rating .na {
+.employee_summary_detail-item p.rating .na {
   font-size: 16px;
   font-weight: 500;
   color: #6b7280;
 }
 
-/* --- Goals & Reviews Tables --- */
-.Employee_Summary_table-wrapper {
+/* Goals & Reviews Tables */
+.employee_summary_table-wrapper, .employee_goals_table-wrapper {
   overflow-x: auto;
   background-color: #fff;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   border: 1px solid #e5e7eb;
+  /* Hide horizontal scrollbar */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
 }
 
-.Employee_Summary_table {
+/* Hide scrollbar for Chrome, Safari and Opera */
+.employee_summary_table-wrapper::-webkit-scrollbar,
+.employee_goals_table-wrapper::-webkit-scrollbar {
+  display: none;
+}
+
+.employee_summary_table, .employee_goals_table {
   width: 100%;
   border-collapse: collapse;
   background-color: #fff;
   min-width: 800px;
 }
 
-/* Specific min-width for employee list */
-.Employee_Summary_table-wrapper .Employee_Summary_table {
-    min-width: auto;
-}
-
-.Employee_Summary_table th {
+.employee_summary_table th, .employee_goals_table th {
   background-color: #f8fafc;
   padding: 14px 18px;
   text-align: left;
@@ -245,11 +323,17 @@
   font-size: 12px;
   font-weight: 600;
   color: #374151;
-  text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
-.Employee_Summary_table td {
+/* Supervisor column width for employee list table */
+.employee_goals_table th:nth-child(4),
+.employee_goals_table td:nth-child(4) {
+  width: 20%;
+  min-width: 180px;
+}
+
+.employee_summary_table td, .employee_goals_table td {
   padding: 14px 18px;
   text-align: left;
   border-bottom: 1px solid #f3f4f6;
@@ -260,31 +344,123 @@
   word-break: break-word;
 }
 
-.Employee_Summary_table tbody tr:last-child td {
+.employee_summary_table tbody tr:last-child td, .employee_goals_table tbody tr:last-child td {
   border-bottom: none;
 }
 
-/* NEW: Hover for employee list table */
-.Employee_Summary_table-hover tbody tr:hover {
-  background-color: #f0f9ff;
+.employee_summary_table tbody tr, .employee_goals_table tbody tr {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  cursor: pointer;
 }
 
-.Employee_Summary_empty-state {
+.employee_summary_table tbody tr:hover, .employee_goals_table tbody tr:hover {
+  background: linear-gradient(135deg, #f8fafc, #f0f9ff);
+  transform: translateX(4px);
+  box-shadow: 4px 0 12px rgba(15, 212, 108, 0.1);
+}
+
+.employee_summary_empty-state, .employee_goals_empty-state {
   text-align: center;
   padding: 40px 20px;
   color: #6b7280;
 }
 
-/* NEW: Pagination Container */
-.Employee_Summary_pagination {
+/* Pagination Container */
+.employee_summary_pagination-container, .employee_goals_pagination-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 20px;
-  padding: 20px 0;
+  margin-top: 20px;
+  gap: 10px;
 }
 
-.Employee_Summary_pagination span {
+.employee_summary_pagination-input, .employee_goals_pagination-input {
+  width: 40px;
+  text-align: center;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 4px;
   font-size: 14px;
-  color: #374151;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.employee_summary_pagination-input:focus, .employee_goals_pagination-input:focus {
+  outline: none;
+  border-color: #0fd46c;
+  box-shadow: 0 0 0 2px rgba(15, 212, 108, 0.25);
+}
+
+.employee_summary_pagination-text, .employee_goals_pagination-text {
+  font-size: 14px;
+  color: #333;
+}
+
+.employee_summary_rows-per-page-container, .employee_goals_rows-per-page-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+  justify-content: flex-start;
+}
+
+.employee_summary_rows-per-page-label, .employee_goals_rows-per-page-label {
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+}
+
+.employee_summary_rows-per-page-input, .employee_goals_rows-per-page-input {
+  width: 60px;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  text-align: center;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.employee_summary_rows-per-page-input:focus, .employee_goals_rows-per-page-input:focus {
+  outline: none;
+  border-color: #0fd46c;
+  box-shadow: 0 0 0 2px rgba(15, 212, 108, 0.25);
+}
+
+.employee_summary_rows-per-page-input:disabled {
+  background-color: #f0f0f0;
+  cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .employee_summary_header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .employee_summary_filter-container {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .employee_summary_search-input,
+  .employee_summary_filter-select {
+    width: 100%;
+  }
+  
+  /* NEW Responsive rule for controls row */
+  .employee_summary_controls_row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .employee_summary_details-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .employee_summary_table th,
+  .employee_summary_table td {
+    padding: 12px 15px;
+  }
 }

@@ -4,13 +4,12 @@ import React, { useState, useEffect, useMemo } from 'react';
 import './goals.css';
 import { createGoal, updateGoal, deleteGoal } from '@/app/serverActions/Performance_Review/goals';
 
-// Define the default empty state for a new goal form
 const DEFAULT_FORM_DATA = {
   id: null,
   employee_id: '',
   description: '',
-  start_date: new Date().toLocaleDateString('en-CA'), // YYYY-MM-DD
-  end_date: new Date(new Date().setMonth(new Date().getMonth() + 3)).toLocaleDateString('en-CA'), // Default +3 months
+  start_date: new Date().toLocaleDateString('en-CA'), 
+  end_date: new Date(new Date().setMonth(new Date().getMonth() + 3)).toLocaleDateString('en-CA'),
   completion_percentage: 0,
   employee_comments: '',
   supervisor_comments: '',
@@ -24,27 +23,22 @@ const Goals = ({
   orgid
 }) => {
   // --- STATE ---
-
-  // 1. Data State:
   const [goals, setGoals] = useState(initialGoals || []);
   useEffect(() => {
     setGoals(initialGoals || []);
   }, [initialGoals]);
 
-  // 2. Filter State:
   const [filterEmployeeId, setFilterEmployeeId] = useState('all');
   const currentYear = new Date().getFullYear();
   const [filterYear, setFilterYear] = useState(currentYear.toString());
 
-  // 3. Modal & Form State:
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingGoal, setEditingGoal] = useState(null); // null = Add mode, object = Edit mode
+  const [editingGoal, setEditingGoal] = useState(null); 
   const [formData, setFormData] = useState(DEFAULT_FORM_DATA);
   const [formError, setFormError] = useState(null);
   const [formSuccess, setFormSuccess] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // 4. Pagination State (NEW)
   const [currentPage, setCurrentPage] = useState(1);
   const [pageInputValue, setPageInputValue] = useState('1');
   const [goalsPerPage, setGoalsPerPage] = useState(10);
@@ -71,13 +65,12 @@ const Goals = ({
     return canAdmin || goal.employee_id === loggedInEmpId;
   };
 
-  // --- DERIVED DATA (for filters) ---
-
+  // --- DERIVED DATA ---
   const sortedEmployeesForDropdown = useMemo(() => {
     if (!employees || employees.length === 0) return [];
     const loggedInUser = employees.find(emp => String(emp.empid) === String(loggedInEmpId));
     const otherEmployees = employees.filter(emp => String(emp.empid) !== String(loggedInEmpId))
-                                  .sort((a, b) => a.name.localeCompare(b.name)); // Sort others alphabetically
+                                  .sort((a, b) => a.name.localeCompare(b.name));
     if (loggedInUser) {
       const meEmployee = { ...loggedInUser, name: `${loggedInUser.name} (Me)` };
       return [meEmployee, ...otherEmployees];
@@ -85,7 +78,6 @@ const Goals = ({
     return employees.sort((a, b) => a.name.localeCompare(b.name));
   }, [employees, loggedInEmpId]);
 
-  // --- MODIFIED: Year Filter Logic ---
   const availableYears = useMemo(() => {
     const currentYear = new Date().getFullYear();
     const specialYears = [
@@ -94,39 +86,49 @@ const Goals = ({
       (currentYear - 1).toString()
     ];
     
-    // Get all other distinct years from goals, excluding the special years
-    const otherYears = new Set(goals.map(g => new Date(g.end_date).getFullYear().toString()));
-    specialYears.forEach(year => otherYears.delete(year));
+    const otherYears = new Set();
+    goals.forEach(g => {
+      const start = new Date(g.start_date).getFullYear();
+      const end = new Date(g.end_date).getFullYear();
+      for (let y = start; y <= end; y++) {
+        otherYears.add(y.toString());
+      }
+    });
 
-    // Sort the remaining years descending
+    specialYears.forEach(year => otherYears.delete(year));
     const sortedOtherYears = Array.from(otherYears).sort((a, b) => b - a);
 
     return [...specialYears, ...sortedOtherYears];
   }, [goals]);
 
-  // Filter the goals based on the selected employee and year
   const filteredGoals = useMemo(() => {
     return goals.filter(goal => {
       const matchEmp = filterEmployeeId === 'all' || String(goal.employee_id) === filterEmployeeId;
-      const matchYear = filterYear === 'all' || new Date(goal.end_date).getFullYear().toString() === filterYear;
+      
+      let matchYear = true;
+      if (filterYear !== 'all') {
+        const selectedYear = parseInt(filterYear, 10);
+        const goalStartYear = new Date(goal.start_date).getFullYear();
+        const goalEndYear = new Date(goal.end_date).getFullYear();
+        matchYear = selectedYear >= goalStartYear && selectedYear <= goalEndYear;
+      }
+
       return matchEmp && matchYear;
     });
   }, [goals, filterEmployeeId, filterYear]);
 
-  // --- NEW: Pagination Logic ---
+  // --- PAGINATION ---
   const totalPages = Math.ceil(filteredGoals.length / goalsPerPage);
   const indexOfLastGoal = currentPage * goalsPerPage;
   const indexOfFirstGoal = indexOfLastGoal - goalsPerPage;
   const currentGoals = filteredGoals.slice(indexOfFirstGoal, indexOfLastGoal);
 
-  // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
     setPageInputValue('1');
   }, [filterEmployeeId, filterYear, goalsPerPage]);
   
-  // --- EVENT HANDLERS ---
-
+  // --- HANDLERS ---
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingGoal(null);
@@ -188,6 +190,13 @@ const Goals = ({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validation: Check if Start Date > End Date
+    if (new Date(formData.start_date) > new Date(formData.end_date)) {
+      setFormError("End Date cannot be earlier than Start Date.");
+      return;
+    }
+
     setIsSubmitting(true);
     setFormError(null);
     setFormSuccess(null);
@@ -222,8 +231,7 @@ const Goals = ({
     }
   };
 
-  // --- NEW: Pagination Handlers ---
-  
+  // --- Pagination Handlers ---
   useEffect(() => {
     setPageInputValue(currentPage.toString());
   }, [currentPage]);
@@ -233,20 +241,14 @@ const Goals = ({
   }, [goalsPerPage]);
 
   const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(prev => prev + 1);
-    }
+    if (currentPage < totalPages) setCurrentPage(prev => prev + 1);
   };
 
   const handlePrevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(prev => prev - 1);
-    }
+    if (currentPage > 1) setCurrentPage(prev => prev - 1);
   };
 
-  const handlePageInputChange = (e) => {
-    setPageInputValue(e.target.value);
-  };
+  const handlePageInputChange = (e) => setPageInputValue(e.target.value);
 
   const handlePageInputKeyPress = (e) => {
     if (e.key === 'Enter') {
@@ -254,14 +256,12 @@ const Goals = ({
       if (!isNaN(value) && value >= 1 && value <= totalPages) {
         setCurrentPage(value);
       } else {
-        setPageInputValue(currentPage.toString()); // Reset to current page
+        setPageInputValue(currentPage.toString()); 
       }
     }
   };
 
-  const handleGoalsPerPageInputChange = (e) => {
-    setGoalsPerPageInput(e.target.value);
-  };
+  const handleGoalsPerPageInputChange = (e) => setGoalsPerPageInput(e.target.value);
 
   const handleGoalsPerPageInputKeyPress = (e) => {
     if (e.key === 'Enter') {
@@ -269,26 +269,24 @@ const Goals = ({
       if (!isNaN(value) && value >= 1) {
         setGoalsPerPage(value);
       } else {
-        setGoalsPerPageInput(goalsPerPage.toString()); // Reset to current value
+        setGoalsPerPageInput(goalsPerPage.toString()); 
       }
     }
   };
   
   return (
-    <div className="Employee_Goals_container">
-      {/* --- HEADER: Title and Add Button --- */}
-      <div className="Employee_Goals_header-section">
-        <h2 className="Employee_Goals_title">Employee Goals</h2>
-        <button className="Employee_Goals_save Employee_Goals_button" onClick={handleAddClick}>
+    <div className="employee_goals_container">
+      <div className="employee_goals_header-section">
+        <h2 className="employee_goals_title">Employee Goals</h2>
+        <button className="employee_goals_save employee_goals_button" onClick={handleAddClick}>
           Add Goal
         </button>
       </div>
 
-      {/* --- FILTERS: Employee and Year --- */}
-      <div className="Employee_Goals_search-filter-container">
+      <div className="employee_goals_search-filter-container">
         {canAdmin && (
           <select
-            className="Employee_Goals_filter-select"
+            className="employee_goals_filter-select"
             value={filterEmployeeId}
             onChange={(e) => setFilterEmployeeId(e.target.value)}
           >
@@ -299,9 +297,8 @@ const Goals = ({
           </select>
         )}
 
-        {/* --- MODIFIED: Year Filter --- */}
         <select
-          className="Employee_Goals_filter-select"
+          className="employee_goals_filter-select"
           value={filterYear}
           onChange={(e) => setFilterYear(e.target.value)}
         >
@@ -312,12 +309,11 @@ const Goals = ({
         </select>
       </div>
 
-      {/* --- GOALS TABLE --- */}
-      <div className="Employee_Goals_table-wrapper">
-        <table className="Employee_Goals_table">
+      <div className="employee_goals_table-wrapper">
+        <table className="employee_goals_table">
           <thead>
             <tr>
-              {canAdmin && <th>Employee</th>}
+              {canAdmin && <th>Employee Name</th>}
               <th>Description</th>
               <th>Start Date</th>
               <th>End Date</th>
@@ -328,21 +324,20 @@ const Goals = ({
             </tr>
           </thead>
           <tbody>
-            {/* --- MODIFIED: Use currentGoals for pagination --- */}
             {currentGoals.length > 0 ? (
               currentGoals.map(goal => (
                 <tr key={goal.id} onClick={() => handleEditClick(goal)}>
                   {canAdmin && <td>{goal.employee_name}</td>}
                   <td>{goal.description}</td>
-                  <td>{new Date(goal.start_date).toLocaleDateString('en-CA')}</td>
-                  <td>{new Date(goal.end_date).toLocaleDateString('en-CA')}</td>
+                  <td>{goal.start_date}</td>
+                  <td>{goal.end_date}</td>
                   <td>{goal.completion_percentage}%</td>
                   <td style={{ whiteSpace: 'pre-wrap' }}>{goal.employee_comments || '-'}</td>
                   <td style={{ whiteSpace: 'pre-wrap' }}>{goal.supervisor_comments || '-'}</td>
                   <td>
                     {canEditGoal(goal) && (
                       <button
-                        className="Employee_Goals_cancel Employee_Goals_button"
+                        className="employee_goals_cancel employee_goals_button"
                         onClick={(e) => handleDeleteClick(e, goal)}
                       >
                         Delete
@@ -353,7 +348,7 @@ const Goals = ({
               ))
             ) : (
               <tr>
-                <td colSpan={canAdmin ? 8 : 7} className="Employee_Goals_empty-state">
+                <td colSpan={canAdmin ? 8 : 7} className="employee_goals_empty-state">
                   No goals found for the selected filters.
                 </td>
               </tr>
@@ -362,30 +357,29 @@ const Goals = ({
         </table>
       </div>
 
-      {/* --- NEW: Pagination Controls --- */}
       {filteredGoals.length > goalsPerPage && (
-        <div className="Employee_Goals_pagination-container">
+        <div className="employee_goals_pagination-container">
           <button
-            className="Employee_Goals_button Employee_Goals_cancel"
+            className="employee_goals_button employee_goals_cancel"
             onClick={handlePrevPage}
             disabled={currentPage === 1}
             style={{ minWidth: '100px' }}
           >
             ← Previous
           </button>
-          <span className="Employee_Goals_pagination-text">
+          <span className="employee_goals_pagination-text">
             Page{' '}
             <input
               type="text"
               value={pageInputValue}
               onChange={handlePageInputChange}
               onKeyPress={handlePageInputKeyPress}
-              className="Employee_Goals_pagination-input"
+              className="employee_goals_pagination-input"
             />{' '}
             of {totalPages}
           </span>
           <button
-            className="Employee_Goals_button Employee_Goals_save"
+            className="employee_goals_button employee_goals_save"
             onClick={handleNextPage}
             disabled={currentPage === totalPages}
             style={{ minWidth: '100px' }}
@@ -395,47 +389,45 @@ const Goals = ({
         </div>
       )}
       
-      {/* --- NEW: Rows Per Page --- */}
-      <div className="Employee_Goals_rows-per-page-container">
-        <label className="Employee_Goals_rows-per-page-label">Rows per Page:</label>
+      <div className="employee_goals_rows-per-page-container">
+        <label className="employee_goals_rows-per-page-label">Rows per Page:</label>
         <input
           type="text"
           value={goalsPerPageInput}
           onChange={handleGoalsPerPageInputChange}
           onKeyPress={handleGoalsPerPageInputKeyPress}
           placeholder="Goals per page"
-          className="Employee_Goals_rows-per-page-input"
+          className="employee_goals_rows-per-page-input"
           aria-label="Number of rows per page"
         />
       </div>
 
       {/* --- ADD/EDIT MODAL --- */}
       {isModalOpen && (
-        <div className="Employee_Goals_modal-overlay" onClick={closeModal}>
-          <div className="Employee_Goals_modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="employee_goals_modal-overlay" onClick={closeModal}>
+          <div className="employee_goals_modal-content" onClick={(e) => e.stopPropagation()}>
             
-            <div className="Employee_Goals_modal-header">
-              <h3 className="Employee_Goals_modal-title">
+            <div className="employee_goals_modal-header">
+              <h3 className="employee_goals_modal-title">
                 {editingGoal ? 'Edit Goal' : 'Add New Goal'}
               </h3>
-              <button className="Employee_Goals_modal-close-button" onClick={closeModal}>
+              <button className="employee_goals_modal-close-button" onClick={closeModal}>
                 &times;
               </button>
             </div>
 
-            <form className="Employee_Goals_form" onSubmit={handleSubmit}>
-              {formError && <div className="Employee_Goals_error-message">{formError}</div>}
-              {formSuccess && <div className="Employee_Goals_success-message">{formSuccess}</div>}
+            <form className="employee_goals_form" onSubmit={handleSubmit}>
+              {formError && <div className="employee_goals_error-message">{formError}</div>}
+              {formSuccess && <div className="employee_goals_success-message">{formSuccess}</div>}
 
-              {/* --- Employee Selection --- */}
-              <div className="Employee_Goals_form-group">
-                <label htmlFor="employee_id">Employee</label>
+              <div className="employee_goals_form-group">
+                <label htmlFor="employee_id">Employee Name</label>
                 <select
                   id="employee_id"
                   name="employee_id"
                   value={formData.employee_id}
                   onChange={handleFormChange}
-                  disabled={!canAddForOthers || !!editingGoal} // Disable if not admin OR if editing
+                  disabled={!canAddForOthers || !!editingGoal} 
                   required
                 >
                   <option value="" disabled>Select an employee</option>
@@ -451,8 +443,7 @@ const Goals = ({
                 </select>
               </div>
 
-              {/* --- Description --- */}
-              <div className="Employee_Goals_form-group">
+              <div className="employee_goals_form-group">
                 <label htmlFor="description">Goal Description</label>
                 <textarea
                   id="description"
@@ -464,9 +455,8 @@ const Goals = ({
                 />
               </div>
 
-              {/* --- Dates & Completion --- */}
-              <div className="Employee_Goals_form-row">
-                <div className="Employee_Goals_form-group">
+              <div className="employee_goals_form-row">
+                <div className="employee_goals_form-group">
                   <label htmlFor="start_date">Start Date</label>
                   <input
                     type="date"
@@ -477,12 +467,11 @@ const Goals = ({
                     required
                   />
                 </div>
-                <div className="Employee_Goals_form-group">
+                <div className="employee_goals_form-group">
                   <label htmlFor="end_date">End Date</label>
                   <input
                     type="date"
                     id="end_date"
-    
                     name="end_date"
                     value={formData.end_date}
                     onChange={handleFormChange}
@@ -490,7 +479,7 @@ const Goals = ({
                   />
                 </div>
               </div>
-              <div className="Employee_Goals_form-group">
+              <div className="employee_goals_form-group">
                 <label htmlFor="completion_percentage">Completion Percentage</label>
                 <input
                   type="number"
@@ -503,8 +492,7 @@ const Goals = ({
                 />
               </div>
 
-              {/* --- Comments --- */}
-              <div className="Employee_Goals_form-group">
+              <div className="employee_goals_form-group">
                 <label htmlFor="employee_comments">Employee Comments</label>
                 <textarea
                   id="employee_comments"
@@ -515,9 +503,8 @@ const Goals = ({
                 />
               </div>
 
-              {/* --- MODIFIED: Supervisor Comments (Conditional) --- */}
-              {canSeeSupervisorComments && ( // Show if 'individual', 'team', or 'all'
-                <div className="Employee_Goals_form-group">
+              {canSeeSupervisorComments && ( 
+                <div className="employee_goals_form-group">
                   <label htmlFor="supervisor_comments">Supervisor Comments</label>
                   <textarea
                     id="supervisor_comments"
@@ -525,17 +512,15 @@ const Goals = ({
                     value={formData.supervisor_comments}
                     onChange={handleFormChange}
                     rows="3"
-                    // Only admins ('all', 'team') can edit. 'individual' will be disabled.
                     disabled={!canEditSupervisorComments} 
                   />
                 </div>
               )}
 
-              {/* --- Form Actions --- */}
-              <div className="Employee_Goals_form-buttons">
+              <div className="employee_goals_form-buttons">
                 <button
                   type="button"
-                  className="Employee_Goals_cancel Employee_Goals_button"
+                  className="employee_goals_cancel employee_goals_button"
                   onClick={closeModal}
                   disabled={isSubmitting}
                 >
@@ -543,7 +528,7 @@ const Goals = ({
                 </button>
                 <button
                   type="submit"
-                  className="Employee_Goals_save Employee_Goals_button"
+                  className="employee_goals_save employee_goals_button"
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? 'Saving...' : (editingGoal ? 'Update Goal' : 'Save Goal')}

@@ -5,8 +5,6 @@ import { cookies } from 'next/headers';
 import DBconnection from '@/app/utils/config/db';
 import Overview from '@/app/components/Performance_Review/Overview';
 
-
-
 // Simple function to decode JWT without verification
 const decodeJwt = (token) => {
   try {
@@ -25,7 +23,6 @@ const decodeJwt = (token) => {
  */
 async function getSubordinates(pool, superiorId, orgid) {
   const subordinateIds = new Set();
-  // Recursive CTE to get full hierarchy
   const recursiveQuery = `
     WITH RECURSIVE EmployeeHierarchy AS (
       SELECT empid FROM C_EMP WHERE superior = ? AND orgid = ?
@@ -38,9 +35,6 @@ async function getSubordinates(pool, superiorId, orgid) {
     SELECT empid FROM EmployeeHierarchy;
   `;
   try {
-    // Note: Varchar IDs might not work with this recursive query if they are not properly indexed
-    // or if the superior column doesn't exactly match empid.
-    // Assuming superior column stores the empid string directly.
     const [rows] = await pool.query(recursiveQuery, [superiorId, orgid, orgid]);
     rows.forEach(row => subordinateIds.add(row.empid));
   } catch (error) {
@@ -49,25 +43,23 @@ async function getSubordinates(pool, superiorId, orgid) {
   return Array.from(subordinateIds);
 }
 
-/**
- * Formats date for display (YYYY-MM-DD).
- */
-const formatDateForDisplay = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return '';
-    // Format to YYYY-MM-DD for HTML input compatibility
-    return date.toISOString().split('T')[0];
+// UPDATED: User provided date formatting function
+const formatDateForDisplay = (date) => {
+    if (!date || isNaN(new Date(date))) return '';
+    const d = new Date(date);
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${month}/${day}/${d.getFullYear()}`;
 };
 
 export default async function page() {
   let orgid = null;
-  let empid = null; // This will be varchar
+  let empid = null; 
   let permissionLevel = 'none';
-  let employees = []; // For Goals
-  let reviewEmployees = []; // For Reviews (respects new rules)
+  let employees = []; 
+  let reviewEmployees = []; 
   let goals = [];
-  let reviews = []; // NEW
+  let reviews = []; 
   let visibleEmpIds = [];
 
   let hasAllData = false;
@@ -79,24 +71,18 @@ export default async function page() {
     const cookieStore = cookies();
     const token = cookieStore.get('jwt_token')?.value;
 
-    if (!token) {
-      throw new Error("Authentication token is missing.");
-    }
+    if (!token) throw new Error("Authentication token is missing.");
 
     const decoded = decodeJwt(token);
-    if (!decoded || !decoded.orgid || !decoded.userId) {
-      throw new Error("Invalid authentication token.");
-    }
+    if (!decoded || !decoded.orgid || !decoded.userId) throw new Error("Invalid authentication token.");
 
     orgid = decoded.orgid;
     const username = decoded.userId;
 
     // 1. Get Logged In Employee ID
     const [userRows] = await pool.execute("SELECT empid FROM C_USER WHERE username = ? AND orgid = ?", [username, orgid]);
-    if (userRows.length === 0) {
-        throw new Error("User account is not linked to an employee record.");
-    }
-    empid = userRows[0].empid; // This is a varchar
+    if (userRows.length === 0) throw new Error("User account is not linked to an employee record.");
+    empid = userRows[0].empid;
 
     // 2. Get Permissions
     const [userRoles] = await pool.query(
@@ -109,7 +95,7 @@ export default async function page() {
       const [permissions] = await pool.query(
         `SELECT alldata, teamdata, individualdata 
          FROM C_ROLE_MENU_PERMISSIONS 
-         WHERE roleid IN (?) AND menuid = 19`, // Menu 19 for Performance
+         WHERE roleid IN (?) AND menuid = 19`, 
         [roleIds]
       );
       
@@ -120,33 +106,28 @@ export default async function page() {
       }
     }
     
-    // Calculate effective permission level
-    if (hasAllData) {
-      permissionLevel = 'all';
-    } else if (hasTeamData) {
-      permissionLevel = 'team';
-    } else if (hasIndividualData) {
-      permissionLevel = 'individual';
-    }
+    if (hasAllData) permissionLevel = 'all';
+    else if (hasTeamData) permissionLevel = 'team';
+    else if (hasIndividualData) permissionLevel = 'individual';
 
     // 3. Determine Visible Employees based on Permission
-    // --- MODIFIED QUERY to get all details for Summary tab ---
     let employeeQuery = `
       SELECT 
           e.empid, 
           CONCAT(e.EMP_FST_NAME, ' ', e.EMP_LAST_NAME) as name,
           e.email,
-          e.JOB_TITLE as role,
+          jt.job_title as job_title_name,
           CONCAT(s.EMP_FST_NAME, ' ', s.EMP_LAST_NAME) as supervisor_name
         FROM C_EMP e
         LEFT JOIN C_EMP s ON e.superior = s.empid AND e.orgid = s.orgid
+        LEFT JOIN C_ORG_JOBTITLES jt ON e.JOB_TITLE = jt.job_title_id AND e.orgid = jt.orgid
         WHERE e.orgid = ?
     `;
     const queryParams = [orgid];
 
     if (permissionLevel === 'team') {
         const subordinateIds = await getSubordinates(pool, empid, orgid);
-        visibleEmpIds = [empid, ...subordinateIds]; // Goals list includes self
+        visibleEmpIds = [empid, ...subordinateIds]; 
         employeeQuery += ` AND e.empid IN (?)`;
         queryParams.push(visibleEmpIds);
     } else if (permissionLevel === 'individual') {
@@ -161,12 +142,11 @@ export default async function page() {
 
     const [employeeRows] = await pool.query(employeeQuery, queryParams);
     
-    // --- MODIFIED MAPPING to include new fields ---
     employees = employeeRows.map(emp => ({
       empid: emp.empid,
       name: emp.name ? emp.name.trim() : 'N/A',
       email: emp.email || 'N/A',
-      role: emp.role || 'N/A',
+      role: emp.job_title_name || 'N/A', 
       supervisor_name: emp.supervisor_name ? emp.supervisor_name.trim() : 'N/A'
     }));
     
@@ -174,16 +154,13 @@ export default async function page() {
         visibleEmpIds = employees.map(emp => emp.empid);
     }
 
-    // NEW: Create the employee list for REVIEWS
-    // (excludes self for 'team', empty for 'individual')
     if (permissionLevel === 'all') {
       reviewEmployees = employees;
     } else if (permissionLevel === 'team') {
       reviewEmployees = employees.filter(emp => String(emp.empid) !== String(empid));
     }
-    // else, reviewEmployees remains []
 
-    // 4. Fetch Goals for Visible Employees
+    // 4. Fetch Goals
     if (visibleEmpIds.length > 0) {
       const goalsQuery = `
         SELECT 
@@ -209,7 +186,7 @@ export default async function page() {
       }));
     }
 
-    // 5. NEW: Fetch Reviews for Visible Employees
+    // 5. Fetch Reviews
     if (visibleEmpIds.length > 0 && permissionLevel !== 'individual') {
       const reviewsQuery = `
         SELECT 
@@ -255,10 +232,10 @@ export default async function page() {
         individualdata={hasIndividualData ? 1 : 0}
         alldata={hasAllData ? 1 : 0}
         permissionLevel={permissionLevel}
-        employees={employees} // For Goals & Summary
-        reviewEmployees={reviewEmployees} // For Reviews
+        employees={employees} 
+        reviewEmployees={reviewEmployees} 
         goals={goals}
-        reviews={reviews} // NEW
+        reviews={reviews} 
         loggedInEmpId={empid}
         orgid={orgid}
       />

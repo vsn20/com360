@@ -3,7 +3,7 @@
 import { cookies } from 'next/headers';
 import DBconnection from '@/app/utils/config/db';
 
-// Simple function to decode JWT (as used in other files)
+// Simple function to decode JWT
 const decodeJwt = (token) => {
   try {
     const base64Url = token.split('.')[1];
@@ -37,19 +37,17 @@ async function getAuth() {
   return { pool, orgid: decoded.orgid, loggedInEmpId: userRows[0].empid };
 }
 
-/**
- * Formats date for display (YYYY-MM-DD).
- */
-const formatDateForDisplay = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return '';
-    return date.toISOString().split('T')[0];
+// UPDATED: User provided date formatting function
+const formatDateForDisplay = (date) => {
+    if (!date || isNaN(new Date(date))) return '';
+    const d = new Date(date);
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${month}/${day}/${d.getFullYear()}`;
 };
 
 /**
  * Fetches all summary data for a single employee.
- * This function replicates the logic from employee_summary.php
  */
 export async function getEmployeeSummary(employeeId, year) {
   try {
@@ -63,28 +61,35 @@ export async function getEmployeeSummary(employeeId, year) {
 
     let employee, goals, reviews, avgRating, availableYears;
 
-    // 1. Fetch Employee Info (and Supervisor Name)
+    // 1. Fetch Employee Info
     const [empRows] = await pool.query(
-      `SELECT e.*, CONCAT(s.EMP_FST_NAME, ' ', s.EMP_LAST_NAME) AS supervisor_name 
+      `SELECT 
+        e.*, 
+        CONCAT(s.EMP_FST_NAME, ' ', s.EMP_LAST_NAME) AS supervisor_name,
+        jt.job_title AS job_title_name
        FROM C_EMP e 
        LEFT JOIN C_EMP s ON s.empid = e.superior AND s.orgid = e.orgid
+       LEFT JOIN C_ORG_JOBTITLES jt ON e.JOB_TITLE = jt.job_title_id AND e.orgid = jt.orgid
        WHERE e.empid = ? AND e.orgid = ?`,
       [employeeId, orgid]
     );
+    
     if (empRows.length === 0) {
       throw new Error('Employee not found.');
     }
     employee = empRows[0];
     employee.name = `${employee.EMP_FST_NAME} ${employee.EMP_LAST_NAME}`.trim();
+    employee.job_title_name = employee.job_title_name || 'N/A';
 
-
-    // 2. Fetch Goals (filtered by year if provided)
+    // 2. Fetch Goals
     let goalsQuery = "SELECT * FROM C_EMP_GOALS WHERE employee_id = ? AND orgid = ?";
     const goalsParams = [employeeId, orgid];
+    
     if (selectedYear) {
-      goalsQuery += " AND YEAR(end_date) = ?";
+      goalsQuery += " AND ? BETWEEN YEAR(start_date) AND YEAR(end_date)";
       goalsParams.push(selectedYear);
     }
+    
     goalsQuery += " ORDER BY end_date ASC";
     const [goalRows] = await pool.query(goalsQuery, goalsParams);
     goals = goalRows.map(g => ({
@@ -93,7 +98,7 @@ export async function getEmployeeSummary(employeeId, year) {
       end_date: formatDateForDisplay(g.end_date)
     }));
 
-    // 3. Fetch Reviews (filtered by year if provided)
+    // 3. Fetch Reviews
     let reviewsQuery = `
       SELECT r.*, CONCAT(sv.EMP_FST_NAME, ' ', sv.EMP_LAST_NAME) AS supervisor_name 
       FROM C_EMP_REVIEWS r 
@@ -113,7 +118,7 @@ export async function getEmployeeSummary(employeeId, year) {
       created_at: formatDateForDisplay(r.created_at)
     }));
 
-    // 4. Fetch Average Rating (filtered by year if provided)
+    // 4. Fetch Average Rating
     let avgQuery = "SELECT ROUND(AVG(rating), 2) as avgRating FROM C_EMP_REVIEWS WHERE employee_id = ? AND orgid = ?";
     const avgParams = [employeeId, orgid];
     if (selectedYear) {
@@ -123,7 +128,7 @@ export async function getEmployeeSummary(employeeId, year) {
     const [avgRows] = await pool.query(avgQuery, avgParams);
     avgRating = avgRows[0].avgRating || 'N/A';
 
-    // 5. Fetch Distinct Review Years for the year filter
+    // 5. Fetch Distinct Review Years
     const [yearRows] = await pool.query(
       "SELECT DISTINCT review_year FROM C_EMP_REVIEWS WHERE employee_id = ? AND orgid = ? ORDER BY review_year DESC",
       [employeeId, orgid]

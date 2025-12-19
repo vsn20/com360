@@ -2,17 +2,14 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { getEmployeeSummary } from '@/app/serverActions/Performance_Review/summary';
-import './summary.css'; // Import the new CSS file
+import './summary.css'; 
 import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable'; // Corrected import
+import autoTable from 'jspdf-autotable'; 
 
-// Helper to format dates (YYYY-MM-DD)
+// Simply return the string as the backend now handles formatting (MM/DD/YYYY)
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A';
-  const date = new Date(dateString);
-  if (isNaN(date.getTime())) return 'N/A';
-  // Adding timeZone: 'utc' to prevent off-by-one day errors
-  return date.toLocaleDateString('en-CA', { timeZone: 'utc' });
+  return dateString;
 };
 
 const Summary = ({
@@ -21,27 +18,25 @@ const Summary = ({
   loggedInEmpId
 }) => {
   // --- STATE ---
-  // View state: null = employee table, ID = summary detail
   const [viewingEmployeeId, setViewingEmployeeId] = useState(null); 
   
-  // Employee table state
   const [searchTerm, setSearchTerm] = useState('');
+  // NEW: State for Job Title Filter
+  const [selectedJobTitle, setSelectedJobTitle] = useState('all'); 
+
   const [currentPage, setCurrentPage] = useState(1);
   const [employeesPerPage, setEmployeesPerPage] = useState(10);
-  // NEW: State for pagination inputs
   const [pageInputValue, setPageInputValue] = useState('1');
   const [employeesPerPageInput, setEmployeesPerPageInput] = useState('10');
 
-  // Summary detail state
   const [selectedYear, setSelectedYear] = useState('all');
   const [summaryData, setSummaryData] = useState(null);
   const [availableYears, setAvailableYears] = useState([]);
-  const [isLoading, setIsLoading] = useState(false); // Start false, load on select
+  const [isLoading, setIsLoading] = useState(false); 
   const [error, setError] = useState(null);
 
   // --- EMPLOYEE TABLE LOGIC ---
 
-  // Create a sorted list for the employee table with "(Me)"
   const sortedEmployees = useMemo(() => {
     if (!employees || employees.length === 0) return [];
     
@@ -57,18 +52,34 @@ const Summary = ({
     return employees.sort((a, b) => a.name.localeCompare(b.name));
   }, [employees, loggedInEmpId, permissionLevel]);
 
-  // Filter employees based on search term
-  const filteredEmployees = useMemo(() => {
-    return sortedEmployees.filter(emp =>
-      emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.empid.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (emp.email && emp.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (emp.role && emp.role.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (emp.supervisor_name && emp.supervisor_name.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
-  }, [sortedEmployees, searchTerm]);
+  // NEW: Extract Unique Job Titles for the Dropdown
+  const uniqueJobTitles = useMemo(() => {
+    if (!sortedEmployees) return [];
+    // Extract roles, remove duplicates, filter out null/undefined
+    const titles = new Set(sortedEmployees.map(emp => emp.role).filter(Boolean));
+    return Array.from(titles).sort();
+  }, [sortedEmployees]);
 
-  // Paginate the filtered employees
+  // MODIFIED: Filter Logic to include Job Title
+  const filteredEmployees = useMemo(() => {
+    return sortedEmployees.filter(emp => {
+      // 1. Check Job Title Filter
+      if (selectedJobTitle !== 'all' && emp.role !== selectedJobTitle) {
+        return false;
+      }
+
+      // 2. Check Search Term
+      const lowerSearch = searchTerm.toLowerCase();
+      return (
+        emp.name.toLowerCase().includes(lowerSearch) ||
+        emp.empid.toLowerCase().includes(lowerSearch) ||
+        (emp.email && emp.email.toLowerCase().includes(lowerSearch)) ||
+        (emp.role && emp.role.toLowerCase().includes(lowerSearch)) ||
+        (emp.supervisor_name && emp.supervisor_name.toLowerCase().includes(lowerSearch))
+      );
+    });
+  }, [sortedEmployees, searchTerm, selectedJobTitle]);
+
   const totalPages = Math.ceil(filteredEmployees.length / employeesPerPage);
   const paginatedEmployees = useMemo(() => {
     const start = (currentPage - 1) * employeesPerPage;
@@ -76,7 +87,6 @@ const Summary = ({
     return filteredEmployees.slice(start, end);
   }, [filteredEmployees, currentPage, employeesPerPage]);
 
-  // --- NEW: Sync pagination inputs ---
   useEffect(() => {
     setPageInputValue(currentPage.toString());
   }, [currentPage]);
@@ -85,17 +95,15 @@ const Summary = ({
     setEmployeesPerPageInput(employeesPerPage.toString());
   }, [employeesPerPage]);
 
-  // Reset to page 1 when filters change
+  // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, employeesPerPage]);
+  }, [searchTerm, employeesPerPage, selectedJobTitle]);
 
 
-  // --- DATA FETCHING (for Detail View) ---
-  
-  // Use useCallback to memoize the fetch function
+  // --- DATA FETCHING ---
   const fetchSummary = useCallback(async () => {
-    if (!viewingEmployeeId) return; // Don't fetch if no employee is selected
+    if (!viewingEmployeeId) return; 
 
     setIsLoading(true);
     setError(null);
@@ -104,31 +112,27 @@ const Summary = ({
       const result = await getEmployeeSummary(viewingEmployeeId, selectedYear);
       if (result.success) {
         setSummaryData(result.data);
-        // Set the available years for the *newly selected* employee
         setAvailableYears(result.data.availableYears || []);
       } else {
         throw new Error(result.error || 'Failed to fetch summary.');
       }
     } catch (err) {
       setError(err.message);
-      setSummaryData(null); // Clear old data on error
+      setSummaryData(null); 
     } finally {
       setIsLoading(false);
     }
   }, [viewingEmployeeId, selectedYear]);
 
-  // Fetch data when viewingEmployeeId or selectedYear changes
   useEffect(() => {
     if (viewingEmployeeId) {
       fetchSummary();
     } else {
-      // Clear old data when returning to list
       setSummaryData(null);
       setError(null);
     }
-  }, [viewingEmployeeId, fetchSummary]); // fetchSummary is memoized
+  }, [viewingEmployeeId, fetchSummary]); 
   
-  // When the selected employee changes, reset the year filter
   useEffect(() => {
     setSelectedYear('all');
   }, [viewingEmployeeId]);
@@ -141,9 +145,7 @@ const Summary = ({
     const yearLabel = selectedYear === 'all' ? 'All Years' : selectedYear;
 
     const doc = new jsPDF();
-    const
- 
-pageWidth = doc.internal.pageSize.getWidth();
+    const pageWidth = doc.internal.pageSize.getWidth();
     const margin = 15;
     let cursorY = 20;
 
@@ -162,7 +164,7 @@ pageWidth = doc.internal.pageSize.getWidth();
     doc.setFontSize(10);
     doc.setFont(undefined, 'normal');
     doc.text(`Name: ${employee.name || 'N/A'}`, margin, cursorY);
-    doc.text(`Role: ${employee.JOB_TITLE || 'N/A'}`, margin + 80, cursorY);
+    doc.text(`Job Title: ${employee.job_title_name || 'N/A'}`, margin + 80, cursorY);
     cursorY += 6;
     doc.text(`Email: ${employee.email || 'N/A'}`, margin, cursorY);
     doc.text(`Supervisor: ${employee.supervisor_name || 'N/A'}`, margin + 80, cursorY);
@@ -177,13 +179,13 @@ pageWidth = doc.internal.pageSize.getWidth();
       doc.text(`Goals (${yearLabel})`, margin, cursorY);
       cursorY += 8;
 
-      autoTable(doc, { // Corrected call
+      autoTable(doc, { 
         startY: cursorY,
         head: [['Description', 'Start', 'End', '%', 'Employee Comments', 'Supervisor Comments']],
         body: goals.map(g => [
           g.description,
-          formatDate(g.start_date), // <-- FIXED
-          formatDate(g.end_date),   // <-- FIXED
+          formatDate(g.start_date), 
+          formatDate(g.end_date),  
           `${g.completion_percentage}%`,
           g.employee_comments || '-',
           g.supervisor_comments || '-'
@@ -193,7 +195,7 @@ pageWidth = doc.internal.pageSize.getWidth();
         headStyles: { fillColor: [248, 250, 252], textColor: [55, 65, 81], fontSize: 8, fontStyle: 'bold' },
         margin: { left: margin, right: margin }
       });
-      cursorY = doc.lastAutoTable.finalY + 10; // Corrected property
+      cursorY = doc.lastAutoTable.finalY + 10; 
     }
 
     // --- Reviews Table ---
@@ -203,7 +205,7 @@ pageWidth = doc.internal.pageSize.getWidth();
       doc.text(`Reviews (${yearLabel})`, margin, cursorY);
       cursorY += 8;
 
-      autoTable(doc, { // Corrected call
+      autoTable(doc, { 
         startY: cursorY,
         head: [['Supervisor', 'Year', 'Rating', 'Review Text', 'Comments', 'Date']],
         body: reviews.map(r => [
@@ -212,7 +214,7 @@ pageWidth = doc.internal.pageSize.getWidth();
           r.rating,
           r.review_text,
           r.comments || '-',
-          formatDate(r.review_date) // <-- FIXED
+          formatDate(r.review_date)
         ]),
         theme: 'grid',
         styles: { fontSize: 8, cellPadding: 2 },
@@ -231,10 +233,10 @@ pageWidth = doc.internal.pageSize.getWidth();
 
   const handleBackToList = () => {
     setViewingEmployeeId(null);
-    // Reset table state
     setSearchTerm('');
+    setSelectedJobTitle('all'); // Reset filter
     setCurrentPage(1);
-    setPageInputValue('1'); // Reset input
+    setPageInputValue('1');
   };
 
   // --- PAGINATION HANDLERS ---
@@ -244,7 +246,6 @@ pageWidth = doc.internal.pageSize.getWidth();
   const handlePrevPage = () => {
     if (currentPage > 1) setCurrentPage(prev => prev - 1);
   };
-  // NEW: Handlers for input fields
   const handlePageInputChange = (e) => setPageInputValue(e.target.value);
   const handlePageInputKeyPress = (e) => {
     if (e.key === 'Enter') {
@@ -262,37 +263,53 @@ pageWidth = doc.internal.pageSize.getWidth();
     }
   };
 
-  // --- RENDER ---
+  // --- RENDER 1: List View ---
 
-  // RENDER 1: Employee List (Table View)
-  // --- MODIFIED: Use Employee_Goals_... CSS classes ---
   if (!viewingEmployeeId) {
     return (
-      <div className="Employee_Goals_container">
-        <div className="Employee_Goals_header-section">
-          <h2 className="Employee_Goals_title">Employee Summary</h2>
-          <div className="Employee_Goals_search-filter-container">
-            {/* Show search only if not 'individual' */}
+      <div className="employee_goals_container">
+        {/* MODIFIED: Header Section with Column Layout */}
+        <div className="employee_summary_list-header">
+          <h2 className="employee_goals_title">Employee Summary</h2>
+          
+          <div className="employee_summary_controls_row">
             {permissionLevel !== 'individual' && (
-              <input
-                type="text"
-                placeholder="Search employees..."
-                className="Employee_Goals_search-input"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+              <>
+                {/* Search Input */}
+                <input
+                  type="text"
+                  placeholder="Search employees..."
+                  className="employee_summary_search-input"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                
+                {/* Job Title Filter Dropdown */}
+                <select
+                  className="employee_summary_filter-select"
+                  value={selectedJobTitle}
+                  onChange={(e) => setSelectedJobTitle(e.target.value)}
+                  style={{ minWidth: '180px' }} // Optional specific style
+                >
+                  <option value="all">All Job Titles</option>
+                  {uniqueJobTitles.map((title, index) => (
+                    <option key={index} value={title}>
+                      {title}
+                    </option>
+                  ))}
+                </select>
+              </>
             )}
           </div>
         </div>
 
-        <div className="Employee_Goals_table-wrapper">
-          <table className="Employee_Goals_table">
+        <div className="employee_goals_table-wrapper">
+          <table className="employee_goals_table">
             <thead>
               <tr>
-                <th>Employee ID</th>
-                <th>Name</th>
+                <th>Employee Name</th>
                 <th>Email</th>
-                <th>Role</th>
+                <th>Job Title</th>
                 <th>Supervisor</th>
               </tr>
             </thead>
@@ -300,7 +317,6 @@ pageWidth = doc.internal.pageSize.getWidth();
               {paginatedEmployees.length > 0 ? (
                 paginatedEmployees.map(emp => (
                   <tr key={emp.empid} onClick={() => handleEmployeeClick(emp.empid)} style={{ cursor: 'pointer' }}>
-                    <td>{emp.empid}</td>
                     <td>{emp.name}</td>
                     <td>{emp.email}</td>
                     <td>{emp.role}</td>
@@ -309,8 +325,8 @@ pageWidth = doc.internal.pageSize.getWidth();
                 ))
               ) : (
                 <tr>
-                  <td colSpan="5" className="Employee_Goals_empty-state">
-                    No employees found.
+                  <td colSpan="4" className="employee_goals_empty-state">
+                    No employees found matching criteria.
                   </td>
                 </tr>
               )}
@@ -318,30 +334,29 @@ pageWidth = doc.internal.pageSize.getWidth();
           </table>
         </div>
         
-        {/* --- MODIFIED: Pagination Controls (from Goals.jsx) --- */}
         {totalPages > 1 && (
-          <div className="Employee_Goals_pagination-container">
+          <div className="employee_goals_pagination-container">
             <button
-              className="Employee_Goals_button Employee_Goals_cancel"
+              className="employee_goals_button employee_goals_cancel"
               onClick={handlePrevPage}
               disabled={currentPage === 1}
               style={{ minWidth: '100px' }}
             >
               ← Previous
             </button>
-            <span className="Employee_Goals_pagination-text">
+            <span className="employee_goals_pagination-text">
               Page{' '}
               <input
                 type="text"
                 value={pageInputValue}
                 onChange={handlePageInputChange}
                 onKeyPress={handlePageInputKeyPress}
-                className="Employee_Goals_pagination-input"
+                className="employee_goals_pagination-input"
               />{' '}
               of {totalPages}
             </span>
             <button
-              className="Employee_Goals_button Employee_Goals_save"
+              className="employee_goals_button employee_goals_save"
               onClick={handleNextPage}
               disabled={currentPage === totalPages}
               style={{ minWidth: '100px' }}
@@ -351,16 +366,15 @@ pageWidth = doc.internal.pageSize.getWidth();
           </div>
         )}
         
-        {/* --- MODIFIED: Rows Per Page (from Goals.jsx) --- */}
-        <div className="Employee_Goals_rows-per-page-container">
-          <label className="Employee_Goals_rows-per-page-label">Rows per Page:</label>
+        <div className="employee_goals_rows-per-page-container">
+          <label className="employee_goals_rows-per-page-label">Rows per Page:</label>
           <input
             type="text"
             value={employeesPerPageInput}
             onChange={handleEmployeesPerPageInputChange}
             onKeyPress={handleEmployeesPerPageInputKeyPress}
             placeholder="Rows per page"
-            className="Employee_Goals_rows-per-page-input"
+            className="employee_goals_rows-per-page-input"
             aria-label="Number of rows per page"
           />
         </div>
@@ -368,25 +382,23 @@ pageWidth = doc.internal.pageSize.getWidth();
     );
   }
 
-  // RENDER 2: Employee Detail (Summary View)
-  // --- This section remains styled by summary.css ---
+  // RENDER 2: Employee Detail (Summary View) - Unchanged mostly
   return (
-    <div className="Employee_Summary_container">
+    <div className="employee_summary_container">
       {/* --- Header & Filters --- */}
-      <div className="Employee_Summary_header">
-        <h2 className="Employee_Summary_title">
+      <div className="employee_summary_header">
+        <h2 className="employee_summary_title">
           {isLoading ? 'Loading...' : (summaryData ? summaryData.employee.name : 'Employee Summary')}
         </h2>
-        <div className="Employee_Summary_filter-container">
+        <div className="employee_summary_filter-container">
           <button
-            className="Employee_Summary_back-button"
+            className="employee_summary_back-button"
             onClick={handleBackToList}
           >
-            &larr; Back to List
           </button>
           
           <select
-            className="Employee_Summary_filter-select"
+            className="employee_summary_filter-select"
             value={selectedYear}
             onChange={(e) => setSelectedYear(e.target.value)}
             disabled={isLoading || !summaryData}
@@ -398,7 +410,7 @@ pageWidth = doc.internal.pageSize.getWidth();
           </select>
           
           <button
-            className="Employee_Summary_pdf-button"
+            className="employee_summary_pdf-button"
             onClick={handleDownloadPdf}
             disabled={isLoading || !summaryData}
           >
@@ -408,41 +420,41 @@ pageWidth = doc.internal.pageSize.getWidth();
       </div>
 
       {/* --- Content Area --- */}
-      <div className="Employee_Summary_content">
+      <div className="employee_summary_content">
         {isLoading && (
-          <div className="Employee_Summary_loading">Loading summary...</div>
+          <div className="employee_summary_loading">Loading summary...</div>
         )}
         
         {error && (
-          <div className="Employee_Summary_error">Error: {error}</div>
+          <div className="employee_summary_error">Error: {error}</div>
         )}
         
         {!isLoading && !error && summaryData && (
           <div id="summary-report-content">
             {/* --- Employee Details Card --- */}
-            <div className="Employee_Summary_card">
-              <div className="Employee_Summary_card-header">
+            <div className="employee_summary_card">
+              <div className="employee_summary_card-header">
                 Employee Details
               </div>
-              <div className="Employee_Summary_card-body">
-                <div className="Employee_Summary_details-grid">
-                  <div className="Employee_Summary_detail-item">
-                    <label>Name</label>
+              <div className="employee_summary_card-body">
+                <div className="employee_summary_details-grid">
+                  <div className="employee_summary_detail-item">
+                    <label>Employee Name</label>
                     <p>{summaryData.employee.name || 'N/A'}</p>
                   </div>
-                  <div className="Employee_Summary_detail-item">
-                    <label>Role</label>
-                    <p>{summaryData.employee.JOB_TITLE || 'N/A'}</p>
+                  <div className="employee_summary_detail-item">
+                    <label>Job Title</label>
+                    <p>{summaryData.employee.job_title_name || 'N/A'}</p>
                   </div>
-                  <div className="Employee_Summary_detail-item">
+                  <div className="employee_summary_detail-item">
                     <label>Email</label>
                     <p>{summaryData.employee.email || 'N/A'}</p>
                   </div>
-                  <div className="Employee_Summary_detail-item">
+                  <div className="employee_summary_detail-item">
                     <label>Supervisor</label>
                     <p>{summaryData.employee.supervisor_name || 'N/A'}</p>
                   </div>
-                  <div className="Employee_Summary_detail-item">
+                  <div className="employee_summary_detail-item">
                     <label>Average Rating ({selectedYear === 'all' ? 'All Years' : selectedYear})</label>
                     <p className="rating">
                       {summaryData.avgRating !== 'N/A' ? summaryData.avgRating : <span className="na">N/A</span>}
@@ -453,13 +465,13 @@ pageWidth = doc.internal.pageSize.getWidth();
             </div>
 
             {/* --- Goals Card --- */}
-            <div className="Employee_Summary_card">
-              <div className="Employee_Summary_card-header">
+            <div className="employee_summary_card">
+              <div className="employee_summary_card-header">
                 Goals ({selectedYear === 'all' ? 'All Years' : selectedYear})
               </div>
-              <div className="Employee_Summary_card-body">
-                <div className="Employee_Summary_table-wrapper">
-                  <table className="Employee_Summary_table">
+              <div className="employee_summary_card-body">
+                <div className="employee_summary_table-wrapper">
+                  <table className="employee_summary_table">
                     <thead>
                       <tr>
                         <th>Description</th>
@@ -484,7 +496,7 @@ pageWidth = doc.internal.pageSize.getWidth();
                         ))
                       ) : (
                         <tr>
-                          <td colSpan="6" className="Employee_Summary_empty-state">
+                          <td colSpan="6" className="employee_summary_empty-state">
                             No goals found for this period.
                           </td>
                         </tr>
@@ -496,13 +508,13 @@ pageWidth = doc.internal.pageSize.getWidth();
             </div>
             
             {/* --- Reviews Card --- */}
-            <div className="Employee_Summary_card">
-              <div className="Employee_Summary_card-header">
+            <div className="employee_summary_card">
+              <div className="employee_summary_card-header">
                 Reviews ({selectedYear === 'all' ? 'All Years' : selectedYear})
               </div>
-              <div className="Employee_Summary_card-body">
-                <div className="Employee_Summary_table-wrapper">
-                  <table className="Employee_Summary_table">
+              <div className="employee_summary_card-body">
+                <div className="employee_summary_table-wrapper">
+                  <table className="employee_summary_table">
                     <thead>
                       <tr>
                         <th>Supervisor</th>
@@ -527,7 +539,7 @@ pageWidth = doc.internal.pageSize.getWidth();
                         ))
                       ) : (
                         <tr>
-                          <td colSpan="6" className="Employee_Summary_empty-state">
+                          <td colSpan="6" className="employee_summary_empty-state">
                             No reviews found for this period.
                           </td>
                         </tr>

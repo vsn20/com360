@@ -1,19 +1,23 @@
+/* =================================
+   Employee Goals Component Styles
+   ================================= */
+
 /* Button disabled state */
-.Employee_Goals_button:disabled {
+.employee_goals_button:disabled {
   background-color: #cccccc;
   cursor: not-allowed;
 }
 
-.Employee_Goals_button:hover:not(:disabled) {
+.employee_goals_button:hover:not(:disabled) {
   background-color: #0CB25A;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  color: black !important;
+  color: black;
 }
 
 /* Save and Cancel buttons */
-.Employee_Goals_save,
-.Employee_Goals_cancel {
-  color: white !important;
+.employee_goals_save,
+.employee_goals_cancel {
+  color: white;
   padding: 8px 16px;
   border: none;
   cursor: pointer;
@@ -21,49 +25,128 @@
   font-family: Arial, sans-serif;
   transition: background-color 0.3s ease, transform 0.1s ease, color 0.3s ease;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  text-decoration: none !important;
+  text-decoration: none;
   border-radius: 4px;
+  white-space: nowrap;
 }
 
-.Employee_Goals_save {
+.employee_goals_save {
   background-color: #0FD46C;
 }
 
-.Employee_Goals_save:hover {
+.employee_goals_save:hover {
   background-color: #0CB25A;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  color: black !important;
+  color: black;
 }
 
-.Employee_Goals_cancel {
+.employee_goals_cancel {
   background-color: #F44336;
 }
 
-.Employee_Goals_cancel:hover {
+.employee_goals_cancel:hover {
   background-color: #D32F2F;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  color: black !important;
+  color: black;
+}
+
+/* Back button */
+.employee_goals_back-button {
+  padding: 8px 12px 8px 8px;
+  background-color: transparent;
+  color: #6c757d;
+  border: 1px solid #dee2e6;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: Arial, sans-serif;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+}
+
+.employee_goals_back-button::before {
+  content: '‹';
+  font-size: 18px;
+  font-weight: bold;
+  color: #6c757d;
+  transition: color 0.3s ease;
+}
+
+.employee_goals_back-button::after {
+  content: 'Back';
+  font-size: 13px;
+}
+
+.employee_goals_back-button:hover {
+  background-color: #f8f9fa;
+  border-color: #6c757d;
+  color: #495057;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transform: translateX(-2px);
+}
+
+.employee_goals_back-button:hover::before {
+  color: #495057;
 }
 
 /* Title */
-.Employee_Goals_title {
-  font-size: 20px;
-  color: #1f2937;
+.employee_goals_title {
+  font-size: 16px;
+  color: #0fd46c;
   margin: 0;
-  padding-bottom: 10px;
-  font-weight: 600;
+  padding: 10px 0;
+  font-weight: bold;
 }
 
 /* Header section */
-.Employee_Goals_header-section {
+.employee_goals_header-section {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
 }
 
+/* Search and Filter Container */
+.employee_goals_search-filter-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 20px;
+  align-items: center;
+}
+
+.employee_goals_search-input,
+.employee_goals_filter-select {
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.employee_goals_search-input:focus,
+.employee_goals_filter-select:focus {
+  outline: none;
+  border-color: #0fd46c;
+  box-shadow: 0 0 0 2px rgba(15, 212, 108, 0.25);
+}
+
+.employee_goals_search-input {
+  width: 250px;
+}
+
+.employee_goals_filter-select {
+  min-width: 200px;
+}
+
 /* Table styles */
-.Employee_Goals_table-wrapper {
+.employee_goals_table-wrapper {
   background-color: #fff;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
@@ -71,13 +154,13 @@
   margin-top: 20px;
 }
 
-.Employee_Goals_table {
+.employee_goals_table {
   width: 100%;
   border-collapse: collapse;
   background-color: #fff;
 }
 
-.Employee_Goals_table th {
+.employee_goals_table th {
   background-color: #f8fafc;
   padding: 16px 20px;
   text-align: left;
@@ -88,15 +171,21 @@
   font-size: 13px;
   font-weight: 600;
   color: #374151;
-  text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
-.Employee_Goals_table th:hover {
+.employee_goals_table th:hover {
   background-color: #f1f5f9;
 }
 
-.Employee_Goals_table td {
+/* Actions column width */
+.employee_goals_table th:last-child,
+.employee_goals_table td:last-child {
+  width: 120px;
+  min-width: 120px;
+}
+
+.employee_goals_table td {
   padding: 16px 20px;
   text-align: left;
   border-bottom: 1px solid #f3f4f6;
@@ -109,60 +198,91 @@
   white-space: pre-wrap;
 }
 
-.Employee_Goals_table tbody tr {
+.employee_goals_table tbody tr {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   cursor: pointer;
 }
 
-.Employee_Goals_table tbody tr:hover {
+.employee_goals_table tbody tr:hover {
   background: linear-gradient(135deg, #f8fafc, #f0f9ff);
   transform: translateX(4px);
   box-shadow: 4px 0 12px rgba(15, 212, 108, 0.1);
 }
 
-.Employee_Goals_empty-state {
+.employee_goals_empty-state {
   text-align: center;
   padding: 48px 20px;
   color: #6b7280;
 }
 
-/* Filter styles */
-.Employee_Goals_search-filter-container {
+/* Pagination styles */
+.employee_goals_pagination-container {
   display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-  margin-bottom: 20px;
+  justify-content: center;
   align-items: center;
+  margin-top: 20px;
+  gap: 10px;
 }
 
-.Employee_Goals_search-input,
-.Employee_Goals_filter-select {
-  padding: 10px 12px;
+.employee_goals_pagination-input {
+  width: 40px;
+  text-align: center;
   border: 1px solid #ccc;
   border-radius: 4px;
+  padding: 4px;
   font-size: 14px;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.Employee_Goals_search-input:focus,
-.Employee_Goals_filter-select:focus {
+.employee_goals_pagination-input:focus {
   outline: none;
   border-color: #0fd46c;
   box-shadow: 0 0 0 2px rgba(15, 212, 108, 0.25);
 }
 
-.Employee_Goals_search-input {
-  width: 250px;
+.employee_goals_pagination-text {
+  font-size: 14px;
+  color: #333;
 }
 
-.Employee_Goals_filter-select {
-  min-width: 200px;
+.employee_goals_rows-per-page-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+  justify-content: flex-start;
 }
 
+.employee_goals_rows-per-page-label {
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+}
 
-/* --- Modal Styles (for Add/Edit) --- */
-.Employee_Goals_modal-overlay {
+.employee_goals_rows-per-page-input {
+  width: 60px;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  text-align: center;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.employee_goals_rows-per-page-input:focus {
+  outline: none;
+  border-color: #0fd46c;
+  box-shadow: 0 0 0 2px rgba(15, 212, 108, 0.25);
+}
+
+.employee_goals_rows-per-page-input:disabled {
+  background-color: #f0f0f0;
+  cursor: not-allowed;
+}
+
+/* Modal Styles */
+.employee_goals_modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -173,10 +293,10 @@
   justify-content: center;
   align-items: center;
   z-index: 1050;
-  animation: Employee_Goals_fadeIn 0.3s;
+  animation: employee_goals_fadeIn 0.3s;
 }
 
-.Employee_Goals_modal-content {
+.employee_goals_modal-content {
   background-color: #fff;
   padding: 25px 30px;
   border-radius: 8px;
@@ -184,12 +304,12 @@
   position: relative;
   width: 90%;
   max-width: 700px;
-  animation: Employee_Goals_slideIn 0.3s;
+  animation: employee_goals_slideIn 0.3s;
   max-height: 90vh;
   overflow-y: auto;
 }
 
-.Employee_Goals_modal-header {
+.employee_goals_modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -198,14 +318,14 @@
   margin-bottom: 20px;
 }
 
-.Employee_Goals_modal-title {
+.employee_goals_modal-title {
   font-size: 20px;
   font-weight: 600;
   color: #1f2937;
   margin: 0;
 }
 
-.Employee_Goals_modal-close-button {
+.employee_goals_modal-close-button {
   background: none;
   border: none;
   font-size: 28px;
@@ -215,38 +335,38 @@
   transition: color 0.2s ease;
 }
 
-.Employee_Goals_modal-close-button:hover {
+.employee_goals_modal-close-button:hover {
   color: #343a40;
 }
 
-/* Form styles inside modal */
-.Employee_Goals_form {
+/* Form styles */
+.employee_goals_form {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-.Employee_Goals_form-row {
+.employee_goals_form-row {
   display: flex;
   gap: 20px;
 }
 
-.Employee_Goals_form-group {
+.employee_goals_form-group {
   flex: 1;
   display: flex;
   flex-direction: column;
 }
 
-.Employee_Goals_form-group label {
+.employee_goals_form-group label {
   margin-bottom: 6px;
   font-size: 14px;
   font-weight: 500;
   color: #374151;
 }
 
-.Employee_Goals_form-group input,
-.Employee_Goals_form-group select,
-.Employee_Goals_form-group textarea {
+.employee_goals_form-group input,
+.employee_goals_form-group select,
+.employee_goals_form-group textarea {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid #ccc;
@@ -256,28 +376,28 @@
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.Employee_Goals_form-group input:focus,
-.Employee_Goals_form-group select:focus,
-.Employee_Goals_form-group textarea:focus {
+.employee_goals_form-group input:focus,
+.employee_goals_form-group select:focus,
+.employee_goals_form-group textarea:focus {
   outline: none;
   border-color: #0fd46c;
   box-shadow: 0 0 0 2px rgba(15, 212, 108, 0.25);
 }
 
-.Employee_Goals_form-group input:disabled,
-.Employee_Goals_form-group select:disabled,
-.Employee_Goals_form-group textarea:disabled {
+.employee_goals_form-group input:disabled,
+.employee_goals_form-group select:disabled,
+.employee_goals_form-group textarea:disabled {
   background-color: #e9ecef;
   cursor: not-allowed;
   opacity: 0.7;
 }
 
-.Employee_Goals_form-group textarea {
+.employee_goals_form-group textarea {
   resize: vertical;
   min-height: 80px;
 }
 
-.Employee_Goals_form-buttons {
+.employee_goals_form-buttons {
   display: flex;
   gap: 12px;
   margin-top: 15px;
@@ -287,7 +407,7 @@
 }
 
 /* Error/Success messages */
-.Employee_Goals_error-message {
+.employee_goals_error-message {
   color: #dc3545;
   background-color: #f8d7da;
   border: 1px solid #f5c6cb;
@@ -298,7 +418,7 @@
   text-align: center;
 }
 
-.Employee_Goals_success-message {
+.employee_goals_success-message {
   color: #155724;
   background-color: #d4edda;
   border: 1px solid #c3e6cb;
@@ -311,101 +431,39 @@
 
 /* Responsive */
 @media (max-width: 768px) {
-  .Employee_Goals_form-row {
+  .employee_goals_form-row {
     flex-direction: column;
     gap: 15px;
   }
   
-  .Employee_Goals_search-filter-container {
+  .employee_goals_search-filter-container {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .Employee_Goals_search-input,
-  .Employee_Goals_filter-select {
+  .employee_goals_search-input,
+  .employee_goals_filter-select {
     width: 100%;
   }
 
-  .Employee_Goals_modal-content {
+  .employee_goals_modal-content {
     width: 95%;
     padding: 20px;
+  }
+
+  .employee_goals_table th,
+  .employee_goals_table td {
+    padding: 12px 15px;
   }
 }
 
 /* Animations */
-@keyframes Employee_Goals_fadeIn {
+@keyframes employee_goals_fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
-@keyframes Employee_Goals_slideIn {
+@keyframes employee_goals_slideIn {
   from { transform: translateY(-30px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
-}
-
-/* --- NEW: Pagination & Rows Per Page Styles --- */
-/* (Adapted from overview.css) */
-
-.Employee_Goals_pagination-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-top: 20px;
-  gap: 10px;
-}
-
-.Employee_Goals_pagination-input {
-  width: 40px;
-  text-align: center;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  padding: 4px;
-  font-size: 14px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.Employee_Goals_pagination-input:focus {
-  outline: none;
-  border-color: #0fd46c;
-  box-shadow: 0 0 0 2px rgba(15, 212, 108, 0.25);
-}
-
-.Employee_Goals_pagination-text {
-  font-size: 14px;
-  color: #333;
-}
-
-.Employee_Goals_rows-per-page-container {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 20px;
-  justify-content: flex-start;
-}
-
-.Employee_Goals_rows-per-page-label {
-  font-size: 14px;
-  color: #333;
-  font-weight: 500;
-}
-
-.Employee_Goals_rows-per-page-input {
-  width: 60px;
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 14px;
-  text-align: center;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.Employee_Goals_rows-per-page-input:focus {
-  outline: none;
-  border-color: #0fd46c;
-  box-shadow: 0 0 0 2px rgba(15, 212, 108, 0.25);
-}
-
-.Employee_Goals_rows-per-page-input:disabled {
-  background-color: #f0f0f0;
-  cursor: not-allowed;
 }

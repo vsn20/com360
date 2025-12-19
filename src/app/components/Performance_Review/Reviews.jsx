@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import './reviews.css';
 import { createReview, updateReview, deleteReview } from '@/app/serverActions/Performance_Review/reviews';
 
-// Helper to get years for dropdowns
 const getYearOptions = (range = 5) => {
   const currentYear = new Date().getFullYear();
   const years = [];
@@ -15,12 +14,11 @@ const getYearOptions = (range = 5) => {
   return years;
 };
 
-// Default state for the review form
 const DEFAULT_FORM_DATA = {
   id: null,
   employee_id: '',
   review_year: new Date().getFullYear().toString(),
-  review_date: new Date().toLocaleDateString('en-CA'), // YYYY-MM-DD
+  review_date: new Date().toLocaleDateString('en-CA'),
   rating: '3',
   review_text: '',
   comments: '',
@@ -35,32 +33,25 @@ const Reviews = ({
 }) => {
   const router = useRouter();
 
-  // --- Filter initialReviews based on permission ---
   const visibleReviews = useMemo(() => {
     if (permissionLevel === 'team') {
-      // For team leads, filter out their own reviews from the table
       return (initialReviews || []).filter(
         (review) => String(review.employee_id) !== String(loggedInEmpId)
       );
     }
-    // For 'all' permission, show everything
     return initialReviews || [];
   }, [initialReviews, permissionLevel, loggedInEmpId]);
 
   // --- STATE ---
   const [reviews, setReviews] = useState(visibleReviews);
-  
-  // Filters
   const [filterEmployeeId, setFilterEmployeeId] = useState('all');
   const [filterYear, setFilterYear] = useState('all');
   
-  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [pageInputValue, setPageInputValue] = useState('1');
   const [reviewsPerPage, setReviewsPerPage] = useState(10);
   const [reviewsPerPageInput, setReviewsPerPageInput] = useState('10');
   
-  // Modal & Form State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingReview, setEditingReview] = useState(null);
   const [formData, setFormData] = useState(DEFAULT_FORM_DATA);
@@ -68,14 +59,11 @@ const Reviews = ({
   const [formSuccess, setFormSuccess] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Update state if the filtered server data changes
   useEffect(() => {
     setReviews(visibleReviews);
   }, [visibleReviews]);
 
-  // --- DERIVED DATA & FILTERS ---
-
-  // Get a unique, sorted list of years from the reviews
+  // --- DERIVED DATA ---
   const availableYears = useMemo(() => {
     const years = new Set(reviews.map(r => r.review_year.toString()));
     const currentYear = new Date().getFullYear().toString();
@@ -83,7 +71,6 @@ const Reviews = ({
     return Array.from(years).sort((a, b) => b.localeCompare(a));
   }, [reviews]);
 
-  // Filter the reviews based on state
   const filteredReviews = useMemo(() => {
     return reviews.filter(review => {
       const matchEmp = filterEmployeeId === 'all' || String(review.employee_id) === filterEmployeeId;
@@ -92,13 +79,11 @@ const Reviews = ({
     });
   }, [reviews, filterEmployeeId, filterYear]);
 
-  // --- PAGINATION LOGIC ---
   const totalPages = Math.ceil(filteredReviews.length / reviewsPerPage);
   const indexOfLastReview = currentPage * reviewsPerPage;
   const indexOfFirstReview = indexOfLastReview - reviewsPerPage;
   const currentReviews = filteredReviews.slice(indexOfFirstReview, indexOfLastReview);
 
-  // Reset to page 1 when filters or page size change
   useEffect(() => {
     setCurrentPage(1);
     setPageInputValue('1');
@@ -112,8 +97,7 @@ const Reviews = ({
     setReviewsPerPageInput(reviewsPerPage.toString());
   }, [reviewsPerPage]);
 
-  // --- EVENT HANDLERS ---
-
+  // --- HANDLERS ---
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingReview(null);
@@ -185,7 +169,6 @@ const Reviews = ({
 
   const handleDeleteClick = async (e, review) => {
     e.stopPropagation();
-    
     const userConfirmed = window.prompt("To delete this review, type DELETE and click OK.", "");
     if (userConfirmed !== "DELETE") return;
 
@@ -228,19 +211,17 @@ const Reviews = ({
   };
 
   return (
-    <div className="Employee_Reviews_container">
-      {/* --- HEADER: Title and Add Button --- */}
-      <div className="Employee_Reviews_header-section">
-        <h2 className="Employee_Reviews_title">Performance Reviews</h2>
-        <button className="Employee_Reviews_save Employee_Reviews_button" onClick={handleAddClick}>
+    <div className="employee_reviews_container">
+      <div className="employee_reviews_header-section">
+        <h2 className="employee_reviews_title">Performance Reviews</h2>
+        <button className="employee_reviews_save employee_reviews_button" onClick={handleAddClick}>
           Add Review
         </button>
       </div>
 
-      {/* --- FILTERS: Employee and Year (UPDATED to match Goals) --- */}
-      <div className="Employee_Reviews_search-filter-container">
+      <div className="employee_reviews_search-filter-container">
         <select
-          className="Employee_Reviews_filter-select"
+          className="employee_reviews_filter-select"
           value={filterEmployeeId}
           onChange={(e) => setFilterEmployeeId(e.target.value)}
         >
@@ -251,7 +232,7 @@ const Reviews = ({
         </select>
 
         <select
-          className="Employee_Reviews_filter-select"
+          className="employee_reviews_filter-select"
           value={filterYear}
           onChange={(e) => setFilterYear(e.target.value)}
         >
@@ -262,12 +243,11 @@ const Reviews = ({
         </select>
       </div>
       
-      {/* --- REVIEWS TABLE --- */}
-      <div className="Employee_Reviews_table-wrapper">
-        <table className="Employee_Reviews_table">
+      <div className="employee_reviews_table-wrapper">
+        <table className="employee_reviews_table">
           <thead>
             <tr>
-              <th>Employee</th>
+              <th>Employee Name</th>
               <th>Year</th>
               <th>Date</th>
               <th>Rating</th>
@@ -290,7 +270,7 @@ const Reviews = ({
                   <td>{review.supervisor_name}</td>
                   <td>
                     <button
-                      className="Employee_Reviews_cancel Employee_Reviews_button"
+                      className="employee_reviews_cancel employee_reviews_button"
                       onClick={(e) => handleDeleteClick(e, review)}
                     >
                       Delete
@@ -300,7 +280,7 @@ const Reviews = ({
               ))
             ) : (
               <tr>
-                <td colSpan="8" className="Employee_Reviews_empty-state">
+                <td colSpan="8" className="employee_reviews_empty-state">
                   No reviews found for the selected filters.
                 </td>
               </tr>
@@ -309,30 +289,29 @@ const Reviews = ({
         </table>
       </div>
 
-      {/* --- PAGINATION CONTROLS --- */}
       {filteredReviews.length > reviewsPerPage && (
-        <div className="Employee_Reviews_pagination-container">
+        <div className="employee_reviews_pagination-container">
           <button
-            className="Employee_Reviews_button Employee_Reviews_cancel"
+            className="employee_reviews_button employee_reviews_cancel"
             onClick={handlePrevPage}
             disabled={currentPage === 1}
             style={{ minWidth: '100px' }}
           >
             ← Previous
           </button>
-          <span className="Employee_Reviews_pagination-text">
+          <span className="employee_reviews_pagination-text">
             Page{' '}
             <input
               type="text"
               value={pageInputValue}
               onChange={handlePageInputChange}
               onKeyPress={handlePageInputKeyPress}
-              className="Employee_Reviews_pagination-input"
+              className="employee_reviews_pagination-input"
             />{' '}
             of {totalPages}
           </span>
           <button
-            className="Employee_Reviews_button Employee_Reviews_save"
+            className="employee_reviews_button employee_reviews_save"
             onClick={handleNextPage}
             disabled={currentPage === totalPages}
             style={{ minWidth: '100px' }}
@@ -342,38 +321,37 @@ const Reviews = ({
         </div>
       )}
       
-      <div className="Employee_Reviews_rows-per-page-container">
-        <label className="Employee_Reviews_rows-per-page-label">Rows per Page:</label>
+      <div className="employee_reviews_rows-per-page-container">
+        <label className="employee_reviews_rows-per-page-label">Rows per Page:</label>
         <input
           type="text"
           value={reviewsPerPageInput}
           onChange={handleReviewsPerPageInputChange}
           onKeyPress={handleReviewsPerPageInputKeyPress}
-          className="Employee_Reviews_rows-per-page-input"
+          className="employee_reviews_rows-per-page-input"
         />
       </div>
 
       {/* --- ADD/EDIT MODAL --- */}
       {isModalOpen && (
-        <div className="Employee_Reviews_modal-overlay" onClick={closeModal}>
-          <div className="Employee_Reviews_modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="employee_reviews_modal-overlay" onClick={closeModal}>
+          <div className="employee_reviews_modal-content" onClick={(e) => e.stopPropagation()}>
             
-            <div className="Employee_Reviews_modal-header">
-              <h3 className="Employee_Reviews_modal-title">
+            <div className="employee_reviews_modal-header">
+              <h3 className="employee_reviews_modal-title">
                 {editingReview ? 'Edit Review' : 'Add New Review'}
               </h3>
-              <button className="Employee_Reviews_modal-close-button" onClick={closeModal}>
+              <button className="employee_reviews_modal-close-button" onClick={closeModal}>
                 &times;
               </button>
             </div>
 
-            <form className="Employee_Reviews_form" onSubmit={handleSubmit}>
-              {formError && <div className="Employee_Reviews_error-message">{formError}</div>}
-              {formSuccess && <div className="Employee_Reviews_success-message">{formSuccess}</div>}
+            <form className="employee_reviews_form" onSubmit={handleSubmit}>
+              {formError && <div className="employee_reviews_error-message">{formError}</div>}
+              {formSuccess && <div className="employee_reviews_success-message">{formSuccess}</div>}
 
-              {/* --- Employee Selection --- */}
-              <div className="Employee_Reviews_form-group">
-                <label htmlFor="employee_id">Employee</label>
+              <div className="employee_reviews_form-group">
+                <label htmlFor="employee_id">Employee Name</label>
                 <select
                   id="employee_id"
                   name="employee_id"
@@ -389,8 +367,7 @@ const Reviews = ({
                 </select>
               </div>
 
-              {/* --- Year --- */}
-              <div className="Employee_Reviews_form-group">
+              <div className="employee_reviews_form-group">
                 <label htmlFor="review_year">Review Year</label>
                 <select
                   id="review_year"
@@ -405,9 +382,8 @@ const Reviews = ({
                 </select>
               </div>
 
-              {/* --- Date and Rating --- */}
-              <div className="Employee_Reviews_form-row">
-                <div className="Employee_Reviews_form-group">
+              <div className="employee_reviews_form-row">
+                <div className="employee_reviews_form-group">
                   <label htmlFor="review_date">Review Date</label>
                   <input
                     type="date"
@@ -418,7 +394,7 @@ const Reviews = ({
                     required
                   />
                 </div>
-                <div className="Employee_Reviews_form-group">
+                <div className="employee_reviews_form-group">
                   <label htmlFor="rating">Rating (1-5)</label>
                   <select
                     id="rating"
@@ -436,8 +412,7 @@ const Reviews = ({
                 </div>
               </div>
 
-              {/* --- Review Text --- */}
-              <div className="Employee_Reviews_form-group">
+              <div className="employee_reviews_form-group">
                 <label htmlFor="review_text">Review Text</label>
                 <textarea
                   id="review_text"
@@ -449,8 +424,7 @@ const Reviews = ({
                 />
               </div>
 
-              {/* --- Comments --- */}
-              <div className="Employee_Reviews_form-group">
+              <div className="employee_reviews_form-group">
                 <label htmlFor="comments">Optional Comments</label>
                 <textarea
                   id="comments"
@@ -461,11 +435,10 @@ const Reviews = ({
                 />
               </div>
 
-              {/* --- Form Actions --- */}
-              <div className="Employee_Reviews_form-buttons">
+              <div className="employee_reviews_form-buttons">
                 <button
                   type="button"
-                  className="Employee_Reviews_cancel Employee_Reviews_button"
+                  className="employee_reviews_cancel employee_reviews_button"
                   onClick={closeModal}
                   disabled={isSubmitting}
                 >
@@ -473,7 +446,7 @@ const Reviews = ({
                 </button>
                 <button
                   type="submit"
-                  className="Employee_Reviews_save Employee_Reviews_button"
+                  className="employee_reviews_save employee_reviews_button"
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? 'Saving...' : (editingReview ? 'Update Review' : 'Add Review')}
