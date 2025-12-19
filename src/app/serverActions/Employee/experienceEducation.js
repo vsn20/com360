@@ -350,6 +350,7 @@ export async function fetchExperienceByEmpId(empid) {
       `SELECT 
         id,
         employee_id,
+        organization_name,
         location_city,
         location_country,
         DATE_FORMAT(start_date, '%Y-%m-%d') as start_date,
@@ -385,6 +386,7 @@ export async function addExperience(formData) {
     const pool = await DBconnection();
     
     const employee_id = formData.get('employee_id');
+    const organization_name = formData.get('organization_name')?.trim() || null;
     const location_city = formData.get('location_city')?.trim() || null;
     const location_country = formData.get('location_country') || null;
     const start_date = formatDateForDB(formData.get('start_date'));
@@ -397,10 +399,10 @@ export async function addExperience(formData) {
 
     const [result] = await pool.execute(
       `INSERT INTO C_EMPLOYEE_EXPERIENCE 
-       (employee_id, location_city, location_country, start_date, end_date, 
+       (employee_id, organization_name, location_city, location_country, start_date, end_date, 
         currently_working, description, achievements, supervisor_name, supervisor_email)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [employee_id, location_city, location_country, start_date, end_date,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [employee_id, organization_name, location_city, location_country, start_date, end_date,
        currently_working, description, achievements, supervisor_name, supervisor_email]
     );
 
@@ -416,6 +418,7 @@ export async function updateExperience(formData) {
     const pool = await DBconnection();
     
     const id = formData.get('id');
+    const organization_name = formData.get('organization_name')?.trim() || null;
     const location_city = formData.get('location_city')?.trim() || null;
     const location_country = formData.get('location_country') || null;
     const start_date = formatDateForDB(formData.get('start_date'));
@@ -428,10 +431,10 @@ export async function updateExperience(formData) {
 
     await pool.execute(
       `UPDATE C_EMPLOYEE_EXPERIENCE 
-       SET location_city=?, location_country=?, start_date=?, end_date=?, 
+       SET organization_name=?, location_city=?, location_country=?, start_date=?, end_date=?, 
            currently_working=?, description=?, achievements=?, supervisor_name=?, supervisor_email=?
        WHERE id=?`,
-      [location_city, location_country, start_date, end_date,
+      [organization_name, location_city, location_country, start_date, end_date,
        currently_working, description, achievements, supervisor_name, supervisor_email, id]
     );
 

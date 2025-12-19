@@ -154,7 +154,7 @@ function Sidebar({ isAdmin, isSidebarOpen, closeSidebar }) {
       </div>
       
       <ul className={styles.sidebarMenu}>
-        <li className={styles.com360_logo}>COM@360</li>
+        <li className={styles.com360_logo}>Com360 View</li>
         {finalMenuItems.map((item, index) => {
           const safeSubmenu = Array.isArray(item.C_SUBMENU) ? item.C_SUBMENU : [];
           const isActive = pathname === item.href || (safeSubmenu.length > 0 && safeSubmenu.some(sub => pathname === sub.href || pathname.startsWith(sub.href + '?')));

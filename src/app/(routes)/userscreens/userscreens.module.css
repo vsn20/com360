@@ -223,12 +223,15 @@
   font-weight: bold;
   color: #51ec99;
   border-radius: 50%;
-  width: 40px;
+  width: auto; /* Changed from 40px to auto */
   height: 40px;
   transition: background-color 0.3s ease, transform 0.2s ease;
-  margin-left: 35px;
+  margin-left: 20px; /* Reduced from 35px */
+  margin-right: 20px; /* Added right margin */
   margin-bottom: 28px;
   margin-top: 28px;
+  padding: 0 15px; /* Added horizontal padding */
+  white-space: nowrap; /* Prevent text wrapping */
 }
 
 .com360_logo:hover {

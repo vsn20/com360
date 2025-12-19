@@ -28,6 +28,7 @@ const EmployeeExperience = ({
   const [error, setError] = useState(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [formData, setFormData] = useState({
+    organization_name: '',
     location_city: '',
     location_country: '185',
     start_date: '',
@@ -147,6 +148,7 @@ const EmployeeExperience = ({
 
   const handleEdit = (exp) => {
     setFormData({
+      organization_name: exp.organization_name || '',
       location_city: exp.location_city || '',
       location_country: exp.location_country || '185',
       start_date: exp.start_date || '',
@@ -173,6 +175,7 @@ const EmployeeExperience = ({
 
   const resetForm = () => {
     setFormData({
+      organization_name: '',
       location_city: '',
       location_country: '185',
       start_date: '',
@@ -229,6 +232,16 @@ const EmployeeExperience = ({
           
           <div className="form-row">
             <div className="form-group">
+              <label>Company Name</label>
+              <input
+                type="text"
+                name="organization_name"
+                value={formData.organization_name}
+                onChange={handleInputChange}
+                placeholder="Company Name"
+              />
+            </div>
+            <div className="form-group">
               <label>City</label>
               <input
                 type="text"
@@ -237,6 +250,9 @@ const EmployeeExperience = ({
                 onChange={handleInputChange}
               />
             </div>
+          </div>
+
+          <div className="form-row">
             <div className="form-group">
               <label>Country</label>
               <select name="location_country" value={formData.location_country} onChange={handleInputChange}>
@@ -246,9 +262,6 @@ const EmployeeExperience = ({
                 ))}
               </select>
             </div>
-          </div>
-
-          <div className="form-row">
             <div className="form-group">
               <label>Start Date *</label>
               <input
@@ -260,7 +273,10 @@ const EmployeeExperience = ({
                 required
               />
             </div>
-            <div className="form-group">
+          </div>
+
+          <div className="form-row">
+             <div className="form-group">
               <label>End Date</label>
               <input
                 type="date"
@@ -271,11 +287,8 @@ const EmployeeExperience = ({
                 disabled={formData.currently_working}
               />
             </div>
-          </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label>
+            <div className="form-group" style={{ display: 'flex', alignItems: 'center', paddingTop: '30px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                 <input
                   type="checkbox"
                   name="currently_working"
@@ -353,6 +366,10 @@ const EmployeeExperience = ({
           experienceList.map((exp) => (
             <div key={exp.id} className="experience-record-card">
               <div className="details-row">
+                <div className="details-g">
+                  <label>Company</label>
+                  <p>{exp.organization_name || '-'}</p>
+                </div>
                 <div className="details-g">
                   <label>Location</label>
                   <p>

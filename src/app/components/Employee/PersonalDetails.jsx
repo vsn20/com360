@@ -159,7 +159,7 @@ const PersonalDetails = ({
               {/* CHANGE HERE: Masking logic applied */}
               <p>
                 {employeeDetails.SSN 
-                  ? `xxxxxx${employeeDetails.SSN.slice(-3)}` 
+                  ? `xxxxxx${employeeDetails.SSN.slice(-4)}` 
                   : '-'}
               </p>
             </div>
