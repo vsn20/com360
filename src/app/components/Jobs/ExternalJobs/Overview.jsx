@@ -201,6 +201,7 @@ const Overview = ({ orgid, empid, expectedjobtitles, expectedepartment, expected
             countries={countries}
             states={states}
             jobtype={jobtype}
+            handleBack={handleBack}
           />
         </div>
       ) : selectedJob ? (

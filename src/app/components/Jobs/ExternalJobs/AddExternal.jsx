@@ -7,7 +7,7 @@ import './externaljobs.css';
 
 const addFormInitialState = { error: null, success: false };
 
-const AddExternal = ({ orgid, empid, expectedjobtitles, expectedepartment, expectedrole, countries, states, jobtype }) => {
+const AddExternal = ({ orgid, empid, expectedjobtitles, expectedepartment, expectedrole, countries, states, jobtype,handleBack }) => {
   const [formData, setFormData] = useState({
     displayJobName: '',
     expectedJobTitle: '',
@@ -57,6 +57,7 @@ const AddExternal = ({ orgid, empid, expectedjobtitles, expectedepartment, expec
       });
       setSuccessMessage('External job added successfully!');
       setTimeout(() => setSuccessMessage(null), 4000);
+      handleBack();
     }
   }, [state.success]);
 
@@ -108,8 +109,8 @@ const AddExternal = ({ orgid, empid, expectedjobtitles, expectedepartment, expec
               >
                 <option value="">Select Role</option>
                 {expectedrole.map((role) => (
-                  <option key={role.roleid} value={role.roleid}>
-                    {role.rolename}
+                  <option key={role.id} value={role.id}>
+                    {role.Name}
                   </option>
                 ))}
               </select>

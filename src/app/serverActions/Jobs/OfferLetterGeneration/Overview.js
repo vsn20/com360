@@ -61,18 +61,16 @@ async function generateOfferLetterPdf(offerLetterData, details, orgid, employeen
   const decoded = decodeJwt(token);
   const empid = decoded.empid;
 
-   let state;
-  if(offerLetterData.stateid!=null){
- [state] = await pool.query(
-    `select VALUE from C_STATE where ID=?`,
-    [offerLetterData.stateid]
-  );
+  let state;
+  if (offerLetterData.stateid != null) {
+    [state] = await pool.query(
+      `select VALUE from C_STATE where ID=?`,
+      [offerLetterData.stateid]
+    );
     state = state[0].VALUE
-}
-else{
-  state =  offerLetterData.custom_state_name;
-}
-  
+  } else {
+    state = offerLetterData.custom_state_name;
+  }
 
   let [country] = await pool.query(`SELECT VALUE FROM C_COUNTRY WHERE ID = ?`, [offerLetterData.countryid]);
   country = country[0]?.VALUE || offerLetterData.countryid;
@@ -121,15 +119,16 @@ else{
     finalisedDepartmentName = deptRows.length > 0 ? deptRows[0].name : 'Not specified';
   }
 
-  const roleids = offerLetterData.finalised_roleids || [];
-  let roleNames = [];
-  if (roleids.length > 0) {
-    const placeholders = roleids.map(() => '?').join(',');
+  // UPDATED: Fetch single role name from C_GENERIC_VALUES (g_id=32)
+  let roleName = 'Not specified';
+  if (offerLetterData.finalised_role) {
     const [roleRows] = await pool.query(
-      `SELECT rolename FROM C_ORG_ROLE_TABLE WHERE roleid IN (${placeholders}) AND orgid = ? AND is_active = 1`,
-      [...roleids, orgid]
+      `SELECT Name FROM C_GENERIC_VALUES WHERE id = ? AND g_id = 32 AND orgid = ? AND isactive = 1`,
+      [offerLetterData.finalised_role, orgid]
     );
-    roleNames = roleRows.map(row => row.rolename);
+    if (roleRows.length > 0) {
+      roleName = roleRows[0].Name;
+    }
   }
 
   const orgname = rows[0]?.orgname;
@@ -214,7 +213,7 @@ else{
   drawParagraph(`1. Start Date.`, fontSize, 18, true);
   drawParagraph(`${new Date(offerLetterData.expected_join_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}. You will be based in our office located at ${offerLetterData.adress_lane_1}, ${offerLetterData.adress_lane_2 || ''}, ${offerLetterData.zipcode}, ${state}, ${country}.`);
   drawParagraph(`2. Title and Roles.`, fontSize, 18, true);
-  drawParagraph(`Your title will be ${finalisedJobTitleName} at ${orgname}. You will be assigned the following role(s): ${roleNames.length > 0 ? roleNames.join(', ') : 'Not specified'}.`);
+  drawParagraph(`Your title will be ${finalisedJobTitleName} at ${orgname}. You will be assigned the following role: ${roleName}.`);
   drawParagraph(`3. Compensation.`, fontSize, 18, true);
   drawParagraph(`You will be compensated on a ${offerLetterData.finalised_pay_term.toLowerCase()} basis. You will be paid $${offerLetterData.finalised_salary} per ${offerLetterData.finalised_pay_term.toLowerCase()}, payable in ${orgname}'s customary payroll payment procedures. You will work on a ${s} basis for ${orgname}.`);
   drawParagraph(`4. Fringe Benefits.`, fontSize, 18, true);
@@ -291,39 +290,37 @@ export async function fetchalldetails(interviewid) {
       `SELECT empid, email, is_he_employee FROM C_INTERVIEW_PANELS WHERE interview_id = ?`,
       [interviewid]
     );
-    
-    const [department]=await pool.query(
+
+    const [department] = await pool.query(
       `SELECT name FROM C_ORG_DEPARTMENTS WHERE id = ?  AND isactive = 1`,
       [mainRows[0].d1]
     );
-    const departmentname=department[0].name;
+    const departmentname = department[0].name;
 
 
-     const [jobtype] = await pool.query('select Name from C_GENERIC_VALUES where id=?', [parseInt(mainRows[0].job1)]);
-  const jobtypename = jobtype[0].Name;
+    const [jobtype] = await pool.query('select Name from C_GENERIC_VALUES where id=?', [parseInt(mainRows[0].job1)]);
+    const jobtypename = jobtype[0].Name;
 
 
-  let state;
-   let statename;
+    let state;
+    let statename;
 
 
-  if(mainRows[0].s1!=null){
-    [state] = await pool.query(
-    `select VALUE from C_STATE where ID=?`,
-    [mainRows[0].s1]
-  );
- statename = state[0].VALUE;
-}
-  else{
-    statename='';
-  }
+    if (mainRows[0].s1 != null) {
+      [state] = await pool.query(
+        `select VALUE from C_STATE where ID=?`,
+        [mainRows[0].s1]
+      );
+      statename = state[0].VALUE;
+    }
+    else {
+      statename = '';
+    }
 
-  let [country] = await pool.query(
-    `select VALUE from C_COUNTRY where ID=?`, [mainRows[0].c1]
-  );
-let  countryname = country[0].VALUE||'';
-
-    
+    let [country] = await pool.query(
+      `select VALUE from C_COUNTRY where ID=?`, [mainRows[0].c1]
+    );
+    let countryname = country[0].VALUE || '';
 
     const [offerRows] = await pool.query(
       `SELECT 
@@ -336,7 +333,7 @@ let  countryname = country[0].VALUE||'';
       [mainRows[0]?.application_id]
     );
 
-    // Fetch roleids from C_APPLICATIONS_ROLE_ASSIGN
+    // Fetch roleid from C_APPLICATIONS_ROLE_ASSIGN (assuming single role)
     const [roleRows] = await pool.query(
       `SELECT roleid FROM C_APPLICATIONS_ROLE_ASSIGN WHERE applicationid = ? AND orgid = ?`,
       [mainRows[0]?.application_id, mainRows[0]?.orgid]
@@ -379,23 +376,24 @@ let  countryname = country[0].VALUE||'';
         round.panelMembers.push({
           empid: row.panel_empid,
           email: row.email,
-          is_he_employee:row.is_he_employee,
+          is_he_employee: row.is_he_employee,
         });
       }
       return acc;
     }, []);
 
+    // UPDATED: Return finalised_role as a single value
     return {
       success: true,
       data: {
         ...mainRows[0],
         departmentname,
         jobtypename,
-        statename,countryname,
+        statename, countryname,
         panel_members: panelRows || [],
         offerletter: offerRows[0] ? {
           ...offerRows[0],
-          finalised_roleids: roleRows.map(row => row.roleid),
+          finalised_role: roleRows.length > 0 ? roleRows[0].roleid : null,
         } : null,
         rounds: rounds,
       },
@@ -416,7 +414,9 @@ export async function fetchDropdownData(orgid) {
     const [states] = await pool.query('SELECT ID, VALUE FROM C_STATE WHERE ACTIVE = 1');
     const [employeeRows] = await pool.query('SELECT e.empid, e.EMP_FST_NAME, e.EMP_LAST_NAME FROM C_EMP e WHERE e.orgid = ?', [orgid]);
     const [jobtype] = await pool.query('SELECT id, g_id, Name FROM C_GENERIC_VALUES WHERE g_id = 14 AND isactive = 1 AND orgid = ?', [orgid]);
-    const [roles] = await pool.query('SELECT roleid, rolename FROM C_ORG_ROLE_TABLE WHERE orgid = ? AND is_active = 1', [orgid]);
+    
+    // UPDATED: Fetch roles from C_GENERIC_VALUES where g_id = 32
+    const [roles] = await pool.query('SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 32 AND orgid = ? AND isactive = 1', [orgid]);
 
     const employees = employeeRows.map(emp => ({
       empid: emp.empid,
@@ -511,21 +511,20 @@ export async function saveOfferLetter(applicationid, offerLetterData, orgid, det
         return { success: false, error: 'Cannot update: Offer letter has already been sent.' };
       }
 
-      const roleids = [...new Set(offerLetterData.finalised_roleids || [])];
-      if (roleids.length === 0) {
+      // UPDATED: Validate single role against C_GENERIC_VALUES
+      const roleid = offerLetterData.finalised_role;
+      if (!roleid) {
         await connection.rollback();
-        return { success: false, error: 'At least one role is required.' };
+        return { success: false, error: 'Role is required.' };
       }
 
-      for (const roleid of roleids) {
-        const [role] = await connection.execute(
-          'SELECT roleid FROM C_ORG_ROLE_TABLE WHERE roleid = ? AND orgid = ? AND is_active = 1',
-          [roleid, orgid]
-        );
-        if (role.length === 0) {
-          await connection.rollback();
-          return { success: false, error: `Invalid or inactive role selected: ${roleid}` };
-        }
+      const [role] = await connection.execute(
+        'SELECT id FROM C_GENERIC_VALUES WHERE id = ? AND g_id = 32 AND orgid = ? AND isactive = 1',
+        [roleid, orgid]
+      );
+      if (role.length === 0) {
+        await connection.rollback();
+        return { success: false, error: `Invalid or inactive role selected: ${roleid}` };
       }
 
       if (offerLetterData.finalised_jobtitle) {
@@ -584,6 +583,8 @@ export async function saveOfferLetter(applicationid, offerLetterData, orgid, det
         return { success: false, error: 'Invalid token.' };
       }
       const employeename = await getCurrentUserEmpIdName(pool, decoded.userId, orgid);
+      
+      // Pass single role data to PDF generator
       const pdfBytes = await generateOfferLetterPdf(offerLetterData, details, orgid, employeename);
       fs.writeFileSync(offerletterPath, pdfBytes);
 
@@ -616,7 +617,7 @@ export async function saveOfferLetter(applicationid, offerLetterData, orgid, det
           [
             offerletter_url, offerLetterData.expected_join_date,
             offerLetterData.adress_lane_1 || '', offerLetterData.adress_lane_2 || '',
-            offerLetterData.zipcode, offerLetterData.stateid||'', offerLetterData.countryid,
+            offerLetterData.zipcode, offerLetterData.stateid || '', offerLetterData.countryid,
             offerLetterData.custom_state_name || '', offerLetterData.finalised_salary,
             offerLetterData.finalised_jobtitle, offerLetterData.finalised_department,
             offerLetterData.finalised_jobtype, offerLetterData.finalised_pay_term,
@@ -658,14 +659,13 @@ export async function saveOfferLetter(applicationid, offerLetterData, orgid, det
         [normalizedApplicationId, orgid]
       );
 
-      for (const roleid of roleids) {
-        const [roleAssignResult] = await connection.query(
-          `INSERT INTO C_APPLICATIONS_ROLE_ASSIGN (applicationid, orgid, roleid) 
-           VALUES (?, ?, ?) 
-           ON DUPLICATE KEY UPDATE roleid = roleid`,
-          [normalizedApplicationId, orgid, roleid]
-        );
-      }
+      // Insert single role assignment
+      const [roleAssignResult] = await connection.query(
+        `INSERT INTO C_APPLICATIONS_ROLE_ASSIGN (applicationid, orgid, roleid) 
+         VALUES (?, ?, ?) 
+         ON DUPLICATE KEY UPDATE roleid = roleid`,
+        [normalizedApplicationId, orgid, roleid]
+      );
 
       const [salaryResult] = await connection.query(
         `UPDATE C_APPLICATIONS SET custom_salary_by_interviewer = ? WHERE applicationid = ?`,

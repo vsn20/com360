@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, use } from 'react';
+import React, { useState, useEffect } from 'react';
 import { updateExternalJob, fetchExternalJobById } from '@/app/serverActions/Jobs/ExternalJobs/Overview';
 import './externaljobs.css';
-import { set } from 'mongoose';
 
 const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, countries, states, jobtype }) => {
   const [jobDetails, setJobDetails] = useState(null);
@@ -321,8 +320,8 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
                     >
                       <option value="">Select Role</option>
                       {expectedrole.map((role) => (
-                        <option key={role.roleid} value={role.roleid}>
-                          {role.rolename}
+                        <option key={role.id} value={role.id}>
+                          {role.Name}
                         </option>
                       ))}
                     </select>
@@ -416,7 +415,7 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
                   </div>
                   <div className="externaljobs_details-group">
                     <label>Expected Role:</label>
-                    <p>{expectedrole.find((role) => role.roleid === jobDetails.expected_role)?.rolename || '-'}</p>
+                    <p>{expectedrole.find((role) => String(role.id) === String(jobDetails.expected_role))?.Name || '-'}</p>
                   </div>
                 </div>
                 <div className="externaljobs_details-row">
@@ -426,7 +425,7 @@ const Edit = ({ job, orgid, expectedjobtitles, expectedepartment, expectedrole, 
                   </div>
                   <div className="externaljobs_details-group">
                     <label>Job Type:</label>
-                    <p>{jobtype.find((type) => type.id === jobDetails.job_type)?.Name || '-'}</p>
+                    <p>{jobtype.find((type) => String(type.id) === String(jobDetails.job_type))?.Name || '-'}</p>
                   </div>
                 </div>
                 <div className="externaljobs_details-row">

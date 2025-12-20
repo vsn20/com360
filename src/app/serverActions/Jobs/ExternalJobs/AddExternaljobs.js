@@ -126,7 +126,7 @@ export async function addExternalJob(prevState, formData) {
       if (jobTitleCheck.length === 0) return { error: 'Invalid or inactive job title.' };
 
       const [roleCheck] = await pool.execute(
-        'SELECT roleid FROM C_ORG_ROLE_TABLE WHERE roleid = ? AND orgid = ?',
+        'SELECT id FROM C_GENERIC_VALUES WHERE id = ? AND g_id = 32 AND orgid = ? AND isactive = 1',
         [expectedRole, orgId]
       );
       if (roleCheck.length === 0) return { error: 'Invalid or inactive role.' };

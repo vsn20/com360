@@ -13,79 +13,12 @@ const triggerDownload = (fileUrl, fileName) => {
   document.body.removeChild(anchor);
 };
 
-// Custom Multi-Select Dropdown Component
-const MultiSelectDropdown = ({ options, selectedValues, onChange, name, required }) => {
-  const [isOpen, setIsOpen] = useState(false);
-
-  const handleToggle = () => setIsOpen(!isOpen);
-
-  const handleSelect = (value) => {
-    const newValues = selectedValues.includes(value)
-      ? selectedValues.filter((v) => v !== value)
-      : [...selectedValues, value];
-    onChange({ target: { name, value: newValues } });
-  };
-
-  return (
-    <div className="multi-select-container6">
-      <div className="multi-select-input6" onClick={handleToggle}>
-        {selectedValues.length > 0 ? (
-          <div className="selected-tags6">
-            {selectedValues.map((value) => {
-              const option = options.find((opt) => opt.roleid === value);
-              return (
-                <span key={value} className="selected-tag6">
-                  {option?.rolename || value}
-                  <button
-                    type="button"
-                    className="remove-tag6"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleSelect(value);
-                    }}
-                  >
-                    ×
-                  </button>
-                </span>
-              );
-            })}
-          </div>
-        ) : (
-          <span className="placeholder6">Select Roles</span>
-        )}
-        <span className="dropdown-arrow6">{isOpen ? '▲' : '▼'}</span>
-      </div>
-      {isOpen && (
-        <div className="multi-select-options6">
-          {options.length > 0 ? (
-            options.map((option) => (
-              <label key={option.roleid} className="multi-select-option6">
-                <input
-                  type="checkbox"
-                  checked={selectedValues.includes(option.roleid)}
-                  onChange={() => handleSelect(option.roleid)}
-                />
-                {option.rolename}
-              </label>
-            ))
-          ) : (
-            <div className="no-options6">No roles available</div>
-          )}
-        </div>
-      )}
-      {required && selectedValues.length === 0 && (
-        <input type="hidden" name={name} value="" required />
-      )}
-    </div>
-  );
-};
-
 const Details = ({ selectid, orgid, empid, handleback }) => {
   const [details, setDetails] = useState(null);
   const [formData, setFormData] = useState({ status: '' });
   const [offerLetterData, setOfferLetterData] = useState({
     finalised_salary: '',
-    finalised_roleids: [],
+    finalised_role: '', // Changed to single value
     finalised_jobtitle: '',
     finalised_department: '',
     finalised_jobtype: '',
@@ -130,7 +63,7 @@ const Details = ({ selectid, orgid, empid, handleback }) => {
           setFormData({ status: result.data?.status || '' });
           setOfferLetterData({
             finalised_salary: result.data?.offerletter?.finalised_salary || '',
-            finalised_roleids: result.data?.offerletter?.finalised_roleids || [],
+            finalised_role: result.data?.offerletter?.finalised_role || '', // Single value
             finalised_jobtitle: result.data?.offerletter?.finalised_jobtitle || '',
             finalised_department: result.data?.offerletter?.finalised_department || '',
             finalised_jobtype: result.data?.offerletter?.finalised_jobtype || '',
@@ -179,11 +112,7 @@ const Details = ({ selectid, orgid, empid, handleback }) => {
 
   const handleOfferLetterChange = (e) => {
     const { name, value } = e.target;
-    if (name === 'finalised_roleids') {
-      setOfferLetterData((prev) => ({ ...prev, [name]: value }));
-    } else {
-      setOfferLetterData((prev) => ({ ...prev, [name]: value }));
-    }
+    setOfferLetterData((prev) => ({ ...prev, [name]: value }));
   };
 
   const salarycopy = () => {
@@ -194,7 +123,7 @@ const Details = ({ selectid, orgid, empid, handleback }) => {
     }
   };
 
- const handleCopy = () => {
+  const handleCopy = () => {
     let salary;
     if (!salarycopy()) {
       salary = details.max_salary;
@@ -202,7 +131,6 @@ const Details = ({ selectid, orgid, empid, handleback }) => {
       salary = details.salary_expected;
     }
 
-    // --- FIX: Convert country ID to a string to prevent type mismatch ---
     const countryIdStr = String(details.c1 || '');
 
     setOfferLetterData((prev) => ({
@@ -211,16 +139,15 @@ const Details = ({ selectid, orgid, empid, handleback }) => {
       adress_lane_1: details.a1 || '',
       adress_lane_2: details.a2 || '',
       zipcode: details.z1 || '',
-      // --- Use the string version for all logic and state updates ---
       stateid: countryIdStr === '185' ? details.s1 || '' : '',
       countryid: countryIdStr,
       custom_state_name: countryIdStr !== '185' ? details.s2 || '' : '',
       finalised_department: details.d1 || '',
       finalised_jobtype: details.job1 || '',
+      finalised_role: details.role1 || '', // Copying expected role
       finalised_salary: salary || '',
     }));
   };
-
 
   const handleEditStatus = () => {
     setEditingStatus(true);
@@ -241,7 +168,6 @@ const Details = ({ selectid, orgid, empid, handleback }) => {
       }
 
       if (formData.status === 'offerletter-generated') {
-        // --- FIX: Adjust data before saving to ensure correct null values are sent ---
         const adjustedOfferLetterData = {
           ...offerLetterData,
           stateid: offerLetterData.countryid === '185' ? offerLetterData.stateid : null,
@@ -249,8 +175,6 @@ const Details = ({ selectid, orgid, empid, handleback }) => {
         };
 
         const offerLetterResult = await saveOfferLetter(details?.application_id, adjustedOfferLetterData, orgid, details);
-        // --- END FIX ---
-        
         if (!offerLetterResult?.success) {
           setError(offerLetterResult?.error || 'Failed to save offer letter details.');
           setIsLoading(false);
@@ -277,13 +201,12 @@ const Details = ({ selectid, orgid, empid, handleback }) => {
     }
   };
 
-
   const handleCancel = () => {
     setEditingStatus(false);
     setFormData({ status: details?.status || '' });
     setOfferLetterData({
       finalised_salary: details?.offerletter?.finalised_salary || '',
-      finalised_roleids: details?.offerletter?.finalised_roleids || [],
+      finalised_role: details?.offerletter?.finalised_role || '',
       finalised_jobtitle: details?.offerletter?.finalised_jobtitle || '',
       finalised_department: details?.offerletter?.finalised_department || '',
       finalised_jobtype: details?.offerletter?.finalised_jobtype || '',
@@ -293,7 +216,7 @@ const Details = ({ selectid, orgid, empid, handleback }) => {
       adress_lane_2: details?.offerletter?.adress_lane_2 || '',
       zipcode: details?.offerletter?.zipcode || details?.zipcode || '',
       stateid: details?.offerletter?.stateid || '',
-      countryid: details?.offerletter?.countryid || '',
+      countryid: String(details?.offerletter?.countryid || '185'),
       custom_state_name: details?.offerletter?.custom_state_name || '',
       expected_join_date: details?.offerletter?.expected_join_date
         ? new Date(details.offerletter.expected_join_date).toISOString().split('T')[0]
@@ -319,7 +242,7 @@ const Details = ({ selectid, orgid, empid, handleback }) => {
       {isLoading && <div className="loading-message6">Loading...</div>}
       {error && <div className="error-message6">{error}</div>}
       {success && <div className="success-message6">{success}</div>}
-      
+
       {details && (
         <div className="employee-details-container6">
           <div className="header-section6">
@@ -570,14 +493,20 @@ const Details = ({ selectid, orgid, empid, handleback }) => {
                         />
                       </div>
                       <div className="form-group6">
-                        <label>Finalized Roles</label>
-                        <MultiSelectDropdown
-                          options={dropdownData.roles}
-                          selectedValues={offerLetterData.finalised_roleids}
+                        <label>Finalized Role</label>
+                        <select
+                          name="finalised_role"
+                          value={offerLetterData.finalised_role}
                           onChange={handleOfferLetterChange}
-                          name="finalised_roleids"
                           required
-                        />
+                        >
+                          <option value="">Select Role</option>
+                          {dropdownData.roles?.map((role) => (
+                            <option key={role.id} value={role.id}>
+                              {role.Name}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                       <div className="form-group6">
                         <label>Finalized Department</label>

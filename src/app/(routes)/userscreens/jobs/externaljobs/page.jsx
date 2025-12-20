@@ -57,7 +57,10 @@ const decodeJwt = (token) => {
                 if (!success) {
                 console.error('Failed to fetch roles:', fetchError);
                 }
-                expectedrole=fetchedRoles;
+                const [expecteddroles]=await pool.query(
+                  'select id,Name from C_GENERIC_VALUES where g_id=32 and orgid=? and isactive=1',[orgid]
+                );
+                expectedrole=expecteddroles;
 
                 [expectedepartment] = await pool.query(
                 'SELECT id, name FROM C_ORG_DEPARTMENTS WHERE orgid = ? AND isactive = 1',

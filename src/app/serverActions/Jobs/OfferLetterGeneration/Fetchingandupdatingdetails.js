@@ -4,7 +4,6 @@ import { cookies } from "next/headers";
 import fs from "fs";
 import path from "path";
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
-import { time } from "console";
 
 // Helper Functions
 const decodeJwt = (token) => {
@@ -54,8 +53,7 @@ const getCurrentUserEmpIdName = async (pool, userId, orgId) => {
 
 async function generateOfferLetterPdf(offerLetterData, details, orgid, employeename) {
   const pool = await DBconnection();
-  const [rows] = await pool.query(`select orgname from C_ORG where orgid=?`, [orgid]);
-
+  const [rows] = await pool.query(`SELECT orgname FROM C_ORG WHERE orgid = ?`, [orgid]);
   const cookieStore = cookies();
   const token = cookieStore.get("jwt_token")?.value;
   if (!token) return { success: false, error: 'No token found. Please log in.' };
@@ -63,36 +61,46 @@ async function generateOfferLetterPdf(offerLetterData, details, orgid, employeen
   const decoded = decodeJwt(token);
   const empid = decoded.empid;
 
-  const [jobtitleforempid] = await pool.query(`select JOB_TITLE from C_EMP where empid=?`, [empid]);
-  let jobstitle = jobtitleforempid[0].JOB_TITLE;
+  let state;
+  if (offerLetterData.stateid != null) {
+    [state] = await pool.query(
+      `select VALUE from C_STATE where ID=?`,
+      [offerLetterData.stateid]
+    );
+    state = state[0].VALUE
+  } else {
+    state = offerLetterData.custom_state_name;
+  }
+
+  let [country] = await pool.query(`SELECT VALUE FROM C_COUNTRY WHERE ID = ?`, [offerLetterData.countryid]);
+  country = country[0]?.VALUE || offerLetterData.countryid;
+
+  const [jobtitleforempid] = await pool.query(`SELECT JOB_TITLE FROM C_EMP WHERE empid = ?`, [empid]);
+  let jobstitle = jobtitleforempid[0]?.JOB_TITLE;
   const [realtitle] = await pool.query(
-    `select job_title from C_ORG_JOBTITLES where job_title_id=? and orgid=?`,
+    `SELECT job_title FROM C_ORG_JOBTITLES WHERE job_title_id = ? AND orgid = ?`,
     [jobstitle, orgid]
   );
-  jobstitle = realtitle[0].job_title;
+  jobstitle = realtitle[0]?.job_title;
 
-  const [jobtype] = await pool.query('select Name from C_GENERIC_VALUES where id=? and orgid=?', [parseInt(offerLetterData.finalised_jobtype), orgid]);
-  const s = jobtype[0].Name;
+  const [jobtype] = await pool.query('SELECT Name FROM C_GENERIC_VALUES WHERE id = ? AND orgid = ?', [parseInt(offerLetterData.finalised_jobtype), orgid]);
+  const s = jobtype[0]?.Name;
 
-  let state;
-  if(offerLetterData.stateid!=null){
- [state] = await pool.query(
-    `select VALUE from C_STATE where ID=?`,
-    [offerLetterData.stateid]
+  const [reportToRows] = await pool.query(
+    `SELECT EMP_FST_NAME, EMP_LAST_NAME, JOB_TITLE FROM C_EMP WHERE empid = ?`,
+    [offerLetterData.reportto_empid]
   );
-    state = state[0].VALUE
-}
-else{
-  state =  offerLetterData.custom_state_name;
-}
-  
+  let titlejob = 'Manager';
+  if (reportToRows.length > 0 && reportToRows[0].JOB_TITLE) {
+    const [titlejobRows] = await pool.query(
+      `SELECT job_title FROM C_ORG_JOBTITLES WHERE job_title_id = ? AND orgid = ?`,
+      [reportToRows[0].JOB_TITLE, orgid]
+    );
+    titlejob = titlejobRows.length > 0 ? titlejobRows[0].job_title : 'Manager';
+  }
+  const reportToName = reportToRows.length > 0 ? `${reportToRows[0].EMP_FST_NAME} ${reportToRows[0].EMP_LAST_NAME}` : 'Unknown';
+  const reportToTitle = titlejob;
 
-  let [country] = await pool.query(
-    `select VALUE from C_COUNTRY where ID=?`, [offerLetterData.countryid]
-  );
-  country = country[0].VALUE || offerLetterData.countryid;
-
-  // Fetch job title name for finalised_jobtitle
   let finalisedJobTitleName = offerLetterData.finalised_jobtitle;
   if (offerLetterData.finalised_jobtitle) {
     const [jobTitleRows] = await pool.query(
@@ -102,7 +110,6 @@ else{
     finalisedJobTitleName = jobTitleRows.length > 0 ? jobTitleRows[0].job_title : 'Not specified';
   }
 
-  // Fetch department name for finalised_department
   let finalisedDepartmentName = offerLetterData.finalised_department;
   if (offerLetterData.finalised_department) {
     const [deptRows] = await pool.query(
@@ -112,34 +119,19 @@ else{
     finalisedDepartmentName = deptRows.length > 0 ? deptRows[0].name : 'Not specified';
   }
 
-  // Fetch role names for finalised_roleids
-  const roleids = offerLetterData.finalised_roleids || [];
-  let roleNames = [];
-  if (roleids.length > 0) {
-    const placeholders = roleids.map(() => '?').join(',');
+  // UPDATED: Fetch single role name from C_GENERIC_VALUES (g_id=32)
+  let roleName = 'Not specified';
+  if (offerLetterData.finalised_role) {
     const [roleRows] = await pool.query(
-      `SELECT rolename FROM C_ORG_ROLE_TABLE WHERE roleid IN (${placeholders}) AND orgid = ? AND is_active = 1`,
-      [...roleids, orgid]
+      `SELECT Name FROM C_GENERIC_VALUES WHERE id = ? AND g_id = 32 AND orgid = ? AND isactive = 1`,
+      [offerLetterData.finalised_role, orgid]
     );
-    roleNames = roleRows.map(row => row.rolename);
+    if (roleRows.length > 0) {
+      roleName = roleRows[0].Name;
+    }
   }
 
-  const [reportToRows] = await pool.query(
-    `select EMP_FST_NAME, EMP_LAST_NAME, JOB_TITLE from C_EMP where empid=?`,
-    [offerLetterData.reportto_empid]
-  );
-  let titlejob = 'Manager';
-  if (reportToRows.length > 0 && reportToRows[0].JOB_TITLE) {
-    const [titlejobRows] = await pool.query(
-      `select job_title from C_ORG_JOBTITLES where job_title_id=? AND orgid=?`,
-      [reportToRows[0].JOB_TITLE, orgid]
-    );
-    titlejob = titlejobRows.length > 0 ? titlejobRows[0].job_title : 'Manager';
-  }
-  const reportToName = reportToRows.length > 0 ? `${reportToRows[0].EMP_FST_NAME} ${reportToRows[0].EMP_LAST_NAME}` : 'Unknown';
-  const reportToTitle = titlejob;
-
-  const orgname = rows[0].orgname;
+  const orgname = rows[0]?.orgname;
   const pdfDoc = await PDFDocument.create();
   const timesRomanFont = await pdfDoc.embedFont(StandardFonts.TimesRoman);
   const timesRomanBoldFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
@@ -167,7 +159,7 @@ else{
   }
 
   let signatureImage;
-  const signatureJpgPath = path.join(process.cwd(), 'public', 'uploads', 'signatures', `${empid}.jpg`);
+  const signatureJpgPath = path.join(process.cwd(), 'public', 'Uploads', 'signatures', `${empid}.jpg`);
   try {
     const signatureBytes = fs.readFileSync(signatureJpgPath);
     signatureImage = await pdfDoc.embedJpg(signatureBytes);
@@ -221,7 +213,7 @@ else{
   drawParagraph(`1. Start Date.`, fontSize, 18, true);
   drawParagraph(`${new Date(offerLetterData.expected_join_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}. You will be based in our office located at ${offerLetterData.adress_lane_1}, ${offerLetterData.adress_lane_2 || ''}, ${offerLetterData.zipcode}, ${state}, ${country}.`);
   drawParagraph(`2. Title and Roles.`, fontSize, 18, true);
-  drawParagraph(`Your title will be ${finalisedJobTitleName} at ${orgname}. You will be assigned the following role(s): ${roleNames.length > 0 ? roleNames.join(', ') : 'Not specified'}.`);
+  drawParagraph(`Your title will be ${finalisedJobTitleName} at ${orgname}. You will be assigned the following role: ${roleName}.`);
   drawParagraph(`3. Compensation.`, fontSize, 18, true);
   drawParagraph(`You will be compensated on a ${offerLetterData.finalised_pay_term.toLowerCase()} basis. You will be paid $${offerLetterData.finalised_salary} per ${offerLetterData.finalised_pay_term.toLowerCase()}, payable in ${orgname}'s customary payroll payment procedures. You will work on a ${s} basis for ${orgname}.`);
   drawParagraph(`4. Fringe Benefits.`, fontSize, 18, true);
@@ -298,38 +290,37 @@ export async function fetchalldetails(interviewid) {
       `SELECT empid, email, is_he_employee FROM C_INTERVIEW_PANELS WHERE interview_id = ?`,
       [interviewid]
     );
-    
-    const [department]=await pool.query(
+
+    const [department] = await pool.query(
       `SELECT name FROM C_ORG_DEPARTMENTS WHERE id = ?  AND isactive = 1`,
       [mainRows[0].d1]
     );
-    const departmentname=department[0].name;
+    const departmentname = department[0].name;
 
 
-     const [jobtype] = await pool.query('select Name from C_GENERIC_VALUES where id=?', [parseInt(mainRows[0].job1)]);
-  const jobtypename = jobtype[0].Name;
-
-  let state;
-   let statename;
-
-if(mainRows[0].s1!=null){
-    [state] = await pool.query(
-    `select VALUE from C_STATE where ID=?`,
-    [mainRows[0].s1]
-  );
- statename = state[0].VALUE;
-}
-  else{
-    statename='';
-  }
+    const [jobtype] = await pool.query('select Name from C_GENERIC_VALUES where id=?', [parseInt(mainRows[0].job1)]);
+    const jobtypename = jobtype[0].Name;
 
 
-  let [country] = await pool.query(
-    `select VALUE from C_COUNTRY where ID=?`, [mainRows[0].c1]
-  );
-let  countryname = country[0].VALUE||'';
+    let state;
+    let statename;
 
-    
+
+    if (mainRows[0].s1 != null) {
+      [state] = await pool.query(
+        `select VALUE from C_STATE where ID=?`,
+        [mainRows[0].s1]
+      );
+      statename = state[0].VALUE;
+    }
+    else {
+      statename = '';
+    }
+
+    let [country] = await pool.query(
+      `select VALUE from C_COUNTRY where ID=?`, [mainRows[0].c1]
+    );
+    let countryname = country[0].VALUE || '';
 
     const [offerRows] = await pool.query(
       `SELECT 
@@ -342,7 +333,7 @@ let  countryname = country[0].VALUE||'';
       [mainRows[0]?.application_id]
     );
 
-    // Fetch roleids from C_APPLICATIONS_ROLE_ASSIGN
+    // Fetch roleid from C_APPLICATIONS_ROLE_ASSIGN (assuming single role)
     const [roleRows] = await pool.query(
       `SELECT roleid FROM C_APPLICATIONS_ROLE_ASSIGN WHERE applicationid = ? AND orgid = ?`,
       [mainRows[0]?.application_id, mainRows[0]?.orgid]
@@ -385,23 +376,24 @@ let  countryname = country[0].VALUE||'';
         round.panelMembers.push({
           empid: row.panel_empid,
           email: row.email,
-          is_he_employee:row.is_he_employee,
+          is_he_employee: row.is_he_employee,
         });
       }
       return acc;
     }, []);
 
+    // UPDATED: Return finalised_role as a single value
     return {
       success: true,
       data: {
         ...mainRows[0],
         departmentname,
         jobtypename,
-        statename,countryname,
+        statename, countryname,
         panel_members: panelRows || [],
         offerletter: offerRows[0] ? {
           ...offerRows[0],
-          finalised_roleids: roleRows.map(row => row.roleid),
+          finalised_role: roleRows.length > 0 ? roleRows[0].roleid : null,
         } : null,
         rounds: rounds,
       },
@@ -422,7 +414,9 @@ export async function fetchDropdownData(orgid) {
     const [states] = await pool.query('SELECT ID, VALUE FROM C_STATE WHERE ACTIVE = 1');
     const [employeeRows] = await pool.query('SELECT e.empid, e.EMP_FST_NAME, e.EMP_LAST_NAME FROM C_EMP e WHERE e.orgid = ?', [orgid]);
     const [jobtype] = await pool.query('SELECT id, g_id, Name FROM C_GENERIC_VALUES WHERE g_id = 14 AND isactive = 1 AND orgid = ?', [orgid]);
-    const [roles] = await pool.query('SELECT roleid, rolename FROM C_ORG_ROLE_TABLE WHERE orgid = ? AND is_active = 1', [orgid]);
+    
+    // UPDATED: Fetch roles from C_GENERIC_VALUES where g_id = 32
+    const [roles] = await pool.query('SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 32 AND orgid = ? AND isactive = 1', [orgid]);
 
     const employees = employeeRows.map(emp => ({
       empid: emp.empid,
@@ -505,39 +499,34 @@ export async function saveOfferLetter(applicationid, offerLetterData, orgid, det
     await connection.beginTransaction();
 
     try {
-      // Normalize applicationid
       const normalizedApplicationId = applicationid;
 
-      // Check if offer letter has been sent
-      // const [existingOffer] = await connection.query(
-      //   'SELECT offer_letter_sent FROM C_OFFER_LETTERS WHERE applicationid = ?',
-      //   [normalizedApplicationId]
-      // );
+      const [existingOffer] = await connection.query(
+        'SELECT offer_letter_sent FROM C_OFFER_LETTERS WHERE applicationid = ?',
+        [normalizedApplicationId]
+      );
 
-      // if (existingOffer.length > 0 && existingOffer[0].offer_letter_sent === 1) {
-      //   await connection.rollback();
-      //   return { success: false, error: 'Cannot update: Offer letter has already been sent.' };
-      // }
-
-      // Validate roleids
-      const roleids = [...new Set(offerLetterData.finalised_roleids || [])]; // Deduplicate
-      if (roleids.length === 0) {
+      if (existingOffer.length > 0 && existingOffer[0].offer_letter_sent === 1) {
         await connection.rollback();
-        return { success: false, error: 'At least one role is required.' };
+        return { success: false, error: 'Cannot update: Offer letter has already been sent.' };
       }
 
-      for (const roleid of roleids) {
-        const [role] = await connection.execute(
-          'SELECT roleid FROM C_ORG_ROLE_TABLE WHERE roleid = ? AND orgid = ? AND is_active = 1',
-          [roleid, orgid]
-        );
-        if (role.length === 0) {
-          await connection.rollback();
-          return { success: false, error: `Invalid or inactive role selected: ${roleid}` };
-        }
+      // UPDATED: Validate single role against C_GENERIC_VALUES
+      const roleid = offerLetterData.finalised_role;
+      if (!roleid) {
+        await connection.rollback();
+        return { success: false, error: 'Role is required.' };
       }
 
-      // Validate job_title_id
+      const [role] = await connection.execute(
+        'SELECT id FROM C_GENERIC_VALUES WHERE id = ? AND g_id = 32 AND orgid = ? AND isactive = 1',
+        [roleid, orgid]
+      );
+      if (role.length === 0) {
+        await connection.rollback();
+        return { success: false, error: `Invalid or inactive role selected: ${roleid}` };
+      }
+
       if (offerLetterData.finalised_jobtitle) {
         const [jobTitle] = await connection.execute(
           'SELECT job_title_id FROM C_ORG_JOBTITLES WHERE job_title_id = ? AND orgid = ? AND is_active = 1',
@@ -549,7 +538,6 @@ export async function saveOfferLetter(applicationid, offerLetterData, orgid, det
         }
       }
 
-      // Validate department id
       if (offerLetterData.finalised_department) {
         const [dept] = await connection.execute(
           'SELECT id FROM C_ORG_DEPARTMENTS WHERE id = ? AND orgid = ? AND isactive = 1',
@@ -561,8 +549,7 @@ export async function saveOfferLetter(applicationid, offerLetterData, orgid, det
         }
       }
 
-      let timestamp = new Date().toISOString().replace(/[-:T.]/g, '');
-      timestamp = new Date().toLocaleDateString('en-US', {
+      const timestamp = new Date().toLocaleDateString('en-US', {
         month: '2-digit',
         day: '2-digit',
         year: 'numeric'
@@ -596,6 +583,8 @@ export async function saveOfferLetter(applicationid, offerLetterData, orgid, det
         return { success: false, error: 'Invalid token.' };
       }
       const employeename = await getCurrentUserEmpIdName(pool, decoded.userId, orgid);
+      
+      // Pass single role data to PDF generator
       const pdfBytes = await generateOfferLetterPdf(offerLetterData, details, orgid, employeename);
       fs.writeFileSync(offerletterPath, pdfBytes);
 
@@ -628,7 +617,7 @@ export async function saveOfferLetter(applicationid, offerLetterData, orgid, det
           [
             offerletter_url, offerLetterData.expected_join_date,
             offerLetterData.adress_lane_1 || '', offerLetterData.adress_lane_2 || '',
-            offerLetterData.zipcode, offerLetterData.stateid||'', offerLetterData.countryid,
+            offerLetterData.zipcode, offerLetterData.stateid || '', offerLetterData.countryid,
             offerLetterData.custom_state_name || '', offerLetterData.finalised_salary,
             offerLetterData.finalised_jobtitle, offerLetterData.finalised_department,
             offerLetterData.finalised_jobtype, offerLetterData.finalised_pay_term,
@@ -665,21 +654,18 @@ export async function saveOfferLetter(applicationid, offerLetterData, orgid, det
         }
       }
 
-      // Remove existing role assignments
       const [deleteResult] = await connection.query(
         'DELETE FROM C_APPLICATIONS_ROLE_ASSIGN WHERE applicationid = ? AND orgid = ?',
         [normalizedApplicationId, orgid]
       );
 
-      // Insert new role assignments
-      for (const roleid of roleids) {
-        const [roleAssignResult] = await connection.query(
-          `INSERT INTO C_APPLICATIONS_ROLE_ASSIGN (applicationid, orgid, roleid) 
-           VALUES (?, ?, ?) 
-           ON DUPLICATE KEY UPDATE roleid = roleid`,
-          [normalizedApplicationId, orgid, roleid]
-        );
-      }
+      // Insert single role assignment
+      const [roleAssignResult] = await connection.query(
+        `INSERT INTO C_APPLICATIONS_ROLE_ASSIGN (applicationid, orgid, roleid) 
+         VALUES (?, ?, ?) 
+         ON DUPLICATE KEY UPDATE roleid = roleid`,
+        [normalizedApplicationId, orgid, roleid]
+      );
 
       const [salaryResult] = await connection.query(
         `UPDATE C_APPLICATIONS SET custom_salary_by_interviewer = ? WHERE applicationid = ?`,
@@ -695,13 +681,13 @@ export async function saveOfferLetter(applicationid, offerLetterData, orgid, det
       return { success: true, message: 'Offer letter saved and PDF generated successfully', offerletter_url };
     } catch (error) {
       await connection.rollback();
-      console.error('Error in saveOfferLetter transaction:', error);
+      console.error('Error in saveOfferLetter transaction for applicationid:', applicationid, 'Error:', error);
       return { success: false, error: `Transaction error: ${error.message}` };
     } finally {
       connection.release();
     }
   } catch (error) {
-    console.error('Error establishing database connection:', error);
+    console.error('Error establishing database connection for applicationid:', applicationid, 'Error:', error);
     return { success: false, error: `Database connection error: ${error.message}` };
   }
 }
