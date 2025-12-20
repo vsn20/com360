@@ -454,7 +454,7 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
     addform_loadEmployees();
   }, [orgId, addformData.prjId]);
 
-  useEffect(() => {
+ useEffect(() => {
     if (addform_state.success) {
       setaddFormData({
         empId: '',
@@ -472,10 +472,15 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
         projectEndDt: '',
       });
       setaddfrom_success('Project Assigned successfully!');
-      setTimeout(() => setaddfrom_success(null), 4000);
+      
+      // Wait 2 seconds to show the success message, then go back to the list
+      setTimeout(() => {
+        setaddfrom_success(null);
+        handleBack();
+      }, 2000);
     }
   }, [addform_state.success]);
-
+  
   const handleform_handleChange = (e) => {
     const { name, value } = e.target;
     setaddFormData((prev) => ({
@@ -861,8 +866,9 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
                         Description
                       </th>
                       <th onClick={() => requestSort('accntId')} className={`project_assign_sortable ${sortConfig.column === 'accntId' ? `project_assign_sort_${sortConfig.direction}` : ''}`}>
-                        Account
+                        Account Name
                       </th>
+                      
                       <th onClick={() => requestSort('startDt')} className={`project_assign_sortable ${sortConfig.column === 'startDt' ? `project_assign_sort_${sortConfig.direction}` : ''}`}>
                         Start Date
                       </th>
@@ -884,7 +890,8 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
                         </td>
                         <td>{project.PRJ_NAME || '-'}</td>
                         <td>{project.PRS_DESC || '-'}</td>
-                        <td>Account-{getdisplayprojectid(project.ACCNT_ID)}</td>
+                        {/* <td>Account-{getdisplayprojectid(project.ACCNT_ID)}</td> */}
+                         <td>{project.ALIAS_NAME || '-'}</td>
                         <td>{formatDate(project.START_DT) || '-'}</td>
                         <td>{formatDate(project.END_DT) || '-'}</td>
                       </tr>

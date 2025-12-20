@@ -69,10 +69,10 @@ export async function fetchProjectsForAssignment() {
     console.log(`Fetching projects for orgId: ${orgId}`);
     pool = await DBconnection();
     const [rows] = await pool.execute(
-      `SELECT PRJ_ID, PRJ_NAME, PRS_DESC, ACCNT_ID, 
-              DATE_FORMAT(START_DT, '%Y-%m-%d') AS START_DT, 
-              DATE_FORMAT(END_DT, '%Y-%m-%d') AS END_DT 
-       FROM C_PROJECT 
+      `SELECT J.PRJ_ID, J.PRJ_NAME, J.PRS_DESC, J.ACCNT_ID, 
+              DATE_FORMAT(J.START_DT, '%Y-%m-%d') AS START_DT, 
+              DATE_FORMAT(J.END_DT, '%Y-%m-%d') AS END_DT ,c.ALIAS_NAME
+       FROM C_PROJECT J JOIN C_ACCOUNT c ON J.ACCNT_ID = c.ACCNT_ID AND J.ORG_ID = c.ORGID
        WHERE ORG_ID = ?`,
       [orgId]
     );

@@ -12,6 +12,7 @@ const page = async () => {
   let billTypes = [];
   let otBillType = [];
   let payTerms = [];
+  let accountsList=[];
   if (token && JWT_SECRET) {
     try {
       const decoded = jwt.verify(token, JWT_SECRET);
