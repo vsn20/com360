@@ -242,12 +242,12 @@ const SubmittingApplication = ({ applieddetails, orgid, empid, handlesback }) =>
                         >
                           Application ID
                         </th> */}
-                        <th 
+                        {/* <th 
                           className={sortConfig.column === 'C_CANDIDATEid' ? `schedule_interview_sortable schedule_interview_sort-${sortConfig.direction}` : 'schedule_interview_sortable'}
                           onClick={() => requestSort('C_CANDIDATEid')}
                         >
                           Candidate ID
-                        </th>
+                        </th> */}
                         <th 
                           className={sortConfig.column === 'name' ? `schedule_interview_sortable schedule_interview_sort-${sortConfig.direction}` : 'schedule_interview_sortable'}
                           onClick={() => requestSort('name')}
@@ -279,12 +279,12 @@ const SubmittingApplication = ({ applieddetails, orgid, empid, handlesback }) =>
                     <tbody>
                       {currentApplications.map((detail) => (
                         <tr key={detail.applicationid}>
-                          <td className="schedule_interview_id-cell">
+                          <td >
                             <span className="schedule_interview_application-indicator"></span>
-                            {detail.candidate_id}
+                            {`${detail.first_name} ${detail.last_name}`}
                           </td>
                       
-                          <td>{`${detail.first_name} ${detail.last_name}`}</td>
+                         
                           <td>{`${detail.display_job_name}`}</td>
                           <td>{formatDate(detail.applieddate)}</td>
                           <td>

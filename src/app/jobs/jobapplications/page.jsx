@@ -207,7 +207,7 @@ export default function Applications() {
                         <table className="jobs_application_table">
                             <thead>
                                 <tr>
-                                    <th className={sortConfig.column === 'applicationid' ? `jobs_application_sortable jobs_application_sort-${sortConfig.direction}` : 'jobs_application_sortable'} onClick={() => requestSort('applicationid')}>App ID</th>
+                                    {/* <th className={sortConfig.column === 'applicationid' ? `jobs_application_sortable jobs_application_sort-${sortConfig.direction}` : 'jobs_application_sortable'} onClick={() => requestSort('applicationid')}>App ID</th> */}
                                     <th className={sortConfig.column === 'orgname' ? `jobs_application_sortable jobs_application_sort-${sortConfig.direction}` : 'jobs_application_sortable'} onClick={() => requestSort('orgname')}>Organization</th>
                                     <th className={sortConfig.column === 'display_job_name' ? `jobs_application_sortable jobs_application_sort-${sortConfig.direction}` : 'jobs_application_sortable'} onClick={() => requestSort('display_job_name')}>Job Title</th>
                                     <th className={sortConfig.column === 'applieddate' ? `jobs_application_sortable jobs_application_sort-${sortConfig.direction}` : 'jobs_application_sortable'} onClick={() => requestSort('applieddate')}>Applied Date</th>
@@ -219,11 +219,12 @@ export default function Applications() {
                             <tbody>
                                 {currentApplications.map((app) => (
                                     <tr key={app.applicationid}>
-                                        <td className="jobs_application_id-cell">
+                                        <td >
                                             <span className={`jobs_application_role-indicator ${getStatusIndicatorClass(app.status)}`}></span>
-                                            {getdisplayprojectid(app.applicationid)}
+                                            {/* {getdisplayprojectid(app.applicationid)} */}
+                                            {app.orgname}
                                         </td>
-                                        <td>{app.orgname}</td>
+                                        
                                         <td>{app.display_job_name}</td>
                                         <td>{new Date(app.applieddate).toLocaleDateString()}</td>
                                         <td>${Number(app.salary_expected).toLocaleString()}</td>

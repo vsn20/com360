@@ -412,25 +412,25 @@ const Overview = ({ orgid, empid, interviewdetails, time, acceptingtime, editing
               <div className="interview_table-wrapper">
                 <table className="interview_interview-table interview_five-column">
                   <colgroup>
-                    <col />
-                    <col />
+                    {/* <col />
+                    <col /> */}
                     <col />
                     <col />
                     <col />
                   </colgroup>
                   <thead>
                     <tr>
-                      <th className={sortConfig.column === 'applicationid' ? `interview_sortable interview_sort-${sortConfig.direction}` : 'interview_sortable'} onClick={() => requestSort('applicationid')}>
+                      {/* <th className={sortConfig.column === 'applicationid' ? `interview_sortable interview_sort-${sortConfig.direction}` : 'interview_sortable'} onClick={() => requestSort('applicationid')}>
                         Application ID
                       </th>
                       <th className={sortConfig.column === 'interview_id' ? `interview_sortable interview_sort-${sortConfig.direction}` : 'interview_sortable'} onClick={() => requestSort('interview_id')}>
                         Interview ID
-                      </th>
+                      </th> */}
                       <th className={sortConfig.column === 'applicant_name' ? `interview_sortable interview_sort-${sortConfig.direction}` : 'interview_sortable'} onClick={() => requestSort('applicant_name')}>
                         Applicant Name
                       </th>
                       <th className={sortConfig.column === 'job_name' ? `interview_sortable interview_sort-${sortConfig.direction}` : 'interview_sortable'} onClick={() => requestSort('job_name')}>
-                        JobID-Job Name
+                        Job Name
                       </th>
                       <th className={sortConfig.column === 'status' ? `interview_sortable interview_sort-${sortConfig.direction}` : 'interview_sortable'} onClick={() => requestSort('status')}>
                         Status
@@ -447,11 +447,13 @@ const Overview = ({ orgid, empid, interviewdetails, time, acceptingtime, editing
                               : detail.status === 'scheduled'
                               ? 'interview_role-indicator'
                               : 'interview_role-indicator1'
-                            }></span>App-{getdisplayprojectid(detail.applicationid)}
+                            }></span>
+                            {/* App-{getdisplayprojectid(detail.applicationid)} */}
+                            {`${detail.first_name} ${detail.last_name}`}
                         </td>
-                        <td>Interview-{getdisplayprojectid(detail.interview_id)}</td>
-                        <td>{`${detail.first_name} ${detail.last_name}`}</td>
-                        <td>{`${getdisplayprojectid(detail.jobid)}-${detail.display_job_name}`}</td>
+                        {/* <td>Interview-{getdisplayprojectid(detail.interview_id)}</td> */}
+                       
+                        <td>{`${detail.display_job_name}`}</td>
                         <td>
                           <span
                              className={

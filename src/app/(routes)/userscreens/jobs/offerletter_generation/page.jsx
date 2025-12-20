@@ -36,7 +36,7 @@ try {
         orgid = decoded.orgid;
         empid = decoded.empid;
         [interviewdetails]=await pool.query(
-       'select a.orgid,a.interview_id,a.application_id,b.status,b.candidate_id,c.first_name,c.last_name from C_INTERVIEW_TABLES as a join C_APPLICATIONS as b on a.application_id=b.applicationid join C_CANDIDATE as c on b.candidate_id=c.cid  where a.offer_letter_generated!=1 and   a.orgid=? and a.interview_completed=1 and a.confirm=1',
+       'select a.orgid,a.interview_id,a.application_id,b.status,b.candidate_id,c.first_name,c.last_name,e.display_job_name from C_INTERVIEW_TABLES as a join C_APPLICATIONS as b on a.application_id=b.applicationid join C_CANDIDATE as c on b.candidate_id=c.cid JOIN C_EXTERNAL_JOBS AS e ON e.jobid = b.jobid where a.offer_letter_generated!=1 and   a.orgid=? and a.interview_completed=1 and a.confirm=1',
        [orgid]
         );
          [acceptingtime]=await pool.query(
@@ -44,7 +44,7 @@ try {
           [orgid]
         );
         [offerlettergenerated]=await pool.query(
-       'select a.orgid,a.interview_id,a.application_id,b.status,b.candidate_id,c.first_name,c.last_name,z.offerletter_url from C_INTERVIEW_TABLES as a join C_APPLICATIONS as b on a.application_id=b.applicationid join C_CANDIDATE as c on b.candidate_id=c.cid join C_OFFER_LETTERS as z on z.applicationid=b.applicationid where a.offer_letter_generated=1 and a.orgid=? and a.interview_completed=1 and a.confirm=1',
+       'select a.orgid,a.interview_id,a.application_id,b.status,b.candidate_id,b.jobid,c.first_name,c.last_name,z.offerletter_url,e.display_job_name from C_INTERVIEW_TABLES as a join C_APPLICATIONS as b on a.application_id=b.applicationid join C_CANDIDATE as c on b.candidate_id=c.cid JOIN C_EXTERNAL_JOBS AS e ON e.jobid = b.jobid join C_OFFER_LETTERS as z on z.applicationid=b.applicationid where a.offer_letter_generated=1 and a.orgid=? and a.interview_completed=1 and a.confirm=1',
        [orgid]
         );
         console.log("interviews details",interviewdetails);

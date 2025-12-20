@@ -207,7 +207,7 @@ const OfferGenerating = ({ empid, orgid, interviewdetails, acceptingtime, handle
                 <table className="employee-table2">
                   <thead>
                     <tr>
-                      <th
+                      {/* <th
                         className={sortConfig.column === 'interview_id' ? `sortable sort-${sortConfig.direction}` : 'sortable'}
                         onClick={() => requestSort('interview_id')}
                       >
@@ -218,13 +218,14 @@ const OfferGenerating = ({ empid, orgid, interviewdetails, acceptingtime, handle
                         onClick={() => requestSort('application_id')}
                       >
                         Application Id
-                      </th>
+                      </th> */}
                       <th
                         className={sortConfig.column === 'applicant_name' ? `sortable sort-${sortConfig.direction}` : 'sortable'}
                         onClick={() => requestSort('applicant_name')}
                       >
                         Applicant Name
                       </th>
+                      <th>JobName</th>
                       <th
                         className={sortConfig.column === 'status' ? `sortable sort-${sortConfig.direction}` : 'sortable'}
                         onClick={() => requestSort('status')}
@@ -236,12 +237,13 @@ const OfferGenerating = ({ empid, orgid, interviewdetails, acceptingtime, handle
                   <tbody>
                     {currentRows.map((details) => (
                       <tr key={details.interview_id} onClick={() => selectid(details.interview_id)}>
-                        <td className="id-cell2">
+                        <td>
                           <span className={details.status === 'active' ? 'role-indicator' : 'role-indicator1'}></span>
-                          {getdisplayprojectid(details.interview_id)}
+                         {`${details.first_name} ${details.last_name}`}
                         </td>
-                        <td>{getdisplayprojectid(details.application_id)}</td>
-                        <td>{`${details.first_name} ${details.last_name}`}</td>
+                        <td>{details.display_job_name||'-'}</td>
+                        {/* <td>{getdisplayprojectid(details.application_id)}</td> */}
+                       
                         <td>
                           <span className={details.status === 'active' ? 'status-badge2 active2' : 'status-badge2 inactive2'}>
                             {details.status}

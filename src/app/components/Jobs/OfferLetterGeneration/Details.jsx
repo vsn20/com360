@@ -226,6 +226,12 @@ const Details = ({ selectid, orgid, empid, handleback }) => {
     setError(null);
   };
 
+  const genericjobName = (superiorId) => {
+    const superior = dropdownData.roles.find(role => String(role.id) ===String(superiorId));
+    return superior ? `${superior.Name}`.trim() : 'No Jobtype';
+  };
+
+
   const formatDate = (date) => {
     if (!date) return '-';
     if (date instanceof Date) {
@@ -297,20 +303,20 @@ const Details = ({ selectid, orgid, empid, handleback }) => {
           <div className="details-block6">
             <h3>Application Details</h3>
             <div className="details-row6">
-              <div className="details-group6">
+              {/* <div className="details-group6">
                 <label>Interview ID</label>
                 <p>{getdisplayprojectid(details?.interview_id) || '-'}</p>
-              </div>
-              <div className="details-group6">
+              </div> */}
+              {/* <div className="details-group6">
                 <label>Application ID</label>
                 <p>{getdisplayprojectid(details?.application_id) || '-'}</p>
-              </div>
+              </div> */}
             </div>
             <div className="details-row6">
-              <div className="details-group6">
+              {/* <div className="details-group6">
                 <label>Organization ID</label>
                 <p>{details?.orgid || '-'}</p>
-              </div>
+              </div> */}
               <div className="details-group6">
                 <label>Job Title</label>
                 <p>
@@ -387,6 +393,10 @@ const Details = ({ selectid, orgid, empid, handleback }) => {
                         <label>Expected Salary</label>
                         <input type="text" value={details?.salary_expected || ''} disabled />
                       </div>
+                       <div className="form-group1">
+                          <label>Expected Role</label>
+                          <input type="text" value={genericjobName(details?.role1) || ''} disabled />
+                        </div>
                       <div className="form-group6">
                         <label>Min Salary</label>
                         <input type="text" value={details?.min_salary || ''} disabled />
