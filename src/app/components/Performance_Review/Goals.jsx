@@ -324,36 +324,41 @@ const Goals = ({
             </tr>
           </thead>
           <tbody>
-            {currentGoals.length > 0 ? (
-              currentGoals.map(goal => (
-                <tr key={goal.id} onClick={() => handleEditClick(goal)}>
-                  {canAdmin && <td>{goal.employee_name}</td>}
-                  <td>{goal.description}</td>
-                  <td>{goal.start_date}</td>
-                  <td>{goal.end_date}</td>
-                  <td>{goal.completion_percentage}%</td>
-                  <td style={{ whiteSpace: 'pre-wrap' }}>{goal.employee_comments || '-'}</td>
-                  <td style={{ whiteSpace: 'pre-wrap' }}>{goal.supervisor_comments || '-'}</td>
-                  <td>
-                    {canEditGoal(goal) && (
-                      <button
-                        className="employee_goals_cancel employee_goals_button"
-                        onClick={(e) => handleDeleteClick(e, goal)}
-                      >
-                        Delete
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={canAdmin ? 8 : 7} className="employee_goals_empty-state">
-                  No goals found for the selected filters.
-                </td>
-              </tr>
-            )}
-          </tbody>
+  {currentGoals.length > 0 ? (
+    currentGoals.map(goal => (
+      <tr key={goal.id} onClick={() => handleEditClick(goal)}>
+        {canAdmin && (
+          <td>
+            <span className="employee_goals_status-indicator"></span>
+            {goal.employee_name}
+          </td>
+        )}
+        <td>{goal.description}</td>
+        <td>{goal.start_date}</td>
+        <td>{goal.end_date}</td>
+        <td>{goal.completion_percentage}%</td>
+        <td style={{ whiteSpace: 'pre-wrap' }}>{goal.employee_comments || '-'}</td>
+        <td style={{ whiteSpace: 'pre-wrap' }}>{goal.supervisor_comments || '-'}</td>
+        <td>
+          {canEditGoal(goal) && (
+            <button
+              className="employee_goals_cancel employee_goals_button"
+              onClick={(e) => handleDeleteClick(e, goal)}
+            >
+              Delete
+            </button>
+          )}
+        </td>
+      </tr>
+    ))
+  ) : (
+    <tr>
+      <td colSpan={canAdmin ? 8 : 7} className="employee_goals_empty-state">
+        No goals found for the selected filters.
+      </td>
+    </tr>
+  )}
+</tbody>
         </table>
       </div>
 

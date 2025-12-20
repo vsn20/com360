@@ -8,7 +8,7 @@ import './contact.css'
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" className="contact-submit-button" disabled={pending}>
+    <button type="submit" className="contact_save" disabled={pending}>
       {pending ? 'Saving...' : 'Save Contact'}
     </button>
   );
@@ -20,28 +20,28 @@ function AddressBlock({ title, countries, states, prefix, formData, handleChange
   const isUS = countryId === '185' || countryId === 185;
 
   return (
-    <div className="contact-form-block">
+    <div className="contact_form-block">
       <h3>{title}</h3>
-      <div className="contact-form-row">
-        <div className="contact-form-group">
+      <div className="contact_form-row">
+        <div className="contact_form-group">
           <label>Address Line 1</label>
           <input name={`${prefix}_ADDR_LINE1`} value={formData[`${prefix}_ADDR_LINE1`]} onChange={handleChange} />
         </div>
-        <div className="contact-form-group">
+        <div className="contact_form-group">
           <label>Address Line 2</label>
           <input name={`${prefix}_ADDR_LINE2`} value={formData[`${prefix}_ADDR_LINE2`]} onChange={handleChange} />
         </div>
-        <div className="contact-form-group">
+        <div className="contact_form-group">
           <label>Address Line 3</label>
           <input name={`${prefix}_ADDR_LINE3`} value={formData[`${prefix}_ADDR_LINE3`]} onChange={handleChange} />
         </div>
       </div>
-      <div className="contact-form-row">
-        <div className="contact-form-group">
+      <div className="contact_form-row">
+        <div className="contact_form-group">
           <label>City</label>
           <input name={`${prefix}_CITY`} value={formData[`${prefix}_CITY`]} onChange={handleChange} />
         </div>
-        <div className="contact-form-group">
+        <div className="contact_form-group">
           <label>Country</label>
           <select name={`${prefix}_COUNTRY_ID`} value={countryId} onChange={handleChange}>
             <option value="">Select Country</option>
@@ -50,7 +50,7 @@ function AddressBlock({ title, countries, states, prefix, formData, handleChange
             ))}
           </select>
         </div>
-        <div className="contact-form-group">
+        <div className="contact_form-group">
           <label>State</label>
           <select name={`${prefix}_STATE_ID`} value={formData[`${prefix}_STATE_ID`]} onChange={handleChange} disabled={!isUS}>
             <option value="">Select State</option>
@@ -60,8 +60,8 @@ function AddressBlock({ title, countries, states, prefix, formData, handleChange
           </select>
         </div>
       </div>
-      <div className="contact-form-row">
-        <div className="contact-form-group">
+      <div className="contact_form-row">
+        <div className="contact_form-group">
           <label>Custom State</label>
           <input
             name={`${prefix}_CUSTOM_STATE`}
@@ -71,7 +71,7 @@ function AddressBlock({ title, countries, states, prefix, formData, handleChange
             placeholder={isUS ? 'N/A (Use State dropdown)' : 'Enter state/province'}
           />
         </div>
-        <div className="contact-form-group">
+        <div className="contact_form-group">
           <label>Postal Code</label>
           <input name={`${prefix}_POSTAL_CODE`} value={formData[`${prefix}_POSTAL_CODE`]} onChange={handleChange} />
         </div>
@@ -184,21 +184,21 @@ export default function AddContactForm({
   const contactType = formData.CONTACT_TYPE_CD;
 
   return (
-    <div className="contact-add-container">
-      <div className="contact-header-section">
-        <h1 className="contact-title">Add New Contact</h1>
-        <button className="contact-back-button" onClick={onBackClick}></button>
+    <div className="contact_add-container">
+      <div className="contact_header-section">
+        <h1 className="contact_title">Add New Contact</h1>
+        <button className="contact_back-button" onClick={onBackClick}></button>
       </div>
 
-      {state?.error && <p className="contact-error-message">{state.error}</p>}
+      {state?.error && <p className="contact_error-message">{state.error}</p>}
 
       <form action={formAction}>
         <input type="hidden" name="ORGID" value={orgid} />
         
-        <div className="contact-form-block">
+        <div className="contact_form-block">
           <h3>Core Information</h3>
-          <div className="contact-form-row">
-            <div className="contact-form-group">
+          <div className="contact_form-row">
+            <div className="contact_form-group">
               <label>Account*</label>
               <select name="ACCOUNT_ID" value={formData.ACCOUNT_ID} onChange={handleChange} required>
                 <option value="">Select an Account</option>
@@ -207,14 +207,14 @@ export default function AddContactForm({
                 ))}
               </select>
             </div>
-            <div className="contact-form-group">
+            <div className="contact_form-group">
               <label>Organization (Auto-filled)</label>
               <input type="text" value={suborgName} readOnly placeholder="Select an account to populate" />
               <input type="hidden" name="SUBORGID" value={formData.SUBORGID} />
             </div>
           </div>
-          <div className="contact-form-row">
-            <div className="contact-form-group">
+          <div className="contact_form-row">
+            <div className="contact_form-group">
               <label>Contact Type*</label>
               <select name="CONTACT_TYPE_CD" value={formData.CONTACT_TYPE_CD} onChange={handleChange} required>
                 <option value="">Select Contact Type</option>
@@ -226,16 +226,16 @@ export default function AddContactForm({
             </div>
             {/* Dynamic Contact Fields */}
             {contactType === 'Email' && (
-              <div className="contact-form-group"><label>Email Address*</label><input type="email" name="EMAIL" value={formData.EMAIL} onChange={handleChange} required /></div>
+              <div className="contact_form-group"><label>Email Address*</label><input type="email" name="EMAIL" value={formData.EMAIL} onChange={handleChange} required /></div>
             )}
             {contactType === 'Phone' && (
-              <div className="contact-form-group"><label>Phone Number*</label><input type="tel" name="PHONE" value={formData.PHONE} onChange={handleChange} required /></div>
+              <div className="contact_form-group"><label>Phone Number*</label><input type="tel" name="PHONE" value={formData.PHONE} onChange={handleChange} required /></div>
             )}
             {contactType === 'Mobile' && (
-              <div className="contact-form-group"><label>Mobile Number*</label><input type="tel" name="MOBILE" value={formData.MOBILE} onChange={handleChange} required /></div>
+              <div className="contact_form-group"><label>Mobile Number*</label><input type="tel" name="MOBILE" value={formData.MOBILE} onChange={handleChange} required /></div>
             )}
             {contactType === 'Fax' && (
-              <div className="contact-form-group"><label>Fax Number*</label><input type="tel" name="FAX" value={formData.FAX} onChange={handleChange} required /></div>
+              <div className="contact_form-group"><label>Fax Number*</label><input type="tel" name="FAX" value={formData.FAX} onChange={handleChange} required /></div>
             )}
           </div>
         </div>
@@ -243,9 +243,9 @@ export default function AddContactForm({
         <AddressBlock title="Home Address" prefix="HOME" countries={countries} states={states} formData={formData} handleChange={handleChange} />
         <AddressBlock title="Mailing Address" prefix="MAILING" countries={countries} states={states} formData={formData} handleChange={handleChange} />
 
-        <div className="contact-form-buttons">
+        <div className="contact_form-buttons">
           <SubmitButton />
-          <button type="button" className="contact-cancel-button" onClick={onBackClick}>
+          <button type="button" className="contact_cancel" onClick={onBackClick}>
             Cancel
           </button>
         </div>

@@ -30,7 +30,7 @@ function Navbar({
         <span className={styles.orgName}>{orgName}</span>       
       </div>
       
-      <SearchInput onSearch={handleSearch} />
+      {/* <SearchInput onSearch={handleSearch} /> */}
       
       <div className={styles.right}>
         <a href="#" className={styles.icon}>         

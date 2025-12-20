@@ -1353,16 +1353,16 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
               <div className="roles_table-wrapper">
                 <table className="roles_roles-table roles_four-column">
                   <colgroup>
-                    <col />
+                    {/* <col /> */}
                     <col />
                     <col />
                     <col />
                   </colgroup>
                   <thead>
                     <tr>
-                      <th className={sortConfig.column === 'roleid' ? `roles_sortable roles_sort-${sortConfig.direction}` : 'roles_sortable'} onClick={() => requestSort('roleid')}>
+                      {/* <th className={sortConfig.column === 'roleid' ? `roles_sortable roles_sort-${sortConfig.direction}` : 'roles_sortable'} onClick={() => requestSort('roleid')}>
                         Role ID
-                      </th>
+                      </th> */}
                       <th className={sortConfig.column === 'rolename' ? `roles_sortable roles_sort-${sortConfig.direction}` : 'roles_sortable'} onClick={() => requestSort('rolename')}>
                         Role Name
                       </th>
@@ -1374,22 +1374,24 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
                       </th>
                     </tr>
                   </thead>
-                  <tbody>
-                    {currentRoles.map((role) => (
-                      <tr key={`${role.roleid}-${role.orgid}`} onClick={() => handleRoleClick(role)} style={{ cursor: 'pointer' }}>
-                        <td className="roles_id-cell">
-                          <span className={role.is_active ? 'roles_role-indicator-active' : 'roles_role-indicator-inactive'}></span>Role-{getDisplayRoleId(role.roleid)}
-                        </td>
-                        <td className="roles_name-cell">{role.rolename}</td>
-                        <td className={role.is_active ? 'roles_status-badge roles_active' : 'roles_status-badge roles_inactive'}>
-                          {role.is_active ? 'Yes' : 'No'}
-                        </td>
-                        <td className="roles_date-cell">
-                          {role.CREATED_DATE ? new Date(role.CREATED_DATE).toLocaleDateString() : 'N/A'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
+<tbody>
+  {currentRoles.map((role) => (
+    <tr key={`${role.roleid}-${role.orgid}`} onClick={() => handleRoleClick(role)} style={{ cursor: 'pointer' }}>
+      <td>
+        <span className={role.is_active ? 'roles_role-indicator-active' : 'roles_role-indicator-inactive'}></span>
+        {role.rolename}
+      </td>
+      <td>
+        <span className={role.is_active ? 'roles_status-badge roles_active' : 'roles_status-badge roles_inactive'}>
+          {role.is_active ? 'Yes' : 'No'}
+        </span>
+      </td>
+      <td>
+        {role.CREATED_DATE ? new Date(role.CREATED_DATE).toLocaleDateString() : 'N/A'}
+      </td>
+    </tr>
+  ))}
+</tbody>
                 </table>
                 
               </div>
@@ -1478,17 +1480,15 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
             ) : (
               <div className="roles_view-details">
                 <div className="roles_details-row">
-                  <div className="roles_details-g">
+                  {/* <div className="roles_details-g">
                     <label>Role ID</label>
                     <p>Role-{getDisplayRoleId(formData.roleid)}</p>
-                  </div>
+                  </div> */}
                   <div className="roles_details-g">
                     <label>Role Name</label>
                     <p>{formData.rolename}</p>
                   </div>
-                </div>
-                <div className="roles_details-row">
-                  <div className="roles_details-g">
+                   <div className="roles_details-g">
                     <label>Is Active</label>
                     <p>{formData.is_active === '1' ? 'Yes' : 'No'}</p>
                   </div>

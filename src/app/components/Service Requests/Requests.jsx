@@ -840,7 +840,7 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
               <div className="table-wrapper">
                 <table className="service-requests-table five-column">
                   <colgroup>
-                    <col />
+                    {/* <col /> */}
                     <col />
                     <col />
                     <col />
@@ -848,9 +848,9 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
                   </colgroup>
                   <thead>
                     <tr>
-                      <th className={sortConfig.column === 'SR_NUM' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('SR_NUM')}>
+                      {/* <th className={sortConfig.column === 'SR_NUM' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('SR_NUM')}>
                         Service Request ID
-                      </th>
+                      </th> */}
                       <th className={sortConfig.column === 'SERVICE_NAME' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('SERVICE_NAME')}>
                         Service Name
                       </th>
@@ -875,9 +875,8 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
                       >
                         <td className="id-cell">
                               <span className={req.STATUS_CD?.toLowerCase() === 'resolved' ? 'service-request-indicator-active' : 'service-request-indicator-inactive'}></span>
-                               {req.SR_NUM ? `SR-${getdisplayprojectid(req.SR_NUM)}` : '-'}
+                                {req.SERVICE_NAME }
                         </td>
-                        <td className="name-cell">{req.SERVICE_NAME || '-'}</td>
                         <td className="status-cell">
                           <span className={`status-badge ${req.STATUS_CD?.toLowerCase() === 'resolved' ? 'active' : 'inactive'}`}>
                             {req.STATUS_CD || '-'}
@@ -949,7 +948,7 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
               </div>
               {readOnlyMode ? (
                 <div className="view-details">
-                  <div className="details-row">
+                  {/* <div className="details-row">
                     <div className="details-g">
                       <label>Service Request ID</label>
                       <p>SR-{getdisplayprojectid(serviceRequestDetails.SR_NUM)}</p>
@@ -958,7 +957,7 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
                       <label>Organization ID</label>
                       <p>{serviceRequestDetails.ORG_ID || '-'}</p>
                     </div>
-                  </div>
+                  </div> */}
                   <div className="details-row">
                     <div className="details-g">
                       <label>Service Name</label>
@@ -1003,7 +1002,7 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
                     handleSaveStatus();
                   }}
                 >
-                  <div className="form-row">
+                  {/* <div className="form-row">
                     <div className="form-group">
                       <label>Service Request ID</label>
                       <input
@@ -1022,7 +1021,7 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
                         className="bg-gray-100"
                       />
                     </div>
-                  </div>
+                  </div> */}
                   <div className="form-row">
                     <div className="form-group">
                       <label>Service Name</label>

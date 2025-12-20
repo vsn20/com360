@@ -280,7 +280,10 @@ const Reviews = ({
             {currentReviews.length > 0 ? (
               currentReviews.map(review => (
                 <tr key={review.id} onClick={() => handleEditClick(review)}>
-                  <td>{review.employee_name}</td>
+                  <td>
+                    <span className="employee_reviews_status-indicator"></span>
+                    {review.employee_name}
+                  </td>
                   <td>{review.review_year}</td>
                   <td>{review.review_date}</td>
                   <td>{review.rating}</td>

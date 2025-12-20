@@ -313,24 +313,28 @@ const Summary = ({
                 <th>Supervisor</th>
               </tr>
             </thead>
-            <tbody>
-              {paginatedEmployees.length > 0 ? (
-                paginatedEmployees.map(emp => (
-                  <tr key={emp.empid} onClick={() => handleEmployeeClick(emp.empid)} style={{ cursor: 'pointer' }}>
-                    <td>{emp.name}</td>
-                    <td>{emp.email}</td>
-                    <td>{emp.role}</td>
-                    <td>{emp.supervisor_name}</td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="4" className="employee_goals_empty-state">
-                    No employees found matching criteria.
-                  </td>
-                </tr>
-              )}
-            </tbody>
+           <tbody>
+  {paginatedEmployees.length > 0 ? (
+    paginatedEmployees.map(emp => (
+      <tr key={emp.empid} onClick={() => handleEmployeeClick(emp.empid)} style={{ cursor: 'pointer' }}>
+        <td>
+          <span className="employee_goals_status-indicator"></span>
+          {emp.name}
+        </td>
+        <td>{emp.email}</td>
+        <td>{emp.role}</td>
+        <td>{emp.supervisor_name}</td>
+      </tr>
+    ))
+  ) : (
+    <tr>
+      <td colSpan="4" className="employee_goals_empty-state">
+        No employees found matching criteria.
+      </td>
+    </tr>
+  )}
+</tbody>
+
           </table>
         </div>
         

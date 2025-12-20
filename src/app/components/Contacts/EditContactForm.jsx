@@ -31,28 +31,28 @@ function AddressBlock({
     <>
       {isEditing ? (
         <>
-          <div className="edit_contact_form_row">
-            <div className="edit_contact_form_group">
+          <div className="contact_form-row">
+            <div className="contact_form-group">
               <label>Address Line 1</label>
               <input name={`${prefix}_ADDR_LINE1`} value={formData?.[`${prefix}_ADDR_LINE1`] || ''} onChange={handleChange} />
             </div>
-            <div className="edit_contact_form_group">
+            <div className="contact_form-group">
               <label>Address Line 2</label>
               <input name={`${prefix}_ADDR_LINE2`} value={formData?.[`${prefix}_ADDR_LINE2`] || ''} onChange={handleChange} />
             </div>
           </div>
-          <div className="edit_contact_form_row">
-            <div className="edit_contact_form_group">
+          <div className="contact_form-row">
+            <div className="contact_form-group">
               <label>Address Line 3</label>
               <input name={`${prefix}_ADDR_LINE3`} value={formData?.[`${prefix}_ADDR_LINE3`] || ''} onChange={handleChange} />
             </div>
-            <div className="edit_contact_form_group">
+            <div className="contact_form-group">
               <label>City</label>
               <input name={`${prefix}_CITY`} value={formData?.[`${prefix}_CITY`] || ''} onChange={handleChange} />
             </div>
           </div>
-          <div className="edit_contact_form_row">
-            <div className="edit_contact_form_group">
+          <div className="contact_form-row">
+            <div className="contact_form-group">
               <label>Country</label>
               <select name={`${prefix}_COUNTRY_ID`} value={countryId || '185'} onChange={handleChange}>
                 <option value="">Select Country</option>
@@ -61,7 +61,7 @@ function AddressBlock({
                 ))}
               </select>
             </div>
-            <div className="edit_contact_form_group">
+            <div className="contact_form-group">
               <label>State</label>
               <select name={`${prefix}_STATE_ID`} value={stateId || ''} onChange={handleChange} disabled={!isUS}>
                 <option value="">Select State</option>
@@ -71,8 +71,8 @@ function AddressBlock({
               </select>
             </div>
           </div>
-          <div className="edit_contact_form_row">
-            <div className="edit_contact_form_group">
+          <div className="contact_form-row">
+            <div className="contact_form-group">
               <label>Custom State</label>
               <input
                 name={`${prefix}_CUSTOM_STATE`}
@@ -82,7 +82,7 @@ function AddressBlock({
                 placeholder={isUS ? 'N/A (Use State dropdown)' : 'Enter state/province'}
               />
             </div>
-            <div className="edit_contact_form_group">
+            <div className="contact_form-group">
               <label>Postal Code</label>
               <input name={`${prefix}_POSTAL_CODE`} value={formData?.[`${prefix}_POSTAL_CODE`] || ''} onChange={handleChange} />
             </div>
@@ -90,43 +90,43 @@ function AddressBlock({
         </>
       ) : (
         <>
-          <div className="edit_contact_view_details">
-            <div className="edit_contact_details_row">
-              <div className="edit_contact_details_group">
+          <div className="contact_view-details">
+            <div className="contact_details-row">
+              <div className="contact_details-group">
                 <label>Address Line 1</label>
                 <p>{data?.[`${prefix}_ADDR_LINE1`] || '-'}</p>
               </div>
-              <div className="edit_contact_details_group">
+              <div className="contact_details-group">
                 <label>Address Line 2</label>
                 <p>{data?.[`${prefix}_ADDR_LINE2`] || '-'}</p>
               </div>
             </div>
-            <div className="edit_contact_details_row">
-              <div className="edit_contact_details_group">
+            <div className="contact_details-row">
+              <div className="contact_details-group">
                 <label>Address Line 3</label>
                 <p>{data?.[`${prefix}_ADDR_LINE3`] || '-'}</p>
               </div>
-              <div className="edit_contact_details_group">
+              <div className="contact_details-group">
                 <label>City</label>
                 <p>{data?.[`${prefix}_CITY`] || '-'}</p>
               </div>
             </div>
-            <div className="edit_contact_details_row">
-              <div className="edit_contact_details_group">
+            <div className="contact_details-row">
+              <div className="contact_details-group">
                 <label>Country</label>
                 <p>{getCountryName(countryId)}</p>
               </div>
-              <div className="edit_contact_details_group">
+              <div className="contact_details-group">
                 <label>State</label>
                 <p>{isUS ? getStateName(stateId) : customState || '-'}</p>
               </div>
             </div>
-            <div className="edit_contact_details_row">
-              <div className="edit_contact_details_group">
+            <div className="contact_details-row">
+              <div className="contact_details-group">
                 <label>Postal Code</label>
                 <p>{data?.[`${prefix}_POSTAL_CODE`] || '-'}</p>
               </div>
-              <div className="edit_contact_details_group"></div>
+              <div className="contact_details-group"></div>
             </div>
           </div>
         </>
@@ -581,30 +581,30 @@ export default function EditContactForm({
 
   if (isLoading) {
     return (
-      <div className="edit_contact_container">
-        <p className="edit_contact_loading_message">Loading contact details...</p>
+      <div className="contact_edit-container">
+        <p>Loading contact details...</p>
       </div>
     );
   }
 
   if (error && !contactDetails) {
     return (
-      <div className="edit_contact_container">
-        <div className="edit_contact_header_section">
-          <h1 className="edit_contact_title">Edit Contact</h1>
-          <button className="edit_contact_back_button" onClick={onBackClick}></button>
+      <div className="contact_edit-container">
+        <div className="contact_header-section">
+          <h1 className="contact_title">Edit Contact</h1>
+          <button className="contact_back-button" onClick={onBackClick}></button>
         </div>
-        <p className="edit_contact_error_message">{error}</p>
+        <p className="contact_error-message">{error}</p>
       </div>
     );
   }
 
   if (!contactDetails || !formData) {
     return (
-      <div className="edit_contact_container">
-        <div className="edit_contact_header_section">
-          <h1 className="edit_contact_title">Edit Contact</h1>
-          <button className="edit_contact_back_button" onClick={onBackClick}></button>
+      <div className="contact_edit-container">
+        <div className="contact_header-section">
+          <h1 className="contact_title">Edit Contact</h1>
+          <button className="contact_back-button" onClick={onBackClick}></button>
         </div>
         <p>Contact data not available or still loading...</p>
       </div>
@@ -614,13 +614,13 @@ export default function EditContactForm({
   const contactType = formData.CONTACT_TYPE_CD;
 
   return (
-    <div className="edit_contact_container">
-      <div className="edit_contact_header_section">
-        <h1 className="edit_contact_title">Edit Contact</h1>
-        <button className="edit_contact_back_button" onClick={onBackClick}></button>
+    <div className="contact_edit-container">
+      <div className="contact_header-section">
+        <h1 className="contact_title">Edit Contact</h1>
+        <button className="contact_back-button" onClick={onBackClick}></button>
       </div>
 
-      <div className="edit_contact_submenu_bar">
+      <div className="contact_submenu-bar">
         <button
           className={activeTab === 'information' ? 'active' : ''}
           onClick={() => setActiveTab('information')}
@@ -635,27 +635,25 @@ export default function EditContactForm({
         </button>
       </div>
 
-      {error && <p className="edit_contact_error_message">{error}</p>}
-      {success && <p className="edit_contact_success_message">{success}</p>}
+      {error && <p className="contact_error-message">{error}</p>}
+      {success && <p className="contact_success-message">{success}</p>}
 
-      <div className="edit_contact_details_content">
+      <div className="contact_details-content">
         {activeTab === 'information' && (
-          <div className="edit_contact_details_block">
-            <div className="edit_contact_details_header">
-              <h3 className="edit_contact_details_header_title">Core Information</h3>
+          <div className="contact_details-block">
+            <div className="contact_details-header">
+              <h2>Core Information</h2>
               {!editingCoreInfo && (
-                <div className="edit_contact_details_buttons">
-                  <button className="edit_contact_edit_button" onClick={() => handleEdit('core')}>
-                    Edit
-                  </button>
-                </div>
+                <button className="contact_button" onClick={() => handleEdit('core')}>
+                  Edit
+                </button>
               )}
             </div>
 
             {editingCoreInfo ? (
               <>
-                <div className="edit_contact_form_row">
-                  <div className="edit_contact_form_group">
+                <div className="contact_form-row">
+                  <div className="contact_form-group">
                     <label>Account*</label>
                     <select name="ACCOUNT_ID" value={formData.ACCOUNT_ID} onChange={handleChange} required>
                       <option value="">Select an Account</option>
@@ -664,14 +662,14 @@ export default function EditContactForm({
                       ))}
                     </select>
                   </div>
-                  <div className="edit_contact_form_group">
+                  <div className="contact_form-group">
                     <label>Organization (Auto-filled)</label>
                     <input type="text" value={suborgName} readOnly placeholder="Select an account" />
                     <input type="hidden" name="SUBORGID" value={formData.SUBORGID || ''} />
                   </div>
                 </div>
-                <div className="edit_contact_form_row">
-                  <div className="edit_contact_form_group">
+                <div className="contact_form-row">
+                  <div className="contact_form-group">
                     <label>Contact Type*</label>
                     <select name="CONTACT_TYPE_CD" value={formData.CONTACT_TYPE_CD} onChange={handleChange} required>
                       <option value="">Select Contact Type</option>
@@ -682,46 +680,46 @@ export default function EditContactForm({
                     </select>
                   </div>
                   {contactType === 'Email' && (
-                    <div className="edit_contact_form_group"><label>Email Address*</label><input type="email" name="EMAIL" value={formData.EMAIL || ''} onChange={handleChange} required /></div>
+                    <div className="contact_form-group"><label>Email Address*</label><input type="email" name="EMAIL" value={formData.EMAIL || ''} onChange={handleChange} required /></div>
                   )}
                   {contactType === 'Phone' && (
-                    <div className="edit_contact_form_group"><label>Phone Number*</label><input type="tel" name="PHONE" value={formData.PHONE || ''} onChange={handleChange} required /></div>
+                    <div className="contact_form-group"><label>Phone Number*</label><input type="tel" name="PHONE" value={formData.PHONE || ''} onChange={handleChange} required /></div>
                   )}
                   {contactType === 'Mobile' && (
-                    <div className="edit_contact_form_group"><label>Mobile Number*</label><input type="tel" name="MOBILE" value={formData.MOBILE || ''} onChange={handleChange} required /></div>
+                    <div className="contact_form-group"><label>Mobile Number*</label><input type="tel" name="MOBILE" value={formData.MOBILE || ''} onChange={handleChange} required /></div>
                   )}
                   {contactType === 'Fax' && (
-                    <div className="edit_contact_form_group"><label>Fax Number*</label><input type="tel" name="FAX" value={formData.FAX || ''} onChange={handleChange} required /></div>
+                    <div className="contact_form-group"><label>Fax Number*</label><input type="tel" name="FAX" value={formData.FAX || ''} onChange={handleChange} required /></div>
                   )}
                 </div>
-                <div className="edit_contact_form_buttons">
-                  <button type="button" className="edit_contact_submit_button" onClick={() => handleSave('core')} disabled={isSaving}>
+                <div className="contact_form-buttons">
+                  <button type="button" className="contact_save" onClick={() => handleSave('core')} disabled={isSaving}>
                     {isSaving ? 'Saving...' : 'Save Core Info'}
                   </button>
-                  <button type="button" className="edit_contact_cancel_button" onClick={() => handleCancel('core')} disabled={isSaving}>
+                  <button type="button" className="contact_cancel" onClick={() => handleCancel('core')} disabled={isSaving}>
                     Cancel
                   </button>
                 </div>
               </>
             ) : (
               <>
-                <div className="edit_contact_view_details">
-                  <div className="edit_contact_details_row">
-                    <div className="edit_contact_details_group">
+                <div className="contact_view-details">
+                  <div className="contact_details-row">
+                    <div className="contact_details-group">
                       <label>Account</label>
                       <p>{accounts.find(a => String(a.ACCNT_ID) === String(contactDetails?.ACCOUNT_ID))?.ALIAS_NAME || '-'}</p>
                     </div>
-                    <div className="edit_contact_details_group">
+                    <div className="contact_details-group">
                       <label>Organization</label>
                       <p>{suborgs.find(s => s.suborgid === contactDetails?.SUBORGID)?.suborgname || '-'}</p>
                     </div>
                   </div>
-                  <div className="edit_contact_details_row">
-                    <div className="edit_contact_details_group">
+                  <div className="contact_details-row">
+                    <div className="contact_details-group">
                       <label>Contact Type</label>
                       <p>{contactDetails?.CONTACT_TYPE_CD || '-'}</p>
                     </div>
-                    <div className="edit_contact_details_group">
+                    <div className="contact_details-group">
                       <label>Contact Info</label>
                       <p>
                         {contactDetails?.CONTACT_TYPE_CD === 'Email' ? contactDetails.EMAIL :
@@ -739,15 +737,13 @@ export default function EditContactForm({
 
         {activeTab === 'address' && (
           <>
-            <div className="edit_contact_details_block">
-              <div className="edit_contact_details_header">
-                <h3 className="edit_contact_details_header_title">Home Address</h3>
+            <div className="contact_details-block">
+              <div className="contact_details-header">
+                <h2>Home Address</h2>
                 {!editingHomeAddress && (
-                  <div className="edit_contact_details_buttons">
-                    <button className="edit_contact_edit_button" onClick={() => handleEdit('home')}>
-                      Edit
-                    </button>
-                  </div>
+                  <button className="contact_button" onClick={() => handleEdit('home')}>
+                    Edit
+                  </button>
                 )}
               </div>
               <AddressBlock
@@ -760,26 +756,24 @@ export default function EditContactForm({
                 contactDetails={contactDetails}
               />
               {editingHomeAddress && (
-                <div className="edit_contact_form_buttons">
-                  <button type="button" className="edit_contact_submit_button" onClick={() => handleSave('home')} disabled={isSaving}>
+                <div className="contact_form-buttons">
+                  <button type="button" className="contact_save" onClick={() => handleSave('home')} disabled={isSaving}>
                     {isSaving ? 'Saving...' : 'Save Home Address'}
                   </button>
-                  <button type="button" className="edit_contact_cancel_button" onClick={() => handleCancel('home')} disabled={isSaving}>
+                  <button type="button" className="contact_cancel" onClick={() => handleCancel('home')} disabled={isSaving}>
                     Cancel
                   </button>
                 </div>
               )}
             </div>
 
-            <div className="edit_contact_details_block">
-              <div className="edit_contact_details_header">
-                <h3 className="edit_contact_details_header_title">Mailing Address</h3>
+            <div className="contact_details-block">
+              <div className="contact_details-header">
+                <h2>Mailing Address</h2>
                 {!editingMailingAddress && (
-                  <div className="edit_contact_details_buttons">
-                    <button className="edit_contact_edit_button" onClick={() => handleEdit('mailing')}>
-                      Edit
-                    </button>
-                  </div>
+                  <button className="contact_button" onClick={() => handleEdit('mailing')}>
+                    Edit
+                  </button>
                 )}
               </div>
               <AddressBlock
@@ -792,11 +786,11 @@ export default function EditContactForm({
                 contactDetails={contactDetails}
               />
               {editingMailingAddress && (
-                <div className="edit_contact_form_buttons">
-                  <button type="button" className="edit_contact_submit_button" onClick={() => handleSave('mailing')} disabled={isSaving}>
+                <div className="contact_form-buttons">
+                  <button type="button" className="contact_save" onClick={() => handleSave('mailing')} disabled={isSaving}>
                     {isSaving ? 'Saving...' : 'Save Mailing Address'}
                   </button>
-                  <button type="button" className="edit_contact_cancel_button" onClick={() => handleCancel('mailing')} disabled={isSaving}>
+                  <button type="button" className="contact_cancel" onClick={() => handleCancel('mailing')} disabled={isSaving}>
                     Cancel
                   </button>
                 </div>

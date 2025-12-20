@@ -13,8 +13,8 @@
 /* Save and Cancel buttons */
 .save,
 .cancel {
-  color: white !important;
-  padding: 5px 10px;
+  color: black !important;
+  padding: 5px 20px;
   border: none;
   cursor: pointer;
   font-size: 14px;
@@ -22,7 +22,7 @@
   transition: background-color 0.3s ease, transform 0.1s ease, color 0.3s ease;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   text-decoration: none !important;
-  border-radius: 0;
+  border-radius: 4px;
 }
 
 .save {
@@ -115,21 +115,21 @@ table {
   table-layout: fixed;
 }
 
-table.four-column93 col:nth-child(1) {
+/* table.four-column93 col:nth-child(1) {
   width: 15%;
+} */
+
+/* table.four-column93 col:nth-child(1) {
+  width: 55%;
 }
 
 table.four-column93 col:nth-child(2) {
-  width: 35%;
-}
-
-table.four-column93 col:nth-child(3) {
   width: 15%;
 }
 
-table.four-column93 col:nth-child(4) {
+table.four-column93 col:nth-child(3) {
   width: 35%;
-}
+} */
 
 th {
   background-color: #f8fafc;
@@ -817,25 +817,6 @@ tbody tr:hover {
 }
 
 /* Five-column table configuration */
-.service-requests-table.five-column col:nth-child(1) {
-  width: 15%;
-}
-
-.service-requests-table.five-column col:nth-child(2) {
-  width: 30%;
-}
-
-.service-requests-table.five-column col:nth-child(3) {
-  width: 15%;
-}
-
-.service-requests-table.five-column col:nth-child(4) {
-  width: 20%;
-}
-
-.service-requests-table.five-column col:nth-child(5) {
-  width: 20%;
-}
 
 /* Attachment Form */
 .attachment-form {
@@ -898,4 +879,68 @@ tbody tr:hover {
   .service-requests-table.five-column col:nth-child(5) {
     width: 15%;
   }
+}
+
+/* Update the table column widths in overview.css */
+
+/* Replace the existing .four-column93 styles with these: */
+
+table.four-column93 col:nth-child(1) {
+  width: 40%; /* Service Name */
+}
+
+table.four-column93 col:nth-child(2) {
+  width: 30%; /* Status */
+}
+
+table.four-column93 col:nth-child(3) {
+  width: 30%; /* Priority */
+}
+
+/* Update media queries as well */
+
+@media (max-width: 768px) {
+  table.four-column93 col:nth-child(1) {
+    width: 40%;
+  }
+
+  table.four-column93 col:nth-child(2) {
+    width: 30%;
+  }
+
+  table.four-column93 col:nth-child(3) {
+    width: 30%;
+  }
+}
+
+@media (max-width: 576px) {
+  table.four-column93 col:nth-child(1) {
+    width: 40%;
+  }
+
+  table.four-column93 col:nth-child(2) {
+    width: 30%;
+  }
+
+  table.four-column93 col:nth-child(3) {
+    width: 30%;
+  }
+}
+
+/* Also update the service-requests-table styles if needed */
+.service-requests-table.four-column93 col:nth-child(1) {
+  width: 30%;
+}
+
+.service-requests-table.four-column93 col:nth-child(2) {
+  width: 20%;
+}
+
+
+.service-requests-table.four-column93 col:nth-child(3) {
+  width: 20%;
+}
+
+.service-requests-table.four-column93 col:nth-child(4) {
+  width: 30%;
 }

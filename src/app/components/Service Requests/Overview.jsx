@@ -18,7 +18,6 @@ const Overview = ({
   previousServiceRequests,
   accountRows,
   empname,
- 
 }) => {
   const searchparams = useSearchParams();
   const router = useRouter();
@@ -66,7 +65,7 @@ const Overview = ({
     parRowId: '',
     emp1stname: '',
     emplastname: '',
-      accountname:'',
+    accountname:'',
   });
   const [existingFiles, setExistingFiles] = useState([]);
   const [newFiles, setNewFiles] = useState([]);
@@ -96,6 +95,17 @@ const Overview = ({
     } catch (error) {
       return 'N/A';
     }
+  };
+
+  // Helper to get Parent SR Name for Display
+  const getParentSrName = (parRowId) => {
+    if (!parRowId) return '-';
+    // Try to find the name in the loaded parentServiceRequests list
+    const parent = parentServiceRequests.find(sr => sr.SR_NUM === parRowId);
+    if (parent) return parent.SERVICE_NAME;
+    
+    // Fallback to displaying ID if name not found in list
+    return `SR-${getdisplayprojectid(parRowId)}`;
   };
 
   useEffect(() => {
@@ -263,12 +273,24 @@ const Overview = ({
     if (section === 'attachments') setIsEditingAttachments(true);
   };
 
+  // UPDATED: Handle Form Change with Escalation Logic
   const handleFormChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
+
+    // Logic to clear escalated fields if checkbox is unchecked
+    if (name === 'escalatedFlag' && !checked) {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: checked,
+        escalatedTo: '',
+        escalatedDate: ''
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: type === 'checkbox' ? checked : value,
+      }));
+    }
   };
 
   const handleFileChange = (e) => {
@@ -520,7 +542,7 @@ const Overview = ({
 
   const filteredServiceRequests = allServiceRequests.filter(request => {
     const matchesSearch = request.SERVICE_NAME?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                         request.SR_NUM?.toLowerCase().includes(searchQuery.toLowerCase());
+                          request.SR_NUM?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || request.STATUS_CD === statusFilter;
     const matchesPriority = priorityFilter === 'all' || request.PRIORITY_CD === priorityFilter;
     
@@ -586,6 +608,12 @@ const Overview = ({
   const getdisplayemployeeid = (prjid) => {
     return prjid?.split('_')[1] || prjid;
   };
+
+  const getesclatedName = (superiorId) => {
+    const superior = employees.find(emp => emp.empid === superiorId);
+    return superior ? `${superior.EMP_FST_NAME} ${superior.EMP_LAST_NAME || ''}`.trim() : 'No Escalted';
+  };
+
 
   // Get unique status and priority values for filters
   const uniqueStatuses = [...new Set(allServiceRequests.map(req => req.STATUS_CD).filter(Boolean))];
@@ -668,22 +696,6 @@ const Overview = ({
                 <option key={priority} value={priority}>{priority}</option>
               ))}
             </select>
-            {/* <div className="date-filter-container">
-              <input
-                type="date"
-                value={startDate}
-                onChange={handleStartDateChange}
-                className="date-input"
-                placeholder="Start Date"
-              />
-              <input
-                type="date"
-                value={endDate}
-                onChange={handleEndDateChange}
-                className="date-input"
-                placeholder="End Date"
-              />
-            </div> */}
           </div>
 
           {filteredServiceRequests.length === 0 && !error ? (
@@ -693,16 +705,13 @@ const Overview = ({
               <div className="table-wrapper">
                 <table className="service-requests-table four-column93">
                   <colgroup>
-                    <col />
+                    
                     <col />
                     <col />
                     <col />
                   </colgroup>
                   <thead>
                     <tr>
-                      <th className={sortConfig.column === 'SR_NUM' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('SR_NUM')}>
-                        Service Request ID
-                      </th>
                       <th className={sortConfig.column === 'SERVICE_NAME' ? `sortable sort-${sortConfig.direction}` : 'sortable'} onClick={() => requestSort('SERVICE_NAME')}>
                         Service Name
                       </th>
@@ -724,9 +733,8 @@ const Overview = ({
                       >
                         <td className="id-cell">
                           <span className={request.STATUS_CD?.toLowerCase() === 'resolved' ? 'service-request-indicator-active' : 'service-request-indicator-inactive'}></span>
-                          SR-{getdisplayprojectid(request.SR_NUM)}
+                          {request.SERVICE_NAME || '-'}
                         </td>
-                        <td className="name-cell">{request.SERVICE_NAME || '-'}</td>
                         <td className="status-cell">
                           <span className={`status-badge ${request.STATUS_CD?.toLowerCase() === 'resolved' ? 'active' : 'inactive'}`}>
                             {request.STATUS_CD || '-'}
@@ -808,17 +816,6 @@ const Overview = ({
                 >
                   <div className="form-row">
                     <div className="form-group">
-                      <label>Organization ID</label>
-                      <input
-                        type="text"
-                        value={orgid || ''}
-                        readOnly
-                        className="bg-gray-100"
-                      />
-                    </div>
-                  </div>
-                  <div className="form-row">
-                    <div className="form-group">
                       <label>Service Name*</label>
                       <input
                         type="text"
@@ -895,7 +892,7 @@ const Overview = ({
                       <input
                         type="text"
                         name="assignedTo"
-                        value={getdisplayemployeeid(formData.assignedTo)}
+                        value={getesclatedName(formData.assignedTo)}
                         readOnly
                         className="bg-gray-100"
                       />
@@ -932,16 +929,6 @@ const Overview = ({
                 </form>
               ) : (
                 <div className="view-details">
-                  <div className="details-row">
-                    <div className="details-g">
-                      <label>Service Request ID</label>
-                      <p>SR-{getdisplayprojectid(serviceRequestDetails.SR_NUM)}</p>
-                    </div>
-                    <div className="details-g">
-                      <label>Organization ID</label>
-                      <p>{serviceRequestDetails.ORG_ID || '-'}</p>
-                    </div>
-                  </div>
                   <div className="details-row">
                     <div className="details-g">
                       <label>Service Name</label>
@@ -1008,13 +995,19 @@ const Overview = ({
                     </div>
                     <div className="form-group">
                       <label>Escalated To</label>
-                      <input
-                        type="text"
-                        name="escalatedTo"
-                        value={formData.escalatedTo}
+                      <select 
+                        name="escalatedTo" 
+                        value={formData.escalatedTo} 
                         onChange={handleFormChange}
-                        placeholder="Enter Escalated To"
-                      />
+                        disabled={!formData.escalatedFlag}
+                      >
+                        <option value="">Select Employee</option>
+                        {employees.map((emp) => (
+                          <option key={emp.empid} value={emp.empid}>
+                            {emp.EMP_FST_NAME} {emp.EMP_LAST_NAME}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   </div>
                   <div className="form-row">
@@ -1025,6 +1018,7 @@ const Overview = ({
                         name="escalatedDate"
                         value={formData.escalatedDate}
                         onChange={handleFormChange}
+                        disabled={!formData.escalatedFlag}
                       />
                     </div>
                     <div className="form-group">
@@ -1038,7 +1032,7 @@ const Overview = ({
                         <option value="">Select Parent SR</option>
                         {parentServiceRequests.map((sr) => (
                           <option key={sr.SR_NUM} value={sr.SR_NUM}>
-                            SR-{getdisplayprojectid(sr.SR_NUM)} ({sr.SERVICE_NAME || '-'})
+                           {sr.SERVICE_NAME || '-'}
                           </option>
                         ))}
                       </select>
@@ -1056,29 +1050,29 @@ const Overview = ({
                       />
                     </div>
                     <div className="form-group">
-              <label>Account ID</label>
-              <select name="accountId" value={formData.accountId} onChange={handleFormChange}>
-                <option value="">Select Account</option>
-                {accountRows.map((details) => (
-                  <option key={details.ACCNT_ID} value={details.ACCNT_ID}>
-                    {details.ALIAS_NAME}
-                  </option>
-                ))}
-              </select>
-            </div>
+                      <label>Account ID</label>
+                      <select name="accountId" value={formData.accountId} onChange={handleFormChange}>
+                        <option value="">Select Account</option>
+                        {accountRows.map((details) => (
+                          <option key={details.ACCNT_ID} value={details.ACCNT_ID}>
+                            {details.ALIAS_NAME}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
-                 <div className="form-row">
-                 <div className="form-group">
-              <label>Asset ID</label>
-              <input
-                type="text"
-                name="assetId"
-                value={formData.assetId}
-                onChange={handleFormChange}
-                placeholder="Enter Asset ID"
-              />
-            </div>
-          </div>
+                   <div className="form-row">
+                   <div className="form-group">
+                      <label>Asset ID</label>
+                      <input
+                        type="text"
+                        name="assetId"
+                        value={formData.assetId}
+                        onChange={handleFormChange}
+                        placeholder="Enter Asset ID"
+                      />
+                    </div>
+                  </div>
                   <div className="form-buttons">
                     <button
                       type="submit"
@@ -1106,7 +1100,7 @@ const Overview = ({
                     </div>
                     <div className="details-g">
                       <label>Escalated To</label>
-                      <p>{serviceRequestDetails.ESCALATED_TO || '-'}</p>
+                      <p>{getesclatedName(serviceRequestDetails.ESCALATED_TO) || '-'}</p>
                     </div>
                   </div>
                   <div className="details-row">
@@ -1115,11 +1109,9 @@ const Overview = ({
                       <p>{formatDate(serviceRequestDetails.ESCALATED_DATE) || '-'}</p>
                     </div>
                     <div className="details-g">
-                      <label>Parent SR ID</label>
+                      <label>Parent SR Name</label>
                       <p>
-                        {serviceRequestDetails.PAR_ROW_ID
-                          ? `SR-${getdisplayprojectid(serviceRequestDetails.PAR_ROW_ID)}`
-                          : '-'}
+                        {getParentSrName(serviceRequestDetails.PAR_ROW_ID)}
                       </p>
                     </div>
                   </div>

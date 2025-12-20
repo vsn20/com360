@@ -97,12 +97,12 @@ const PersonalDetails = ({
         </form>
       ) : (
         <div className="view-details">
-          <div className="details-row">
+          {/* <div className="details-row">
             <div className="details-g">
               <label>Employee ID</label>
               <p>Employee-{getDisplayProjectId(employeeDetails.empid)}</p>
             </div>
-          </div>
+          </div> */}
           <div className="details-row">
             <div className="details-g">
               <label>Employee Number</label>

@@ -464,3 +464,29 @@
     padding: 12px 15px;
   }
 }
+/* ========================================
+   ADD THESE STYLES TO summary.css
+   ======================================== */
+
+/* Status indicator dot for Summary tables */
+.employee_summary_status-indicator {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background-color: #0fd46c;
+  border-radius: 50%;
+  margin-right: 8px;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+.employee_goals_status-indicator {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background-color: #0fd46c;
+  border-radius: 50%;
+  margin-right: 8px;
+  flex-shrink: 0;
+  vertical-align: middle;
+}

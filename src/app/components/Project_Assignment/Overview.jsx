@@ -847,7 +847,7 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
               <div className="project_assign_table_wrapper">
                 <table className="project_assign_table project_assign_four_column">
                   <colgroup>
-                    <col />
+                    
                     <col />
                     <col />
                     <col />
@@ -856,9 +856,9 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
                   </colgroup>
                   <thead>
                     <tr>
-                      <th onClick={() => requestSort('prjId')} className={`project_assign_sortable ${sortConfig.column === 'prjId' ? `project_assign_sort_${sortConfig.direction}` : ''}`}>
+                      {/* <th onClick={() => requestSort('prjId')} className={`project_assign_sortable ${sortConfig.column === 'prjId' ? `project_assign_sort_${sortConfig.direction}` : ''}`}>
                         Project ID
-                      </th>
+                      </th> */}
                       <th onClick={() => requestSort('prjName')} className={`project_assign_sortable ${sortConfig.column === 'prjName' ? `project_assign_sort_${sortConfig.direction}` : ''}`}>
                         Project Name
                       </th>
@@ -886,9 +886,9 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
                       >
                         <td className="project_assign_id_cell">
                           <span className="project_assign_indicator"></span>
-                          Project-{getdisplayprojectid(project.PRJ_ID)}
+                         {project.PRJ_NAME || '-'}
                         </td>
-                        <td>{project.PRJ_NAME || '-'}</td>
+                       
                         <td>{project.PRS_DESC || '-'}</td>
                         {/* <td>Account-{getdisplayprojectid(project.ACCNT_ID)}</td> */}
                          <td>{project.ALIAS_NAME || '-'}</td>

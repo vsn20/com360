@@ -110,25 +110,22 @@
 
 table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   background-color: #fff;
   table-layout: fixed;
 }
 
 table.roles_four-column col:nth-child(1) {
-  width: 15%;
+  width: 45%;
 }
 
 table.roles_four-column col:nth-child(2) {
-  width: 35%;
+  width: 25%;
 }
 
 table.roles_four-column col:nth-child(3) {
-  width: 15%;
-}
-
-table.roles_four-column col:nth-child(4) {
-  width: 35%;
+  width: 30%;
 }
 
 th {
@@ -139,6 +136,9 @@ th {
   cursor: pointer;
   transition: background-color 0.2s ease;
   position: relative;
+  box-sizing: border-box;
+  border-left: 1px solid transparent;
+  border-right: 1px solid transparent;
 }
 
 th:hover {
@@ -171,6 +171,14 @@ th.roles_sortable.roles_sort-desc::after {
   opacity: 1;
 }
 
+th:first-child {
+  border-left: 1px solid transparent;
+}
+
+th:last-child {
+  border-right: 1px solid transparent;
+}
+
 td {
   padding: 16px 20px;
   text-align: left;
@@ -181,6 +189,17 @@ td {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  box-sizing: border-box;
+  border-left: 1px solid transparent;
+  border-right: 1px solid transparent;
+}
+
+td:first-child {
+  border-left: 1px solid transparent;
+}
+
+td:last-child {
+  border-right: 1px solid transparent;
 }
 
 tbody tr {
@@ -195,13 +214,18 @@ tbody tr:hover {
   box-shadow: 4px 0 12px rgba(15, 212, 108, 0.1);
 }
 
-.roles_role-indicator-active{
+tbody tr:hover td {
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.roles_role-indicator-active {
   display: inline-block;
   width: 8px;
   height: 8px;
   background-color: #0fd46c;
   border-radius: 50%;
   margin-right: 8px;
+  flex-shrink: 0;
   vertical-align: middle;
 }
 
@@ -212,16 +236,18 @@ tbody tr:hover {
   background-color: #dc2626;
   border-radius: 50%;
   margin-right: 8px;
+  flex-shrink: 0;
   vertical-align: middle;
 }
-
 
 .roles_status-badge {
   display: inline-flex;
   align-items: center;
-  padding: 4px 12px;
+  justify-content: center;
+  padding: 6px 12px;
   border-radius: 9999px;
-  margin-left: 15px;
+  vertical-align: middle;
+  line-height: 1;
 }
 
 .roles_status-badge.roles_active {
@@ -247,6 +273,7 @@ tbody tr:hover {
 .roles_id-cell {
   display: flex;
   align-items: center;
+  padding: 16px 20px;
 }
 
 .roles_empty-state {
@@ -295,18 +322,14 @@ tbody tr:hover {
   }
 
   table.roles_four-column col:nth-child(1) {
-    width: 20%;
-  }
-
-  table.roles_four-column col:nth-child(2) {
     width: 30%;
   }
 
-  table.roles_four-column col:nth-child(3) {
+  table.roles_four-column col:nth-child(2) {
     width: 20%;
   }
 
-  table.roles_four-column col:nth-child(4) {
+  table.roles_four-column col:nth-child(3) {
     width: 30%;
   }
 }
@@ -326,10 +349,6 @@ tbody tr:hover {
   }
 
   table.roles_four-column col:nth-child(3) {
-    width: 25%;
-  }
-
-  table.roles_four-column col:nth-child(4) {
     width: 25%;
   }
 }
@@ -926,65 +945,66 @@ tbody tr:hover {
 .roles_role-details-block {
   margin-bottom: 30px;
 }
-/* ===== REVISED BUTTON STYLES (Based on projectoverview.css) ===== */
+
+/* ===== REVISED BUTTON STYLES ===== */
 
 /* Base style for main buttons (Add Role, Edit, Pagination) */
 .roles_button {
-  background-color: #0FD46C; /* cite: 1 */
-  color: black !important; /* cite: 1 */
+  background-color: #0FD46C;
+  color: black !important;
   padding: 5px 20px;
-  border: none; /* cite: 1 */
-  border-radius: 5px; /* cite: 1 */
-  cursor: pointer; /* cite: 1 */
-  font-size: 14px; /* cite: 1 */
-  font-family: Arial, sans-serif; /* cite: 1 */
-  transition: background-color 0.3s ease, transform 0.1s ease, color 0.3s ease; /* cite: 1 */
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* cite: 1 */
-  text-decoration: none !important; /* cite: 1 */
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: Arial, sans-serif;
+  transition: background-color 0.3s ease, transform 0.1s ease, color 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  text-decoration: none !important;
 }
 
 .roles_button:hover:not(:disabled) {
-  background-color: #0CB25A; /* cite: 1 */
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* cite: 1 */
+  background-color: #0CB25A;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 .roles_button:disabled {
-  background-color: #cccccc; /* cite: 1 */
-  cursor: not-allowed; /* cite: 1 */
+  background-color: #cccccc;
+  cursor: not-allowed;
   box-shadow: none;
 }
 
 /* Shared styles for form buttons (Save and Cancel) */
 .roles_save,
 .roles_cancel {
-  color: black !important; /* cite: 1 */
-  padding: 5px 20px; /* cite: 1 */
-  border: none; /* cite: 1 */
-  cursor: pointer; /* cite: 1 */
-  font-size: 14px; /* cite: 1 */
-  font-family: Arial, sans-serif; /* cite: 1 */
-  transition: background-color 0.3s ease, transform 0.1s ease, color 0.3s ease; /* cite: 1 */
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* cite: 1 */
-  text-decoration: none !important; /* cite: 1 */
-  border-radius: 4px; /* cite: 1 */
+  color: black !important;
+  padding: 5px 20px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: Arial, sans-serif;
+  transition: background-color 0.3s ease, transform 0.1s ease, color 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  text-decoration: none !important;
+  border-radius: 4px;
 }
 
 /* Specific styles for Save button */
 .roles_save {
-  background-color: #0FD46C; /* cite: 1 */
+  background-color: #0FD46C;
 }
 
 .roles_save:hover {
-  background-color: #0CB25A; /* cite: 1 */
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* cite: 1 */
+  background-color: #0CB25A;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 /* Specific styles for Cancel button */
 .roles_cancel {
-  background-color: #F44336; /* cite: 1 */
+  background-color: #F44336;
 }
 
 .roles_cancel:hover {
-  background-color: #D32F2F; /* cite: 1 */
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* cite: 1 */
+  background-color: #D32F2F;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }

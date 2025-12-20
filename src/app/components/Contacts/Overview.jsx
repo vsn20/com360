@@ -498,7 +498,7 @@ export default function Overview({
     return (
       <>
         {aiMessage && (
-          <div className={`contact-ai-message ${isProcessingAI ? 'processing' : ''}`}>
+          <div className={`contact_ai-message ${isProcessingAI ? 'processing' : ''}`}>
             {isProcessingAI ? 'Processing your request...' : aiMessage}
           </div>
         )}
@@ -520,7 +520,7 @@ export default function Overview({
     return (
       <>
         {aiMessage && (
-          <div className={`contact-ai-message ${isProcessingAI ? 'processing' : ''}`}>
+          <div className={`contact_ai-message ${isProcessingAI ? 'processing' : ''}`}>
             {isProcessingAI ? 'Processing your request...' : aiMessage}
           </div>
         )}
@@ -541,22 +541,22 @@ export default function Overview({
 
   // --- Default View (List) ---
   return (
-    <div className="contact-overview-container">
+    <div className="contact_overview-container">
       {aiMessage && (
-        <div className={`contact-ai-message ${isProcessingAI ? 'processing' : ''}`}>
+        <div className={`contact_ai-message ${isProcessingAI ? 'processing' : ''}`}>
           {isProcessingAI ? 'Processing your request...' : aiMessage}
         </div>
       )}
 
       {(activeFilters.length > 0 || searchQuery || accountFilter !== 'all' || suborgFilter !== 'all' || contactTypeFilter !== 'all') && (
-        <div className="contact-active-filters">
-          <div className="contact-filter-header">
+        <div className="contact_active-filters">
+          <div className="contact_filter-header">
             <span>Active Filters ({allActiveFilters.length}):</span>
-            <button onClick={clearFilters} className="contact-clear-filters">Clear All</button>
+            <button onClick={clearFilters} className="contact_clear-filters">Clear All</button>
           </div>
-          <div className="contact-filter-tags">
+          <div className="contact_filter-tags">
             {allActiveFilters.map((filter, index) => (
-              <span key={index} className="contact-filter-tag">
+              <span key={index} className="contact_filter-tag">
                 {filter.field}: {filter.operator} "{filter.displayValue || filter.value}"
               </span>
             ))}
@@ -565,21 +565,21 @@ export default function Overview({
       )}
 
       {showSelectionModal && matchingContacts.length > 0 && (
-        <div className="contact-selection-modal">
-          <div className="contact-selection-modal-content">
+        <div className="contact_selection-modal">
+          <div className="contact_selection-modal-content">
             <h3>Select Contact to Edit</h3>
             <p>Found {matchingContacts.length} matching contacts:</p>
-            <div className="contact-selection-list">
+            <div className="contact_selection-list">
               {matchingContacts.map((contact) => (
                 <div
                   key={contact.ROW_ID}
-                  className="contact-selection-item"
+                  className="contact_selection-item"
                   onClick={() => handleContactSelection(contact)}
                 >
-                  <div className="contact-selection-item-name">
+                  <div className="contact_selection-item-name">
                     {contact.accountName} - {contact.contactValue}
                   </div>
-                  <div className="contact-selection-item-details">
+                  <div className="contact_selection-item-details">
                     Type: {contact.CONTACT_TYPE_CD} | 
                     Organization: {contact.suborgName || 'N/A'} |
                     Contact ID: {contact.accountName}-{contact.ROW_ID}
@@ -588,7 +588,7 @@ export default function Overview({
               ))}
             </div>
             <button 
-              className="contact-selection-cancel"
+              className="contact_selection-cancel"
               onClick={() => {
                 setShowSelectionModal(false);
                 setMatchingContacts([]);
@@ -603,25 +603,25 @@ export default function Overview({
         </div>
       )}
 
-      <div className="contact-header-section">
-        <h1 className="contact-title">Contacts</h1>
-        <button className="contact-button" onClick={handleAddClick}>
+      <div className="contact_header-section">
+        <h1 className="contact_title">Contacts</h1>
+        <button className="contact_button" onClick={handleAddClick}>
           Add Contact
         </button>
       </div>
 
-      <div className="contact-overview-search-filter-container">
+      <div className="contact_search-filter-container">
         <input
           type="text"
           placeholder="Search by Account, Suborg, or Contact Info..."
           value={searchQuery}
           onChange={handleSearchChange}
-          className="contact-overview-search-input"
+          className="contact_search-input"
         />
         <select
           value={accountFilter}
           onChange={handleAccountFilterChange}
-          className="contact-overview-filter-select"
+          className="contact_filter-select"
         >
           <option value="all">All Accounts</option>
           {uniqueAccounts.map((account) => (
@@ -631,7 +631,7 @@ export default function Overview({
         <select
           value={suborgFilter}
           onChange={handleSuborgFilterChange}
-          className="contact-overview-filter-select"
+          className="contact_filter-select"
         >
           <option value="all">All Orgs</option>
           {uniqueSuborgs.map((suborg) => (
@@ -641,7 +641,7 @@ export default function Overview({
         <select
           value={contactTypeFilter}
           onChange={handleContactTypeFilterChange}
-          className="contact-overview-filter-select"
+          className="contact_filter-select"
         >
           <option value="all">All Contact Types</option>
           {uniqueContactTypes.map((type) => (
@@ -651,21 +651,20 @@ export default function Overview({
       </div>
 
       {filteredContacts.length === 0 ? (
-        <div className="contact-empty-state">
+        <div className="contact_empty-state">
           No contacts found matching your criteria.
           {allActiveFilters.length > 0 && (
-            <button onClick={clearFilters} className="contact-retry-button">
+            <button onClick={clearFilters} className="contact_retry-button">
               Clear Filters
             </button>
           )}
         </div>
       ) : (
         <>
-          <div className="contact-table-wrapper">
-            <table className="contact-table">
+          <div className="contact_table-wrapper">
+            <table className="contact_table">
               <thead>
                 <tr>
-                  <th>Contact ID</th>
                   <th>Account</th>
                   <th>Organization</th>
                   <th>Contact Type</th>
@@ -678,8 +677,10 @@ export default function Overview({
                     key={contact.ROW_ID}
                     onClick={() => handleRowClick(contact.ROW_ID)}
                   >
-                    <td>{`${contact.accountName}-${contact.ROW_ID}`}</td>
-                    <td>{contact.accountName}</td>
+                    <td>
+                      <span className="contact_status-indicator"></span>
+                      {contact.accountName}
+                    </td>
                     <td>{contact.suborgName}</td>
                     <td>{contact.CONTACT_TYPE_CD}</td>
                     <td>{contact.contactValue}</td>
@@ -690,27 +691,27 @@ export default function Overview({
           </div>
 
           {filteredContacts.length > contactsPerPage && (
-            <div className="contact-overview-pagination-container">
+            <div className="contact_pagination-container">
               <button
-                className="contact-overview-button"
+                className="contact_button"
                 onClick={handlePrevPage}
                 disabled={currentPage === 1}
               >
                 ← Previous
               </button>
-              <span className="contact-overview-pagination-text">
+              <span className="contact_pagination-text">
                 Page{' '}
                 <input
                   type="text"
                   value={pageInputValue}
                   onChange={handlePageInputChange}
                   onKeyPress={handlePageInputKeyPress}
-                  className="contact-overview-pagination-input"
+                  className="contact_pagination-input"
                 />{' '}
                 of {totalPages}
               </span>
               <button
-                className="contact-overview-button"
+                className="contact_button"
                 onClick={handleNextPage}
                 disabled={currentPage === totalPages}
               >
@@ -719,15 +720,15 @@ export default function Overview({
             </div>
           )}
           
-          <div className="contact-overview-rows-per-page-container">
-            <label className="contact-overview-rows-per-page-label">Rows per Page:</label>
+          <div className="contact_rows-per-page-container">
+            <label className="contact_rows-per-page-label">Rows per Page:</label>
             <input
               type="text"
               value={contactsPerPageInput}
               onChange={handleContactsPerPageInputChange}
               onKeyPress={handleContactsPerPageInputKeyPress}
               placeholder="Contacts per page"
-              className="contact-overview-rows-per-page-input"
+              className="contact_rows-per-page-input"
               aria-label="Number of rows per page"
             />
           </div>

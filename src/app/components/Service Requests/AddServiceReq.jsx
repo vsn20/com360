@@ -53,10 +53,21 @@ const AddServiceReq = ({ orgid, empid, employees, type, subtype, priority, previ
 
   const handleFormChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
+    
+    // If unchecking Escalated flag, clear the Escalated To and Date fields automatically
+    if (name === 'escalatedFlag' && !checked) {
+        setFormData((prev) => ({
+            ...prev,
+            [name]: checked,
+            escalatedTo: '',
+            escalatedDate: ''
+        }));
+    } else {
+        setFormData((prev) => ({
+            ...prev,
+            [name]: type === 'checkbox' ? checked : value,
+        }));
+    }
   };
 
   const handleFileChange = (e) => {
@@ -139,6 +150,7 @@ const AddServiceReq = ({ orgid, empid, employees, type, subtype, priority, previ
         setTimeout(() => {
           setSuccessMessage(null);
           resetForm();
+          onBack();
         }, 4000);
       } else {
         setError(result.error || 'Failed to create service request');
@@ -166,16 +178,10 @@ const AddServiceReq = ({ orgid, empid, employees, type, subtype, priority, previ
             <div>Basic Details</div>
           </div>
           <div className="form-row">
-            <div className="form-group">
+            {/* <div className="form-group">
               <label>Organization ID</label>
               <input type="text" value={orgid || ''} readOnly className="bg-gray-100" />
-            </div>
-            <div className="form-group">
-              <label>Created By</label>
-              <input type="text" value={empname || ''} readOnly className="bg-gray-100" />
-            </div>
-          </div>
-          <div className="form-row">
+            </div> */}
             <div className="form-group">
               <label>Service Name*</label>
               <input
@@ -188,6 +194,13 @@ const AddServiceReq = ({ orgid, empid, employees, type, subtype, priority, previ
               />
             </div>
             <div className="form-group">
+              <label>Created By</label>
+              <input type="text" value={empname || ''} readOnly className="bg-gray-100" />
+            </div>
+          </div>
+          <div className="form-row">
+            
+            <div className="form-group">
               <label>Status*</label>
               <input
                 type="text"
@@ -196,6 +209,10 @@ const AddServiceReq = ({ orgid, empid, employees, type, subtype, priority, previ
                 readOnly
                 className="bg-gray-100"
               />
+            </div>
+             <div className="form-group">
+              <label>Due Date</label>
+              <input type="date" name="dueDate" value={formData.dueDate} onChange={handleFormChange} />
             </div>
           </div>
           <div className="form-row">
@@ -240,12 +257,6 @@ const AddServiceReq = ({ orgid, empid, employees, type, subtype, priority, previ
               </select>
             </div>
           </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Due Date</label>
-              <input type="date" name="dueDate" value={formData.dueDate} onChange={handleFormChange} />
-            </div>
-          </div>
         </div>
 
         <div className="details-block">
@@ -264,13 +275,20 @@ const AddServiceReq = ({ orgid, empid, employees, type, subtype, priority, previ
             </div>
             <div className="form-group">
               <label>Escalated To</label>
-              <input
-                type="text"
-                name="escalatedTo"
-                value={formData.escalatedTo}
+              {/* FIXED: Changed from input to select to prevent foreign key errors */}
+              <select 
+                name="escalatedTo" 
+                value={formData.escalatedTo} 
                 onChange={handleFormChange}
-                placeholder="Enter Escalated To"
-              />
+                disabled={!formData.escalatedFlag} // Optional UX: disable if flag is unchecked
+              >
+                <option value="">Select Employee</option>
+                {employees.map((emp) => (
+                  <option key={emp.empid} value={emp.empid}>
+                    {emp.EMP_FST_NAME} {emp.EMP_LAST_NAME}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
           <div className="form-row">
@@ -281,6 +299,7 @@ const AddServiceReq = ({ orgid, empid, employees, type, subtype, priority, previ
                 name="escalatedDate"
                 value={formData.escalatedDate}
                 onChange={handleFormChange}
+                disabled={!formData.escalatedFlag} // Optional UX: disable if flag is unchecked
               />
             </div>
             <div className="form-group">
