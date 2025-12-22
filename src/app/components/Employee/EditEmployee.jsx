@@ -10,7 +10,7 @@ import {
   fetchFdnsDocumentsById,
   uploadProfilePhoto,
   deleteProfilePhoto,
-  uploadSignature // 🔹 Imported uploadSignature
+  uploadSignature 
 } from '@/app/serverActions/Employee/overview';
 // IMPORT FETCH IMMIGRATION DATA
 import { fetchImmigrationData } from '@/app/serverActions/Employee/Immigration'; 
@@ -76,7 +76,6 @@ const EditEmployee = ({
       : "/uploads/profile_photos/default.png"
   );
   
-  // 🔹 Signature state
   const [signatureSrc, setSignatureSrc] = useState(
     selectedEmpId 
       ? `/uploads/signatures/${selectedEmpId}.jpg?${new Date().getTime()}` 
@@ -1022,7 +1021,7 @@ function onImageLoad(e) {
               <div className="employee-submenu-bar">
                 <button className={activeTab === 'personal' ? 'active' : ''} onClick={() => personaldetailsselecting(employeeDetails.empid)}>Personal Details</button>
                 <button className={activeTab === 'employment' ? 'active' : ''} onClick={() => employementdetailselecting(employeeDetails.empid)}>Employment Details</button>
-                <button className={activeTab === 'address' ? 'active' : ''} onClick={() =>workdetailsselecting(employeeDetails.empid)}>Address Details</button>
+                <button className={activeTab === 'address' ? 'active' : ''} onClick={() => workdetailsselecting(employeeDetails.empid)}>Address Details</button>
                 <button className={activeTab === 'experience' ? 'active' : ''} onClick={() => experiencedetailsselecting(employeeDetails.empid)}>Work Experience</button>
                 <button className={activeTab === 'education' ? 'active' : ''} onClick={() => educationdetailsselecting(employeeDetails.empid)}>Education</button>
                 <button className={activeTab === 'immigration' ? 'active' : ''} onClick={() => immigrationselecting(employeeDetails.empid)}>Immigration</button>
@@ -1078,7 +1077,6 @@ function onImageLoad(e) {
                  employmentTypes={employmentTypes}
                  canEdit={canEdit('employment')}
                  helpers={helpers}
-                 // 🔹 Pass Signature props
                  signatureSrc={signatureSrc}
                  onSignatureFileChange={(e) => {
                    if (e.target.files && e.target.files.length > 0) {
@@ -1195,6 +1193,9 @@ function onImageLoad(e) {
                 documentSubtypes={immigrationDocSubtypes} 
                 onUpdate={handleImmigrationUpdate}
                 employeeName={`${employeeDetails.EMP_FST_NAME} ${employeeDetails.EMP_LAST_NAME}`}
+                suborgs={suborgs}
+                // 🔹 Passed employeeSuborgId to filter Company Dropdown
+                employeeSuborgId={employeeDetails.suborgid} 
               />
             )}
     </div>

@@ -327,7 +327,7 @@ const Overview = ({
                           onClick={() => handleRowClick(employee.empid)}
                           className={selectedEmpId === employee.empid ? 'selected-row' : ''}
                         >
-                          <td className="id-cell">
+                          <td>
                             <span className={employee.STATUS.toLowerCase() === 'active' ? 'role-indicator' : 'role-indicatorinactive '}></span>
                             {employee.employee_number || 'Not Configured'}
                           </td>

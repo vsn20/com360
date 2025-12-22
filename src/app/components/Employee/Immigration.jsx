@@ -9,7 +9,7 @@ import {
 import styles from './immigration.module.css';
 
 // ID for "Case Approved" (Must match your DB/Generic Values)
-const APPROVED_STATUS_ID = 7; 
+const APPROVED_STATUS_ID = 582; 
 
 const Immigration = ({ 
   empid, 
@@ -18,7 +18,9 @@ const Immigration = ({
   documentTypes,    
   documentSubtypes, 
   onUpdate, 
-  employeeName 
+  employeeName,
+  suborgs, // Recieve suborgs prop for Company Name dropdown
+  employeeSuborgId // Recieve current employee's suborg ID to filter options
 }) => {
   // Sync prop data to local state
   const [data, setData] = useState(initialData || []);
@@ -56,7 +58,11 @@ const Immigration = ({
       expiryDate: '',
       eligibleReviewDate: '',
       comments: '',
-      document_path: '' 
+      document_path: '',
+      // New Fields
+      beneficiaryEmpid: empid || '', 
+      suborgid: '',
+      petitionerName: ''
     };
   }
 
@@ -76,6 +82,26 @@ const Immigration = ({
   const getNameById = (list, id) => {
     const item = list?.find(x => String(x.id) === String(id));
     return item ? item.Name : 'N/A';
+  };
+
+  // --- HANDLE SUBORG CHANGE (Auto-populate Petitioner) ---
+  const handleSuborgChange = (e) => {
+    const selectedId = e.target.value;
+    let newPetitionerName = '';
+
+    if (selectedId === 'other') {
+        newPetitionerName = ''; // Allow typing
+    } else if (selectedId) {
+        // Find suborg name
+        const sub = suborgs?.find(s => String(s.suborgid) === String(selectedId));
+        newPetitionerName = sub ? sub.suborgname : '';
+    }
+
+    setFormData(prev => ({
+        ...prev,
+        suborgid: selectedId,
+        petitionerName: newPetitionerName
+    }));
   };
 
   // --- USCIS Sync Function ---
@@ -114,7 +140,6 @@ const Immigration = ({
 
   // Single filtered and paginated data calculation
   const { filteredRecords, totalPages, paginatedRecords } = useMemo(() => {
-    // Step 1: Filter data
     const filtered = data.filter(item => {
       const typeName = getNameById(documentTypes, item.document_type).toLowerCase();
       const subtypeName = getNameById(documentSubtypes, item.subtype).toLowerCase();
@@ -134,10 +159,7 @@ const Immigration = ({
       return matchesSearch && matchesType && matchesSubtype;
     });
 
-    // Step 2: Calculate total pages
     const pages = Math.ceil(filtered.length / rowsPerPage);
-
-    // Step 3: Paginate
     const start = (currentPage - 1) * rowsPerPage;
     const paginated = filtered.slice(start, start + rowsPerPage);
 
@@ -221,7 +243,10 @@ const Immigration = ({
       expiryDate: record.expiry_date || '',
       eligibleReviewDate: record.eligible_review_date || '',
       comments: record.comments || '',
-      document_path: record.document_path || ''
+      document_path: record.document_path || '',
+      beneficiaryEmpid: record.beneficiary_empid || empid,
+      suborgid: record.suborgid || '',
+      petitionerName: record.petitioner_name || ''
     });
     setFile(null); 
     setEditing(true);
@@ -246,6 +271,7 @@ const Immigration = ({
 
   const handleCancel = () => {
     if (currentRecord && !isViewOnly) {
+      // Cancel editing: revert to original and go to view mode
       setFormData({
         documentName: originalRecord.document_name || '',
         documentType: originalRecord.document_type || '', 
@@ -256,12 +282,16 @@ const Immigration = ({
         expiryDate: originalRecord.expiry_date || '',
         eligibleReviewDate: originalRecord.eligible_review_date || '',
         comments: originalRecord.comments || '',
-        document_path: originalRecord.document_path || ''
+        document_path: originalRecord.document_path || '',
+        beneficiaryEmpid: originalRecord.beneficiary_empid || empid,
+        suborgid: originalRecord.suborgid || '',
+        petitionerName: originalRecord.petitioner_name || ''
       });
       setFile(null);
       setIsViewOnly(true);
       setError(null);
     } else if (currentRecord && isViewOnly) {
+      // Back to list from view mode
       setEditing(false);
       setCurrentRecord(null);
       setOriginalRecord(null);
@@ -269,6 +299,7 @@ const Immigration = ({
       setError(null);
       setIsViewOnly(false);
     } else {
+      // Cancel adding new document
       setEditing(false);
       setCurrentRecord(null);
       setOriginalRecord(null);
@@ -294,6 +325,11 @@ const Immigration = ({
     submitData.append('expiryDate', formData.expiryDate);
     submitData.append('eligibleReviewDate', formData.eligibleReviewDate);
     submitData.append('comments', formData.comments);
+    
+    // New Fields
+    submitData.append('beneficiaryEmpid', formData.beneficiaryEmpid);
+    submitData.append('suborgid', formData.suborgid);
+    submitData.append('petitionerName', formData.petitionerName);
 
     if (file) {
       submitData.append('file', file);
@@ -320,6 +356,7 @@ const Immigration = ({
       setFile(null);
       setIsSubmitting(false);
       setIsViewOnly(false);
+      // Trigger update in parent component
       if (onUpdate) onUpdate();
     }
   };
@@ -331,6 +368,7 @@ const Immigration = ({
       if (result.error) {
         setError(result.error);
       } else {
+        // Trigger update in parent component
         if (onUpdate) onUpdate();
       }
     }
@@ -357,6 +395,8 @@ const Immigration = ({
 
       {editing ? (
         <form onSubmit={handleSubmit} className={styles.employee_immigration_form}>
+          
+          {/* ROW 1: Employee Name & Beneficiary Name */}
           <div className={styles.employee_immigration_formRow}>
              <div className={styles.employee_immigration_formGroup}>
                 <label className={styles.employee_immigration_formLabel}>Employee Name</label>
@@ -368,6 +408,56 @@ const Immigration = ({
                   style={{ backgroundColor: '#f0f0f0', color: '#666' }}
                 />
              </div>
+             {/* Beneficiary Name (Displays Employee Name, saves empid) */}
+             <div className={styles.employee_immigration_formGroup}>
+                <label className={styles.employee_immigration_formLabel}>Beneficiary Name</label>
+                <input 
+                  type="text" 
+                  value={employeeName} 
+                  disabled 
+                  className={styles.employee_immigration_formInput} 
+                  style={{ backgroundColor: '#f0f0f0', color: '#666' }}
+                />
+             </div>
+          </div>
+
+          {/* ROW 2: Company Name (Dropdown) & Petitioner Name */}
+          <div className={styles.employee_immigration_formRow}>
+            <div className={styles.employee_immigration_formGroup}>
+              <label className={styles.employee_immigration_formLabel}>Company Name</label>
+              <select
+                name="suborgid"
+                value={formData.suborgid}
+                onChange={handleSuborgChange}
+                className={styles.employee_immigration_formInput}
+                disabled={isSubmitting || isViewOnly}
+              >
+                <option value="">Select Company</option>
+                {/* 🔹 FILTERED SUBORGS: Only show the employee's assigned suborg */}
+                {suborgs
+                    ?.filter(sub => String(sub.suborgid) === String(employeeSuborgId))
+                    .map(sub => (
+                    <option key={sub.suborgid} value={sub.suborgid}>{sub.suborgname}</option>
+                ))}
+                <option value="other">Others</option>
+              </select>
+            </div>
+            <div className={styles.employee_immigration_formGroup}>
+              <label className={styles.employee_immigration_formLabel}>Petitioner Name</label>
+              <input
+                type="text"
+                name="petitionerName"
+                value={formData.petitionerName}
+                onChange={handleInputChange}
+                // Disabled if not "other"
+                disabled={isSubmitting || isViewOnly || (formData.suborgid !== 'other' && formData.suborgid !== '')}
+                className={styles.employee_immigration_formInput}
+                style={ (formData.suborgid !== 'other' && formData.suborgid !== '') ? { backgroundColor: '#f0f0f0', color: '#666' } : {}}
+              />
+            </div>
+          </div>
+
+          <div className={styles.employee_immigration_formRow}>
              <div className={styles.employee_immigration_formGroup}>
               <label className={styles.employee_immigration_formLabel}>Document Name</label>
               <input 
@@ -380,9 +470,6 @@ const Immigration = ({
                 disabled={isSubmitting || isViewOnly}
               />
             </div>
-          </div>
-
-          <div className={styles.employee_immigration_formRow}>
             <div className={styles.employee_immigration_formGroup}>
               <label className={styles.employee_immigration_formLabel}>Document Type*</label>
               <select 
@@ -399,6 +486,9 @@ const Immigration = ({
                 ))}
               </select>
             </div>
+          </div>
+
+          <div className={styles.employee_immigration_formRow}>
             <div className={styles.employee_immigration_formGroup}>
               <label className={styles.employee_immigration_formLabel}>Document Subtype</label>
               <select 
@@ -414,9 +504,6 @@ const Immigration = ({
                 ))}
               </select>
             </div>
-          </div>
-
-          <div className={styles.employee_immigration_formRow}>
             <div className={styles.employee_immigration_formGroup}>
               <label className={styles.employee_immigration_formLabel}>Document/Receipt Number</label>
               <input 
@@ -428,6 +515,9 @@ const Immigration = ({
                 disabled={isSubmitting || isViewOnly}
               />
             </div>
+          </div>
+
+          <div className={styles.employee_immigration_formRow}>
             <div className={styles.employee_immigration_formGroup}>
               <label className={styles.employee_immigration_formLabel}>Immigration Status</label>
               <select 
@@ -443,9 +533,6 @@ const Immigration = ({
                 ))}
               </select>
             </div>
-          </div>
-
-          <div className={styles.employee_immigration_formRow}>
             <div className={styles.employee_immigration_formGroup}>
               <label className={styles.employee_immigration_formLabel}>Issue Date</label>
               <input 
@@ -457,6 +544,9 @@ const Immigration = ({
                 disabled={isSubmitting || isViewOnly}
               />
             </div>
+          </div>
+
+          <div className={styles.employee_immigration_formRow}>
             <div className={styles.employee_immigration_formGroup}>
               <label className={styles.employee_immigration_formLabel}>Expiry Date</label>
               <input 
@@ -468,9 +558,6 @@ const Immigration = ({
                 disabled={isSubmitting || isViewOnly}
               />
             </div>
-          </div>
-
-          <div className={styles.employee_immigration_formRow}>
             <div className={styles.employee_immigration_formGroup}>
               <label className={styles.employee_immigration_formLabel}>Eligible Review Date</label>
               <input 
@@ -482,7 +569,9 @@ const Immigration = ({
                 disabled={isSubmitting || isViewOnly}
               />
             </div>
-            
+          </div>
+          
+          <div className={styles.employee_immigration_formRow}>
             <div className={styles.employee_immigration_formGroup}>
               <label className={styles.employee_immigration_formLabel}>Attachment (PDF/JPG/JPEG, max 1MB)</label>
               {currentRecord && currentRecord.document_path ? (
@@ -681,6 +770,7 @@ const Immigration = ({
                 </table>
               </div>
 
+              {/* PAGINATION CONTROLS */}
               {filteredRecords.length > rowsPerPage && (
                 <div className={styles.employee_immigration_paginationContainer}>
                   <button 
@@ -711,6 +801,7 @@ const Immigration = ({
                 </div>
               )}
 
+              {/* ROWS PER PAGE INPUT */}
               <div 
                 className={styles.employee_immigration_rowsPerPageContainer} 
                 style={{ marginTop: '16px' }}

@@ -5,6 +5,7 @@ import { cookies } from 'next/headers';
 import fs from 'fs/promises';
 import path from 'path';
 
+// Helper: Decode JWT
 const decodeJwt = (token) => {
   try {
     const base64Url = token.split('.')[1];
@@ -17,37 +18,14 @@ const decodeJwt = (token) => {
   }
 };
 
+// Helper: Format Date for MySQL (YYYY-MM-DD)
 const formatDateForDB = (dateStr) => {
   if (!dateStr) return null;
-  // Parse the date string and create a date using UTC to avoid timezone shifts
   const date = new Date(dateStr + 'T00:00:00Z');
   if (isNaN(date.getTime())) return null;
-  
-  // Format as YYYY-MM-DD using UTC methods
   const year = date.getUTCFullYear();
   const month = String(date.getUTCMonth() + 1).padStart(2, '0');
   const day = String(date.getUTCDate()).padStart(2, '0');
-  
-  return `${year}-${month}-${day}`;
-};
-
-const formatDateFromDB = (date) => {
-  if (!date) return '';
-  
-  // If it's already a string in YYYY-MM-DD format, return as is
-  if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}/.test(date)) {
-    return date.split('T')[0];
-  }
-  
-  // If it's a Date object
-  const d = new Date(date);
-  if (isNaN(d.getTime())) return '';
-  
-  // Use UTC methods to avoid timezone issues
-  const year = d.getUTCFullYear();
-  const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(d.getUTCDate()).padStart(2, '0');
-  
   return `${year}-${month}-${day}`;
 };
 
@@ -60,6 +38,7 @@ export async function fetchImmigrationData(empid) {
 
     const pool = await DBconnection();
     
+    // Updated query to include new fields: beneficiary_empid, suborgid, petitioner_name
     const [rows] = await pool.query(`
       SELECT 
         i.id,
@@ -69,6 +48,11 @@ export async function fetchImmigrationData(empid) {
         i.subtype,
         i.immigration_status,
         i.document_number,
+        i.beneficiary_empid,  
+        i.suborgid,           
+        i.petitioner_name,    
+        i.uscis_api_status_text,
+        i.last_updated_uscis,
         DATE_FORMAT(i.issue_date, '%Y-%m-%d') as issue_date,
         DATE_FORMAT(i.expiry_date, '%Y-%m-%d') as expiry_date,
         DATE_FORMAT(i.eligible_review_date, '%Y-%m-%d') as eligible_review_date,
@@ -92,10 +76,9 @@ export async function fetchImmigrationData(empid) {
 
     return rows.map(row => ({
       ...row,
-      // Dates are already formatted by DATE_FORMAT in the query
-      // Just ensure they're strings, no additional processing needed
       created_date: row.created_date ? row.created_date.toISOString() : null,
       last_updated_date: row.last_updated_date ? row.last_updated_date.toISOString() : null,
+      last_updated_uscis: row.last_updated_uscis ? row.last_updated_uscis.toISOString() : null,
     }));
 
   } catch (error) {
@@ -120,7 +103,6 @@ export async function addImmigrationData(formData) {
     if (file && file.size > 0) {
       const extension = file.name.split('.').pop().toLowerCase();
       const uniqueSuffix = Date.now();
-      // Use provided name or filename, sanitize it
       const safeName = (documentName || file.name).replace(/[^a-zA-Z0-9]/g, '_');
       const filename = `${empId}_IMM_${safeName}_${uniqueSuffix}.${extension}`;
       
@@ -131,7 +113,6 @@ export async function addImmigrationData(formData) {
       await fs.writeFile(filePath, Buffer.from(await file.arrayBuffer()));
 
       documentPath = `/uploads/immigration/${filename}`;
-      // If user didn't provide a specific name, use the original file name
       if (!documentName) documentName = file.name; 
     }
 
@@ -142,8 +123,9 @@ export async function addImmigrationData(formData) {
         empid, orgid, document_type, subtype, document_number, immigration_status, 
         issue_date, expiry_date, eligible_review_date, comments, 
         document_path, document_name,
+        beneficiary_empid, suborgid, petitioner_name, 
         created_by, updated_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       empId,
       decoded.orgid,
@@ -157,6 +139,9 @@ export async function addImmigrationData(formData) {
       formData.get('comments'),
       documentPath,
       documentName,
+      formData.get('beneficiaryEmpid') || empId, 
+      formData.get('suborgid'),
+      formData.get('petitionerName'),
       decoded.userId,
       decoded.userId
     ]);
@@ -182,6 +167,7 @@ export async function updateImmigrationData(formData) {
     let documentName = formData.get('documentName');
 
     const pool = await DBconnection();
+    
     let updateQuery = `
       UPDATE C_EMP_IMMIGRATION SET
         document_type = ?,
@@ -193,6 +179,9 @@ export async function updateImmigrationData(formData) {
         eligible_review_date = ?,
         comments = ?,
         document_name = ?,
+        beneficiary_empid = ?,
+        suborgid = ?,
+        petitioner_name = ?,
         updated_by = ?,
         last_updated_date = NOW()
     `;
@@ -207,12 +196,14 @@ export async function updateImmigrationData(formData) {
       formatDateForDB(formData.get('eligibleReviewDate')),
       formData.get('comments'),
       documentName,
+      formData.get('beneficiaryEmpid') || empId,
+      formData.get('suborgid'),
+      formData.get('petitionerName'),
       decoded.userId
     ];
 
     // Handle File Replacement
     if (file && file.size > 0) {
-      // 1. Delete old file
       if (oldDocumentPath) {
         const fullOldPath = path.join(process.cwd(), 'public', oldDocumentPath);
         await fs.unlink(fullOldPath).catch(err => 
@@ -220,7 +211,6 @@ export async function updateImmigrationData(formData) {
         );
       }
 
-      // 2. Save new file
       const extension = file.name.split('.').pop().toLowerCase();
       const uniqueSuffix = Date.now();
       const safeName = (documentName || file.name).replace(/[^a-zA-Z0-9]/g, '_');
