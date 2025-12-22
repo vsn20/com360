@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import React from 'react';
 import Immigration from '@/app/components/Immigration/Immigration';
 import DBconnection from '@/app/utils/config/db';
