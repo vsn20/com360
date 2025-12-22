@@ -8,6 +8,9 @@ import {
 } from '@/app/serverActions/Employee/Immigration';
 import styles from './immigration.module.css';
 
+// ID for "Case Approved" (Must match your DB/Generic Values)
+const APPROVED_STATUS_ID = 7; 
+
 const Immigration = ({ 
   empid, 
   immigrationData: initialData, 
@@ -27,6 +30,9 @@ const Immigration = ({
   const [file, setFile] = useState(null); 
   const [error, setError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // --- USCIS Sync State ---
+  const [syncLoadingMap, setSyncLoadingMap] = useState({});
 
   // --- Pagination, Search & Filter State ---
   const [searchQuery, setSearchQuery] = useState('');
@@ -70,6 +76,40 @@ const Immigration = ({
   const getNameById = (list, id) => {
     const item = list?.find(x => String(x.id) === String(id));
     return item ? item.Name : 'N/A';
+  };
+
+  // --- USCIS Sync Function ---
+  const handleSync = async (e, receiptNumber) => {
+    e.stopPropagation(); // Prevent row click
+    if (!receiptNumber) return alert("No Receipt Number available for this record.");
+
+    setSyncLoadingMap(prev => ({ ...prev, [receiptNumber]: true }));
+
+    try {
+      const res = await fetch('/api/sync-uscis-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ receiptNumber }),
+      });
+
+      const result = await res.json();
+
+      if (result.success) {
+        if (result.skipped) {
+            alert(result.message); // "Already Approved" message
+        } else {
+            alert(result.message); // Success message
+        }
+        if (onUpdate) onUpdate(); // Refresh data to show new status
+      } else {
+        alert(`Error: ${result.error}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("System Error during sync.");
+    } finally {
+      setSyncLoadingMap(prev => ({ ...prev, [receiptNumber]: false }));
+    }
   };
 
   // Single filtered and paginated data calculation
@@ -206,7 +246,6 @@ const Immigration = ({
 
   const handleCancel = () => {
     if (currentRecord && !isViewOnly) {
-      // Cancel editing: revert to original and go to view mode
       setFormData({
         documentName: originalRecord.document_name || '',
         documentType: originalRecord.document_type || '', 
@@ -223,7 +262,6 @@ const Immigration = ({
       setIsViewOnly(true);
       setError(null);
     } else if (currentRecord && isViewOnly) {
-      // Back to list from view mode
       setEditing(false);
       setCurrentRecord(null);
       setOriginalRecord(null);
@@ -231,7 +269,6 @@ const Immigration = ({
       setError(null);
       setIsViewOnly(false);
     } else {
-      // Cancel adding new document
       setEditing(false);
       setCurrentRecord(null);
       setOriginalRecord(null);
@@ -283,7 +320,6 @@ const Immigration = ({
       setFile(null);
       setIsSubmitting(false);
       setIsViewOnly(false);
-      // Trigger update in parent component
       if (onUpdate) onUpdate();
     }
   };
@@ -295,7 +331,6 @@ const Immigration = ({
       if (result.error) {
         setError(result.error);
       } else {
-        // Trigger update in parent component
         if (onUpdate) onUpdate();
       }
     }
@@ -576,11 +611,10 @@ const Immigration = ({
                   <thead>
                     <tr>
                       <th className={styles.employee_immigration_tableHeader}>Doc Name</th>
-                      <th className={styles.employee_immigration_tableHeader}>Type</th>
-                      <th className={styles.employee_immigration_tableHeader}>Subtype</th>
+                      <th className={styles.employee_immigration_tableHeader}>Receipt #</th>
                       <th className={styles.employee_immigration_tableHeader}>Status</th>
-                      <th className={styles.employee_immigration_tableHeader}>Expiry Date</th>
                       <th className={styles.employee_immigration_tableHeader}>Attachment</th>
+                      <th className={styles.employee_immigration_tableHeader}>Sync</th>
                       <th className={styles.employee_immigration_tableHeader}>Actions</th>
                     </tr>
                   </thead>
@@ -592,10 +626,11 @@ const Immigration = ({
                         onClick={() => handleRowClick(row)}
                       >
                         <td className={styles.employee_immigration_tableCell}>{row.document_name || '-'}</td>
-                        <td className={styles.employee_immigration_tableCell}>{row.type_name || getNameById(documentTypes, row.document_type)}</td>
-                        <td className={styles.employee_immigration_tableCell}>{row.subtype_name || getNameById(documentSubtypes, row.subtype)}</td>
+                        <td className={styles.employee_immigration_tableCell} style={{ fontFamily: 'monospace', color: '#0056b3' }}>
+                           {row.document_number || '-'}
+                        </td>
                         <td className={styles.employee_immigration_tableCell}>{row.status_name || getNameById(immigrationStatuses, row.immigration_status)}</td>
-                        <td className={styles.employee_immigration_tableCell}>{row.expiry_date}</td>
+                        
                         <td className={styles.employee_immigration_tableCell}>
                           {row.document_path ? (
                             <a 
@@ -609,6 +644,29 @@ const Immigration = ({
                             </a>
                           ) : 'No File'}
                         </td>
+
+                        {/* Sync Button Column - Hidden if Status is Approved (582) */}
+                        <td className={styles.employee_immigration_tableCell}>
+                           {Number(row.immigration_status) === APPROVED_STATUS_ID ? (
+                             <span style={{ color: 'green', fontSize: '12px', fontWeight: 'bold' }}>✓ Synced</span>
+                           ) : (
+                             <button 
+                               onClick={(e) => handleSync(e, row.document_number)}
+                               disabled={syncLoadingMap[row.document_number] || !row.document_number}
+                               className={`${styles.employee_immigration_button}`}
+                               style={{
+                                 backgroundColor: syncLoadingMap[row.document_number] ? '#ccc' : '#007bff',
+                                 color: 'white',
+                                 fontSize: '11px',
+                                 padding: '4px 8px',
+                                 minWidth: '60px'
+                               }}
+                             >
+                               {syncLoadingMap[row.document_number] ? '...' : 'Sync'}
+                             </button>
+                           )}
+                        </td>
+
                         <td className={styles.employee_immigration_actionsCell}>
                           <button 
                             className={`${styles.employee_immigration_button} ${styles.employee_immigration_deleteButton}`} 
@@ -623,7 +681,6 @@ const Immigration = ({
                 </table>
               </div>
 
-              {/* PAGINATION CONTROLS (Only if more than 1 page) */}
               {filteredRecords.length > rowsPerPage && (
                 <div className={styles.employee_immigration_paginationContainer}>
                   <button 
@@ -654,7 +711,6 @@ const Immigration = ({
                 </div>
               )}
 
-              {/* ROWS PER PAGE INPUT (Separate Container below) */}
               <div 
                 className={styles.employee_immigration_rowsPerPageContainer} 
                 style={{ marginTop: '16px' }}

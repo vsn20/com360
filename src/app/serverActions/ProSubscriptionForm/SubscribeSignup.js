@@ -482,7 +482,15 @@ export async function approveProSubscription(reqData) {
          (5,'20', 'Auto Generated', '1', NULL, '-1', NULL, '1'),
          (6,'18', 'W-9','1',NULL,'-1',NULL,'4')`
     );
-
+     await newTenantConnection.query(
+        `INSERT INTO C_GENERIC_VALUES (id, g_id, Name, isactive, cutting, orgid, parent_value_id, display_order) 
+        VALUES 
+        ('7', '29', 'Case Approved', '1', NULL, '-1', NULL, '1'),
+        ('8', '29', 'Case Was Received', '1', NULL, '-1', NULL, '2'), 
+        ('9', '29', 'Case Rejected', '1', NULL, '-1', NULL, '3'), 
+        ('10', '29', 'Request For Evidence', '1', NULL, '', '-1', '4'), 
+        ('11', '29', 'Pending', '1', NULL, '-1', NULL, '5')`
+       );
     // 1. Insert Generic Data
     const genericValues = rawGenericData.map(item => [item[0], item[1], item[2], item[3], tenantOrgId, item[4], item[5]]);
     if (genericValues.length > 0) {

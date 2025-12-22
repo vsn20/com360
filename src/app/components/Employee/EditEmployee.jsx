@@ -1028,7 +1028,7 @@ function onImageLoad(e) {
                 <button className={activeTab === 'immigration' ? 'active' : ''} onClick={() => immigrationselecting(employeeDetails.empid)}>Immigration</button>
                 <button className={activeTab === 'documents' ? 'active' : ''} onClick={() => documentselecting(employeeDetails.empid)}>Documents</button>
                 <button className={activeTab === 'paf' ? 'active' : ''} onClick={() => pafdocumentselecting(employeeDetails.empid)}>PAF Documents</button>
-                <button className={activeTab === 'fdns' ? 'active' : ''} onClick={() => fdnsdocumentselecting(employeeDetails.empid)}>FDNS Document</button>
+                <button className={activeTab === 'fdns' ? 'active' : ''} onClick={() => fdnsdocumentselecting(employeeDetails.empid)}>FDNS Documents</button>
              </div>
              <br />
              
