@@ -38,10 +38,16 @@ export async function middleware(request) {
     '/Subscriber/GrowthSubscribeSignup',
     '/FeePayment/EnterpriseFeePayment',
     '/Subscriber/EnterpriseSubscribeSignup',
-    '/COM360LOGOS.jpg',
+    '/COM360LOGOS.jpg', // Add logo path
   ];
 
   const { pathname } = request.nextUrl;
+
+  // Allow logo path for everyone without any checks
+  if (pathname === '/COM360LOGOS.jpg') {
+    console.log(`Logo path accessed: ${pathname} - allowing unrestricted access`);
+    return NextResponse.next();
+  }
 
   // Handle expense attachment paths (/expenses/expense_EXP-xxx_timestamp.ext)
   const isExpensePath = pathname.match(/^\/expenses\/expense_(.+)_(\d+)\.(jpg|jpeg|png|pdf|gif)$/i);
