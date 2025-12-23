@@ -19,7 +19,7 @@ async function sendNotificationEmail(toEmail, status, companyName) {
 
   // 1. UPDATED: Using the configuration from your working reference code
   const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
+    host: process.env.GMAIL_HOST,
     port: 587,
     secure: false, // true for 465, false for other ports
     auth: {

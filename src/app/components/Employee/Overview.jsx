@@ -32,6 +32,12 @@ const Overview = ({
   immigrationStatuses,
   immigrationDocTypes,
   immigrationDocSubtypes,
+  paf_document_types,
+  paf_document_subtypes,
+  paf_document_statuses,
+  fdns_document_types,
+  fdns_document_subtypes,
+  fdns_document_statuses,
   org_name    
 }) => {
   const [selectedEmpId, setSelectedEmpId] = useState(null);
@@ -244,6 +250,13 @@ const Overview = ({
             immigrationStatuses={immigrationStatuses}
             immigrationDocTypes={immigrationDocTypes}
             immigrationDocSubtypes={immigrationDocSubtypes}
+            // Pass New Props
+            paf_document_types={paf_document_types}
+            paf_document_subtypes={paf_document_subtypes}
+            paf_document_statuses={paf_document_statuses}
+            fdns_document_types={fdns_document_types}
+            fdns_document_subtypes={fdns_document_subtypes}
+            fdns_document_statuses={fdns_document_statuses}
             loggedInEmpId={loggedInEmpId}
             permissionLevel={permissionLevel}
             onBack={handleBackClick}

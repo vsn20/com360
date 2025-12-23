@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { addFdnsDocument, updateFdnsDocument, deleteFdnsDocument } from '@/app/serverActions/Employee/EmployeeFdnsDocument';
-import styles from './document.module.css'; // Reusing the same styles
+import styles from './document.module.css';
 
 const FDNS_Document = ({ id, documents: initialDocuments, onDocumentsUpdate, document_types, document_purposes, document_subtypes }) => {
   const [editing, setEditing] = useState(false);
@@ -34,6 +34,13 @@ const FDNS_Document = ({ id, documents: initialDocuments, onDocumentsUpdate, doc
   const [filterPurpose, setFilterPurpose] = useState('all');
 
   const MAX_FILE_SIZE_BYTES = 1 * 1024 * 1024; // 1 MB
+
+  // Helper to look up names from IDs
+  const getNameById = (list, id) => {
+    if (!id || !list) return id || 'N/A';
+    const item = list.find(i => String(i.id) === String(id));
+    return item ? item.Name : id;
+  };
 
   const formatDate = (dateStr, formatType = 'input') => {
     if (!dateStr) {
@@ -227,16 +234,16 @@ const FDNS_Document = ({ id, documents: initialDocuments, onDocumentsUpdate, doc
         bValue = (b.document_name || '').toLowerCase();
         return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
       case 'document_type':
-        aValue = (a.document_type_name || '').toLowerCase();
-        bValue = (b.document_type_name || '').toLowerCase();
+        aValue = getNameById(document_types, a.document_type || a.document_type_id).toLowerCase();
+        bValue = getNameById(document_types, b.document_type || b.document_type_id).toLowerCase();
         return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
       case 'subtype':
-        aValue = (a.subtype_name || '').toLowerCase();
-        bValue = (b.subtype_name || '').toLowerCase();
+        aValue = getNameById(document_subtypes, a.subtype || a.subtype_id).toLowerCase();
+        bValue = getNameById(document_subtypes, b.subtype || b.subtype_id).toLowerCase();
         return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
       case 'document_purpose':
-        aValue = (a.document_purpose_name || '').toLowerCase();
-        bValue = (b.document_purpose_name || '').toLowerCase();
+        aValue = getNameById(document_purposes, a.document_purpose || a.document_purpose_id).toLowerCase();
+        bValue = getNameById(document_purposes, b.document_purpose || b.document_purpose_id).toLowerCase();
         return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
       case 'startdate':
         aValue = a.startdate ? new Date(formatDate(a.startdate)) : new Date(0);
@@ -323,10 +330,15 @@ const FDNS_Document = ({ id, documents: initialDocuments, onDocumentsUpdate, doc
 
   const filteredDocuments = useMemo(() => {
     return (Array.isArray(allDocuments) ? allDocuments : []).filter((doc) => {
+      const typeId = String(doc.document_type || doc.document_type_id);
+      const subtypeId = String(doc.subtype || doc.subtype_id);
+      const purposeId = String(doc.document_purpose || doc.document_purpose_id);
+
       const matchesSearch = doc.document_name?.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesType = filterType === 'all' || String(doc.document_type_id) === filterType;
-      const matchesSubtype = filterSubtype === 'all' || String(doc.subtype_id) === filterSubtype;
-      const matchesPurpose = filterPurpose === 'all' || String(doc.document_purpose_id) === filterPurpose;
+      const matchesType = filterType === 'all' || typeId === filterType;
+      const matchesSubtype = filterSubtype === 'all' || subtypeId === filterSubtype;
+      const matchesPurpose = filterPurpose === 'all' || purposeId === filterPurpose;
+      
       return matchesSearch && matchesType && matchesSubtype && matchesPurpose;
     });
   }, [allDocuments, searchQuery, filterType, filterSubtype, filterPurpose]);
@@ -691,8 +703,12 @@ const FDNS_Document = ({ id, documents: initialDocuments, onDocumentsUpdate, doc
                         setIsViewOnly(true); 
                       }} style={{ cursor: 'pointer' }}>
                         <td className={styles.tableCell}>{d.document_name || 'N/A'}</td>
-                        <td className={styles.tableCell}>{d.document_type_name || 'N/A'}</td>
-                        <td className={styles.tableCell}>{d.subtype_name || 'N/A'}</td>
+                        <td className={styles.tableCell}>
+                          {getNameById(document_types, d.document_type || d.document_type_id)}
+                        </td>
+                        <td className={styles.tableCell}>
+                          {getNameById(document_subtypes, d.subtype || d.subtype_id)}
+                        </td>
                         <td
                           className={styles.tableCell}
                           onClick={(e) => {
@@ -708,7 +724,9 @@ const FDNS_Document = ({ id, documents: initialDocuments, onDocumentsUpdate, doc
                             'N/A'
                           )}
                         </td>
-                        <td className={styles.tableCell}>{d.document_purpose_name || 'N/A'}</td>
+                        <td className={styles.tableCell}>
+                          {getNameById(document_purposes, d.document_purpose || d.document_purpose_id)}
+                        </td>
                         <td className={styles.tableCell}>{formatDate(d.startdate, 'display')}</td>
                         <td className={styles.tableCell}>{formatDate(d.enddate, 'display')}</td>
                       </tr>

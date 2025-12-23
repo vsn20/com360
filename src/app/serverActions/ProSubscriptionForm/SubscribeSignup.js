@@ -65,7 +65,7 @@ export async function sendSignupOTP(formData) {
     const expiry = new Date(Date.now() + 10 * 60 * 1000);
     await tenantPool.query(`INSERT INTO C_OTP (email, otp, expiry) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE otp = ?, expiry = ?`, [email, otp, expiry, otp, expiry]);
     await tenantPool.end(); 
-    const transporter = nodemailer.createTransport({ service: 'gmail', auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASS } });
+    const transporter = nodemailer.createTransport({ host: process.env.GMAIL_HOST, port: 587, secure: false, auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASS } });
     await transporter.sendMail({ from: process.env.GMAIL_USER, to: email, subject: 'Com360 Signup Verification', text: `Your verification code for Com360 is ${otp}.` });
     return { success: true };
   } catch (err) { if (tenantPool) await tenantPool.end(); return { success: false, error: "Failed to send OTP." }; }

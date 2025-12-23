@@ -38,6 +38,7 @@ export async function middleware(request) {
     '/Subscriber/GrowthSubscribeSignup',
     '/FeePayment/EnterpriseFeePayment',
     '/Subscriber/EnterpriseSubscribeSignup',
+    '/COM360LOGOS.jpg',
   ];
 
   const { pathname } = request.nextUrl;

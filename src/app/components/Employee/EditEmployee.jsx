@@ -58,7 +58,13 @@ const EditEmployee = ({
   employmentTypes,
   immigrationStatuses, 
   immigrationDocTypes,    
-  immigrationDocSubtypes, 
+  immigrationDocSubtypes,
+  paf_document_types,
+  paf_document_subtypes,
+  paf_document_statuses,
+  fdns_document_types,
+  fdns_document_subtypes,
+  fdns_document_statuses,
   loggedInEmpId,      
   permissionLevel,
   onBack,
@@ -1169,9 +1175,9 @@ function onImageLoad(e) {
                 id={employeeDetails.empid}
                 documents={pafDocuments}
                 onDocumentsUpdate={handlePafDocumentsUpdate}
-                document_types={document_types}
-                document_purposes={document_purposes}
-                document_subtypes={document_subtypes}
+                document_types={paf_document_types}
+                document_purposes={paf_document_statuses} // Map Statuses to Purposes prop
+                document_subtypes={paf_document_subtypes}
               />
             )}
             {fdnsdocument && !workdetails && !employementdetails && !personaldetails && !experiencedetails && !educationdetails && !selecteddocument && !immigrationdetails&&(
@@ -1179,9 +1185,9 @@ function onImageLoad(e) {
                 id={employeeDetails.empid}
                 documents={fdnsDocuments}
                 onDocumentsUpdate={handleFdnsDocumentsUpdate}
-                document_types={document_types}
-                document_purposes={document_purposes}
-                document_subtypes={document_subtypes}
+                document_types={fdns_document_types}
+                document_purposes={fdns_document_statuses} // Map Statuses to Purposes prop
+                document_subtypes={fdns_document_subtypes}
               />
             )}
             {immigrationdetails && !workdetails && !employementdetails && !personaldetails && !experiencedetails && !educationdetails && !selecteddocument && !pafdocument && !fdnsdocument&&(

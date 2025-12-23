@@ -87,7 +87,7 @@ export async function sendForgotOTP(formData) {
 
   // Send email
   const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
+    host: process.env.GMAIL_HOST,
     port: 587,
     secure: false,
     auth: {

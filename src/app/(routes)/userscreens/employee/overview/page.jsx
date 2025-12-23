@@ -78,7 +78,16 @@ export default async function OverviewPage({ searchParams }) {
   let employmentTypes = []; 
   let immigrationStatuses = [];     
   let immigrationDocTypes = [];     
-  let immigrationDocSubtypes = [];  
+  let immigrationDocSubtypes = [];
+  
+  // New variables for PAF and FDNS
+  let paf_document_types = [];
+  let paf_document_subtypes = [];
+  let paf_document_statuses = [];
+  let fdns_document_types = [];
+  let fdns_document_subtypes = [];
+  let fdns_document_statuses = [];
+
   let timestamp = new Date().getTime();
   let organizationName = '';
 
@@ -242,7 +251,35 @@ export default async function OverviewPage({ searchParams }) {
       [orgid]
     );
 
-  const [orgnizations]=await pool.query(
+    // --- PAF DOCUMENT FETCHES ---
+    [paf_document_types] = await pool.query(
+      'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 33 AND isactive = 1 AND (orgid = ? OR orgid = -1)',
+      [orgid]
+    );
+    [paf_document_subtypes] = await pool.query(
+      'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 35 AND isactive = 1 AND (orgid = ? OR orgid = -1)',
+      [orgid]
+    );
+    [paf_document_statuses] = await pool.query(
+      'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 37 AND isactive = 1 AND (orgid = ? OR orgid = -1)',
+      [orgid]
+    );
+
+    // --- FDNS DOCUMENT FETCHES ---
+    [fdns_document_types] = await pool.query(
+      'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 34 AND isactive = 1 AND (orgid = ? OR orgid = -1)',
+      [orgid]
+    );
+    [fdns_document_subtypes] = await pool.query(
+      'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 36 AND isactive = 1 AND (orgid = ? OR orgid = -1)',
+      [orgid]
+    );
+    [fdns_document_statuses] = await pool.query(
+      'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 38 AND isactive = 1 AND (orgid = ? OR orgid = -1)',
+      [orgid]
+    );
+
+    const [orgnizations]=await pool.query(
       'SELECT orgname FROM C_ORG WHERE orgid = ?',
       [orgid]
     );
@@ -298,6 +335,14 @@ export default async function OverviewPage({ searchParams }) {
       immigrationStatuses={immigrationStatuses}
       immigrationDocTypes={immigrationDocTypes}
       immigrationDocSubtypes={immigrationDocSubtypes}
+      // New PAF Props
+      paf_document_types={paf_document_types}
+      paf_document_subtypes={paf_document_subtypes}
+      paf_document_statuses={paf_document_statuses}
+      // New FDNS Props
+      fdns_document_types={fdns_document_types}
+      fdns_document_subtypes={fdns_document_subtypes}
+      fdns_document_statuses={fdns_document_statuses}
       org_name={organizationName}
     />
   );

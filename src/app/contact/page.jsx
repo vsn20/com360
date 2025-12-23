@@ -27,7 +27,7 @@ const Page = () => {
           <h1 className="contactHeroTitle">Contact Us</h1>
           <div className="contactContent">
             <p className="contactDescription">
-              Please contact us at <a href="tel:4023150893" className="contactLink">402 315 0893</a> or email at <a href="mailto:info@cloudworksusa.com" className="contactLink">info@cloudworksusa.com</a>
+              Please contact us at <a className='contactLink'>469-276-7000</a> or email at <a className="contactLink">sales@com360view.com</a>
             </p>
           </div>
         </div>

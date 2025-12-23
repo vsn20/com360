@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { X } from 'lucide-react'; // Import X icon for close button
+import Image from 'next/image'; 
+import { X } from 'lucide-react';
 import { 
   LayoutDashboard, 
   Users, 
@@ -29,8 +30,6 @@ import {
   ListChecks
 } from 'lucide-react';
 import styles from '../(routes)/userscreens/userscreens.module.css';
-
-// ... keep all your existing icon mapping code ...
 
 const menuIconMap = {
   'Roles': Shield,
@@ -154,7 +153,21 @@ function Sidebar({ isAdmin, isSidebarOpen, closeSidebar }) {
       </div>
       
       <ul className={styles.sidebarMenu}>
-        <li className={styles.com360_logo}>Com360 View</li>
+       
+        
+        {/* LOGO SECTION */}
+        <li style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px', marginTop: '30px' }}>
+            <Image 
+                src="/COM360LOGOS.jpg" 
+                alt="logo" 
+                width={150} 
+                height={50}
+                style={{ objectFit: 'contain' }}
+                priority={true} 
+                unoptimized={true} // bypasses optimization to fix "received null" error
+            />
+        </li>
+
         {finalMenuItems.map((item, index) => {
           const safeSubmenu = Array.isArray(item.C_SUBMENU) ? item.C_SUBMENU : [];
           const isActive = pathname === item.href || (safeSubmenu.length > 0 && safeSubmenu.some(sub => pathname === sub.href || pathname.startsWith(sub.href + '?')));

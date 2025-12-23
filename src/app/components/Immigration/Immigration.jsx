@@ -3,9 +3,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   addGlobalImmigrationRecord,
+  updateGlobalImmigrationRecord,
   fetchGlobalImmigrationRecords 
 } from '@/app/serverActions/Immigration/ImmigrationFeature';
 import styles from '../Employee/immigration.module.css'; 
+import EditImmigration from './EditImmigration'; // Import new component
 
 const APPROVED_STATUS_ID = 582; 
 const MAX_FILE_SIZE_BYTES = 1 * 1024 * 1024; // 1 MB
@@ -23,7 +25,12 @@ const Immigration = ({
   const [records, setRecords] = useState(initialRecords);
   const [syncingMap, setSyncingMap] = useState({});
   const [isGlobalSyncing, setIsGlobalSyncing] = useState(false);
-  const [showModal, setShowModal] = useState(false);
+  
+  // Modal States
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState(null);
+
   const [filterDocType, setFilterDocType] = useState('all');
 
   // --- Pagination State ---
@@ -32,7 +39,7 @@ const Immigration = ({
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [rowsPerPageInput, setRowsPerPageInput] = useState('10');
 
-  // Form State
+  // Add Form State
   const [formData, setFormData] = useState(initialFormState());
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -70,28 +77,25 @@ const Immigration = ({
 
   // --- FILTERING & PAGINATION LOGIC ---
   const { filteredRecords, totalPages, paginatedRecords } = useMemo(() => {
-    // 1. Filter
     const filtered = records.filter(r => {
         if (filterDocType !== 'all' && String(r.document_type) !== filterDocType) return false;
         return true;
     });
 
-    // 2. Paginate
     const pages = Math.ceil(filtered.length / rowsPerPage);
     const start = (currentPage - 1) * rowsPerPage;
     const paginated = filtered.slice(start, start + rowsPerPage);
 
     return { 
-        filteredRecords: filtered, // Contains ALL matching rows (for Global Sync)
+        filteredRecords: filtered, 
         totalPages: pages, 
-        paginatedRecords: paginated // Contains ONLY current page rows (for Display)
+        paginatedRecords: paginated 
     };
   }, [records, filterDocType, currentPage, rowsPerPage]);
 
   // --- PAGINATION HANDLERS ---
   const handleNextPage = () => { if (currentPage < totalPages) { setCurrentPage(prev => prev + 1); setPageInputValue(String(currentPage + 1)); }};
   const handlePrevPage = () => { if (currentPage > 1) { setCurrentPage(prev => prev - 1); setPageInputValue(String(currentPage - 1)); }};
-  
   const handlePageInputChange = (e) => setPageInputValue(e.target.value);
   const handlePageInputKeyPress = (e) => {
     if (e.key === 'Enter') {
@@ -100,7 +104,6 @@ const Immigration = ({
       else setPageInputValue(String(currentPage));
     }
   };
-
   const handleRowsPerPageChange = (e) => setRowsPerPageInput(e.target.value);
   const handleRowsPerPageKeyPress = (e) => {
     if (e.key === 'Enter') {
@@ -110,8 +113,25 @@ const Immigration = ({
     }
   };
 
+  // --- ROW CLICK (OPEN EDIT) ---
+  const handleRowClick = (record) => {
+    setSelectedRecord(record);
+    setShowEditModal(true);
+  };
+
+  const handleEditSave = async (data) => {
+    const res = await updateGlobalImmigrationRecord(data);
+    if (res.success) {
+        setShowEditModal(false);
+        refreshData();
+    } else {
+        alert("Error updating record: " + res.error);
+    }
+  };
+
   // --- SYNC LOGIC ---
-  const handleSingleSync = async (receiptNumber) => {
+  const handleSingleSync = async (e, receiptNumber) => {
+    e.stopPropagation(); // Stop row click
     if (!receiptNumber) return;
     setSyncingMap(prev => ({ ...prev, [receiptNumber]: true }));
     try {
@@ -133,8 +153,6 @@ const Immigration = ({
 
   const handleGlobalSync = async () => {
     setIsGlobalSyncing(true);
-    
-    // 1. Sync ALL filtered records (ignoring pagination), excluding Approved
     const recordsToSync = filteredRecords.filter(r => 
         Number(r.immigration_status) !== APPROVED_STATUS_ID && 
         r.document_number
@@ -146,7 +164,6 @@ const Immigration = ({
         return;
     }
 
-    // 2. Sequential Sync
     let successCount = 0;
     for (const rec of recordsToSync) {
         setSyncingMap(prev => ({ ...prev, [rec.document_number]: true }));
@@ -166,7 +183,7 @@ const Immigration = ({
     alert(`Global Sync Completed. Synced ${successCount} records.`);
   };
 
-  // --- FORM HANDLERS ---
+  // --- ADD MODAL HANDLERS ---
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -183,6 +200,11 @@ const Immigration = ({
             }));
         }
     }
+  };
+
+  const handleEmployeeChange = (e) => {
+      const val = e.target.value;
+      setFormData(prev => ({ ...prev, employeeSelection: val }));
   };
 
   const handleFileChange = (e) => {
@@ -216,7 +238,7 @@ const Immigration = ({
         petitionerName: defaultPetitioner,
     });
     setFile(null);
-    setShowModal(true);
+    setShowAddModal(true);
   };
 
   const handleSubmit = async (e) => {
@@ -227,7 +249,7 @@ const Immigration = ({
     
     const res = await addGlobalImmigrationRecord(data);
     if (res.success) {
-        setShowModal(false);
+        setShowAddModal(false);
         refreshData();
     } else {
         alert("Error: " + res.error);
@@ -261,7 +283,7 @@ const Immigration = ({
       <div className={styles.employee_immigration_searchFilterContainer}>
          <select 
             value={filterDocType} 
-            onChange={(e) => { setFilterDocType(e.target.value); setCurrentPage(1); }} // Reset page on filter
+            onChange={(e) => { setFilterDocType(e.target.value); setCurrentPage(1); }} 
             className={styles.employee_immigration_filterSelect}
          >
             <option value="all">All Document Types</option>
@@ -292,7 +314,11 @@ const Immigration = ({
                 ) : paginatedRecords.length === 0 ? (
                     <tr><td colSpan="8" style={{padding:'20px', textAlign:'center'}}>No records found.</td></tr>
                 ) : paginatedRecords.map(row => (
-                    <tr key={row.id} className={styles.employee_immigration_tableRow}>
+                    <tr 
+                        key={row.id} 
+                        className={styles.employee_immigration_tableRow}
+                        onClick={() => handleRowClick(row)} // Enable Edit on click
+                    >
                         <td className={styles.employee_immigration_tableCell} style={{fontFamily:'monospace', color:'#0056b3'}}>
                             {row.document_number}
                         </td>
@@ -307,7 +333,7 @@ const Immigration = ({
                              <span style={{ color: 'green', fontSize: '12px', fontWeight: 'bold' }}>✓ Synced</span>
                            ) : (
                              <button 
-                               onClick={(e) => handleSingleSync(row.document_number)}
+                               onClick={(e) => handleSingleSync(e, row.document_number)}
                                disabled={syncingMap[row.document_number] || isGlobalSyncing}
                                className={styles.employee_immigration_button}
                                style={{ 
@@ -329,9 +355,9 @@ const Immigration = ({
       {filteredRecords.length > rowsPerPage && (
         <div className={styles.employee_immigration_paginationContainer}>
             <button 
-            className={styles.employee_immigration_paginationButton} 
-            onClick={handlePrevPage}
-            disabled={currentPage === 1}
+                className={styles.employee_immigration_paginationButton} 
+                onClick={handlePrevPage}
+                disabled={currentPage === 1}
             >
             ← Previous
             </button>
@@ -347,9 +373,9 @@ const Immigration = ({
             of {totalPages}
             </span>
             <button 
-            className={styles.employee_immigration_paginationButton} 
-            onClick={handleNextPage}
-            disabled={currentPage === totalPages}
+                className={styles.employee_immigration_paginationButton} 
+                onClick={handleNextPage}
+                disabled={currentPage === totalPages}
             >
             Next →
             </button>
@@ -357,10 +383,7 @@ const Immigration = ({
       )}
 
       {/* ROWS PER PAGE INPUT */}
-      <div 
-        className={styles.employee_immigration_rowsPerPageContainer} 
-        style={{ marginTop: '16px' }}
-      >
+      <div className={styles.employee_immigration_rowsPerPageContainer} style={{ marginTop: '16px' }}>
         <label className={styles.employee_immigration_rowsPerPageLabel}>Rows per Page:</label>
         <input 
             type="text" 
@@ -373,7 +396,7 @@ const Immigration = ({
       </div>
 
       {/* ADD MODAL */}
-      {showModal && (
+      {showAddModal && (
         <div style={{
             position:'fixed', top:0, left:0, right:0, bottom:0, 
             backgroundColor:'rgba(0,0,0,0.5)', display:'flex', justifyContent:'center', alignItems:'center', zIndex:1000
@@ -381,18 +404,19 @@ const Immigration = ({
             <div className={styles.employee_immigration_form} style={{ width: '800px', maxHeight:'90vh', overflowY:'auto' }}>
                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px'}}>
                     <h3 className={styles.employee_immigration_title}>Add Immigration Record</h3>
-                    <button onClick={()=>setShowModal(false)} style={{background:'none', border:'none', fontSize:'24px', cursor:'pointer'}}>&times;</button>
+                    <button onClick={()=>setShowAddModal(false)} style={{background:'none', border:'none', fontSize:'24px', cursor:'pointer'}}>&times;</button>
                 </div>
                 
                 <form onSubmit={handleSubmit}>
-                    {/* ROW 1: Employee & Beneficiary */}
+                    {/* (Same Form Fields as previous, omitted for brevity but logic remains exactly the same) */}
+                    {/* ROW 1 */}
                     <div className={styles.employee_immigration_formRow}>
                         <div className={styles.employee_immigration_formGroup}>
                             <label className={styles.employee_immigration_formLabel}>Employee Name</label>
                             <select 
                                 name="employeeSelection"
                                 value={formData.employeeSelection}
-                                onChange={(e) => setFormData(prev => ({ ...prev, employeeSelection: e.target.value }))}
+                                onChange={handleEmployeeChange}
                                 className={styles.employee_immigration_formInput}
                                 required
                             >
@@ -418,7 +442,9 @@ const Immigration = ({
                             ) : (
                                 <input 
                                     type="text"
-                                    value={employees.find(e=>e.empid === formData.employeeSelection)?.EMP_FST_NAME || ''}
+                                    value={employees.find(e=>e.empid === formData.employeeSelection) 
+                                        ? `${employees.find(e=>e.empid === formData.employeeSelection).EMP_FST_NAME} ${employees.find(e=>e.empid === formData.employeeSelection).EMP_LAST_NAME}`
+                                        : ''}
                                     disabled
                                     className={styles.employee_immigration_formInput}
                                     style={{ backgroundColor: '#f0f0f0', color: '#666' }}
@@ -535,11 +561,27 @@ const Immigration = ({
 
                     <div className={styles.employee_immigration_formButtons}>
                         <button type="submit" className={`${styles.employee_immigration_button} ${styles.employee_immigration_saveButton}`}>Save Record</button>
-                        <button type="button" onClick={()=>setShowModal(false)} className={`${styles.employee_immigration_button} ${styles.employee_immigration_cancelButton}`}>Cancel</button>
+                        <button type="button" onClick={()=>setShowAddModal(false)} className={`${styles.employee_immigration_button} ${styles.employee_immigration_cancelButton}`}>Cancel</button>
                     </div>
                 </form>
             </div>
         </div>
+      )}
+
+      {/* EDIT MODAL */}
+      {showEditModal && selectedRecord && (
+        <EditImmigration 
+            record={selectedRecord}
+            employees={employees}
+            suborgs={suborgs}
+            document_types={document_types}
+            document_subtypes={document_subtypes}
+            immigrationStatuses={immigrationStatuses}
+            isAdmin={isAdmin}
+            userSuborgId={userSuborgId}
+            onClose={() => setShowEditModal(false)}
+            onSave={handleEditSave}
+        />
       )}
     </div>
   );

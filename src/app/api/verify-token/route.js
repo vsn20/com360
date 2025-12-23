@@ -27,8 +27,12 @@ export async function POST(request) {
     const isOfferLetterPath = pathname && pathname.match(/^\/uploads\/offerletter\/[^_]+_[^/]+\.pdf$/);
     const isDocumentsPath = pathname && pathname.match(/^\/public\/uploads\/documents\/.*$/); // Unrestricted access to /public/uploads/documents
     const isProfilePhotoPath = pathname && pathname.match(/^\/public\/uploads\/profile_photos\/.*$/); // Unrestricted access to /public/uploads/profile_photos
+    
+    // --- ADDED: Check for Logo Path ---
+    const isLogoPath = pathname && pathname.match(/^\/COM360LOGOS\.jpg$/); 
 
-    if (isUploadPath || isResumePath || isOfferLetterPath || isDocumentsPath || isProfilePhotoPath) {
+    // --- UPDATED: Included isLogoPath in the condition ---
+    if (isUploadPath || isResumePath || isOfferLetterPath || isDocumentsPath || isProfilePhotoPath || isLogoPath) {
       // Check if the first character of applicationid (from pathname) matches orgid for resume or offer letter paths
       if (isResumePath || isOfferLetterPath) {
         const applicationidMatch = pathname.match(/^\/uploads\/(resumes|offerletter)\/([^_]+)_/);
@@ -43,11 +47,13 @@ export async function POST(request) {
           }
         }
       }
-      // Unrestricted access to /public/uploads/documents and /public/uploads/profile_photos
-      if (isDocumentsPath || isProfilePhotoPath) {
-        console.log(`Unrestricted access granted to ${pathname} for empid ${empid} (${isDocumentsPath ? 'documents' : 'profile photos'} path)`);
+      
+      // --- UPDATED: Allow unrestricted access if it is a document, profile photo, OR LOGO ---
+      if (isDocumentsPath || isProfilePhotoPath || isLogoPath) {
+        console.log(`Unrestricted access granted to ${pathname} for empid ${empid} (static resource path)`);
         return NextResponse.json({ success: true, accessibleItems: [] });
       }
+      
       console.log(`Universal access granted to ${pathname} for empid ${empid} (upload path)`);
       return NextResponse.json({ success: true, accessibleItems: [] });
     }
@@ -97,7 +103,7 @@ export async function POST(request) {
       LEFT JOIN C_SUBMENU sm ON sm.id = omp.submenuid AND sm.is_active = 1
       JOIN C_ROLE_MENU_PERMISSIONS rmp 
           ON rmp.menuid = omp.menuid 
-         AND (rmp.submenuid = omp.submenuid OR omp.submenuid IS NULL)
+          AND (rmp.submenuid = omp.submenuid OR omp.submenuid IS NULL)
       WHERE rmp.roleid IN (?) AND omp.orgid = ?
       GROUP BY m.id, m.name, m.url, m.hassubmenu, sm.id, sm.name, sm.url
       ORDER BY priority`,
@@ -283,7 +289,7 @@ export async function POST(request) {
     }
 
     //accessibleItems.sort((a, b) => a.priority - b.priority);
-    console.log("Accessible items for user:", JSON.stringify(accessibleItems, null, 2));
+    // console.log("Accessible items for user:", JSON.stringify(accessibleItems, null, 2));
 
     if (!pathname) {
       return NextResponse.json({ success: true, accessibleItems });

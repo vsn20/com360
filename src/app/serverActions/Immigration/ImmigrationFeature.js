@@ -60,19 +60,22 @@ export async function getUserContext() {
 }
 
 /**
- * 2. Fetch Records
+ * 2. Fetch Records (Strict Suborg Filtering)
  */
 export async function fetchGlobalImmigrationRecords() {
   const { isAdmin, userSuborgId, orgid } = await getUserContext();
   const pool = await DBconnection();
 
-  // STRICT FILTERING:
-  // Admin: See everything in ORG.
-  // Non-Admin: See ONLY records matching their suborgid.
+  // Base Logic: Always filter by Organization
   let whereClause = `i.orgid = ?`;
   const params = [orgid];
 
-  if (!isAdmin) {
+  if (isAdmin) {
+    // Admin: Show all records in Org EXCEPT 'other' (External companies)
+    // Display records for Suborg A, Suborg B, Suborg C, etc.
+    whereClause += ` AND (i.suborgid IS NOT NULL AND i.suborgid != 'other')`;
+  } else {
+    // Non-Admin: STRICTLY show only records matching their specific Suborg
     whereClause += ` AND i.suborgid = ?`; 
     params.push(userSuborgId);
   }
@@ -87,6 +90,9 @@ export async function fetchGlobalImmigrationRecords() {
     )
     SELECT 
       rr.id,
+      rr.empid,
+      rr.orgid,
+      rr.suborgid,
       rr.document_number,
       rr.petitioner_name,
       rr.beneficiary_empid,
@@ -95,8 +101,12 @@ export async function fetchGlobalImmigrationRecords() {
       rr.document_type,
       rr.subtype,
       rr.document_path,
+      rr.document_name,
+      rr.comments,
       rr.last_updated_uscis,
       DATE_FORMAT(rr.issue_date, '%Y-%m-%d') as issue_date,
+      DATE_FORMAT(rr.expiry_date, '%Y-%m-%d') as expiry_date,
+      DATE_FORMAT(rr.eligible_review_date, '%Y-%m-%d') as eligible_review_date,
       
       g_type.Name as type_name,
       g_subtype.Name as subtype_name,
@@ -139,7 +149,7 @@ export async function addGlobalImmigrationRecord(formData) {
     let documentName = formData.get('documentName') || null;
 
     // --- EMPID LOGIC ---
-    // If 'OTHER' is selected, store 'OTHER' in empid column.
+    // If 'OTHER' is selected, store 'OTHER' string in empid column.
     // If a real employee is selected, store their ID.
     const ownerEmpId = (employeeSelection === 'OTHER') ? 'OTHER' : employeeSelection;
     
@@ -181,7 +191,7 @@ export async function addGlobalImmigrationRecord(formData) {
         created_by, updated_by
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
-      ownerEmpId, // Now stores 'OTHER' if custom
+      ownerEmpId, // Stores 'OTHER' or EmpID
       orgid,
       formData.get('documentType'),
       formData.get('subtype') || null,
@@ -208,12 +218,123 @@ export async function addGlobalImmigrationRecord(formData) {
   }
 }
 
-// Re-export dropdown fetchers to be used in page.jsx
+/**
+ * 4. Update Record
+ */
+export async function updateGlobalImmigrationRecord(formData) {
+  try {
+    const { isAdmin, userSuborgId, orgid, empid: loggedInUser } = await getUserContext();
+    const pool = await DBconnection();
+
+    const id = formData.get('id');
+    const employeeSelection = formData.get('employeeSelection'); 
+    const beneficiaryNameCustom = formData.get('beneficiaryNameCustom');
+    const companySelection = formData.get('companySelection'); 
+    const petitionerName = formData.get('petitionerName');
+    const file = formData.get('file');
+    const oldDocumentPath = formData.get('oldDocumentPath');
+    
+    let documentName = formData.get('documentName') || null;
+
+    const ownerEmpId = (employeeSelection === 'OTHER') ? 'OTHER' : employeeSelection;
+    const finalBeneficiaryId = employeeSelection;
+
+    let finalSuborgId = companySelection;
+    if (!isAdmin) {
+      finalSuborgId = userSuborgId; 
+    }
+
+    // Base Update Query
+    let updateQuery = `
+      UPDATE C_EMP_IMMIGRATION SET
+        empid = ?, 
+        document_type = ?, 
+        subtype = ?, 
+        document_number = ?, 
+        immigration_status = ?, 
+        issue_date = ?, 
+        expiry_date = ?, 
+        eligible_review_date = ?, 
+        comments = ?, 
+        beneficiary_empid = ?, 
+        beneficiary_custom_name = ?,
+        suborgid = ?, 
+        petitioner_name = ?, 
+        document_name = ?,
+        updated_by = ?,
+        last_updated_date = NOW()
+    `;
+
+    const params = [
+      ownerEmpId,
+      formData.get('documentType'),
+      formData.get('subtype') || null,
+      formData.get('documentNumber'),
+      formData.get('immigrationStatus') || null,
+      formatDateForDB(formData.get('issueDate')),
+      formatDateForDB(formData.get('expiryDate')),
+      formatDateForDB(formData.get('eligibleReviewDate')),
+      formData.get('comments'),
+      finalBeneficiaryId,
+      beneficiaryNameCustom || null,
+      finalSuborgId,
+      petitionerName,
+      documentName,
+      loggedInUser
+    ];
+
+    // Handle File Replacement
+    if (file && file.size > 0) {
+      if (oldDocumentPath) {
+        const fullOldPath = path.join(process.cwd(), 'public', oldDocumentPath);
+        await fs.unlink(fullOldPath).catch(err => console.warn(`Failed to delete old file: ${err.message}`));
+      }
+
+      const extension = file.name.split('.').pop().toLowerCase();
+      const uniqueSuffix = Date.now();
+      const safeName = (documentName || file.name).replace(/[^a-zA-Z0-9]/g, '_');
+      const prefix = ownerEmpId === 'OTHER' ? 'EXT' : ownerEmpId; 
+      const filename = `${prefix}_IMM_${safeName}_${uniqueSuffix}.${extension}`;
+      
+      const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'immigration');
+      const filePath = path.join(uploadDir, filename);
+
+      await fs.mkdir(uploadDir, { recursive: true });
+      await fs.writeFile(filePath, Buffer.from(await file.arrayBuffer()));
+
+      const documentPath = `/uploads/immigration/${filename}`;
+      
+      updateQuery += `, document_path = ?`;
+      params.push(documentPath);
+    }
+
+    updateQuery += ` WHERE id = ? AND orgid = ?`;
+    params.push(id, orgid);
+
+    // If not admin, ensure they can only edit their own suborg records
+    if (!isAdmin) {
+       updateQuery += ` AND suborgid = ?`;
+       params.push(userSuborgId);
+    }
+
+    await pool.query(updateQuery, params);
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating global immigration:', error);
+    return { error: error.message };
+  }
+}
+
+// Re-export dropdown fetchers
 export async function fetchEmployeesForDropdown() {
   const { isAdmin, userSuborgId, orgid } = await getUserContext();
   const pool = await DBconnection();
+  
+  // Filter Employees: Admin sees all, Non-Admin sees only same suborg
   let query = `SELECT empid, EMP_FST_NAME, EMP_LAST_NAME FROM C_EMP WHERE orgid = ?`;
   const params = [orgid];
+  
   if (!isAdmin) {
     query += ` AND suborgid = ?`;
     params.push(userSuborgId);
