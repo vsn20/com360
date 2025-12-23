@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import React from 'react';
 import H1BReg from '@/app/components/Immigration/H1B_Registration/H1BReg';
 import { 
