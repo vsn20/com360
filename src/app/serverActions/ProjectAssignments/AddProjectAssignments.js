@@ -49,6 +49,7 @@ export async function addProjectAssignment(prevState, formData) {
   const prjId = formData.get('prjId')?.trim();
   const startDt = formData.get('startDt')?.trim();
   const endDt = formData.get('endDt')?.trim() || null;
+  const skills = formData.get('skills')?.trim() || null;
   const billRate = formData.get('billRate')?.trim() || null;
   const billType = formData.get('billType')?.trim();
   const otBillRate = formData.get('otBillRate')?.trim() || null;
@@ -62,6 +63,7 @@ export async function addProjectAssignment(prevState, formData) {
     prjId,
     startDt,
     endDt,
+    skills,
     billRate,
     billType,
     otBillRate,
@@ -178,15 +180,16 @@ export async function addProjectAssignment(prevState, formData) {
 
     const [result] = await pool.query(
       `INSERT INTO C_PROJ_EMP (
-        emp_id, prj_id, start_dt, end_dt, bill_rate, bill_type, ot_bill_rate,
+        emp_id, prj_id, start_dt, end_dt, skills, bill_rate, bill_type, ot_bill_rate,
         ot_bill_type, billable_flag, ot_billable_flag, pay_term, created_date,
         created_by, modification_num
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?)`,
       [
         empId,
         prjId,
         startDt,
         endDt,
+        skills,
         parseFloat(billRate),
         billType,
         otBillRate ? parseFloat(otBillRate) : null,

@@ -36,12 +36,13 @@ const formatDateToInput = (date) => {
 };
 
 // 🔹 HELPER: Sync Employee to Meta Database
-async function syncEmployeeToMeta(empid, orgid, tenantPool, currentUsername) {
+async function syncEmployeeToMeta(empid, orgid, tenantPool, currentUsername, oldEmail = null) {
   let metaConnection;
   try {
     console.log(`\n--- 🚀 STARTING META SYNC ---`);
     console.log(`Target EmpID: ${empid}, OrgID: ${orgid}`);
     console.log(`Executed By: ${currentUsername}`);
+    console.log(`Old Email: ${oldEmail || 'N/A (new employee)'}`);
 
     // Get Meta Pool from db.js export
     const metaPool = MetaDBconnection(); 
@@ -85,45 +86,85 @@ async function syncEmployeeToMeta(empid, orgid, tenantPool, currentUsername) {
     
     // 3. Resolve Status ID to 'Y' or 'N'
     let isActive = 'Y';
-    // if (targetEmp.STATUS) {
-    //  if (targetEmp.STATUS=="ACTIVE"||targetEmp.STATUS=="Active"||targetEmp.STATUS=="active") {
-    //     isActive = 'Y';
-    //  }
-    // }
     console.log(`✅ Status Resolved: ${isActive}`);
 
-    // 4. Upsert into Meta C_EMP
-    console.log(`🚀 STEP 4: Attempting INSERT into Meta C_EMP...`);
-    console.log(`Payload:`, {
-        first: targetEmp.EMP_FST_NAME,
-        email: targetEmp.email,
-        username: targetEmp.email, // Using email as username
-        org: metaOrgId,
-        plan: plan_number
-    });
+    // 4. Update or Insert into Meta C_EMP
+    if (oldEmail) {
+      // Email was changed - UPDATE existing record by old email
+      console.log(`🚀 STEP 4: Updating Meta C_EMP using old email: ${oldEmail}`);
+      
+      const [updateResult] = await metaConnection.query(
+        `UPDATE C_EMP 
+         SET emp_first_name = ?, 
+             emp_middle_name = ?, 
+             org_id = ?, 
+             plan_number = ?, 
+             email = ?, 
+             active = ?
+         WHERE email = ?`, 
+        [
+          targetEmp.EMP_FST_NAME,
+          targetEmp.EMP_MID_NAME || null,
+          metaOrgId,   
+          plan_number, 
+          targetEmp.email,
+          isActive,
+          oldEmail // Match by old email to update the correct record
+        ]
+      );
+      
+      console.log(`✅ UPDATE Result: ${updateResult.affectedRows} rows affected`);
+      
+      if (updateResult.affectedRows === 0) {
+        console.log(`⚠️ No record found with old email, attempting INSERT...`);
+        // Fallback to INSERT if no record found with old email
+        await metaConnection.query(
+          `INSERT INTO C_EMP 
+            (emp_first_name, emp_middle_name, org_id, plan_number, email, active, username)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            targetEmp.EMP_FST_NAME,
+            targetEmp.EMP_MID_NAME || null,
+            metaOrgId,   
+            plan_number, 
+            targetEmp.email,
+            isActive,
+            targetEmp.email
+          ]
+        );
+      }
+    } else {
+      // New employee or no email change - use INSERT ON DUPLICATE KEY UPDATE
+      console.log(`🚀 STEP 4: Attempting INSERT into Meta C_EMP...`);
+      console.log(`Payload:`, {
+          first: targetEmp.EMP_FST_NAME,
+          email: targetEmp.email,
+          username: targetEmp.email,
+          org: metaOrgId,
+          plan: plan_number
+      });
 
-    // 🔴 CRITICAL FIX: The INSERT statement now includes 'username'
-    await metaConnection.query(
-      `INSERT INTO C_EMP 
-        (emp_first_name, emp_middle_name, org_id, plan_number, email, active, username)
-       VALUES (?, ?, ?, ?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE 
-        emp_first_name = VALUES(emp_first_name),
-        emp_middle_name = VALUES(emp_middle_name),
-        org_id = VALUES(org_id),
-        plan_number = VALUES(plan_number),
-        active = VALUES(active),
-        username = VALUES(username)`, 
-      [
-        targetEmp.EMP_FST_NAME,
-        targetEmp.EMP_MID_NAME || null,
-        metaOrgId,   
-        plan_number, 
-        targetEmp.email,
-        isActive,
-        targetEmp.email // 👈 THIS IS REQUIRED because username cannot be NULL
-      ]
-    );
+      await metaConnection.query(
+        `INSERT INTO C_EMP 
+          (emp_first_name, emp_middle_name, org_id, plan_number, email, active, username)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE 
+          emp_first_name = VALUES(emp_first_name),
+          emp_middle_name = VALUES(emp_middle_name),
+          org_id = VALUES(org_id),
+          plan_number = VALUES(plan_number),
+          active = VALUES(active)`, 
+        [
+          targetEmp.EMP_FST_NAME,
+          targetEmp.EMP_MID_NAME || null,
+          metaOrgId,   
+          plan_number, 
+          targetEmp.email,
+          isActive,
+          targetEmp.email
+        ]
+      );
+    }
 
     console.log(`✅ SUCCESS: Meta Sync Completed for ${targetEmp.email}`);
     console.log(`--- 🏁 END META SYNC ---\n`);
@@ -196,12 +237,13 @@ export async function updateEmployee(prevState, formData) {
       return { error: 'Employee ID is required.' };
     }
 
-    const [existing] = await pool.execute('SELECT empid FROM C_EMP WHERE empid = ? AND orgid = ?', [empid, orgid]);
+    const [existing] = await pool.execute('SELECT empid, email FROM C_EMP WHERE empid = ? AND orgid = ?', [empid, orgid]);
     if (existing.length === 0) {
       console.log('Employee not found');
       return { error: 'Employee not found.' };
     }
 
+    const oldEmail = existing[0].email; // Store old email for meta sync
     let affectedRows = 0;
 
     if (section === 'personal') {
@@ -300,7 +342,9 @@ export async function updateEmployee(prevState, formData) {
 
       // 🔹 TRIGGER META SYNC (Personal Details change)
       if (affectedRows > 0) {
-        await syncEmployeeToMeta(empid, orgid, pool, currentUsername);
+        // Pass old email if it changed, so meta DB can find the correct record
+        const emailChanged = oldEmail !== email;
+        await syncEmployeeToMeta(empid, orgid, pool, currentUsername, emailChanged ? oldEmail : null);
       }
 
     } else if (section === 'employment') {

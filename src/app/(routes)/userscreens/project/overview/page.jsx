@@ -16,6 +16,7 @@ const page = async () => {
   let otBillTypes = [];
   let payTerms = [];
   let accounts = [];
+  let industries = [];
 
   if (token && JWT_SECRET) {
     try {
@@ -41,7 +42,7 @@ const page = async () => {
         const [projectRows] = await pool.execute(
           `SELECT p.PRJ_ID, p.PRJ_NAME, p.PRS_DESC, p.ACCNT_ID, p.ORG_ID, p.BILL_RATE, p.BILL_TYPE, p.OT_BILL_RATE, p.OT_BILL_TYPE,
                   p.BILLABLE_FLAG, p.START_DT, p.END_DT, p.CLIENT_ID, p.PAY_TERM, p.INVOICE_EMAIL, p.INVOICE_FAX, p.INVOICE_PHONE,
-                  p.Createdby, p.Updatedby, p.suborgid, s.suborgname
+                  p.Createdby, p.Updatedby, p.suborgid, p.Industries, s.suborgname
            FROM C_PROJECT p
            LEFT JOIN C_SUB_ORG s ON p.suborgid = s.suborgid AND p.ORG_ID = s.orgid
            WHERE p.ORG_ID = ?`,
@@ -52,7 +53,8 @@ const page = async () => {
           PRJ_ID: row.PRJ_ID,
           ACCNT_ID: row.ACCNT_ID,
           suborgid: row.suborgid,
-          suborgname: row.suborgname
+          suborgname: row.suborgname,
+          Industries: row.Industries
         })));
 
         // Fetch billTypes (g_id = 7)
@@ -78,6 +80,14 @@ const page = async () => {
         );
         payTerms = payTermRows;
         console.log('Fetched payTerms:', payTerms);
+
+        // Fetch industries (g_id = 40)
+        const [industryRows] = await pool.query(
+          'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = ? AND orgid = ? AND isactive = 1',
+          [40, orgId]
+        );
+        industries = industryRows;
+        console.log('Fetched industries:', industries);
 
         // Fetch accounts with suborgid and suborgname
         const [accountRows] = await pool.execute(
@@ -119,6 +129,7 @@ const page = async () => {
         otBillTypes={otBillTypes}
         payTerms={payTerms}
         accounts={accounts}
+        industries={industries}
       />
     </div>
   );

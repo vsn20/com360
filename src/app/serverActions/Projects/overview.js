@@ -116,8 +116,11 @@ export async function updateproject(formData) {
         const prsDesc = formData.get('PRS_DESC')?.trim() || null;
         const accntId = formData.get('ACCNT_ID')?.trim();
         let suborgid = formData.get('suborgid')?.trim() || null;
+        const industries = formData.get('Industries') ? String(formData.get('Industries')).trim() : null;
+        const startDt = formData.get('START_DT') || null;
+        const endDt = formData.get('END_DT') || null;
 
-        console.log('Basic details before adjustment:', { prjName, prsDesc, accntId, suborgid, updatedBy });
+        console.log('Basic details before adjustment:', { prjName, prsDesc, accntId, suborgid, industries, startDt, endDt, updatedBy });
 
         if (!prjName) {
           console.log('Project name is required');
@@ -154,14 +157,14 @@ export async function updateproject(formData) {
           console.log('Validated suborg:', suborgCheck[0]);
         }
 
-        console.log('Basic details after adjustment:', { prjName, prsDesc, accntId, suborgid, updatedBy });
+        console.log('Basic details after adjustment:', { prjName, prsDesc, accntId, suborgid, industries, startDt, endDt, updatedBy });
 
         const [result] = await pool.query(
           `UPDATE C_PROJECT 
-           SET PRJ_NAME = ?, PRS_DESC = ?, ACCNT_ID = ?, suborgid = ?, 
-               Updatedby = ?, last_updated_date = ?
+           SET PRJ_NAME = ?, PRS_DESC = ?, ACCNT_ID = ?, suborgid = ?, Industries = ?,
+               START_DT = ?, END_DT = ?, Updatedby = ?, last_updated_date = ?
            WHERE PRJ_ID = ? AND ORG_ID = ?`,
-          [prjName, prsDesc, accntId, suborgid, updatedBy, new Date(), prjId, orgId]
+          [prjName, prsDesc, accntId, suborgid, industries, startDt, endDt, updatedBy, new Date(), prjId, orgId]
         );
 
         affectedRows += result.affectedRows;
@@ -172,8 +175,6 @@ export async function updateproject(formData) {
         const otBillRate = formData.get('OT_BILL_RATE') ? parseFloat(formData.get('OT_BILL_RATE')) : null;
         const otBillType = formData.get('OT_BILL_TYPE') ? String(formData.get('OT_BILL_TYPE')).trim() : null;
         const billableFlag = formData.get('BILLABLE_FLAG')?.trim() === '1' ? 1 : 0;
-        const startDt = formData.get('START_DT') || null;
-        const endDt = formData.get('END_DT') || null;
         const clientId = formData.get('CLIENT_ID')?.trim() || null;
         const payTerm = formData.get('PAY_TERM') ? String(formData.get('PAY_TERM')).trim() : null;
         const invoiceEmail = formData.get('INVOICE_EMAIL')?.trim() || null;
@@ -235,12 +236,12 @@ export async function updateproject(formData) {
         const [result] = await pool.query(
           `UPDATE C_PROJECT 
            SET BILL_RATE = ?, BILL_TYPE = ?, OT_BILL_RATE = ?, OT_BILL_TYPE = ?, 
-               BILLABLE_FLAG = ?, START_DT = ?, END_DT = ?, CLIENT_ID = ?, 
+               BILLABLE_FLAG = ?, CLIENT_ID = ?, 
                PAY_TERM = ?, INVOICE_EMAIL = ?, INVOICE_FAX = ?, INVOICE_PHONE = ?, 
                Updatedby = ?, last_updated_date = ?
            WHERE PRJ_ID = ? AND ORG_ID = ?`,
           [
-            billRate, billType, otBillRate, otBillType, billableFlag, startDt, endDt,
+            billRate, billType, otBillRate, otBillType, billableFlag,
             clientId, payTerm, invoiceEmail, invoiceFax, invoicePhone, updatedBy,
             new Date(), prjId, orgId
           ]
@@ -393,7 +394,7 @@ export async function fetchProjectById(prjId) {
     const [rows] = await pool.execute(
       `SELECT p.PRJ_ID, p.PRJ_NAME, p.PRS_DESC, p.ACCNT_ID, p.ORG_ID, p.BILL_RATE, p.BILL_TYPE, p.OT_BILL_RATE, p.OT_BILL_TYPE,
               p.BILLABLE_FLAG, p.START_DT, p.END_DT, p.CLIENT_ID, p.PAY_TERM, p.INVOICE_EMAIL, p.INVOICE_FAX, p.INVOICE_PHONE,
-              p.Createdby, p.Updatedby, p.last_updated_date, p.suborgid, s.suborgname
+              p.Createdby, p.Updatedby, p.last_updated_date, p.suborgid, p.Industries, s.suborgname
        FROM C_PROJECT p 
        LEFT JOIN C_SUB_ORG s ON p.suborgid = s.suborgid AND p.ORG_ID = s.orgid
        WHERE p.PRJ_ID = ? AND p.ORG_ID = ?`,

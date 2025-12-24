@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import './goals.css';
-import { createGoal, updateGoal, deleteGoal } from '@/app/serverActions/Performance_Review/goals';
+import { createGoal, updateGoal, deleteGoal, createBulkGoals } from '@/app/serverActions/Performance_Review/goals';
 
 const DEFAULT_FORM_DATA = {
   id: null,
@@ -38,6 +38,20 @@ const Goals = ({
   const [formError, setFormError] = useState(null);
   const [formSuccess, setFormSuccess] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Bulk goal modal state
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+  const [bulkFormData, setBulkFormData] = useState({
+    description: '',
+    start_date: new Date().toLocaleDateString('en-CA'),
+    end_date: new Date(new Date().setMonth(new Date().getMonth() + 3)).toLocaleDateString('en-CA'),
+    completion_percentage: 0,
+    employee_comments: '',
+    supervisor_comments: '',
+  });
+  const [bulkFormError, setBulkFormError] = useState(null);
+  const [bulkFormSuccess, setBulkFormSuccess] = useState(null);
+  const [isBulkSubmitting, setIsBulkSubmitting] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [pageInputValue, setPageInputValue] = useState('1');
@@ -146,6 +160,77 @@ const Goals = ({
     setFormData({ ...DEFAULT_FORM_DATA, employee_id: defaultEmployee });
     setEditingGoal(null);
     setIsModalOpen(true);
+  };
+
+  // Bulk goal handlers
+  const closeBulkModal = () => {
+    setIsBulkModalOpen(false);
+    setBulkFormData({
+      description: '',
+      start_date: new Date().toLocaleDateString('en-CA'),
+      end_date: new Date(new Date().setMonth(new Date().getMonth() + 3)).toLocaleDateString('en-CA'),
+      completion_percentage: 0,
+      employee_comments: '',
+      supervisor_comments: '',
+    });
+    setBulkFormError(null);
+    setBulkFormSuccess(null);
+    setIsBulkSubmitting(false);
+  };
+
+  const handleAddBulkClick = () => {
+    setBulkFormData({
+      description: '',
+      start_date: new Date().toLocaleDateString('en-CA'),
+      end_date: new Date(new Date().setMonth(new Date().getMonth() + 3)).toLocaleDateString('en-CA'),
+      completion_percentage: 0,
+      employee_comments: '',
+      supervisor_comments: '',
+    });
+    setIsBulkModalOpen(true);
+  };
+
+  const handleBulkFormChange = (e) => {
+    const { name, value } = e.target;
+    setBulkFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleBulkSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Validation: Check if Start Date > End Date
+    if (new Date(bulkFormData.start_date) > new Date(bulkFormData.end_date)) {
+      setBulkFormError("End Date cannot be earlier than Start Date.");
+      return;
+    }
+
+    setIsBulkSubmitting(true);
+    setBulkFormError(null);
+    setBulkFormSuccess(null);
+
+    // Get all employee IDs from the dropdown (visible employees)
+    const employeeIds = sortedEmployeesForDropdown.map(emp => emp.empid);
+
+    const formDataObject = new FormData();
+    formDataObject.append('orgid', orgid);
+    formDataObject.append('employee_ids', JSON.stringify(employeeIds));
+    formDataObject.append('description', bulkFormData.description);
+    formDataObject.append('start_date', bulkFormData.start_date);
+    formDataObject.append('end_date', bulkFormData.end_date);
+    formDataObject.append('completion_percentage', bulkFormData.completion_percentage);
+    formDataObject.append('employee_comments', bulkFormData.employee_comments);
+    formDataObject.append('supervisor_comments', bulkFormData.supervisor_comments);
+
+    try {
+      const result = await createBulkGoals(formDataObject);
+      if (result.error) throw new Error(result.error);
+      setBulkFormSuccess(`Goal added for ${employeeIds.length} employees successfully!`);
+      setTimeout(closeBulkModal, 1500);
+    } catch (err) {
+      setBulkFormError(err.message);
+    } finally {
+      setIsBulkSubmitting(false);
+    }
   };
 
   const handleEditClick = (goal) => {
@@ -278,9 +363,16 @@ const Goals = ({
     <div className="employee_goals_container">
       <div className="employee_goals_header-section">
         <h2 className="employee_goals_title">Employee Goals</h2>
-        <button className="employee_goals_save employee_goals_button" onClick={handleAddClick}>
-          Add Goal
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          {canAdmin && (
+            <button className="employee_goals_save employee_goals_button" onClick={handleAddBulkClick}>
+              Add All Employee Goals
+            </button>
+          )}
+          <button className="employee_goals_save employee_goals_button" onClick={handleAddClick}>
+            Add Goal
+          </button>
+        </div>
       </div>
 
       <div className="employee_goals_search-filter-container">
@@ -537,6 +629,122 @@ const Goals = ({
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? 'Saving...' : (editingGoal ? 'Update Goal' : 'Save Goal')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- BULK ADD MODAL --- */}
+      {isBulkModalOpen && (
+        <div className="employee_goals_modal-overlay" onClick={closeBulkModal}>
+          <div className="employee_goals_modal-content" onClick={(e) => e.stopPropagation()}>
+            
+            <div className="employee_goals_modal-header">
+              <h3 className="employee_goals_modal-title">
+                Add Goal for All Employees
+              </h3>
+              <button className="employee_goals_modal-close-button" onClick={closeBulkModal}>
+                &times;
+              </button>
+            </div>
+
+            <div style={{ padding: '0 20px', marginBottom: '15px', color: '#666', fontSize: '14px' }}>
+              This goal will be added for <strong>{sortedEmployeesForDropdown.length}</strong> employees.
+            </div>
+
+            <form className="employee_goals_form" onSubmit={handleBulkSubmit}>
+              {bulkFormError && <div className="employee_goals_error-message">{bulkFormError}</div>}
+              {bulkFormSuccess && <div className="employee_goals_success-message">{bulkFormSuccess}</div>}
+
+              <div className="employee_goals_form-group">
+                <label htmlFor="bulk_description">Goal Description</label>
+                <textarea
+                  id="bulk_description"
+                  name="description"
+                  value={bulkFormData.description}
+                  onChange={handleBulkFormChange}
+                  rows="3"
+                  required
+                />
+              </div>
+
+              <div className="employee_goals_form-row">
+                <div className="employee_goals_form-group">
+                  <label htmlFor="bulk_start_date">Start Date</label>
+                  <input
+                    type="date"
+                    id="bulk_start_date"
+                    name="start_date"
+                    value={bulkFormData.start_date}
+                    onChange={handleBulkFormChange}
+                    required
+                  />
+                </div>
+                <div className="employee_goals_form-group">
+                  <label htmlFor="bulk_end_date">End Date</label>
+                  <input
+                    type="date"
+                    id="bulk_end_date"
+                    name="end_date"
+                    value={bulkFormData.end_date}
+                    onChange={handleBulkFormChange}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="employee_goals_form-group">
+                <label htmlFor="bulk_completion_percentage">Completion Percentage</label>
+                <input
+                  type="number"
+                  id="bulk_completion_percentage"
+                  name="completion_percentage"
+                  value={bulkFormData.completion_percentage}
+                  onChange={handleBulkFormChange}
+                  min="0"
+                  max="100"
+                />
+              </div>
+
+              <div className="employee_goals_form-group">
+                <label htmlFor="bulk_employee_comments">Employee Comments</label>
+                <textarea
+                  id="bulk_employee_comments"
+                  name="employee_comments"
+                  value={bulkFormData.employee_comments}
+                  onChange={handleBulkFormChange}
+                  rows="3"
+                />
+              </div>
+
+              <div className="employee_goals_form-group">
+                <label htmlFor="bulk_supervisor_comments">Supervisor Comments</label>
+                <textarea
+                  id="bulk_supervisor_comments"
+                  name="supervisor_comments"
+                  value={bulkFormData.supervisor_comments}
+                  onChange={handleBulkFormChange}
+                  rows="3"
+                />
+              </div>
+
+              <div className="employee_goals_form-buttons">
+                <button
+                  type="button"
+                  className="employee_goals_cancel employee_goals_button"
+                  onClick={closeBulkModal}
+                  disabled={isBulkSubmitting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="employee_goals_save employee_goals_button"
+                  disabled={isBulkSubmitting}
+                >
+                  {isBulkSubmitting ? 'Adding Goals...' : `Add Goal for ${sortedEmployeesForDropdown.length} Employees`}
                 </button>
               </div>
             </form>

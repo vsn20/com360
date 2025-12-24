@@ -8,6 +8,7 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate,
   const [editing, setEditing] = useState(false);
   const [isViewOnly, setIsViewOnly] = useState(false);
   const [error, setError] = useState(null);
+  const [isAddingDocument, setIsAddingDocument] = useState(false);
   const [newDocument, setNewDocument] = useState({
     documentName: '',
     documentType: '',
@@ -162,14 +163,15 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate,
       setError('Please fill required fields: Type, Subtype, and select a file.');
       return;
     }
+    setIsAddingDocument(true);
     const formData = new FormData();
     formData.append('empid', id);
     formData.append('documentName', newDocument.documentName);
     formData.append('documentType', newDocument.documentType);
     formData.append('subtype', newDocument.subtype);
     formData.append('documentPurpose', newDocument.documentPurpose);
-    formData.append('startdate', newDocument.startdate ? `${newDocument.startdate} 00:00:00` : null);
-    formData.append('enddate', newDocument.enddate ? `${newDocument.enddate} 00:00:00` : null);
+    formData.append('startdate', newDocument.startdate ? `${newDocument.startdate} 00:00:00` : '');
+    formData.append('enddate', newDocument.enddate ? `${newDocument.enddate} 00:00:00` : '');
     formData.append('comments', newDocument.comments);
     formData.append('file', newDocument.file);
 
@@ -190,6 +192,8 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate,
       setError(null);
     } catch (err) {
       setError(`Failed to add document: ${err.message}`);
+    } finally {
+      setIsAddingDocument(false);
     }
   };
 
@@ -203,8 +207,8 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate,
     formData.append('documentType', editDocument.document_type_id);
     formData.append('subtype', editDocument.subtype_id);
     formData.append('documentPurpose', editDocument.document_purpose_id);
-    formData.append('startdate', editDocument.startdate ? `${formatDate(editDocument.startdate)} 00:00:00` : null);
-    formData.append('enddate', editDocument.enddate ? `${formatDate(editDocument.enddate)} 00:00:00` : null);
+    formData.append('startdate', editDocument.startdate ? `${formatDate(editDocument.startdate)} 00:00:00` : '');
+    formData.append('enddate', editDocument.enddate ? `${formatDate(editDocument.enddate)} 00:00:00` : '');
     formData.append('comments', editDocument.comments);
 
     if (editFile) {
@@ -386,6 +390,7 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate,
         )}
       </div>
       {error && <div className={styles.errorMessage}>{error}</div>}
+      {isAddingDocument && <div className={styles.loadingMessage}>Adding document, please wait...</div>}
 
       {editing ? (
         <form onSubmit={editDocument ? handleUpdateDocument : handleAddDocument} className={styles.form}>
@@ -619,8 +624,8 @@ const EmplopyeeDocument = ({ id, documents: initialDocuments, onDocumentsUpdate,
                 </button>
               </>
             ) : (
-              <button type="submit" className={`${styles.button} ${styles.saveButton}`}>
-                {editDocument ? 'Save' : 'Add Document'}
+              <button type="submit" className={`${styles.button} ${styles.saveButton}`} disabled={isAddingDocument}>
+                {isAddingDocument ? 'Adding...' : (editDocument ? 'Save' : 'Add Document')}
               </button>
             )}
             <button

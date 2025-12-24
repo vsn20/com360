@@ -10,7 +10,7 @@ import { set } from 'mongoose';
 
 const addform_intialstate = { error: null, success: false };
 
-const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts }) => {
+const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts, industries }) => {
   const searchparams = useSearchParams();
   const router = useRouter();
   const [selectedProject, setSelectedProject] = useState(null);
@@ -30,6 +30,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
   const [projectsPerPageInput, setProjectsPerPageInput] = useState('10');
   const [searchQuery, setSearchQuery] = useState('');
   const [accountFilter, setAccountFilter] = useState('all');
+  const [industryFilter, setIndustryFilter] = useState('all');
   const [basicdetailsdisplay, setbasicdetailsdisplay] = useState(false);
   const [additionaldetailsdisplay, setadditionaldetailsdisplay] = useState(false);
   const [activetab, setactivetab] = useState('basic');
@@ -120,7 +121,8 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
       updatedBy: project.Updatedby || '',
       lastUpdatedDate: formatDate(project.last_updated_date) || '',
       suborgid: project.suborgid || '',
-      suborgname: project.suborgname || ''
+      suborgname: project.suborgname || '',
+      industries: project.Industries || ''
     });
     setEditingBasic(false);
     setEditingAdditional(false);
@@ -239,14 +241,15 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
       formDataToSubmit.append('PRS_DESC', formData.prsDesc || '');
       formDataToSubmit.append('ACCNT_ID', formData.accntId || '');
       formDataToSubmit.append('suborgid', formData.suborgid || '');
+      formDataToSubmit.append('Industries', formData.industries || '');
+      formDataToSubmit.append('START_DT', formData.startDt || '');
+      formDataToSubmit.append('END_DT', formData.endDt || '');
     } else if (section === 'additional') {
       formDataToSubmit.append('BILL_RATE', formData.billRate || '');
       formDataToSubmit.append('BILL_TYPE', formData.billType || '');
       formDataToSubmit.append('OT_BILL_RATE', formData.otBillRate || '');
       formDataToSubmit.append('OT_BILL_TYPE', formData.otBillType || '');
       formDataToSubmit.append('BILLABLE_FLAG', formData.billableFlag === 'Yes' ? '1' : '0');
-      formDataToSubmit.append('START_DT', formData.startDt || '');
-      formDataToSubmit.append('END_DT', formData.endDt || '');
       formDataToSubmit.append('CLIENT_ID', formData.clientId || '');
       formDataToSubmit.append('PAY_TERM', formData.payTerm || '');
       formDataToSubmit.append('INVOICE_EMAIL', formData.invoiceEmail || '');
@@ -312,6 +315,12 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
     if (!accntId || !accounts) return '-';
     const account = accounts.find(acc => acc.ACCNT_ID === accntId);
     return account ? account.ALIAS_NAME : accntId;
+  };
+
+  const getIndustryName = (industryId) => {
+    if (!industryId || !industries) return '-';
+    const industry = industries.find(ind => String(ind.id) === String(industryId));
+    return industry ? industry.Name : industryId;
   };
 
   const getdisplayprojectid = (prjid) => {
@@ -380,11 +389,18 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
     setPageInputValue('1');
   };
 
+  const handleIndustryFilterChange = (e) => {
+    setIndustryFilter(e.target.value);
+    setCurrentPage(1);
+    setPageInputValue('1');
+  };
+
   // Filter logic
   const filteredProjects = allProjects.filter((project) => {
     const matchesSearch = project.PRJ_NAME?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesAccount = accountFilter === 'all' || String(project.ACCNT_ID) === accountFilter;
-    return matchesSearch && matchesAccount;
+    const matchesIndustry = industryFilter === 'all' || String(project.Industries) === industryFilter;
+    return matchesSearch && matchesAccount && matchesIndustry;
   });
 
   // Pagination logic
@@ -411,11 +427,12 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
     invoiceFax: '',
     invoicePhone: '',
     suborgid: '',
-    suborgname: ''
+    suborgname: '',
+    industries: ''
   });
 
   const [addform_accounts, addform_setAccounts] = useState([]);
-  const [state, formAction] = useActionState(addProject, addform_intialstate);
+  const [state, formAction, isPending] = useActionState(addProject, addform_intialstate);
 
   useEffect(() => {
     const loadData = async () => {
@@ -484,11 +501,15 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
         invoiceFax: '',
         invoicePhone: '',
         suborgid: '',
-        suborgname: ''
+        suborgname: '',
+        industries: ''
       });
       setaddformsuccess('Project added successfully!');
-      setTimeout(() => setaddformsuccess(null), 4000);
-      setTimeout(() => router.refresh(), 4000);
+      setTimeout(() => {
+        setaddformsuccess(null);
+        setisadd(false);
+        router.refresh();
+      }, 2000);
     }
   }, [state.success, orgId]);
 
@@ -503,9 +524,10 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
             <h2 className="project_title">Add Project</h2>
             <button className="project_back_button" onClick={handleBack}></button>
           </div>
+          {isPending && <div className="project_loading_message">Adding project, please wait...</div>}
           {addformsuccess && <div className="project_success_message">{addformsuccess}</div>}
           {state.error && <div className="project_error_message">{state.error}</div>}
-          <form action={addform_enhancedFormAction}>
+          <form action={addform_enhancedFormAction} onSubmit={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
             <div className="project_details_block">
               <h3>Basic Details</h3>
               <div className="project_form_row">
@@ -520,13 +542,19 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                   />
                 </div>
                 <div className="project_form_group">
-                  <label>Description:</label>
-                  <input
-                    type="text"
-                    name="prsDesc"
-                    value={addformData.prsDesc}
+                  <label>Industry:</label>
+                  <select
+                    name="industries"
+                    value={addformData.industries}
                     onChange={addform_handleChange}
-                  />
+                  >
+                    <option value="">Select Industry</option>
+                    {industries.map((industry) => (
+                      <option key={industry.id} value={industry.id}>
+                        {industry.Name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
               <div className="project_form_row">
@@ -553,6 +581,39 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                     type="text"
                     value={addformData.suborgname || ''}
                     disabled
+                  />
+                </div>
+              </div>
+              <div className="project_form_row">
+                <div className="project_form_group">
+                  <label>Start Date:</label>
+                  <input
+                    type="date"
+                    name="startDt"
+                    value={addformData.startDt}
+                    onChange={addform_handleChange}
+                    placeholder="mm/dd/yyyy"
+                  />
+                </div>
+                <div className="project_form_group">
+                  <label>End Date:</label>
+                  <input
+                    type="date"
+                    name="endDt"
+                    value={addformData.endDt}
+                    onChange={addform_handleChange}
+                    placeholder="mm/dd/yyyy"
+                  />
+                </div>
+              </div>
+              <div className="project_form_row">
+                <div className="project_form_group">
+                  <label>Description:</label>
+                  <input
+                    type="text"
+                    name="prsDesc"
+                    value={addformData.prsDesc}
+                    onChange={addform_handleChange}
                   />
                 </div>
               </div>
@@ -633,28 +694,6 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                   </select>
                 </div>
                 <div className="project_form_group">
-                  <label>Start Date:</label>
-                  <input
-                    type="date"
-                    name="startDt"
-                    value={addformData.startDt}
-                    onChange={addform_handleChange}
-                    placeholder="mm/dd/yyyy"
-                  />
-                </div>
-              </div>
-              <div className="project_form_row">
-                <div className="project_form_group">
-                  <label>End Date:</label>
-                  <input
-                    type="date"
-                    name="endDt"
-                    value={addformData.endDt}
-                    onChange={addform_handleChange}
-                    placeholder="mm/dd/yyyy"
-                  />
-                </div>
-                <div className="project_form_group">
                   <label>Client*:</label>
                   <select
                     name="clientId"
@@ -724,8 +763,8 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
             </div>
 
             <div className="project_form_buttons">
-              <button type="submit" className="project_submit_button" disabled={!orgId}>
-                Add Project
+              <button type="submit" className="project_submit_button" disabled={!orgId || isPending}>
+                {isPending ? 'Adding...' : 'Add Project'}
               </button>
             </div>
           </form>
@@ -754,6 +793,14 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                 </option>
               ))}
             </select>
+            <select value={industryFilter} onChange={handleIndustryFilterChange} className="project_filter_select">
+              <option value="all">All Industries</option>
+              {industries.map((industry) => (
+                <option key={industry.id} value={industry.id}>
+                  {industry.Name}
+                </option>
+              ))}
+            </select>
           </div>
           {filteredProjects.length === 0 ? (
             <div className="project_empty_state">No projects found.</div>
@@ -778,6 +825,9 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                       <th>
                         Organization
                       </th>
+                      <th>
+                        Industry
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -794,7 +844,8 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                           </td>
                         <td>{project.PRS_DESC || '-'}</td>
                         <td>{getAccountName(project.ACCNT_ID)}</td>
-                        <td>{project.suborgname||'-'}</td>
+                        <td>{project.suborgname || '-'}</td>
+                        <td>{getIndustryName(project.Industries)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -873,17 +924,23 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                         required
                       />
                     </div>
+                    <div className="project_form_group">
+                      <label>Industry:</label>
+                      <select
+                        name="industries"
+                        value={formData.industries}
+                        onChange={handleChange}
+                      >
+                        <option value="">Select Industry</option>
+                        {industries.map((industry) => (
+                          <option key={industry.id} value={industry.id}>
+                            {industry.Name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                   <div className="project_form_row">
-                    <div className="project_form_group">
-                      <label>Description:</label>
-                      <input
-                        type="text"
-                        name="prsDesc"
-                        value={formData.prsDesc}
-                        onChange={handleChange}
-                      />
-                    </div>
                     <div className="project_form_group">
                       <label>Account*:</label>
                       <select
@@ -900,14 +957,43 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                         ))}
                       </select>
                     </div>
-                  </div>
-                  <div className="project_form_row">
                     <div className="project_form_group">
                       <label>Organization:</label>
                       <input
                         type="text"
                         value={formData.suborgname || ''}
                         disabled
+                      />
+                    </div>
+                  </div>
+                  <div className="project_form_row">
+                    <div className="project_form_group">
+                      <label>Start Date:</label>
+                      <input
+                        type="date"
+                        name="startDt"
+                        value={formData.startDt}
+                        onChange={handleChange}
+                      />
+                    </div>
+                    <div className="project_form_group">
+                      <label>End Date:</label>
+                      <input
+                        type="date"
+                        name="endDt"
+                        value={formData.endDt}
+                        onChange={handleChange}
+                      />
+                    </div>
+                  </div>
+                  <div className="project_form_row">
+                    <div className="project_form_group">
+                      <label>Description:</label>
+                      <input
+                        type="text"
+                        name="prsDesc"
+                        value={formData.prsDesc}
+                        onChange={handleChange}
                       />
                     </div>
                   </div>
@@ -940,9 +1026,9 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                         <label>Project Name:</label>
                         <p>{selectedProject.PRJ_NAME || '-'}</p>
                       </div>
-                       <div className="project_details_group">
-                        <label>Description:</label>
-                        <p>{selectedProject.PRS_DESC || '-'}</p>
+                      <div className="project_details_group">
+                        <label>Industry:</label>
+                        <p>{getIndustryName(selectedProject.Industries)}</p>
                       </div>
                     </div>
                     <div className="project_details_row">                    
@@ -953,6 +1039,22 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                        <div className="project_details_group">
                         <label>Organization:</label>
                         <p>{selectedProject.suborgname || '---'}</p>
+                      </div>
+                    </div>
+                    <div className="project_details_row">
+                      <div className="project_details_group">
+                        <label>Start Date:</label>
+                        <p>{formatDate(selectedProject.START_DT) || '-'}</p>
+                      </div>
+                      <div className="project_details_group">
+                        <label>End Date:</label>
+                        <p>{formatDate(selectedProject.END_DT) || '-'}</p>
+                      </div>
+                    </div>
+                    <div className="project_details_row">
+                      <div className="project_details_group">
+                        <label>Description:</label>
+                        <p>{selectedProject.PRS_DESC || '-'}</p>
                       </div>
                     </div>
                   </div>
@@ -1038,26 +1140,6 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                         <option value="No">No</option>
                         <option value="Yes">Yes</option>
                       </select>
-                    </div>
-                    <div className="project_form_group">
-                      <label>Start Date:</label>
-                      <input
-                        type="date"
-                        name="startDt"
-                        value={formData.startDt}
-                        onChange={handleChange}
-                      />
-                    </div>
-                  </div>
-                  <div className="project_form_row">
-                    <div className="project_form_group">
-                      <label>End Date:</label>
-                      <input
-                        type="date"
-                        name="endDt"
-                        value={formData.endDt}
-                        onChange={handleChange}
-                      />
                     </div>
                     <div className="project_form_group">
                       <label>Client*:</label>
@@ -1169,16 +1251,6 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts 
                       <div className="project_details_group">
                         <label>Billable:</label>
                         <p>{selectedProject.BILLABLE_FLAG ? 'Yes' : 'No'}</p>
-                      </div>
-                      <div className="project_details_group">
-                        <label>Start Date:</label>
-                        <p>{formatDate(selectedProject.START_DT) || '-'}</p>
-                      </div>
-                    </div>
-                    <div className="project_details_row">
-                      <div className="project_details_group">
-                        <label>End Date:</label>
-                        <p>{formatDate(selectedProject.END_DT) || '-'}</p>
                       </div>
                       <div className="project_details_group">
                         <label>Client:</label>

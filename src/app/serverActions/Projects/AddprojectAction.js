@@ -73,6 +73,7 @@ export async function addProject(prevState, formData) {
   const invoiceFax = formData.get('invoiceFax')?.trim() || null;
   const invoicePhone = formData.get('invoicePhone')?.trim() || null;
   const suborgid = formData.get('suborgid')?.trim() || null;
+  const industries = formData.get('industries') ? String(formData.get('industries')).trim() : null;
   const billTypes = JSON.parse(formData.get('billTypes') || '[]');
   const otBillTypes = JSON.parse(formData.get('otBillTypes') || '[]');
   const payTerms = JSON.parse(formData.get('payTerms') || '[]');
@@ -95,6 +96,7 @@ export async function addProject(prevState, formData) {
     invoiceFax,
     invoicePhone,
     suborgid,
+    industries,
     billTypes,
     otBillTypes,
     payTerms,
@@ -202,7 +204,7 @@ export async function addProject(prevState, formData) {
       const insertColumns = [
         'PRJ_ID', 'PRJ_NAME', 'PRS_DESC', 'ACCNT_ID', 'ORG_ID', 'BILL_RATE', 'BILL_TYPE',
         'OT_BILL_RATE', 'OT_BILL_TYPE', 'BILLABLE_FLAG', 'START_DT', 'END_DT', 'CLIENT_ID',
-        'PAY_TERM', 'INVOICE_EMAIL', 'INVOICE_FAX', 'INVOICE_PHONE', 'ROW_ID', 'Createdby', 'suborgid'
+        'PAY_TERM', 'INVOICE_EMAIL', 'INVOICE_FAX', 'INVOICE_PHONE', 'ROW_ID', 'Createdby', 'suborgid', 'Industries'
       ];
 
       const values = [
@@ -225,7 +227,8 @@ export async function addProject(prevState, formData) {
         invoicePhone,
         null,
         createdBy,
-        effectiveSuborgid
+        effectiveSuborgid,
+        industries
       ];
 
       // console.log('Inserting project with columns:', insertColumns);

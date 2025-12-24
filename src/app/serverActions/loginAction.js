@@ -18,6 +18,12 @@ export async function loginaction(logindetails) {
 
   try {
     const pool = await loginDBconnection(username);
+    
+    if (!pool) {
+      console.log("No employee found for username:", username);
+      return { success: false, error: "Invalid username or password" };
+    }
+    
     console.log("MySQL connection established");
     let usernameemail = [];
     if (username.includes('@')) {

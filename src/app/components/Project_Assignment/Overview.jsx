@@ -127,6 +127,7 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
             prjId: data[0].PRJ_ID || '',
             startDt: formatDate(data[0].START_DT) || '',
             endDt: formatDate(data[0].END_DT) || '',
+            skills: data[0].SKILLS || '',
             billRate: data[0].BILL_RATE || '',
             billType: data[0].BILL_TYPE || '',
             otBillRate: data[0].OT_BILL_RATE || '',
@@ -147,6 +148,7 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
             prjId: selectedProject.PRJ_ID,
             startDt: '',
             endDt: '',
+            skills: '',
             billRate: '',
             billType: '',
             otBillRate: '',
@@ -289,6 +291,7 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
     if (section === 'basic') {
       formDataToSubmit.append('START_DT', formData.startDt || '');
       formDataToSubmit.append('END_DT', formData.endDt || '');
+      formDataToSubmit.append('SKILLS', formData.skills || '');
     } else if (section === 'additional') {
       formDataToSubmit.append('BILL_RATE', formData.billRate || '');
       formDataToSubmit.append('BILL_TYPE', formData.billType || '');
@@ -310,6 +313,7 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
             prjId: updatedDetails[0].PRJ_ID || '',
             startDt: formatDate(updatedDetails[0].START_DT) || '',
             endDt: formatDate(updatedDetails[0].END_DT) || '',
+            skills: updatedDetails[0].SKILLS || '',
             billRate: updatedDetails[0].BILL_RATE || '',
             billType: updatedDetails[0].BILL_TYPE || '',
             otBillRate: updatedDetails[0].OT_BILL_RATE || '',
@@ -403,6 +407,7 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
     prjId: '',
     startDt: '',
     endDt: '',
+    skills: '',
     billRate: '',
     billType: '',
     otBillRate: '',
@@ -416,7 +421,7 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
 
   const [addform_employees, addform_setEmployees] = useState([]);
   const [addform_projects, addform_setProjects] = useState([]);
-  const [addform_state, addform_formAction] = useActionState(addProjectAssignment, addform_initialState);
+  const [addform_state, addform_formAction, addform_isPending] = useActionState(addProjectAssignment, addform_initialState);
 
   useEffect(() => {
     const addform_loadProjects = async () => {
@@ -461,6 +466,7 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
         prjId: '',
         startDt: '',
         endDt: '',
+        skills: '',
         billRate: '',
         billType: '',
         otBillRate: '',
@@ -639,6 +645,7 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
           </div>
           {addform_success && <div className="project_assign_success_message">{addform_success}</div>}
           {addform_state.error && <div className="project_assign_error_message">{addform_state.error}</div>}
+          {addform_isPending && <div className="project_assign_loading_message">Project is assigning, please wait...</div>}
           <form action={addform_formAction}>
             <div className="project_assign_details_block">
               <h3>Selection Details</h3>
@@ -685,6 +692,18 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
                     value={addformData.projectEndDt}
                     readOnly
                     className="project_assign_bg_gray_100"
+                  />
+                </div>
+              </div>
+              <div className="project_assign_form_row">
+                <div className="project_assign_form_group">
+                  <label>Skills:</label>
+                  <input
+                    type="text"
+                    name="skills"
+                    value={addformData.skills}
+                    onChange={handleform_handleChange}
+                    placeholder="Enter skills"
                   />
                 </div>
               </div>
@@ -793,7 +812,7 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
               </div>
             </div>
             <div className="project_assign_form_buttons">
-              <button type="submit" disabled={!orgId || !addformData.prjId || !addformData.empId} className="project_assign_submit_button">Add Assignment</button>
+              <button type="submit" disabled={!orgId || !addformData.prjId || !addformData.empId || addform_isPending} className="project_assign_submit_button">{addform_isPending ? 'Assigning...' : 'Add Assignment'}</button>
             </div>
           </form>
         </div>
@@ -1026,6 +1045,18 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
                         />
                       </div>
                     </div>
+                    <div className="project_assign_form_row">
+                      <div className="project_assign_form_group">
+                        <label>Skills:</label>
+                        <input
+                          type="text"
+                          name="skills"
+                          value={formData.skills || ''}
+                          onChange={handleChange}
+                          placeholder="Enter skills"
+                        />
+                      </div>
+                    </div>
                     <div className="project_assign_form_buttons">
                       <button type="submit" className="project_assign_submit_button" disabled={isLoading}>
                         {isLoading ? 'Saving...' : 'Save'}
@@ -1053,12 +1084,12 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
                     <div className="project_assign_view_details">
                       <div className="project_assign_details_row">
                         <div className="project_assign_details_group">
-                          <label>Employee ID:</label>
-                          <p>Employee-{getdisplayemployeeid(employeeDetails.EMP_ID) || '-'}</p>
+                          <label>Employee Name:</label>
+                          <p>{employeeDetails.EMP_NAME || '-'}</p>
                         </div>
                         <div className="project_assign_details_group">
-                          <label>Project ID:</label>
-                          <p>Project-{getdisplayprojectid(employeeDetails.PRJ_ID) || '-'}</p>
+                          <label>Project Name:</label>
+                          <p>{selectedProject.PRJ_NAME || '-'}</p>
                         </div>
                       </div>
                       <div className="project_assign_details_row">
@@ -1079,6 +1110,12 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
                         <div className="project_assign_details_group">
                           <label>Assignment End Date:</label>
                           <p>{formatDate(employeeDetails.END_DT) || '-'}</p>
+                        </div>
+                      </div>
+                      <div className="project_assign_details_row">
+                        <div className="project_assign_details_group">
+                          <label>Skills:</label>
+                          <p>{employeeDetails.SKILLS || '-'}</p>
                         </div>
                       </div>
                     </div>

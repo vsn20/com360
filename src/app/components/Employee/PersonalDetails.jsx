@@ -1,4 +1,13 @@
 import React from 'react';
+import Image from 'next/image';
+
+const formatDate = (date) => {
+  if (!date || isNaN(new Date(date))) return '';
+  const d = new Date(date);
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${month}/${day}/${d.getFullYear()}`;
+};
 
 const PersonalDetails = ({
   editing,
@@ -8,7 +17,9 @@ const PersonalDetails = ({
   onSave,
   employeeDetails,
   canEdit,
-  getDisplayProjectId
+  getDisplayProjectId,
+  signatureSrc,
+  onSignatureFileChange
 }) => {
   return (
     <div className="role-details-block96">
@@ -90,6 +101,29 @@ const PersonalDetails = ({
               />
             </div>
           </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Signature (Upload .jpg)</label>
+              {signatureSrc && (
+                <div style={{ marginBottom: '10px', border: '1px solid #ccc', display: 'inline-block', padding: '5px' }}>
+                  <Image 
+                    src={signatureSrc} 
+                    alt="Signature" 
+                    width={150} 
+                    height={60} 
+                    unoptimized 
+                    onError={(e) => e.target.style.display = 'none'}
+                  />
+                </div>
+              )}
+              <input 
+                type="file" 
+                accept="image/jpeg, image/jpg" 
+                onChange={onSignatureFileChange}
+                className="form-control"
+              />
+            </div>
+          </div>
           <div className="form-buttons">
             <button type="submit" className="save">Save</button>
             <button type="button" className="cancel" onClick={() => setEditing(false)}>Cancel</button>
@@ -152,7 +186,7 @@ const PersonalDetails = ({
           <div className="details-row">
             <div className="details-g">
               <label>Date of Birth</label>
-              <p>{employeeDetails.DOB ? new Date(employeeDetails.DOB).toLocaleDateString('en-US') : '-'}</p>
+              <p>{employeeDetails.DOB ? formatDate(employeeDetails.DOB) : '-'}</p>
             </div>
             <div className="details-g">
               <label>SSN</label>
@@ -168,6 +202,25 @@ const PersonalDetails = ({
             <div className="details-g">
               <label>LinkedIn URL</label>
               <p>{employeeDetails.LINKEDIN_URL || '-'}</p>
+            </div>
+          </div>
+          <div className="details-row">
+            <div className="details-g">
+              <label>Signature</label>
+              {signatureSrc ? (
+                <div style={{ marginTop: '5px', border: '1px solid #eee', display: 'inline-block', padding: '5px' }}>
+                  <Image 
+                    src={signatureSrc} 
+                    alt="Signature" 
+                    width={150} 
+                    height={60} 
+                    unoptimized 
+                    onError={(e) => e.target.style.display = 'none'}
+                  />
+                </div>
+              ) : (
+                <p>-</p>
+              )}
             </div>
           </div>
           {canEdit && (

@@ -82,12 +82,17 @@ const AddEmployee = ({
         setTimeout(() => addform_setFormError(null), 4000)
       } else {
         addform_setsuccess("Employee added Successfully!");
-        setTimeout(() => addform_setsuccess(null), 4000);
         
         addform_setSelectedRoles([]);
         addform_setLeaves({});
         addform_setIsDropdownOpen(false);
         document.querySelector('form').reset();
+        
+        // Wait 2 seconds to show success message, then go back to table
+        setTimeout(() => {
+          addform_setsuccess(null);
+          onBack();
+        }, 2000);
       }
     } catch (error) {
       addform_setFormError(`Submission failed: ${error.message}`);
@@ -112,8 +117,9 @@ const AddEmployee = ({
       
       {addform_formError && <p className="error-message">{addform_formError}</p>}
       {addform_success && <p className="success-message">{addform_success}</p>}
+      {addform_isSubmitting && <p className="loading-message">Adding employee, please wait...</p>}
       
-      <form action={addform_handleSubmit} >
+      <form onSubmit={(e) => { e.preventDefault(); addform_handleSubmit(new FormData(e.target)); }}>
         <div className="form-section">
           {/* Personal Details */}
           <div className="role-details-block93">
@@ -767,7 +773,7 @@ const AddEmployee = ({
               className={`button save ${addform_isSubmitting ? 'disabled' : ''}`}
               disabled={addform_isSubmitting}
             >
-              {addform_isSubmitting ? 'Submitting...' : 'Add Employee'}
+              {addform_isSubmitting ? 'Adding...' : 'Add Employee'}
             </button>
           </div>
         </div>

@@ -147,6 +147,69 @@ export async function createGoal(formData) {
 }
 
 /**
+ * Creates the same goal for multiple employees at once (bulk insert).
+ */
+export async function createBulkGoals(formData) {
+  try {
+    const { pool, orgid, loggedInEmpId, permissionLevel } = await getAuthAndPermissions();
+
+    // Only users with 'all' or 'team' permission can use bulk add
+    const canAdmin = permissionLevel === 'all' || permissionLevel === 'team';
+    if (!canAdmin) {
+      throw new Error('You do not have permission to add goals for all employees.');
+    }
+
+    // Get the employee IDs from form data
+    const employeeIdsJson = formData.get('employee_ids');
+    if (!employeeIdsJson) {
+      throw new Error('No employees specified.');
+    }
+
+    const employeeIds = JSON.parse(employeeIdsJson);
+    if (!Array.isArray(employeeIds) || employeeIds.length === 0) {
+      throw new Error('No employees to add goals for.');
+    }
+
+    const goalData = {
+      description: formData.get('description'),
+      start_date: formData.get('start_date'),
+      end_date: formData.get('end_date'),
+      completion_percentage: formData.get('completion_percentage') || 0,
+      employee_comments: formData.get('employee_comments') || null,
+      supervisor_comments: formData.get('supervisor_comments') || null,
+    };
+
+    // Build bulk insert query
+    const sql = `
+      INSERT INTO C_EMP_GOALS 
+      (orgid, employee_id, description, start_date, end_date, completion_percentage, employee_comments, supervisor_comments) 
+      VALUES ?
+    `;
+
+    // Create values array for bulk insert
+    const values = employeeIds.map(empId => [
+      orgid,
+      empId,
+      goalData.description,
+      goalData.start_date,
+      goalData.end_date,
+      goalData.completion_percentage,
+      goalData.employee_comments,
+      goalData.supervisor_comments,
+    ]);
+
+    await pool.query(sql, [values]);
+
+    revalidatePath('/(routes)/userscreens/performancereview');
+    return { success: true, count: employeeIds.length };
+
+  } catch (err) {
+    console.error('Error creating bulk goals:', err);
+    return { error: err.message };
+  }
+}
+
+/**
  * Updates an existing goal.
  */
 export async function updateGoal(formData) {

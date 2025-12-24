@@ -1056,6 +1056,12 @@ function onImageLoad(e) {
                   employeeDetails={employeeDetails}
                   canEdit={canEdit('personal')}
                   getDisplayProjectId={getdisplayprojectid}
+                  signatureSrc={signatureSrc}
+                  onSignatureFileChange={(e) => {
+                    if (e.target.files && e.target.files.length > 0) {
+                      setSignatureFile(e.target.files[0]);
+                    }
+                  }}
                 />
             )}
             
@@ -1083,12 +1089,6 @@ function onImageLoad(e) {
                  employmentTypes={employmentTypes}
                  canEdit={canEdit('employment')}
                  helpers={helpers}
-                 signatureSrc={signatureSrc}
-                 onSignatureFileChange={(e) => {
-                   if (e.target.files && e.target.files.length > 0) {
-                     setSignatureFile(e.target.files[0]);
-                   }
-                 }}
                />
                           
                <LeaveAssignments 

@@ -108,6 +108,7 @@ export async function fetchProjectAssignmentDetails(PRJ_ID, EMP_ID) {
         pe.PRJ_ID,
         DATE_FORMAT(pe.START_DT, '%Y-%m-%d') AS START_DT,
         DATE_FORMAT(pe.END_DT, '%Y-%m-%d') AS END_DT,
+        pe.SKILLS,
         pe.BILL_RATE,
         pe.BILL_TYPE,
         pe.OT_BILL_RATE,
@@ -209,8 +210,9 @@ export async function updateProjectAssignment(formData) {
       if (section === 'basic') {
         const startDt = formData.get('START_DT')?.trim() || null;
         const endDt = formData.get('END_DT')?.trim() || null;
+        const skills = formData.get('SKILLS')?.trim() || null;
 
-        console.log('Basic details:', { startDt, endDt, updatedBy });
+        console.log('Basic details:', { startDt, endDt, skills, updatedBy });
 
         if (!startDt) {
           console.log('Start Date is required');
@@ -239,10 +241,10 @@ export async function updateProjectAssignment(formData) {
 
         const [result] = await pool.query(
           `UPDATE C_PROJ_EMP 
-           SET START_DT = ?, END_DT = ?, 
+           SET START_DT = ?, END_DT = ?, SKILLS = ?,
                LAST_UPDATED_BY = ?, LAST_UPDATED_DATE = ?, MODIFICATION_NUM = MODIFICATION_NUM + 1
            WHERE PRJ_ID = ? AND EMP_ID = ?`,
-          [startDt, endDt, updatedBy, new Date(), PRJ_ID, EMP_ID]
+          [startDt, endDt, skills, updatedBy, new Date(), PRJ_ID, EMP_ID]
         );
 
         affectedRows += result.affectedRows;

@@ -61,12 +61,16 @@ export async function addDocument(formData) {
     const comments = formData.get('comments') || null;
     const file = formData.get('file');
 
+    // Convert empty strings to null
+    if (startdate === '' || startdate === 'null') startdate = null;
+    if (enddate === '' || enddate === 'null') enddate = null;
+
     if (!file) {
       throw new Error('File is required for document upload.');
     }
 
-    // Validate startdate <= enddate
-    if (!compareDates(startdate, enddate)) {
+    // Validate startdate <= enddate only if enddate is specified
+    if (enddate && !compareDates(startdate, enddate)) {
       throw new Error('Start date must be less than or equal to end date.');
     }
 
@@ -134,8 +138,12 @@ export async function updateDocument(formData) {
     const file = formData.get('file');
     const oldDocumentPath = formData.get('oldDocumentPath');
 
-    // Validate startdate <= enddate
-    if (!compareDates(startdate, enddate)) {
+    // Convert empty strings to null
+    if (startdate === '' || startdate === 'null') startdate = null;
+    if (enddate === '' || enddate === 'null') enddate = null;
+
+    // Validate startdate <= enddate only if enddate is specified
+    if (enddate && !compareDates(startdate, enddate)) {
       throw new Error('Start date must be less than or equal to end date.');
     }
 
