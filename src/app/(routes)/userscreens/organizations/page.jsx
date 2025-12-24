@@ -25,6 +25,7 @@ const Page = async () => {
   let countries = [];
   let states = [];
   let organizations = [];
+  let documenttypes=[];
 
   try {
     const cookieStore = cookies();
@@ -62,6 +63,12 @@ const Page = async () => {
         'SELECT ID, VALUE FROM C_STATE WHERE ACTIVE = 1'
       );
       states = stateRows;
+
+      const [documenttypesrows]=await pool.query(
+        'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 39 AND isactive = 1 AND (orgid = ? OR orgid = -1)',
+      [orgid]
+      );
+      documenttypes=documenttypesrows;
     } catch (error) {
       console.error('Error fetching data:', error);
     }
@@ -76,6 +83,7 @@ const Page = async () => {
       organizations={organizations}
       countries={countries}
       states={states}
+      documenttypes={documenttypes}
     />
   );
 };

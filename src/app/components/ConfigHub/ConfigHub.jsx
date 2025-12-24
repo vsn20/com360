@@ -40,7 +40,8 @@ const ConfigHub = () => {
     { id: 'service', name: 'Service', dbCategory: 'Service' },
     { id: 'reports', name: 'Reports', dbCategory: 'Reports' },
     { id: 'pafdocuments', name: 'PAF Documents', dbCategory: 'pafdocuments' },
-    { id: 'fdnsdocuments', name: 'FDNS Documents', dbCategory: 'fdnsdocuments' }
+    { id: 'fdnsdocuments', name: 'FDNS Documents', dbCategory: 'fdnsdocuments' },
+    { id: 'orgdocuments', name: 'Organization', dbCategory: 'orgdocuments' }
   ];
 
   const handleCategoryClick = async (category) => {

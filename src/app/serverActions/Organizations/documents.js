@@ -34,6 +34,9 @@ export async function addSubOrgDocument(formData) {
 
     const documentName = formData.get('documentName') || '';
     const documentPurpose = formData.get('documentPurpose') || '';
+    // Get document type from form dropdown instead of inferring from file
+    const documentType = formData.get('documentType') || 'unknown';
+    
     const file = formData.get('file');
     if (!file) throw new Error('File is required for document upload.');
 
@@ -46,7 +49,6 @@ export async function addSubOrgDocument(formData) {
     await fs.mkdir(uploadDir, { recursive: true });
     await fs.writeFile(filePath, Buffer.from(await file.arrayBuffer()));
 
-    const documentType = extension === 'pdf' ? 'pdf' : ['jpg', 'jpeg'].includes(extension) ? extension : 'unknown';
     const documentPath = `/uploads/suborg_documents/${filename}`;
 
     const pool = await DBconnection();
@@ -80,6 +82,7 @@ export async function updateSubOrgDocument(formData) {
 
     const documentName = formData.get('documentName');
     const documentPurpose = formData.get('documentPurpose');
+    const documentType = formData.get('documentType');
     const file = formData.get('file');
     const oldDocumentPath = formData.get('oldDocumentPath');
 
@@ -94,6 +97,11 @@ export async function updateSubOrgDocument(formData) {
     if (documentPurpose) {
       updateQuery += ', document_purpose = ?';
       params.push(documentPurpose);
+    }
+    // Update document type if provided
+    if (documentType) {
+      updateQuery += ', document_type = ?';
+      params.push(documentType);
     }
 
     if (file) {
@@ -111,11 +119,10 @@ export async function updateSubOrgDocument(formData) {
       await fs.mkdir(uploadDir, { recursive: true });
       await fs.writeFile(newFilePath, Buffer.from(await file.arrayBuffer()));
 
-      const documentType = extension === 'pdf' ? 'pdf' : ['jpg', 'jpeg'].includes(extension) ? extension : 'unknown';
       const documentPath = `/uploads/suborg_documents/${filename}`;
 
-      updateQuery += ', document_type = ?, document_path = ?';
-      params.push(documentType, documentPath);
+      updateQuery += ', document_path = ?';
+      params.push(documentPath);
     }
 
     updateQuery += ' WHERE id = ? AND suborgid = ? AND orgid = ?';
@@ -167,4 +174,3 @@ export async function deleteSubOrgDocument(id) {
     throw new Error(`Failed to delete document: ${error.message}`);
   }
 }
-

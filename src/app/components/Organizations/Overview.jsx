@@ -8,7 +8,7 @@ import { gptintegration } from '@/app/serverActions/gptintegration';
 import { useRouter, useSearchParams } from 'next/navigation';
 import './organizations.css';
 
-const Overview = ({ orgid, empid, organizations, countries, states }) => {
+const Overview = ({ orgid, empid, organizations, countries, states,documenttypes }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [selectedorgid, setSelectedorgid] = useState(null);
@@ -445,7 +445,7 @@ const Overview = ({ orgid, empid, organizations, countries, states }) => {
       {!add && selectedorgid ? (
         <div className="organization_details_container">
           <div className="organization_header_section">
-            <h1 className="organization_title">Edit Organization</h1>
+            <h1 className="organization_title">Organization Details</h1>
             <button className="organization_back_button" onClick={handleBackClick}></button>
           </div>
           
@@ -482,6 +482,7 @@ const Overview = ({ orgid, empid, organizations, countries, states }) => {
                   suborgid={selectedorgid} 
                   documents={subOrgDocs}
                   onDocumentsUpdate={fetchDocuments}
+                  documenttypes={documenttypes}
               />
               }
             </div>
@@ -491,7 +492,7 @@ const Overview = ({ orgid, empid, organizations, countries, states }) => {
         !add && (
           <div>
              <div className="organization_header_section">
-              <h1 className="organization_title">Existing Organizations</h1>
+              <h1 className="organization_title">Organizations</h1>
               <button onClick={handleAdd} className="organization_button">Add Organization</button>
             </div>
             <div className="organization_search_filter_container">
