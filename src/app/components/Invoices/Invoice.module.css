@@ -325,3 +325,28 @@
 .paperFooter { margin-top: 40px; text-align: right; border-top: 2px solid #0FD46C; padding-top: 10px; }
 .grandTotalLabel { font-size: 14px; letter-spacing: 1px; }
 .grandTotalAmount { font-size: 32px; font-weight: bold; color: #0FD46C; }
+
+/* Error and No Results Messages */
+.errorBanner {
+  background: #fee;
+  color: #c00;
+  padding: 12px 16px;
+  border-radius: 4px;
+  border: 1px solid #fcc;
+  margin-top: 15px;
+}
+
+.noResults {
+  background: #fff3cd;
+  color: #856404;
+  padding: 20px;
+  border-radius: 4px;
+  border: 1px solid #ffc107;
+  margin-top: 15px;
+  text-align: center;
+}
+
+.noResults p {
+  margin: 0;
+  font-size: 14px;
+}

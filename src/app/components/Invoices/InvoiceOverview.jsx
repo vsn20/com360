@@ -36,6 +36,7 @@ const InvoiceOverview = () => {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState(null);
+  const [hasSearched, setHasSearched] = useState(false);
 
   // Fetch employees and projects on mount
   useEffect(() => {
@@ -148,6 +149,7 @@ const InvoiceOverview = () => {
     setLoading(true);
     setError(null);
     setInvoices([]);
+    setHasSearched(true);
     const progressInt = runProgress();
 
     try {
@@ -473,6 +475,13 @@ const InvoiceOverview = () => {
         )}
 
         {error && <div className={styles.errorBanner}>{error}</div>}
+        
+        {/* No results message */}
+        {hasSearched && !loading && !error && invoices.length === 0 && (
+          <div className={styles.noResults}>
+            <p>No invoices found. The selected employee did not work on this project during the selected period.</p>
+          </div>
+        )}
       </div>
 
       {view === "list" && !loading && invoices.length > 0 && (
