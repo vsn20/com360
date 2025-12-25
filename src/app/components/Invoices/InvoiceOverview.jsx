@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { generateInvoices, fetchEmployeesForInvoice, fetchClientsForInvoice } from "@/app/serverActions/Invoices/InvoiceActions";
+import { generateInvoices, fetchEmployeesForInvoice, fetchProjectsForInvoice } from "@/app/serverActions/Invoices/InvoiceActions";
 import styles from "./Invoice.module.css";
 import ExcelJS from 'exceljs'; 
 import { saveAs } from 'file-saver';
@@ -12,15 +12,15 @@ const InvoiceOverview = () => {
   
   // Filter Options (fetched from server)
   const [employees, setEmployees] = useState([]);
-  const [clients, setClients] = useState([]);
-  // Project filter (COMMENTED - replaced by client filter)
-  // const [projects, setProjects] = useState([]);
+  const [projects, setProjects] = useState([]);
+  // Client filter (COMMENTED - replaced by project filter)
+  // const [clients, setClients] = useState([]);
   
   // Selected Filters (single select with 'all' option)
   const [selectedEmployee, setSelectedEmployee] = useState("all");
-  const [selectedClient, setSelectedClient] = useState("all");
-  // Project filter (COMMENTED - replaced by client filter)
-  // const [selectedProject, setSelectedProject] = useState("all");
+  const [selectedProject, setSelectedProject] = useState("all");
+  // Client filter (COMMENTED - replaced by project filter)
+  // const [selectedClient, setSelectedClient] = useState("all");
   
   // Controls
   const [reportType, setReportType] = useState("monthly");
@@ -37,17 +37,17 @@ const InvoiceOverview = () => {
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState(null);
 
-  // Fetch employees and clients on mount
+  // Fetch employees and projects on mount
   useEffect(() => {
     const loadFilterData = async () => {
       try {
-        const [empRes, clientRes] = await Promise.all([
+        const [empRes, projRes] = await Promise.all([
           fetchEmployeesForInvoice(),
-          fetchClientsForInvoice()
+          fetchProjectsForInvoice()
         ]);
         
         console.log("Employee fetch result:", empRes);
-        console.log("Client fetch result:", clientRes);
+        console.log("Project fetch result:", projRes);
         
         if (empRes.error) {
           console.error("Error fetching employees:", empRes.error);
@@ -55,17 +55,17 @@ const InvoiceOverview = () => {
           setEmployees(empRes.employees);
         }
         
-        if (clientRes.error) {
-          console.error("Error fetching clients:", clientRes.error);
-        } else if (clientRes.clients) {
-          setClients(clientRes.clients);
+        if (projRes.error) {
+          console.error("Error fetching projects:", projRes.error);
+        } else if (projRes.projects) {
+          setProjects(projRes.projects);
         }
         
-        // Project filter (COMMENTED - replaced by client filter)
-        // if (projRes.error) {
-        //   console.error("Error fetching projects:", projRes.error);
-        // } else if (projRes.projects) {
-        //   setProjects(projRes.projects);
+        // Client filter (COMMENTED - replaced by project filter)
+        // if (clientRes.error) {
+        //   console.error("Error fetching clients:", clientRes.error);
+        // } else if (clientRes.clients) {
+        //   setClients(clientRes.clients);
         // }
       } catch (err) {
         console.error("Error loading filter data:", err);
@@ -153,18 +153,18 @@ const InvoiceOverview = () => {
     try {
       // Keep IDs as-is (they may be strings like "2-1" or "2_2")
       const empId = selectedEmployee === "all" ? null : selectedEmployee;
-      const clientId = selectedClient === "all" ? null : selectedClient;
-      // Project filter (COMMENTED - replaced by client filter)
-      // const projId = selectedProject === "all" ? null : selectedProject;
+      const projId = selectedProject === "all" ? null : selectedProject;
+      // Client filter (COMMENTED - replaced by project filter)
+      // const clientId = selectedClient === "all" ? null : selectedClient;
       
-      console.log("Selected filters:", { selectedEmployee, selectedClient, empId, clientId });
+      console.log("Selected filters:", { selectedEmployee, selectedProject, empId, projId });
       
       let params = { 
         reportType,
         selectedEmployees: empId ? [empId] : [],
-        selectedClients: clientId ? [clientId] : []
-        // Project filter (COMMENTED - replaced by client filter)
-        // selectedProjects: projId ? [projId] : []
+        selectedProjects: projId ? [projId] : []
+        // Client filter (COMMENTED - replaced by project filter)
+        // selectedClients: clientId ? [clientId] : []
       };
       
       console.log("Params being sent:", params);
@@ -369,23 +369,8 @@ const InvoiceOverview = () => {
             </select>
           </div>
 
-          {/* Client Filter */}
+          {/* Project Filter */}
           <div className={styles.controlGroup}>
-            <label>Client</label>
-            <select 
-              value={selectedClient}
-              onChange={e => setSelectedClient(e.target.value)}
-              className={styles.filterSelect}
-            >
-              <option value="all">All Clients</option>
-              {clients.map(client => (
-                <option key={client.id} value={client.id}>{client.name}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Project Filter (COMMENTED - replaced by client filter) */}
-          {/* <div className={styles.controlGroup}>
             <label>Project</label>
             <select 
               value={selectedProject}
@@ -395,6 +380,21 @@ const InvoiceOverview = () => {
               <option value="all">All Projects</option>
               {projects.map(proj => (
                 <option key={proj.id} value={proj.id}>{proj.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Client Filter (COMMENTED - replaced by project filter) */}
+          {/* <div className={styles.controlGroup}>
+            <label>Client</label>
+            <select 
+              value={selectedClient}
+              onChange={e => setSelectedClient(e.target.value)}
+              className={styles.filterSelect}
+            >
+              <option value="all">All Clients</option>
+              {clients.map(client => (
+                <option key={client.id} value={client.id}>{client.name}</option>
               ))}
             </select>
           </div> */}
