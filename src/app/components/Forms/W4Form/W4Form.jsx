@@ -10,6 +10,14 @@ import {
 import SignatureCanvas from 'react-signature-canvas';
 import styles from '../W9Form/W9Forms.module.css'; // Reusing W9Form styles
 
+const formatDate = (date) => {
+  if (!date || isNaN(new Date(date))) return 'N/A';
+  const d = new Date(date);
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${month}/${day}/${d.getFullYear()}`;
+};
+
 const W4Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onError, onSuccess }) => {
   const [formData, setFormData] = useState({
     first_name: '',
@@ -418,7 +426,7 @@ const W4Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
             <div className={styles.formGroup}>
               <label>Employee Signature</label>
               <div className={styles.signatureDisplay}><img src={existingForm.EMPLOYEE_SIGNATURE_URL} alt="Signature" /></div>
-               <p>Date Signed: {existingForm.EMPLOYEE_SIGNATURE_DATE ? new Date(existingForm.EMPLOYEE_SIGNATURE_DATE).toLocaleDateString() : 'N/A'}</p>
+               <p>Date Signed: {formatDate(existingForm.EMPLOYEE_SIGNATURE_DATE)}</p>
             </div>
           )
         ) : (

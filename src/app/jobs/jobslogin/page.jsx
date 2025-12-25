@@ -225,7 +225,7 @@ export default function JobsLoginPage() {
                                         type="submit"
                                         disabled={isPending}
                                     >
-                                        Send OTP
+                                        {isPending ? 'Sending...' : 'Send OTP'}
                                     </button>
                                 </form>
                             )}
@@ -244,7 +244,7 @@ export default function JobsLoginPage() {
                                             type="submit"
                                             disabled={isPending}
                                         >
-                                            Verify OTP
+                                            {isPending ? 'Verifying...' : 'Verify OTP'}
                                         </button>
                                     </form>
                                     <p style={{ marginTop: '10px' }}>
@@ -294,7 +294,7 @@ export default function JobsLoginPage() {
                                             type="submit"
                                             disabled={isPending}
                                         >
-                                            Complete Signup
+                                            {isPending ? 'Completing...' : 'Complete Signup'}
                                         </button>
                                     </form>
                                     <p style={{ marginTop: '10px' }}>
@@ -329,7 +329,7 @@ export default function JobsLoginPage() {
                                         type="submit"
                                         disabled={isPending}
                                     >
-                                        Send OTP
+                                        {isPending ? 'Sending...' : 'Send OTP'}
                                     </button>
                                 </form>
                             )}
@@ -348,7 +348,7 @@ export default function JobsLoginPage() {
                                             type="submit"
                                             disabled={isPending}
                                         >
-                                            Verify OTP
+                                            {isPending ? 'Verifying...' : 'Verify OTP'}
                                         </button>
                                     </form>
                                     <p style={{ marginTop: '10px' }}>
@@ -384,7 +384,7 @@ export default function JobsLoginPage() {
                                             type="submit"
                                             disabled={isPending}
                                         >
-                                            Reset Password
+                                            {isPending ? 'Resetting...' : 'Reset Password'}
                                         </button>
                                     </form>
                                     <p style={{ marginTop: '10px' }}>

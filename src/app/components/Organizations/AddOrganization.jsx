@@ -261,8 +261,9 @@ const AddOrganization = ({ orgid, empid, countries, states, prefilledData }) => 
           </div>
           
           <div className="organization_form_buttons">
+            {isLoading && <p style={{ color: '#007bff', marginBottom: '10px' }}>Adding organization, please wait...</p>}
             <button type="submit" onClick={handleSubmit} className="organization_submit_button" disabled={isLoading}>
-              {isLoading ? 'Saving...' : 'Add Organization'}
+              {isLoading ? 'Adding...' : 'Add Organization'}
             </button>
           </div>
         </div>

@@ -89,12 +89,11 @@ const Overview = ({
   };
 
   const formatDateDisplay = (date) => {
-    if (!date) return 'N/A';
-    try {
-      return new Date(date).toLocaleDateString();
-    } catch (error) {
-      return 'N/A';
-    }
+    if (!date || isNaN(new Date(date))) return 'N/A';
+    const d = new Date(date);
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${month}/${day}/${d.getFullYear()}`;
   };
 
   // Helper to get Parent SR Name for Display
@@ -271,6 +270,71 @@ const Overview = ({
     if (section === 'additional') setIsEditingAdditional(true);
     if (section === 'description') setIsEditingDescription(true);
     if (section === 'attachments') setIsEditingAttachments(true);
+  };
+
+  // Cancel handlers to reset form data to original values
+  const handleCancelBasic = () => {
+    setIsEditingBasic(false);
+    if (serviceRequestDetails) {
+      setFormData(prev => ({
+        ...prev,
+        serviceName: serviceRequestDetails.SERVICE_NAME || '',
+        statusCd: serviceRequestDetails.STATUS_CD || 'Open',
+        priorityCd: serviceRequestDetails.PRIORITY_CD || '',
+        typeCd: serviceRequestDetails.TYPE_CD || '',
+        subTypeCd: serviceRequestDetails.SUB_TYPE_CD || '',
+        assignedTo: serviceRequestDetails.ASSIGNED_TO || '',
+        dueDate: formatDate(serviceRequestDetails.DUE_DATE),
+      }));
+    }
+    setError(null);
+  };
+
+  const handleCancelAdditional = () => {
+    setIsEditingAdditional(false);
+    if (serviceRequestDetails) {
+      setFormData(prev => ({
+        ...prev,
+        escalatedFlag: !!serviceRequestDetails.ESCALATED_FLAG,
+        escalatedTo: serviceRequestDetails.ESCALATED_TO || '',
+        escalatedDate: formatDate(serviceRequestDetails.ESCALATED_DATE),
+        contactId: serviceRequestDetails.CONTACT_ID || '',
+        accountId: serviceRequestDetails.ACCOUNT_ID || '',
+        assetId: serviceRequestDetails.ASSET_ID || '',
+        parRowId: serviceRequestDetails.PAR_ROW_ID || '',
+      }));
+    }
+    setError(null);
+  };
+
+  const handleCancelDescription = () => {
+    setIsEditingDescription(false);
+    if (serviceRequestDetails) {
+      setFormData(prev => ({
+        ...prev,
+        description: serviceRequestDetails.DESCRIPTION || '',
+        comments: serviceRequestDetails.COMMENTS || '',
+      }));
+    }
+    setError(null);
+  };
+
+  const handleCancelAttachments = () => {
+    setIsEditingAttachments(false);
+    if (serviceRequestDetails) {
+      setExistingFiles(
+        serviceRequestDetails.attachments?.map((att) => ({
+          sr_att_id: att.SR_ATT_ID,
+          name: att.FILE_NAME,
+          file_path: att.FILE_PATH,
+          type: att.TYPE_CD || '',
+          comments: att.COMMENTS || '',
+          attachmentStatus: att.ATTACHMENT_STATUS || '',
+        })) || []
+      );
+      setNewFiles([]);
+    }
+    setError(null);
   };
 
   // UPDATED: Handle Form Change with Escalation Logic
@@ -920,7 +984,7 @@ const Overview = ({
                     <button
                       type="button"
                       className="cancel"
-                      onClick={() => setIsEditingBasic(false)}
+                      onClick={handleCancelBasic}
                       disabled={isLoading}
                     >
                       Cancel
@@ -1084,7 +1148,7 @@ const Overview = ({
                     <button
                       type="button"
                       className="cancel"
-                      onClick={() => setIsEditingAdditional(false)}
+                      onClick={handleCancelAdditional}
                       disabled={isLoading}
                     >
                       Cancel
@@ -1184,7 +1248,7 @@ const Overview = ({
                     <button
                       type="button"
                       className="cancel"
-                      onClick={() => setIsEditingDescription(false)}
+                      onClick={handleCancelDescription}
                       disabled={isLoading}
                     >
                       Cancel
@@ -1356,7 +1420,7 @@ const Overview = ({
                     <button
                       type="button"
                       className="cancel"
-                      onClick={() => setIsEditingAttachments(false)}
+                      onClick={handleCancelAttachments}
                       disabled={isLoading}
                     >
                       Cancel

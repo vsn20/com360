@@ -8,6 +8,7 @@ const SubOrgDocument = ({ suborgid, documents: initialDocuments, onDocumentsUpda
   // View States: 'list', 'add', 'detail'
   const [viewState, setViewState] = useState('list');
   const [editingDetail, setEditingDetail] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   
   const [error, setError] = useState(null);
   const [allDocuments, setAllDocuments] = useState(Array.isArray(initialDocuments) ? initialDocuments : []);
@@ -103,6 +104,22 @@ const SubOrgDocument = ({ suborgid, documents: initialDocuments, onDocumentsUpda
     setForm(prev => ({ ...prev, [name]: value }));
   };
 
+  // Cancel handler to reset form data to original values
+  const handleCancelDetail = () => {
+    setEditingDetail(false);
+    if (selectedDoc) {
+      setForm({
+        id: selectedDoc.id,
+        documentName: selectedDoc.document_name || '',
+        documentType: selectedDoc.document_type || '',
+        documentPurpose: selectedDoc.document_purpose || '',
+        existingPath: selectedDoc.document_path || '',
+        file: null
+      });
+    }
+    setError(null);
+  };
+
   const handleFileLinkClick = (e, path) => {
     e.stopPropagation();
     if (path) window.open(path, '_blank');
@@ -111,6 +128,7 @@ const SubOrgDocument = ({ suborgid, documents: initialDocuments, onDocumentsUpda
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
+    setIsLoading(true);
 
     const formData = new FormData();
     formData.append('suborgid', suborgid);
@@ -154,9 +172,11 @@ const SubOrgDocument = ({ suborgid, documents: initialDocuments, onDocumentsUpda
         };
         setSelectedDoc(updatedDoc);
         setEditingDetail(false);
+        setIsLoading(false);
       }
     } catch (err) {
       setError(`Failed to save document: ${err.message}`);
+      setIsLoading(false);
     }
   };
 
@@ -276,8 +296,11 @@ const SubOrgDocument = ({ suborgid, documents: initialDocuments, onDocumentsUpda
             </div>
           </div>
           <div className={styles.formButtons}>
-            <button type="submit" className={styles.saveButton}>Add Document</button>
-            <button type="button" className={styles.cancelButton} onClick={handleBackClick}>Cancel</button>
+            {isLoading && <p style={{ color: '#007bff', marginBottom: '10px' }}>Adding document, please wait...</p>}
+            <button type="submit" className={styles.saveButton} disabled={isLoading}>
+              {isLoading ? 'Adding...' : 'Add Document'}
+            </button>
+            <button type="button" className={styles.cancelButton} onClick={handleBackClick} disabled={isLoading}>Cancel</button>
           </div>
         </form>
       </div>
@@ -355,8 +378,11 @@ const SubOrgDocument = ({ suborgid, documents: initialDocuments, onDocumentsUpda
                 </div>
               </div>
               <div className={styles.formButtons}>
-                <button type="submit" className={styles.saveButton}>Save</button>
-                <button type="button" className={styles.cancelButton} onClick={() => setEditingDetail(false)}>Cancel</button>
+                {isLoading && <p style={{ color: '#007bff', marginBottom: '10px' }}>Saving changes, please wait...</p>}
+                <button type="submit" className={styles.saveButton} disabled={isLoading}>
+                  {isLoading ? 'Saving...' : 'Save'}
+                </button>
+                <button type="button" className={styles.cancelButton} onClick={handleCancelDetail} disabled={isLoading}>Cancel</button>
               </div>
             </form>
           ) : (

@@ -1,10 +1,33 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useFormStatus } from 'react-dom';
 import { fetchRolesByOrgId, fetchRoleById, fetchMenusAndSubmenus, updateRole, addRole } from '@/app/serverActions/Roles/Overview';
 import './rolesoverview.css';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Loading from '../Loading/Loading';
+
+// Submit button component that uses useFormStatus for pending state
+function AddRoleSubmitButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="roles_button"
+    >
+      {pending ? 'Adding...' : 'Add Role'}
+    </button>
+  );
+}
+
+const formatDate = (date) => {
+  if (!date || isNaN(new Date(date))) return 'N/A';
+  const d = new Date(date);
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${month}/${day}/${d.getFullYear()}`;
+};
 
 const Overview = ({ currentRole, orgid, noofrows, error }) => {
   const searchparams = useSearchParams();
@@ -35,6 +58,9 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
   const [addform_availableSubmenus, addform_setAvailableSubmenus] = useState([]);
   const [addform_loading, addform_setLoading] = useState(true);
   const [addform_success, addform_setsuccess] = useState(null);
+  const [isAddingRole, setIsAddingRole] = useState(false);
+  const [isSavingDetails, setIsSavingDetails] = useState(false);
+  const [isSavingFeatures, setIsSavingFeatures] = useState(false);
   const [sortConfig, setSortConfig] = useState({ column: 'roleid', direction: 'asc' });
   const [currentPage, setCurrentPage] = useState(1);
   const [pageInputValue, setPageInputValue] = useState('1');
@@ -220,6 +246,7 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
       }, 4000);
       return;
     }
+    setIsSavingDetails(true);
     setRolesLoading(true);
     try {
       const formDataToSubmit = new FormData();
@@ -249,6 +276,7 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
       }, 4000);
     } finally {
       setRolesLoading(false);
+      setIsSavingDetails(false);
     }
   };
 
@@ -268,6 +296,7 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
   };
 
   const handleFeatureSave = async () => {
+    setIsSavingFeatures(true);
     setRolesLoading(true);
     try {
       const formDataToSubmit = new FormData();
@@ -312,6 +341,7 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
       }, 4000);
     } finally {
       setRolesLoading(false);
+      setIsSavingFeatures(false);
     }
   };
 
@@ -417,6 +447,7 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
   
   const addform_handleSubmit = async (formData) => {
     addform_setLoading(true);
+    setIsAddingRole(true);
     addform_setFormError(null);
     addform_setsuccess(null);
 
@@ -475,6 +506,7 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
       setTimeout(() => addform_setFormError(null), 4000);
     } finally {
       addform_setLoading(false);
+      setIsAddingRole(false);
     }
   };
 
@@ -886,7 +918,8 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
    setduplicate(e.target.value)
   }
 
-  if (addform_loading || rolesLoading) {
+  // Only show full-page loading during initial data fetch, not during form submission
+  if ((addform_loading || rolesLoading) && !isAddingRole && !isSavingDetails && !isSavingFeatures) {
     return (
       <div>
         <Loading />
@@ -1253,6 +1286,7 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
           </div>
           {addform_formerror && <p style={{ color: "red" }}>{addform_formerror}</p>}
           {addform_success && <p style={{ color: "green" }}>{addform_success}</p>}
+          {isAddingRole && <p style={{ color: "#007bff" }}>Adding role, please wait...</p>}
           <form action={addform_handleSubmit} ref={formRef} className="roles_add-role-form">
             <div className="roles_form-section">
               <div className="roles_role-name-section">
@@ -1286,13 +1320,7 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
               </div>
             </div>
             <div className="roles_submit-section">
-              <button
-                type="submit"
-                disabled={addform_loading}
-                className="roles_button"
-              >
-                Add Role
-              </button>
+              <AddRoleSubmitButton />
             </div>
           </form>
         </div>
@@ -1387,7 +1415,7 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
         </span>
       </td>
       <td>
-        {role.CREATED_DATE ? new Date(role.CREATED_DATE).toLocaleDateString() : 'N/A'}
+        {formatDate(role.CREATED_DATE)}
       </td>
     </tr>
   ))}
@@ -1457,6 +1485,7 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
               )}
             </div>
             {detailsError && <div className="roles_error-message">{detailsError}</div>}
+            {isSavingDetails && <p style={{ color: "#007bff" }}>Saving changes, please wait...</p>}
             {editingDetails ? (
               <form onSubmit={(e) => { e.preventDefault(); handleDetailsSave(); }}>
                 <div className="roles_form-row">
@@ -1473,8 +1502,10 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
                   </div>
                 </div>
                 <div className="roles_form-buttons">
-                  <button type="submit" className="roles_save">Save</button>
-                  <button type="button" className="roles_cancel" onClick={handleDetailsCancel}>Cancel</button>
+                  <button type="submit" className="roles_save" disabled={isSavingDetails}>
+                    {isSavingDetails ? 'Saving...' : 'Save'}
+                  </button>
+                  <button type="button" className="roles_cancel" onClick={handleDetailsCancel} disabled={isSavingDetails}>Cancel</button>
                 </div>
               </form>
             ) : (
@@ -1504,12 +1535,15 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
               )}
             </div>
             {featuresError && <div className="roles_error-message">{featuresError}</div>}
+            {isSavingFeatures && <p style={{ color: "#007bff" }}>Saving changes, please wait...</p>}
             <div className="roles_permissions-container">
               {renderPermissionsGrid(editingFeatures, editingFeatures ? tempPermissions : permissions)}
               {editingFeatures && (
                 <div className="roles_form-buttons">
-                  <button className="roles_save" onClick={handleFeatureSave}>Save</button>
-                  <button className="roles_cancel" onClick={handleFeatureCancel}>Cancel</button>
+                  <button className="roles_save" onClick={handleFeatureSave} disabled={isSavingFeatures}>
+                    {isSavingFeatures ? 'Saving...' : 'Save'}
+                  </button>
+                  <button className="roles_cancel" onClick={handleFeatureCancel} disabled={isSavingFeatures}>Cancel</button>
                 </div>
               )}
             </div>

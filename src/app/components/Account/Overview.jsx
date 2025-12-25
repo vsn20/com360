@@ -62,6 +62,7 @@ const Overview = ({
   const [editingBusinessAddress, setEditingBusinessAddress] = useState(false);
   const [editingMailingAddress, setEditingMailingAddress] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
   const [isadd, setisadd] = useState(false);
   const [addFormError, addsetFormError] = useState(null);
   const [addFormSuccess, addsetFormSuccess] = useState(null);
@@ -413,6 +414,57 @@ const Overview = ({
     if (section === 'mailingAddress') setEditingMailingAddress(true);
   };
 
+  // Cancel handlers to reset form data to original values
+  const handleCancelBasic = () => {
+    setEditingBasic(false);
+    if (accountDetails) {
+      setFormData(prev => ({
+        ...prev,
+        activeFlag: accountDetails.ACTIVE_FLAG ? '1' : '0',
+        acctTypeCd: accountDetails.ACCT_TYPE_CD || '',
+        email: accountDetails.EMAIL || '',
+        aliasName: accountDetails.ALIAS_NAME || '',
+        branchType: accountDetails.BRANCH_TYPE || '',
+        suborgid: accountDetails.suborgid || '',
+      }));
+    }
+    setError(null);
+  };
+
+  const handleCancelBusinessAddress = () => {
+    setEditingBusinessAddress(false);
+    if (accountDetails) {
+      setFormData(prev => ({
+        ...prev,
+        businessAddrLine1: accountDetails.BUSINESS_ADDR_LINE1 || '',
+        businessAddrLine2: accountDetails.BUSINESS_ADDR_LINE2 || '',
+        businessAddrLine3: accountDetails.BUSINESS_ADDR_LINE3 || '',
+        businessCity: accountDetails.BUSINESS_CITY || '',
+        businessStateId: accountDetails.BUSINESS_STATE_ID ? String(accountDetails.BUSINESS_STATE_ID) : '',
+        businessCountryId: accountDetails.BUSINESS_COUNTRY_ID ? String(accountDetails.BUSINESS_COUNTRY_ID) : '185',
+        businessPostalCode: accountDetails.BUSINESS_POSTAL_CODE || '',
+      }));
+    }
+    setError(null);
+  };
+
+  const handleCancelMailingAddress = () => {
+    setEditingMailingAddress(false);
+    if (accountDetails) {
+      setFormData(prev => ({
+        ...prev,
+        mailingAddrLine1: accountDetails.MAILING_ADDR_LINE1 || '',
+        mailingAddrLine2: accountDetails.MAILING_ADDR_LINE2 || '',
+        mailingAddrLine3: accountDetails.MAILING_ADDR_LINE3 || '',
+        mailingCity: accountDetails.MAILING_CITY || '',
+        mailingStateId: accountDetails.MAILING_STATE_ID ? String(accountDetails.MAILING_STATE_ID) : '',
+        mailingCountryId: accountDetails.MAILING_COUNTRY_ID ? String(accountDetails.MAILING_COUNTRY_ID) : '185',
+        mailingPostalCode: accountDetails.MAILING_POSTAL_CODE || '',
+      }));
+    }
+    setError(null);
+  };
+
   const ensureOrgId = async () => {
     if (!formData.orgid || formData.orgid === '') {
       if (orgid) {
@@ -573,21 +625,26 @@ const Overview = ({
     e.preventDefault();
     addsetFormError(null);
     addsetFormSuccess(null);
+    setIsAdding(true);
 
     if (!addformData.accountName) {
       addsetFormError('Account name is required.');
+      setIsAdding(false);
       return;
     }
     if (!addformData.acctTypeCd) {
       addsetFormError('Please select an account type.');
+      setIsAdding(false);
       return;
     }
     if (!addformData.branchType) {
       addsetFormError('Please select a branch type.');
+      setIsAdding(false);
       return;
     }
     if (!addformData.email) {
       addsetFormError('Email is required.');
+      setIsAdding(false);
       return;
     }
 
@@ -598,6 +655,7 @@ const Overview = ({
     addformDataToSend.append('orgid', orgid);
 
     const addresult = await addAccount(addformDataToSend);
+    setIsAdding(false);
     if (addresult?.error) {
       addsetFormError(addresult.error);
     } else if (addresult?.success) {
@@ -906,8 +964,9 @@ const Overview = ({
             </div>
 
             <div className="account_form_buttons">
-              <button type="submit" className="account_save">
-                Add Account
+              {isAdding && <p style={{ color: '#007bff', marginBottom: '10px' }}>Adding account, please wait...</p>}
+              <button type="submit" className="account_save" disabled={isAdding}>
+                {isAdding ? 'Adding...' : 'Add Account'}
               </button>
             </div>
           </form>
@@ -1132,7 +1191,7 @@ const Overview = ({
                         <button type="submit" className="account_save" disabled={isLoading}>
                           {isLoading ? 'Saving...' : 'Save'}
                         </button>
-                        <button type="button" className="account_cancel" onClick={() => setEditingBasic(false)} disabled={isLoading}>
+                        <button type="button" className="account_cancel" onClick={handleCancelBasic} disabled={isLoading}>
                           Cancel
                         </button>
                       </div>
@@ -1265,7 +1324,7 @@ const Overview = ({
                           <button type="submit" className="account_save" disabled={isLoading}>
                             {isLoading ? 'Saving...' : 'Save'}
                           </button>
-                          <button type="button" className="account_cancel" onClick={() => setEditingBusinessAddress(false)} disabled={isLoading}>
+                          <button type="button" className="account_cancel" onClick={handleCancelBusinessAddress} disabled={isLoading}>
                             Cancel
                           </button>
                         </div>
@@ -1375,7 +1434,7 @@ const Overview = ({
                           <button type="submit" className="account_save" disabled={isLoading}>
                             {isLoading ? 'Saving...' : 'Save'}
                           </button>
-                          <button type="button" className="account_cancel" onClick={() => setEditingMailingAddress(false)} disabled={isLoading}>
+                          <button type="button" className="account_cancel" onClick={handleCancelMailingAddress} disabled={isLoading}>
                             Cancel
                           </button>
                         </div>

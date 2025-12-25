@@ -20,6 +20,7 @@ const EmployeeEducation = ({
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
     degree_name: '',
     major: '',
@@ -58,6 +59,7 @@ const EmployeeEducation = ({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSaving(true);
     const data = new FormData();
     data.append('employee_id', empid);
     
@@ -73,6 +75,7 @@ const EmployeeEducation = ({
       ? await updateEducation(data)
       : await addEducation(data);
 
+    setIsSaving(false);
     if (result.error) {
       setError(result.error);
     } else {
@@ -324,10 +327,10 @@ const EmployeeEducation = ({
           </div>
 
           <div className="form-buttons">
-            <button type="submit" className="save">
-              {editingId ? 'Update' : 'Add'}
+            <button type="submit" className="save" disabled={isSaving}>
+              {isSaving ? 'Saving...' : (editingId ? 'Update' : 'Add')}
             </button>
-            <button type="button" className="cancel" onClick={resetForm}>
+            <button type="button" className="cancel" onClick={resetForm} disabled={isSaving}>
               Cancel
             </button>
           </div>

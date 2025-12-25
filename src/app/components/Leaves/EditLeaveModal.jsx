@@ -129,6 +129,7 @@ export default function EditLeaveModal({ leave, onClose, onSuccess, canEditAnyti
           </div>
           
           {error && <p className="error-message">{error}</p>}
+          {loading && <p style={{ color: '#007bff', marginBottom: '10px' }}>Saving changes, please wait...</p>}
 
           <div className="form-actions">
             <button type="button" className="button-cancel" onClick={onClose} disabled={loading}>Cancel</button>

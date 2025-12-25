@@ -1105,7 +1105,7 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
                       className="save"
                       disabled={isLoading || isResolved}
                     >
-                      {isLoading ? 'Save Status' : 'Save Status'}
+                      {isLoading ? 'Saving...' : 'Save Status'}
                     </button>
                     <button
                       type="button"
@@ -1325,7 +1325,7 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
                         className="save"
                         disabled={isLoading || isResolved}
                       >
-                        {isLoading ? 'Save Attachment' : 'Save Attachment'}
+                        {isLoading ? 'Saving...' : 'Save Attachment'}
                       </button>
                       <button
                         type="button"
@@ -1481,7 +1481,7 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
                       className="save"
                       disabled={isLoading || isResolved}
                     >
-                      {isLoading ? 'Save Activity' : 'Save Activity'}
+                      {isLoading ? 'Saving...' : 'Save Activity'}
                     </button>
                     <button
                       type="button"

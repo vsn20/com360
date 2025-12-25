@@ -23,6 +23,7 @@ export default function LoginPage() {
   const [signupEmail, setSignupEmail] = useState('');
   const [forgotStep, setForgotStep] = useState('identifier'); // 'identifier', 'otp', 'reset'
   const [forgotEmail, setForgotEmail] = useState('');
+  const [loadingMessage, setLoadingMessage] = useState('');
 
   useEffect(() => setIsClient(true), []);
 
@@ -37,9 +38,11 @@ export default function LoginPage() {
 
   const handleSendOTP = async (formData) => {
     setSignupError(null);
+    setLoadingMessage('Sending OTP, please wait...');
     startTransition(async () => {
       const email = formData.get('email');
       const { success, error } = await sendOTP(formData);
+      setLoadingMessage('');
       if (success) {
         setSignupEmail(email);
         setSignupStep('otp');
@@ -52,9 +55,11 @@ export default function LoginPage() {
 
   const handleVerifyOTP = async (formData) => {
     setSignupError(null);
+    setLoadingMessage('Verifying OTP, please wait...');
     startTransition(async () => {
       formData.append('email', signupEmail); // Pass email along
       const { success, error } = await verifyOTP(formData);
+      setLoadingMessage('');
       if (success) {
         setSignupStep('details');
         setSignupSuccess('OTP verified successfully.');
@@ -66,14 +71,17 @@ export default function LoginPage() {
 
   const handleFinalSignup = async (formData) => {
     setSignupError(null);
+    setLoadingMessage('Creating account, please wait...');
     startTransition(async () => {
       const user_id = formData.get('user_id');
       if (!validateUsername(user_id)) {
         setSignupError('Username must contain only letters and numbers.');
+        setLoadingMessage('');
         return;
       }
       formData.append('email', signupEmail); // Pass email along
       const { success, error } = await finalSignup(formData);
+      setLoadingMessage('');
       if (success) {
         setSignupError(null);
         setSignupSuccess("Signup successful! Please log in.");
@@ -91,11 +99,13 @@ export default function LoginPage() {
 
   const handleSendForgotOTP = async (formData) => {
     setForgotError(null);
+    setLoadingMessage('Sending OTP, please wait...');
     startTransition(async () => {
       const identifier = formData.get('identifier');
       const isEmail = identifier.includes('@') && (identifier.includes('.com') || identifier.includes('.in'));
       formData.append('type', isEmail ? 'email' : 'username');
       const { success, error, email } = await sendForgotOTP(formData);
+      setLoadingMessage('');
       if (success) {
         setForgotEmail(email);
         setForgotStep('otp');
@@ -108,9 +118,11 @@ export default function LoginPage() {
 
   const handleVerifyForgotOTP = async (formData) => {
     setForgotError(null);
+    setLoadingMessage('Verifying OTP, please wait...');
     startTransition(async () => {
       formData.append('email', forgotEmail); // Pass email along
       const { success, error } = await verifyForgotOTP(formData);
+      setLoadingMessage('');
       if (success) {
         setForgotStep('reset');
         setForgotSuccess('OTP verified successfully.');
@@ -122,9 +134,11 @@ export default function LoginPage() {
 
   const handleResetPassword = async (formData) => {
     setForgotError(null);
+    setLoadingMessage('Resetting password, please wait...');
     startTransition(async () => {
       formData.append('email', forgotEmail); // Pass email along
       const { success, error } = await resetPassword(formData);
+      setLoadingMessage('');
       if (success) {
         setForgotError(null);
         setForgotSuccess("Password reset successful! Please log in.");
@@ -142,6 +156,7 @@ export default function LoginPage() {
 
   const handleSubmit = async (formData) => {
     setError(null);
+    setLoadingMessage('Logging in, please wait...');
     startTransition(async () => {
       try {
         const logindetails = { username: formData.get('identifier'), password: formData.get('password') };
@@ -193,9 +208,11 @@ export default function LoginPage() {
 
           router.push(redirectPath);
         } else {
+          setLoadingMessage('');
           setError(loginError || 'Login failed. Please try again.');
         }
       } catch (err) {
+        setLoadingMessage('');
         setError('An unexpected error occurred. Please try again.');
         console.error('Login error:', err);
       }
@@ -248,11 +265,12 @@ export default function LoginPage() {
               <h2>Sign Up</h2>
               {signupError && <p style={{ color: 'red' }}>{signupError}</p>}
               {signupSuccess && <p style={{ color: 'green' }}>{signupSuccess}</p>}
+              {isPending && loadingMessage && <p style={{ color: '#007bff' }}>{loadingMessage}</p>}
               {signupStep === 'email' && (
                 <form action={handleSendOTP}>
                   <input className={styles.input} type="email" name="email" placeholder="Email" required />
                   <button className={`${styles.button} button`} type="submit" disabled={isPending}>
-                    Send OTP
+                    {isPending ? 'Sending OTP...' : 'Send OTP'}
                   </button>
                 </form>
               )}
@@ -261,7 +279,7 @@ export default function LoginPage() {
                   <form action={handleVerifyOTP}>
                     <input className={styles.input} type="text" name="otp" placeholder="Enter OTP" required />
                     <button className={`${styles.button} button`} type="submit" disabled={isPending}>
-                      Verify OTP
+                      {isPending ? 'Verifying...' : 'Verify OTP'}
                     </button>
                   </form>
                   <p style={{ marginTop: '10px' }}>
@@ -278,7 +296,7 @@ export default function LoginPage() {
                     <input className={styles.input} type="password" name="password" placeholder="Password (min 6 chars, 1 letter, 1 number, 1 capital, 1 special)" required />
                     <input className={styles.input} type="password" name="confirm_password" placeholder="Confirm Password" required />
                     <button className={`${styles.button} button`} type="submit" disabled={isPending}>
-                      Complete Signup
+                      {isPending ? 'Creating Account...' : 'Complete Signup'}
                     </button>
                   </form>
                   <p style={{ marginTop: '10px' }}>
@@ -294,6 +312,7 @@ export default function LoginPage() {
               <h2>Forgot Password</h2>
               {forgotError && <p style={{ color: 'red' }}>{forgotError}</p>}
               {forgotSuccess && <p style={{ color: 'green' }}>{forgotSuccess}</p>}
+              {isPending && loadingMessage && <p style={{ color: '#007bff' }}>{loadingMessage}</p>}
               {forgotStep === 'identifier' && (
                 <form action={handleSendForgotOTP}>
                   <input
@@ -304,7 +323,7 @@ export default function LoginPage() {
                     required
                   />
                   <button className={`${styles.button} button`} type="submit" disabled={isPending}>
-                    Send OTP
+                    {isPending ? 'Sending OTP...' : 'Send OTP'}
                   </button>
                 </form>
               )}
@@ -313,7 +332,7 @@ export default function LoginPage() {
                   <form action={handleVerifyForgotOTP}>
                     <input className={styles.input} type="text" name="otp" placeholder="Enter OTP" required />
                     <button className={`${styles.button} button`} type="submit" disabled={isPending}>
-                      Verify OTP
+                      {isPending ? 'Verifying...' : 'Verify OTP'}
                     </button>
                   </form>
                   <p style={{ marginTop: '10px' }}>
@@ -329,7 +348,7 @@ export default function LoginPage() {
                     <input className={styles.input} type="password" name="password" placeholder="New Password (min 6 chars, 1 letter, 1 number, 1 capital, 1 special)" required />
                     <input className={styles.input} type="password" name="confirm_password" placeholder="Confirm New Password" required />
                     <button className={`${styles.button} button`} type="submit" disabled={isPending}>
-                      Reset Password
+                      {isPending ? 'Resetting...' : 'Reset Password'}
                     </button>
                   </form>
                   <p style={{ marginTop: '10px' }}>
@@ -345,10 +364,11 @@ export default function LoginPage() {
               <h2>Login</h2>
               <form action={handleSubmit}>
                 {error && <p style={{ color: 'red' }}>{error}</p>}
+                {isPending && loadingMessage && <p style={{ color: '#007bff' }}>{loadingMessage}</p>}
                 <input className={styles.input} type="text" name="identifier" placeholder="User ID or Email" required />
                 <input className={styles.input} type="password" name="password" placeholder="Password" required />
                 <button className={`${styles.button} button`} type="submit" disabled={isPending}>
-                  Login
+                  {isPending ? 'Logging in...' : 'Login'}
                 </button>
                 <div className={styles.linkContainer}>
                   <a href="#" onClick={() => setIsForgotPassword(true)}>Forgot Password?</a>

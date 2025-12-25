@@ -432,6 +432,7 @@ const AddServiceReq = ({ orgid, empid, employees, type, subtype, priority, previ
         </div>
 
         <div className="form-buttons">
+          {isLoading && <p style={{ color: '#007bff', marginBottom: '10px' }}>Creating service request, please wait...</p>}
           <button type="submit" className="save" disabled={isLoading}>
             {isLoading ? 'Creating...' : 'Create'}
           </button>

@@ -1,8 +1,24 @@
 import React from 'react';
 
+const formatDate = (date) => {
+  if (!date) return '';
+  // Handle YYYY-MM-DD format directly without creating Date object to avoid timezone issues
+  if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    const [year, month, day] = date.split('-');
+    return `${month}/${day}/${year}`;
+  }
+  // Fallback for other date formats
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return '';
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${month}/${day}/${d.getFullYear()}`;
+};
+
 const EmploymentDetails = ({
   editing,
   setEditing,
+  onCancel,
   formData,
   handleFormChange,
   onSave,
@@ -21,7 +37,8 @@ const EmploymentDetails = ({
   suborgs,
   employmentTypes,
   canEdit,
-  helpers // Object containing getRoleNames, getStatusName, etc.
+  helpers,
+  isSaving
 }) => {
   const { 
     getRoleNames, 
@@ -210,8 +227,11 @@ const EmploymentDetails = ({
           </div>
 
           <div className="form-buttons">
-            <button type="submit" className="save">Save</button>
-            <button type="button" className="cancel" onClick={() => setEditing(false)}>Cancel</button>
+            {isSaving && <p style={{ color: '#007bff', marginBottom: '10px' }}>Saving changes, please wait...</p>}
+            <button type="submit" className="save" disabled={isSaving}>
+              {isSaving ? 'Saving...' : 'Save'}
+            </button>
+            <button type="button" className="cancel" onClick={onCancel} disabled={isSaving}>Cancel</button>
           </div>
         </form>
       ) : (
@@ -224,7 +244,7 @@ const EmploymentDetails = ({
             </div>
             <div className="details-g">
               <label>Hire Date</label>
-              <p>{employeeDetails.HIRE ? new Date(employeeDetails.HIRE).toLocaleDateString('en-US') : '-'}</p>
+              <p>{employeeDetails.HIRE ? formatDate(employeeDetails.HIRE) : '-'}</p>
             </div>
           </div>
           <div className="details-row">
@@ -260,17 +280,17 @@ const EmploymentDetails = ({
           <div className="details-row">
             <div className="details-g">
               <label>Last Work Date</label>
-              <p>{employeeDetails.LAST_WORK_DATE ? new Date(employeeDetails.LAST_WORK_DATE).toLocaleDateString('en-US') : '-'}</p>
+              <p>{employeeDetails.LAST_WORK_DATE ? formatDate(employeeDetails.LAST_WORK_DATE) : '-'}</p>
             </div>
             <div className="details-g">
               <label>Terminated Date</label>
-              <p>{employeeDetails.TERMINATED_DATE ? new Date(employeeDetails.TERMINATED_DATE).toLocaleDateString('en-US') : '-'}</p>
+              <p>{employeeDetails.TERMINATED_DATE ? formatDate(employeeDetails.TERMINATED_DATE) : '-'}</p>
             </div>
           </div>
           <div className="details-row">
             <div className="details-g">
               <label>Rejoin Date</label>
-              <p>{employeeDetails.REJOIN_DATE ? new Date(employeeDetails.REJOIN_DATE).toLocaleDateString('en-US') : '-'}</p>
+              <p>{employeeDetails.REJOIN_DATE ? formatDate(employeeDetails.REJOIN_DATE) : '-'}</p>
             </div>
             <div className="details-g">
               <label>Organization</label>

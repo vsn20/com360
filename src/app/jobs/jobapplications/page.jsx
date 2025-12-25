@@ -3,6 +3,14 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import './Applications.css'; // Using Applications.css as requested
 
+const formatDate = (date) => {
+  if (!date || isNaN(new Date(date))) return '';
+  const d = new Date(date);
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${month}/${day}/${d.getFullYear()}`;
+};
+
 export default function Applications() {
     const [allApplications, setAllApplications] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -226,7 +234,7 @@ export default function Applications() {
                                         </td>
                                         
                                         <td>{app.display_job_name}</td>
-                                        <td>{new Date(app.applieddate).toLocaleDateString()}</td>
+                                        <td>{formatDate(app.applieddate)}</td>
                                         <td>${Number(app.salary_expected).toLocaleString()}</td>
                                         <td>
                                             <span className={`jobs_application_status-badge ${getStatusBadgeClass(app.status)}`}>

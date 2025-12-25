@@ -18,7 +18,7 @@ const decodeJwt = (token) => {
 
 export async function fetchRolesByOrgId() {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const token = cookieStore.get('jwt_token')?.value;
 
     if (!token) {
@@ -58,7 +58,7 @@ export async function fetchRolesByOrgId() {
 
 export async function fetchRoleById(roleid) {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const token = cookieStore.get('jwt_token')?.value;
 
     if (!token) {
@@ -119,7 +119,7 @@ export async function fetchRoleById(roleid) {
 
 export async function fetchMenusAndSubmenus() {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const token = cookieStore.get('jwt_token')?.value;
 
     if (!token) {
@@ -193,7 +193,7 @@ export async function updateRole(prevState, formData) {
       roleid, rolename, is_active, permissions
     });
 
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const token = cookieStore.get('jwt_token')?.value;
 
     if (!token) {
@@ -329,7 +329,7 @@ export async function addRole(formData) {
   const orgid = formData.get('orgid');
   const isadmin = 0;
 
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const token = cookieStore.get('jwt_token')?.value;
 
   if (!token) {

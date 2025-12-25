@@ -395,6 +395,7 @@ const EditOrganization = ({ selectedorgid, orgid, empid, countries, states, aiPr
                 </div>
               </div>
               <div className="organization_form_buttons">
+                {isLoading && <p style={{ color: '#007bff', marginBottom: '10px' }}>Saving changes, please wait...</p>}
                 <button type="submit" className="organization_submit_button" disabled={isLoading}>
                   {isLoading ? 'Saving...' : 'Save'}
                 </button>

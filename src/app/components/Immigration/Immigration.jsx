@@ -43,6 +43,7 @@ const Immigration = ({
   const [formData, setFormData] = useState(initialFormState());
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   function initialFormState() {
     return {
@@ -243,11 +244,13 @@ const Immigration = ({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSaving(true);
     const data = new FormData();
     Object.keys(formData).forEach(k => data.append(k, formData[k]));
     if (file) data.append('file', file);
     
     const res = await addGlobalImmigrationRecord(data);
+    setIsSaving(false);
     if (res.success) {
         setShowAddModal(false);
         refreshData();
@@ -560,8 +563,11 @@ const Immigration = ({
                     </div>
 
                     <div className={styles.employee_immigration_formButtons}>
-                        <button type="submit" className={`${styles.employee_immigration_button} ${styles.employee_immigration_saveButton}`}>Save Record</button>
-                        <button type="button" onClick={()=>setShowAddModal(false)} className={`${styles.employee_immigration_button} ${styles.employee_immigration_cancelButton}`}>Cancel</button>
+                        {isSaving && <p style={{ color: '#007bff', marginBottom: '10px' }}>Adding record, please wait...</p>}
+                        <button type="submit" className={`${styles.employee_immigration_button} ${styles.employee_immigration_saveButton}`} disabled={isSaving}>
+                          {isSaving ? 'Saving...' : 'Save Record'}
+                        </button>
+                        <button type="button" onClick={()=>setShowAddModal(false)} className={`${styles.employee_immigration_button} ${styles.employee_immigration_cancelButton}`} disabled={isSaving}>Cancel</button>
                     </div>
                 </form>
             </div>

@@ -1046,8 +1046,25 @@ export async function fetchEmployeeById(empid) {
       [empid, orgId]
     );
 
+    // Helper function to format date as YYYY-MM-DD without timezone conversion
+    const formatDateString = (date) => {
+      if (!date) return null;
+      const d = new Date(date);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    // Convert Date objects to date strings for proper serialization
+    const rawEmployee = rows[0];
     const employee = {
-      ...rows[0],
+      ...rawEmployee,
+      DOB: formatDateString(rawEmployee.DOB),
+      HIRE: formatDateString(rawEmployee.HIRE),
+      LAST_WORK_DATE: formatDateString(rawEmployee.LAST_WORK_DATE),
+      TERMINATED_DATE: formatDateString(rawEmployee.TERMINATED_DATE),
+      REJOIN_DATE: formatDateString(rawEmployee.REJOIN_DATE),
       roleids: roleRows.map(row => row.roleid),
     };
 

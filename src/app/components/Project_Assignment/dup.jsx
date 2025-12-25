@@ -1,11 +1,21 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useFormStatus } from 'react-dom';
 import { fetchProjectsForAssignment, fetchProjectAssignmentDetails, updateProjectAssignment } from '@/app/serverActions/ProjectAssignments/Overview';
 import './dup.css';
 import { addProjectAssignment, fetchEmployeesByOrgId, fetchProjectsByOrgId } from '@/app/serverActions/ProjectAssignments/AddProjectAssignments';
 import { useActionState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+
+function AddAssignmentButton({ disabled }) {
+  const { pending } = useFormStatus();
+  return (
+    <button type="submit" disabled={disabled || pending} className="project_assign_submit_button">
+      {pending ? 'Adding...' : 'Add Assignment'}
+    </button>
+  );
+}
 
 const addform_initialState = { error: null, success: false };
 
@@ -788,7 +798,7 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
               </div>
             </div>
             <div className="project_assign_form_buttons">
-              <button type="submit" disabled={!orgId || !addformData.prjId || !addformData.empId} className="project_assign_submit_button">Add Assignment</button>
+              <AddAssignmentButton disabled={!orgId || !addformData.prjId || !addformData.empId} />
             </div>
           </form>
         </div>

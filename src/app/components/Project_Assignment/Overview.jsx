@@ -253,6 +253,37 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
     if (section === 'additional') setEditingAdditional(true);
   };
 
+  // Cancel handlers to reset form data to original values
+  const handleCancelBasic = () => {
+    setEditingBasic(false);
+    if (employeeDetails) {
+      setFormData(prev => ({
+        ...prev,
+        startDt: formatDate(employeeDetails.START_DT) || '',
+        endDt: formatDate(employeeDetails.END_DT) || '',
+        skills: employeeDetails.SKILLS || '',
+      }));
+    }
+    setError(null);
+  };
+
+  const handleCancelAdditional = () => {
+    setEditingAdditional(false);
+    if (employeeDetails) {
+      setFormData(prev => ({
+        ...prev,
+        billRate: employeeDetails.BILL_RATE || '',
+        billType: employeeDetails.BILL_TYPE || '',
+        otBillRate: employeeDetails.OT_BILL_RATE || '',
+        otBillType: employeeDetails.OT_BILL_TYPE || '',
+        billableFlag: employeeDetails.BILLABLE_FLAG === 1 ? 'Yes' : 'No',
+        otBillableFlag: employeeDetails.OT_BILLABLE_FLAG === 1 ? 'Yes' : 'No',
+        payTerm: employeeDetails.PAY_TERM || '',
+      }));
+    }
+    setError(null);
+  };
+
   const handleSave = async (section) => {
     if (section === 'basic') {
       if (!formData.startDt) {
@@ -1064,7 +1095,7 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
                       <button
                         type="button"
                         className="project_assign_cancel_button"
-                        onClick={() => setEditingBasic(false)}
+                        onClick={handleCancelBasic}
                         disabled={isLoading}
                       >
                         Cancel
@@ -1212,7 +1243,7 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
                     <button
                       type="button"
                       className="project_assign_cancel_button"
-                      onClick={() => setEditingAdditional(false)}
+                      onClick={handleCancelAdditional}
                       disabled={isLoading}
                     >
                       Cancel

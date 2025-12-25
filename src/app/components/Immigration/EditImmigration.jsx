@@ -34,6 +34,7 @@ const EditImmigration = ({
   });
   
   const [file, setFile] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -64,12 +65,14 @@ const EditImmigration = ({
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSaving(true);
     const data = new FormData();
     Object.keys(formData).forEach(k => data.append(k, formData[k]));
     if (file) data.append('file', file);
-    onSave(data);
+    await onSave(data);
+    setIsSaving(false);
   };
 
   return (
@@ -234,8 +237,11 @@ const EditImmigration = ({
                 </div>
 
                 <div className={styles.employee_immigration_formButtons}>
-                    <button type="submit" className={`${styles.employee_immigration_button} ${styles.employee_immigration_saveButton}`}>Save Changes</button>
-                    <button type="button" onClick={onClose} className={`${styles.employee_immigration_button} ${styles.employee_immigration_cancelButton}`}>Cancel</button>
+                    {isSaving && <p style={{ color: '#007bff', marginBottom: '10px' }}>Saving changes, please wait...</p>}
+                    <button type="submit" className={`${styles.employee_immigration_button} ${styles.employee_immigration_saveButton}`} disabled={isSaving}>
+                      {isSaving ? 'Saving...' : 'Save Changes'}
+                    </button>
+                    <button type="button" onClick={onClose} className={`${styles.employee_immigration_button} ${styles.employee_immigration_cancelButton}`} disabled={isSaving}>Cancel</button>
                 </div>
             </form>
         </div>

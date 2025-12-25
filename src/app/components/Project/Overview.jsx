@@ -193,6 +193,44 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts,
     if (section === 'additional') setEditingAdditional(true);
   };
 
+  const handleCancelBasic = () => {
+    setEditingBasic(false);
+    if (selectedProject) {
+      setFormData(prev => ({
+        ...prev,
+        prjName: selectedProject.PRJ_NAME || '',
+        prsDesc: selectedProject.PRS_DESC || '',
+        accntId: selectedProject.ACCNT_ID || '',
+        suborgid: selectedProject.suborgid || '',
+        suborgname: selectedProject.suborgname || '',
+      }));
+    }
+    setError(null);
+  };
+
+  const handleCancelAdditional = () => {
+    setEditingAdditional(false);
+    if (selectedProject) {
+      setFormData(prev => ({
+        ...prev,
+        billRate: selectedProject.BILL_RATE || '',
+        billType: selectedProject.BILL_TYPE || '',
+        otBillRate: selectedProject.OT_BILL_RATE || '',
+        otBillType: selectedProject.OT_BILL_TYPE || '',
+        billableFlag: selectedProject.BILLABLE_FLAG ? 'Yes' : 'No',
+        startDt: formatDate(selectedProject.START_DT),
+        endDt: formatDate(selectedProject.END_DT),
+        clientId: selectedProject.CLIENT_ID || '',
+        payTerm: selectedProject.PAY_TERM || '',
+        invoiceEmail: selectedProject.INVOICE_EMAIL || '',
+        invoiceFax: selectedProject.INVOICE_FAX || '',
+        invoicePhone: selectedProject.INVOICE_PHONE || '',
+        industries: selectedProject.Industries || ''
+      }));
+    }
+    setError(null);
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => {
@@ -1001,7 +1039,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts,
                     <button type="submit" className="project_submit_button" disabled={isLoading}>
                       {isLoading ? 'Saving...' : 'Save'}
                     </button>
-                    <button type="button" className="project_cancel_button" onClick={() => setEditingBasic(false)} disabled={isLoading}>
+                    <button type="button" className="project_cancel_button" onClick={handleCancelBasic} disabled={isLoading}>
                       Cancel
                     </button>
                   </div>
@@ -1211,7 +1249,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts,
                     <button type="submit" className="project_submit_button" disabled={isLoading}>
                       {isLoading ? 'Saving...' : 'Save'}
                     </button>
-                    <button type="button" className="project_cancel_button" onClick={() => setEditingAdditional(false)} disabled={isLoading}>
+                    <button type="button" className="project_cancel_button" onClick={handleCancelAdditional} disabled={isLoading}>
                       Cancel
                     </button>
                   </div>

@@ -67,7 +67,10 @@ const W9VerificationForm = ({ form, verifierEmpId, orgId, onBack, onSuccess, isA
     if (isNaN(date.getTime())) {
         return 'Invalid Date';
     }
-    return new Date(date.getTime() + date.getTimezoneOffset() * 60000).toLocaleDateString();
+    const adjustedDate = new Date(date.getTime() + date.getTimezoneOffset() * 60000);
+    const month = String(adjustedDate.getMonth() + 1).padStart(2, '0');
+    const day = String(adjustedDate.getDate()).padStart(2, '0');
+    return `${month}/${day}/${adjustedDate.getFullYear()}`;
   };
 
   const getTaxClassificationLabel = (status) => {

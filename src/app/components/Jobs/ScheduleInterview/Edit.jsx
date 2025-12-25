@@ -16,6 +16,7 @@ const Edit = ({ id, orgid, empid, handleback, time, status }) => {
   const [employees, setEmployees] = useState([]);
   const [applicationStatus, setApplicationStatus] = useState(status || 'scheduled');
   const [rounds, setRounds] = useState([]);
+  const [originalData, setOriginalData] = useState({ rounds: [], applicationStatus: status || 'scheduled' });
   const [panelMemberForms, setPanelMemberForms] = useState({});
   const [showRoundNameForm, setShowRoundNameForm] = useState(false);
   const [newRoundName, setNewRoundName] = useState('');
@@ -79,7 +80,7 @@ const Edit = ({ id, orgid, empid, handleback, time, status }) => {
         if (result.success) {
           setInterviewDetails(result.interview);
           setApplicationStatus(result.interview.status || 'scheduled');
-          setRounds(result.rounds.map(round => ({
+          const mappedRounds = result.rounds.map(round => ({
             ...round,
             name: round.name || `Round ${rounds.length + 1}`,
             start_date: formatDate(round.start_date),
@@ -95,7 +96,13 @@ const Edit = ({ id, orgid, empid, handleback, time, status }) => {
             marks: round.marks !== undefined && round.marks !== null ? String(round.marks) : '',
             comments: round.comments || '',
             status: round.status || 'scheduled',
-          })) || [getInitialRoundForm()]);
+          })) || [getInitialRoundForm()];
+          setRounds(mappedRounds);
+          // Store original data for cancel functionality
+          setOriginalData({
+            rounds: JSON.parse(JSON.stringify(mappedRounds)),
+            applicationStatus: result.interview.status || 'scheduled'
+          });
           setPanelMemberForms({});
         } else if (result.error === 'Interview not found.') {
           setInterviewDetails(null);
@@ -288,6 +295,15 @@ const Edit = ({ id, orgid, empid, handleback, time, status }) => {
 
   const handleEdit = () => {
     setIsEditing(true);
+    setError('');
+  };
+
+  // Cancel handler to reset form data to original values
+  const handleCancel = () => {
+    setIsEditing(false);
+    setRounds(JSON.parse(JSON.stringify(originalData.rounds)));
+    setApplicationStatus(originalData.applicationStatus);
+    setPanelMemberForms({});
     setError('');
   };
 
@@ -888,7 +904,7 @@ const Edit = ({ id, orgid, empid, handleback, time, status }) => {
             <button
               type="button"
               className="schedule_interview_cancel-button"
-              onClick={() => setIsEditing(false)}
+              onClick={handleCancel}
               disabled={isLoading}
             >
               Cancel

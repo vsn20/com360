@@ -2,8 +2,15 @@ import React from 'react';
 import Image from 'next/image';
 
 const formatDate = (date) => {
-  if (!date || isNaN(new Date(date))) return '';
+  if (!date) return '';
+  // Handle YYYY-MM-DD format directly without creating Date object to avoid timezone issues
+  if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    const [year, month, day] = date.split('-');
+    return `${month}/${day}/${year}`;
+  }
+  // Fallback for other date formats
   const d = new Date(date);
+  if (isNaN(d.getTime())) return '';
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${month}/${day}/${d.getFullYear()}`;
@@ -12,6 +19,7 @@ const formatDate = (date) => {
 const PersonalDetails = ({
   editing,
   setEditing,
+  onCancel,
   formData,
   handleFormChange,
   onSave,
@@ -19,7 +27,9 @@ const PersonalDetails = ({
   canEdit,
   getDisplayProjectId,
   signatureSrc,
-  onSignatureFileChange
+  onSignatureFileChange,
+  onDeleteSignature,
+  isSaving
 }) => {
   return (
     <div className="role-details-block96">
@@ -105,15 +115,31 @@ const PersonalDetails = ({
             <div className="form-group">
               <label>Signature (Upload .jpg)</label>
               {signatureSrc && (
-                <div style={{ marginBottom: '10px', border: '1px solid #ccc', display: 'inline-block', padding: '5px' }}>
-                  <Image 
-                    src={signatureSrc} 
-                    alt="Signature" 
-                    width={150} 
-                    height={60} 
-                    unoptimized 
-                    onError={(e) => e.target.style.display = 'none'}
-                  />
+                <div style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ border: '1px solid #ccc', display: 'inline-block', padding: '5px' }}>
+                    <Image 
+                      src={signatureSrc} 
+                      alt="Signature" 
+                      width={150} 
+                      height={60} 
+                      unoptimized 
+                      onError={(e) => e.target.style.display = 'none'}
+                    />
+                  </div>
+                  <button 
+                    type="button" 
+                    onClick={onDeleteSignature}
+                    style={{ 
+                      backgroundColor: '#dc3545', 
+                      color: 'white', 
+                      border: 'none', 
+                      padding: '5px 10px', 
+                      borderRadius: '4px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Delete
+                  </button>
                 </div>
               )}
               <input 
@@ -125,8 +151,11 @@ const PersonalDetails = ({
             </div>
           </div>
           <div className="form-buttons">
-            <button type="submit" className="save">Save</button>
-            <button type="button" className="cancel" onClick={() => setEditing(false)}>Cancel</button>
+            {isSaving && <p style={{ color: '#007bff', marginBottom: '10px' }}>Saving changes, please wait...</p>}
+            <button type="submit" className="save" disabled={isSaving}>
+              {isSaving ? 'Saving...' : 'Save'}
+            </button>
+            <button type="button" className="cancel" onClick={onCancel} disabled={isSaving}>Cancel</button>
           </div>
         </form>
       ) : (

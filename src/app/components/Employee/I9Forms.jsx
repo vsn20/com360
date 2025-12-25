@@ -540,6 +540,15 @@ const I9Forms = ({
     return form.FORM_STATUS; // Fallback
   };
 
+  const formatDate = (dateStr) => {
+    if (!dateStr) return 'N/A';
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return 'N/A';
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${month}/${day}/${date.getFullYear()}`;
+  };
+
   const getStatusColor = (form) => {
     // Define colors - adjust as needed
     const colors = {
@@ -935,7 +944,7 @@ const I9Forms = ({
                       >
                         <td>{form.ID}</td>
                         <td>{getFormTypeLabel(form.FORM_TYPE)}</td>
-                        <td>{form.SORT_DATE ? new Date(form.SORT_DATE).toLocaleDateString() : 'N/A'}</td>
+                        <td>{formatDate(form.SORT_DATE)}</td>
                         <td>
                           <span style={{
                             padding: '4px 12px',

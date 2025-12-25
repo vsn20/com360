@@ -14,6 +14,7 @@ export default function ApplyPage() {
   const [jobDetails, setJobDetails] = useState(null);
   const [hasApplied, setHasApplied] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const jobid = params.jobid;
 
   useEffect(() => {
@@ -74,6 +75,7 @@ export default function ApplyPage() {
     formData.append('jobid', jobid);
     formData.append('salary_expected', salaryExpected);
 
+    setIsSubmitting(true);
     try {
       const res = await fetch('/api/jobs/apply', {
         method: 'POST',
@@ -90,6 +92,8 @@ export default function ApplyPage() {
       }
     } catch (error) {
       setMessage('Something went wrong.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -145,9 +149,9 @@ export default function ApplyPage() {
         <button
           type="submit"
           className={styles.submitButton}
-          disabled={hasApplied}
+          disabled={hasApplied || isSubmitting}
         >
-          Submit Application
+          {isSubmitting ? 'Submitting...' : 'Submit Application'}
         </button>
       </form>
 

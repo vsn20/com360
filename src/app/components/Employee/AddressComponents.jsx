@@ -3,6 +3,7 @@ import React from 'react';
 export const WorkAddress = ({
   editing,
   setEditing,
+  onCancel,
   formData,
   handleFormChange,
   onSave,
@@ -10,7 +11,8 @@ export const WorkAddress = ({
   countries,
   states,
   canEdit,
-  helpers // contains getCountryName, getStateName
+  helpers,
+  isSaving
 }) => {
   const { getCountryName, getStateName } = helpers;
 
@@ -74,8 +76,11 @@ export const WorkAddress = ({
                     </div>
                   </div>
                   <div className="form-buttons">
-                    <button type="submit" className="save">Save</button>
-                    <button type="button" className="cancel" onClick={() => setEditing(false)}>Cancel</button>
+                    {isSaving && <p style={{ color: '#007bff', marginBottom: '10px' }}>Saving changes, please wait...</p>}
+                    <button type="submit" className="save" disabled={isSaving}>
+                      {isSaving ? 'Saving...' : 'Save'}
+                    </button>
+                    <button type="button" className="cancel" onClick={onCancel} disabled={isSaving}>Cancel</button>
                   </div>
         </form>
       ) : (
@@ -126,6 +131,7 @@ export const WorkAddress = ({
 export const HomeAddress = ({
   editing,
   setEditing,
+  onCancel,
   formData,
   handleFormChange,
   onSave,
@@ -133,7 +139,8 @@ export const HomeAddress = ({
   countries,
   states,
   canEdit,
-  helpers
+  helpers,
+  isSaving
 }) => {
   const { getCountryName, getStateName } = helpers;
   return (
@@ -196,8 +203,11 @@ export const HomeAddress = ({
             </div>
             </div>
             <div className="form-buttons">
-            <button type="submit" className="save">Save</button>
-            <button type="button" className="cancel" onClick={() => setEditing(false)}>Cancel</button>
+            {isSaving && <p style={{ color: '#007bff', marginBottom: '10px' }}>Saving changes, please wait...</p>}
+            <button type="submit" className="save" disabled={isSaving}>
+              {isSaving ? 'Saving...' : 'Save'}
+            </button>
+            <button type="button" className="cancel" onClick={onCancel} disabled={isSaving}>Cancel</button>
             </div>
         </form>
       ) : (
@@ -248,6 +258,7 @@ export const HomeAddress = ({
 export const EmergencyContact = ({
   editing,
   setEditing,
+  onCancel,
   formData,
   handleFormChange,
   onSave,
@@ -255,7 +266,8 @@ export const EmergencyContact = ({
   countries,
   states,
   canEdit,
-  helpers
+  helpers,
+  isSaving
 }) => {
   const { getCountryName, getStateName } = helpers;
   return (
@@ -334,8 +346,11 @@ export const EmergencyContact = ({
             </div>
             </div>
             <div className="form-buttons">
-            <button type="submit" className="save">Save</button>
-            <button type="button" className="cancel" onClick={() => setEditing(false)}>Cancel</button>
+            {isSaving && <p style={{ color: '#007bff', marginBottom: '10px' }}>Saving changes, please wait...</p>}
+            <button type="submit" className="save" disabled={isSaving}>
+              {isSaving ? 'Saving...' : 'Save'}
+            </button>
+            <button type="button" className="cancel" onClick={onCancel} disabled={isSaving}>Cancel</button>
             </div>
         </form>
       ) : (

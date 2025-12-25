@@ -8,6 +8,7 @@ const PAFDocument = ({ id, documents: initialDocuments, onDocumentsUpdate, docum
   const [editing, setEditing] = useState(false);
   const [isViewOnly, setIsViewOnly] = useState(false);
   const [error, setError] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [newDocument, setNewDocument] = useState({
     documentName: '',
     documentType: '',
@@ -139,6 +140,7 @@ const PAFDocument = ({ id, documents: initialDocuments, onDocumentsUpdate, docum
       setError('Please fill required fields: Type, Subtype, and select a file.');
       return;
     }
+    setIsSaving(true);
     const formData = new FormData();
     formData.append('empid', id);
     formData.append('documentName', newDocument.documentName);
@@ -152,6 +154,7 @@ const PAFDocument = ({ id, documents: initialDocuments, onDocumentsUpdate, docum
 
     try {
       await addPafDocument(formData);
+      setIsSaving(false);
       setNewDocument({ 
         documentName: '',
         documentType: '',
@@ -166,6 +169,7 @@ const PAFDocument = ({ id, documents: initialDocuments, onDocumentsUpdate, docum
       if (onDocumentsUpdate) onDocumentsUpdate();
       setError(null);
     } catch (err) {
+      setIsSaving(false);
       setError(`Failed to add PAF document: ${err.message}`);
     }
   };
@@ -173,6 +177,7 @@ const PAFDocument = ({ id, documents: initialDocuments, onDocumentsUpdate, docum
   const handleUpdateDocument = async (e) => {
     e.preventDefault();
     if (!editDocument || !editDocument.subtype_id) return;
+    setIsSaving(true);
     const formData = new FormData();
     formData.append('id', editDocument.id);
     formData.append('empid', id);
@@ -191,6 +196,7 @@ const PAFDocument = ({ id, documents: initialDocuments, onDocumentsUpdate, docum
 
     try {
       await updatePafDocument(formData);
+      setIsSaving(false);
       setEditDocument(null);
       setOriginalDocument(null);
       setEditFile(null);
@@ -199,6 +205,7 @@ const PAFDocument = ({ id, documents: initialDocuments, onDocumentsUpdate, docum
       if (onDocumentsUpdate) onDocumentsUpdate();
       setError(null);
     } catch (err) {
+      setIsSaving(false);
       setError(`Failed to update PAF document: ${err.message}`);
     }
   };
@@ -600,8 +607,8 @@ const PAFDocument = ({ id, documents: initialDocuments, onDocumentsUpdate, docum
                 </button>
               </>
             ) : (
-              <button type="submit" className={`${styles.button} ${styles.saveButton}`}>
-                {editDocument ? 'Save' : 'Add Document'}
+              <button type="submit" className={`${styles.button} ${styles.saveButton}`} disabled={isSaving}>
+                {isSaving ? 'Saving...' : (editDocument ? 'Save' : 'Add Document')}
               </button>
             )}
             <button

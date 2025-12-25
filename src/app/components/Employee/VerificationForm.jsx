@@ -173,7 +173,11 @@ const VerificationForm = ({
   const formatDate = (dateStr) => {
     if (!dateStr) return 'N/A';
     const date = new Date(dateStr);
-    return new Date(date.getTime() + date.getTimezoneOffset() * 60000).toLocaleDateString();
+    if (isNaN(date.getTime())) return 'N/A';
+    const adjustedDate = new Date(date.getTime() + date.getTimezoneOffset() * 60000);
+    const month = String(adjustedDate.getMonth() + 1).padStart(2, '0');
+    const day = String(adjustedDate.getDate()).padStart(2, '0');
+    return `${month}/${day}/${adjustedDate.getFullYear()}`;
   };
 
   const getCitizenshipLabel = (status) => {

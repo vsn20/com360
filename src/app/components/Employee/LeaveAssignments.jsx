@@ -3,12 +3,14 @@ import React from 'react';
 const LeaveAssignments = ({
   editing,
   setEditing,
+  onCancel,
   formLeaves,
   handleLeaveChange,
   onSave,
   leaveAssignments,
   leaveTypes,
-  canEdit
+  canEdit,
+  isSaving
 }) => {
   return (
     <div className="role-details-block96">
@@ -25,12 +27,16 @@ const LeaveAssignments = ({
                 onChange={(e) => handleLeaveChange(leave.id, e.target.value)}
                 min="0"
                 step="any"
+                disabled={isSaving}
               />
             </div>
           ))}
           <div className="form-buttons">
-            <button className="save" onClick={() => onSave('leaves')}>Save</button>
-            <button className="cancel" onClick={() => setEditing(false)}>Cancel</button>
+            {isSaving && <p style={{ color: '#007bff', marginBottom: '10px' }}>Saving changes, please wait...</p>}
+            <button className="save" onClick={() => onSave('leaves')} disabled={isSaving}>
+              {isSaving ? 'Saving...' : 'Save'}
+            </button>
+            <button className="cancel" onClick={onCancel} disabled={isSaving}>Cancel</button>
           </div>
         </div>
       ) : (

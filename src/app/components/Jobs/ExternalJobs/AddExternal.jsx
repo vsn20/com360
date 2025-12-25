@@ -8,6 +8,7 @@ import './externaljobs.css';
 const addFormInitialState = { error: null, success: false };
 
 const AddExternal = ({ orgid, empid, expectedjobtitles, expectedepartment, expectedrole, countries, states, jobtype,handleBack }) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     displayJobName: '',
     expectedJobTitle: '',
@@ -65,6 +66,7 @@ const AddExternal = ({ orgid, empid, expectedjobtitles, expectedepartment, expec
     <div className="externaljobs_employee-details-container">
       {state.error && <div className="externaljobs_error-message">{state.error}</div>}
       {successMessage && <div className="externaljobs_success-message">{successMessage}</div>}
+      {isSubmitting && <div className="externaljobs_loading-message" style={{ color: '#007bff' }}>Adding external job, please wait...</div>}
       <div className="externaljobs_details-block">
         <div className="externaljobs_roledetails-header">
           <div>Add External Job</div>
@@ -270,8 +272,8 @@ const AddExternal = ({ orgid, empid, expectedjobtitles, expectedepartment, expec
             </div>
           </div>
           <div className="externaljobs_form-buttons">
-            <button type="submit" className="externaljobs_save" disabled={!orgid}>
-              Add External Job
+            <button type="submit" className="externaljobs_save" disabled={!orgid || isSubmitting}>
+              {isSubmitting ? 'Adding...' : 'Add External Job'}
             </button>
           </div>
         </form>

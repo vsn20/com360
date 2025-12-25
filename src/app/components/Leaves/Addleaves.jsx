@@ -77,6 +77,9 @@ export default function Addleaves({ onBack, availableLeaves }) {
         {submissionStatus.status === 'success' && (
           <div className="addleaves_success_message">{submissionStatus.message}</div>
         )}
+        {submissionStatus.status === 'submitting' && (
+          <div style={{ color: '#007bff', marginBottom: '10px' }}>Submitting leave request, please wait...</div>
+        )}
 
         <form action={handleSubmit} className="leaves_add_form">
           <fieldset disabled={submissionStatus.status === 'submitting' || submissionStatus.status === 'success'}>

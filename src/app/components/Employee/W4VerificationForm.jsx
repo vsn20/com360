@@ -155,7 +155,10 @@ const W4VerificationForm = ({ form, verifierEmpId, orgId, orgName, onBack, onSuc
         return 'Invalid Date';
     }
     // Adjust for timezone offset to display the correct local date
-    return new Date(date.getTime() + date.getTimezoneOffset() * 60000).toLocaleDateString();
+    const adjustedDate = new Date(date.getTime() + date.getTimezoneOffset() * 60000);
+    const month = String(adjustedDate.getMonth() + 1).padStart(2, '0');
+    const day = String(adjustedDate.getDate()).padStart(2, '0');
+    return `${month}/${day}/${adjustedDate.getFullYear()}`;
   };
 
   const getFilingStatusLabel = (status) => {

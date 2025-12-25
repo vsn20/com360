@@ -162,6 +162,9 @@ const EditEmployee = ({
   const [editingWorkAddress, setEditingWorkAddress] = useState(false);
   const [editingHomeAddress, setEditingHomeAddress] = useState(false);
   const [editingEmergencyContact, setEditingEmergencyContact] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [savingSection, setSavingSection] = useState(null);
   const [employeedocuments,setemployeedocuments]=useState({});
   
   const [experiencedetails, setexperiencedetails] = useState(null);
@@ -247,11 +250,11 @@ const EditEmployee = ({
             gender: employee.GENDER || '',
             mobileNumber: employee.MOBILE_NUMBER || '',
             phoneNumber: employee.PHONE_NUMBER || '',
-            dob: employee.DOB ? new Date(employee.DOB).toISOString().split('T')[0] : '',
-            hireDate: employee.HIRE ? new Date(employee.HIRE).toISOString().split('T')[0] : '',
-            lastWorkDate: employee.LAST_WORK_DATE ? new Date(employee.LAST_WORK_DATE).toISOString().split('T')[0] : '',
-            terminatedDate: employee.TERMINATED_DATE ? new Date(employee.TERMINATED_DATE).toISOString().split('T')[0] : '',
-            rejoinDate: employee.REJOIN_DATE ? new Date(employee.REJOIN_DATE).toISOString().split('T')[0] : '',
+            dob: employee.DOB || '',
+            hireDate: employee.HIRE || '',
+            lastWorkDate: employee.LAST_WORK_DATE || '',
+            terminatedDate: employee.TERMINATED_DATE || '',
+            rejoinDate: employee.REJOIN_DATE || '',
             superior: employee.superior || '',
             ssn: employee.SSN || '',
             status: employee.STATUS || '',
@@ -553,6 +556,7 @@ const handleSaveCroppedPhoto = async () => {
       setError('Please select an area to crop.');
       return;
     }
+    setIsUploadingPhoto(true);
     const image = imgRef.current;
     const canvas = document.createElement('canvas');
     const scaleX = image.naturalWidth / image.width;
@@ -585,6 +589,8 @@ const handleSaveCroppedPhoto = async () => {
         } catch (err) {
           console.error('Error uploading profile photo:', err);
           setError('Failed to upload profile photo.');
+        } finally {
+          setIsUploadingPhoto(false);
         }
       }
     }, 'image/png', 1);
@@ -706,6 +712,8 @@ function onImageLoad(e) {
   };
 
   const handleSave = async (section) => {
+  setIsSaving(true);
+  setSavingSection(section);
   const orgid = await ensureOrgId();
   if (!orgid) {
     setError('Organization ID is missing or invalid.');
@@ -800,10 +808,8 @@ function onImageLoad(e) {
       setemployeedocuments(updatedDocuments);
       setSelectedRoles(updatedEmployee.roleids || []);
       
-      if (section === 'personal') setEditingPersonal(false);
-      
-      if (section === 'employment') {
-        setEditingEmployment(false);
+      if (section === 'personal') {
+        setEditingPersonal(false);
         if (signatureFile) {
           try {
             const sigData = new FormData();
@@ -820,18 +826,28 @@ function onImageLoad(e) {
         }
       }
       
+      if (section === 'employment') {
+        setEditingEmployment(false);
+      }
+      
       if (section === 'leaves') setEditingLeaves(false);
       if (section === 'workAddress') setEditingWorkAddress(false);
       if (section === 'homeAddress') setEditingHomeAddress(false);
       if (section === 'emergencyContact') setEditingEmergencyContact(false);
       setError(null);
+      setIsSaving(false);
+      setSavingSection(null);
     } else {
       const errorMessage = result && result.error ? result.error : 'Failed to save: Invalid response from server';
       setError(errorMessage);
+      setIsSaving(false);
+      setSavingSection(null);
     }
   } catch (err) {
     console.error(`Error saving ${section} details:`, err);
     setError(err.message || 'An unexpected error occurred while saving.');
+    setIsSaving(false);
+    setSavingSection(null);
   }
 };
 
@@ -841,6 +857,102 @@ function onImageLoad(e) {
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
+    }));
+  };
+
+  // Cancel handlers to reset form data to original values
+  const handleCancelPersonal = () => {
+    setEditingPersonal(false);
+    setFormData(prev => ({
+      ...prev,
+      empFstName: employeeDetails.EMP_FST_NAME || '',
+      empMidName: employeeDetails.EMP_MID_NAME || '',
+      empLastName: employeeDetails.EMP_LAST_NAME || '',
+      empPrefName: employeeDetails.EMP_PREF_NAME || '',
+      email: employeeDetails.email || '',
+      gender: employeeDetails.GENDER || '',
+      mobileNumber: employeeDetails.MOBILE_NUMBER || '',
+      phoneNumber: employeeDetails.PHONE_NUMBER || '',
+      dob: employeeDetails.DOB || '',
+      ssn: employeeDetails.SSN || '',
+      linkedinUrl: employeeDetails.LINKEDIN_URL || '',
+      employee_number: employeeDetails.employee_number || '',
+    }));
+    // Reset signature to original
+    setSignatureSrc(`/uploads/signatures/${employeeDetails.empid}.jpg?${new Date().getTime()}`);
+    setSignatureFile(null);
+  };
+
+  const handleCancelEmployment = () => {
+    setEditingEmployment(false);
+    setFormData(prev => ({
+      ...prev,
+      hireDate: employeeDetails.HIRE || '',
+      lastWorkDate: employeeDetails.LAST_WORK_DATE || '',
+      terminatedDate: employeeDetails.TERMINATED_DATE || '',
+      rejoinDate: employeeDetails.REJOIN_DATE || '',
+      superior: employeeDetails.superior || '',
+      status: employeeDetails.STATUS || '',
+      jobTitle: employeeDetails.JOB_TITLE || '',
+      payFrequency: employeeDetails.PAY_FREQUENCY || '',
+      deptId: employeeDetails.DEPT_ID !== null && employeeDetails.DEPT_ID !== undefined ? String(employeeDetails.DEPT_ID) : '',
+      workCompClass: employeeDetails.WORK_COMP_CLASS || '',
+      suborgid: employeeDetails.suborgid || '',
+      employment_type: employeeDetails.employment_type || '',
+    }));
+    setSelectedRoles(employeeDetails.roleids || []);
+  };
+
+  const handleCancelLeaves = () => {
+    setEditingLeaves(false);
+    setFormLeaves(leaveAssignments);
+  };
+
+  const handleCancelWorkAddress = () => {
+    setEditingWorkAddress(false);
+    setFormData(prev => ({
+      ...prev,
+      workAddrLine1: employeeDetails.WORK_ADDR_LINE1 || '',
+      workAddrLine2: employeeDetails.WORK_ADDR_LINE2 || '',
+      workAddrLine3: employeeDetails.WORK_ADDR_LINE3 || '',
+      workCity: employeeDetails.WORK_CITY || '',
+      workStateId: employeeDetails.WORK_STATE_ID ? String(employeeDetails.WORK_STATE_ID) : '',
+      workStateNameCustom: employeeDetails.WORK_STATE_NAME_CUSTOM || '',
+      workCountryId: employeeDetails.WORK_COUNTRY_ID ? String(employeeDetails.WORK_COUNTRY_ID) : '185',
+      workPostalCode: employeeDetails.WORK_POSTAL_CODE || '',
+    }));
+  };
+
+  const handleCancelHomeAddress = () => {
+    setEditingHomeAddress(false);
+    setFormData(prev => ({
+      ...prev,
+      homeAddrLine1: employeeDetails.HOME_ADDR_LINE1 || '',
+      homeAddrLine2: employeeDetails.HOME_ADDR_LINE2 || '',
+      homeAddrLine3: employeeDetails.HOME_ADDR_LINE3 || '',
+      homeCity: employeeDetails.HOME_CITY || '',
+      homeStateId: employeeDetails.HOME_STATE_ID ? String(employeeDetails.HOME_STATE_ID) : '',
+      homeStateNameCustom: employeeDetails.HOME_STATE_NAME_CUSTOM || '',
+      homeCountryId: employeeDetails.HOME_COUNTRY_ID ? String(employeeDetails.HOME_COUNTRY_ID) : '185',
+      homePostalCode: employeeDetails.HOME_POSTAL_CODE || '',
+    }));
+  };
+
+  const handleCancelEmergencyContact = () => {
+    setEditingEmergencyContact(false);
+    setFormData(prev => ({
+      ...prev,
+      emergCnctName: employeeDetails.EMERG_CNCT_NAME || '',
+      emergCnctPhoneNumber: employeeDetails.EMERG_CNCT_PHONE_NUMBER || '',
+      emergCnctEmail: employeeDetails.EMERG_CNCT_EMAIL || '',
+      emergCnctAddrLine1: employeeDetails.EMERG_CNCT_ADDR_LINE1 || '',
+      emergCnctAddrLine2: employeeDetails.EMERG_CNCT_ADDR_LINE2 || '',
+      emergCnctAddrLine3: employeeDetails.EMERG_CNCT_ADDR_LINE3 || '',
+      emergCnctCity: employeeDetails.EMERG_CNCT_CITY || '',
+      emergCnctStateId: employeeDetails.EMERG_CNCT_STATE_ID ? String(employeeDetails.EMERG_CNCT_STATE_ID) : '',
+      emergCnctStateNameCustom: employeeDetails.EMERG_CNCT_STATE_NAME_CUSTOM || '',
+      emergCnctCountryId: employeeDetails.EMERG_CNCT_COUNTRY_ID ? String(employeeDetails.EMERG_CNCT_COUNTRY_ID) : '185',
+      emergCnctPostalCode: employeeDetails.EMERG_CNCT_POSTAL_CODE || '',
     }));
   };
 
@@ -975,8 +1087,10 @@ function onImageLoad(e) {
                         </div> 
                        
                         <div className="modal-actions">
-                          <button className="button save" onClick={handleSaveCroppedPhoto}>Save Photo</button>
-                          <button className="button cancel" onClick={() => setImageToCrop(null)}>Cancel</button>
+                          <button className="button save" onClick={handleSaveCroppedPhoto} disabled={isUploadingPhoto}>
+                            {isUploadingPhoto ? 'Saving...' : 'Save Photo'}
+                          </button>
+                          <button className="button cancel" onClick={() => setImageToCrop(null)} disabled={isUploadingPhoto}>Cancel</button>
                         </div>
                       </div>
                     ) : (
@@ -1050,6 +1164,7 @@ function onImageLoad(e) {
                 <PersonalDetails 
                   editing={editingPersonal}
                   setEditing={setEditingPersonal}
+                  onCancel={handleCancelPersonal}
                   formData={formData}
                   handleFormChange={handleFormChange}
                   onSave={handleSave}
@@ -1062,6 +1177,11 @@ function onImageLoad(e) {
                       setSignatureFile(e.target.files[0]);
                     }
                   }}
+                  onDeleteSignature={() => {
+                    setSignatureSrc(null);
+                    setSignatureFile(null);
+                  }}
+                  isSaving={isSaving && savingSection === 'personal'}
                 />
             )}
             
@@ -1070,6 +1190,7 @@ function onImageLoad(e) {
                <EmploymentDetails 
                  editing={editingEmployment}
                  setEditing={setEditingEmployment}
+                 onCancel={handleCancelEmployment}
                  formData={formData}
                  handleFormChange={handleFormChange}
                  onSave={handleSave}
@@ -1089,17 +1210,20 @@ function onImageLoad(e) {
                  employmentTypes={employmentTypes}
                  canEdit={canEdit('employment')}
                  helpers={helpers}
+                 isSaving={isSaving && savingSection === 'employment'}
                />
                           
                <LeaveAssignments 
                  editing={editingLeaves}
                  setEditing={setEditingLeaves}
+                 onCancel={handleCancelLeaves}
                  formLeaves={formLeaves}
                  handleLeaveChange={handleLeaveChange}
                  onSave={handleSave}
                  leaveAssignments={leaveAssignments}
                  leaveTypes={leaveTypes}
                  canEdit={canEdit('leaves')}
+                 isSaving={isSaving && savingSection === 'leaves'}
                />
             </>       
             )}
@@ -1109,6 +1233,7 @@ function onImageLoad(e) {
                <WorkAddress 
                  editing={editingWorkAddress}
                  setEditing={setEditingWorkAddress}
+                 onCancel={handleCancelWorkAddress}
                  formData={formData}
                  handleFormChange={handleFormChange}
                  onSave={handleSave}
@@ -1117,10 +1242,12 @@ function onImageLoad(e) {
                  states={states}
                  canEdit={canEdit('workAddress')}
                  helpers={helpers}
+                 isSaving={isSaving && savingSection === 'workAddress'}
                />
                <HomeAddress 
                  editing={editingHomeAddress}
                  setEditing={setEditingHomeAddress}
+                 onCancel={handleCancelHomeAddress}
                  formData={formData}
                  handleFormChange={handleFormChange}
                  onSave={handleSave}
@@ -1129,10 +1256,12 @@ function onImageLoad(e) {
                  states={states}
                  canEdit={canEdit('homeAddress')}
                  helpers={helpers}
+                 isSaving={isSaving && savingSection === 'homeAddress'}
                />
                <EmergencyContact 
                  editing={editingEmergencyContact}
                  setEditing={setEditingEmergencyContact}
+                 onCancel={handleCancelEmergencyContact}
                  formData={formData}
                  handleFormChange={handleFormChange}
                  onSave={handleSave}
@@ -1141,6 +1270,7 @@ function onImageLoad(e) {
                  states={states}
                  canEdit={canEdit('emergencyContact')}
                  helpers={helpers}
+                 isSaving={isSaving && savingSection === 'emergencyContact'}
                />
             </>
             )}
