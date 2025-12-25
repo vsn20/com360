@@ -61,24 +61,117 @@ const isDateInRange = (date, start, end) => date >= start && date <= end;
 // but usually we keep YYYY-MM-DD for logic and format on client. 
 // We will return ISO strings and let client format to MM/DD/YYYY.
 
+// Fetch employees for filter dropdown
+export async function fetchEmployeesForInvoice() {
+  const token = cookies().get("jwt_token")?.value;
+  if (!token) return { error: "No token found." };
+
+  const decoded = decodeJwt(token);
+  if (!decoded || !decoded.orgid) return { error: "Invalid token." };
+
+  try {
+    const pool = await DBconnection();
+    const orgid = decoded.orgid;
+
+    const [employees] = await pool.execute(
+      `SELECT empid, EMP_FST_NAME, EMP_LAST_NAME
+       FROM C_EMP 
+       WHERE orgid = ?
+       ORDER BY EMP_FST_NAME, EMP_LAST_NAME`,
+      [orgid]
+    );
+
+    return { employees: employees.map(emp => ({
+      id: emp.empid,
+      name: `${emp.EMP_FST_NAME || ""} ${emp.EMP_LAST_NAME || ""}`.trim() || `Employee ${emp.empid}`
+    }))};
+  } catch (error) {
+    console.error("Error fetching employees:", error);
+    return { error: error.message };
+  }
+}
+
+// Fetch projects for filter dropdown (COMMENTED - replaced by client filter)
+// export async function fetchProjectsForInvoice() {
+//   const token = cookies().get("jwt_token")?.value;
+//   if (!token) return { error: "No token found." };
+
+//   const decoded = decodeJwt(token);
+//   if (!decoded || !decoded.orgid) return { error: "Invalid token." };
+
+//   try {
+//     const pool = await DBconnection();
+//     const orgid = decoded.orgid;
+
+//     const [projects] = await pool.execute(
+//       `SELECT p.PRJ_ID, p.PRJ_NAME, a.ALIAS_NAME as account_name
+//        FROM C_PROJECT p
+//        JOIN C_ACCOUNT a ON p.ACCNT_ID = a.ACCNT_ID
+//        WHERE p.ORG_ID = ?
+//        ORDER BY p.PRJ_NAME`,
+//       [orgid]
+//     );
+
+//     return { projects: projects.map(proj => ({
+//       id: proj.PRJ_ID,
+//       name: proj.PRJ_NAME,
+//       accountName: proj.account_name
+//     }))};
+//   } catch (error) {
+//     console.error("Error fetching projects:", error);
+//     return { error: error.message };
+//   }
+// }
+
+// Fetch clients for filter dropdown
+export async function fetchClientsForInvoice() {
+  const token = cookies().get("jwt_token")?.value;
+  if (!token) return { error: "No token found." };
+
+  const decoded = decodeJwt(token);
+  if (!decoded || !decoded.orgid) return { error: "Invalid token." };
+
+  try {
+    const pool = await DBconnection();
+    const orgid = decoded.orgid;
+
+    const [clients] = await pool.execute(
+      `SELECT DISTINCT a.ACCNT_ID, a.ALIAS_NAME
+       FROM C_ACCOUNT a
+       JOIN C_PROJECT p ON p.CLIENT_ID = a.ACCNT_ID OR p.ACCNT_ID = a.ACCNT_ID
+       WHERE p.ORG_ID = ?
+       ORDER BY a.ALIAS_NAME`,
+      [orgid]
+    );
+
+    return { clients: clients.map(client => ({
+      id: client.ACCNT_ID,
+      name: client.ALIAS_NAME || `Client ${client.ACCNT_ID}`
+    }))};
+  } catch (error) {
+    console.error("Error fetching clients:", error);
+    return { error: error.message };
+  }
+}
+
 export async function generateInvoices({ 
-  reportType, searchStart, searchEnd, actualStart, actualEnd 
+  reportType, searchStart, searchEnd, actualStart, actualEnd,
+  selectedEmployees = [], selectedClients = []
 }) {
   const token = cookies().get("jwt_token")?.value;
   if (!token) return { error: "No token found." };
 
   const decoded = decodeJwt(token);
-  if (!decoded || !decoded.userId) return { error: "Invalid token." };
+  if (!decoded || !decoded.orgid) return { error: "Invalid token." };
 
   try {
     const pool = await DBconnection();
-
-    const [userRows] = await pool.execute(
-      "SELECT u.empid, e.orgid FROM C_USER u JOIN C_EMP e ON u.empid = e.empid WHERE u.username = ?",
-      [decoded.userId]
-    );
-    if (!userRows.length) return { error: "User not found." };
-    const { orgid } = userRows[0];
+    const orgid = decoded.orgid;
+    
+    console.log("generateInvoices params:", { 
+      searchStart, searchEnd, actualStart, actualEnd,
+      selectedEmployees, selectedClients, orgid 
+    });
     
     // Get Organization Details
     const [subOrgRows] = await pool.execute(
@@ -88,7 +181,33 @@ export async function generateInvoices({
     const orgDetails = subOrgRows[0] || {};
     const otThreshold = await getOTThreshold(pool, orgid);
 
-    // Fetch Data
+    // Build dynamic WHERE clauses for employee and client filters
+    let employeeFilter = "";
+    let clientFilter = "";
+    // Project filter (COMMENTED - replaced by client filter)
+    // let projectFilter = "";
+    const baseParams = [searchStart, searchEnd, orgid];
+    const assignBaseParams = [actualEnd, actualStart, orgid];
+    
+    if (selectedEmployees.length > 0) {
+      const empPlaceholders = selectedEmployees.map(() => '?').join(',');
+      employeeFilter = ` AND t.employee_id IN (${empPlaceholders})`;
+    }
+    // Project filter (COMMENTED - replaced by client filter)
+    // if (selectedProjects.length > 0) {
+    //   const projPlaceholders = selectedProjects.map(() => '?').join(',');
+    //   projectFilter = ` AND p.PRJ_ID IN (${projPlaceholders})`;
+    // }
+    if (selectedClients.length > 0) {
+      const clientPlaceholders = selectedClients.map(() => '?').join(',');
+      clientFilter = ` AND (p.CLIENT_ID IN (${clientPlaceholders}) OR p.ACCNT_ID IN (${clientPlaceholders}))`;
+    }
+
+    // Fetch Timesheet Data with filters
+    const timesheetParams = [...baseParams, ...selectedEmployees, ...selectedClients, ...selectedClients];
+    console.log("Timesheet query params:", timesheetParams);
+    console.log("Client filter:", clientFilter);
+    
     const [timesheetRows] = await pool.execute(
       `SELECT t.*, 
               e.EMP_FST_NAME, e.EMP_LAST_NAME,
@@ -103,11 +222,39 @@ export async function generateInvoices({
        LEFT JOIN C_ACCOUNT ac_client ON p.CLIENT_ID = ac_client.ACCNT_ID
        WHERE t.week_start_date >= ? AND t.week_start_date <= ?
        AND t.is_approved = 1
-       AND e.orgid = ?
+       AND e.orgid = ?${employeeFilter}${clientFilter}
        ORDER BY a.ALIAS_NAME, p.PRJ_NAME, e.EMP_FST_NAME`,
-      [searchStart, searchEnd, orgid]
+      timesheetParams
     );
+    
+    console.log("Timesheet rows found:", timesheetRows.length);
+    if (timesheetRows.length > 0) {
+      console.log("Timesheet projects returned:", [...new Set(timesheetRows.map(r => `${r.PRJ_ID}: ${r.PRJ_NAME}`))]);
+      console.log("Timesheet employees returned:", [...new Set(timesheetRows.map(r => `${r.employee_id}: ${r.EMP_FST_NAME}`))]);
+    }
 
+    // Build filters for assignment query
+    let assignEmpFilter = "";
+    let assignClientFilter = "";
+    // Project filter (COMMENTED - replaced by client filter)
+    // let assignProjFilter = "";
+    if (selectedEmployees.length > 0) {
+      const empPlaceholders = selectedEmployees.map(() => '?').join(',');
+      assignEmpFilter = ` AND pe.EMP_ID IN (${empPlaceholders})`;
+    }
+    // Project filter (COMMENTED - replaced by client filter)
+    // if (selectedProjects.length > 0) {
+    //   const projPlaceholders = selectedProjects.map(() => '?').join(',');
+    //   assignProjFilter = ` AND p.PRJ_ID IN (${projPlaceholders})`;
+    // }
+    if (selectedClients.length > 0) {
+      const clientPlaceholders = selectedClients.map(() => '?').join(',');
+      assignClientFilter = ` AND (p.CLIENT_ID IN (${clientPlaceholders}) OR p.ACCNT_ID IN (${clientPlaceholders}))`;
+    }
+
+    const assignParams = [...assignBaseParams, ...selectedEmployees, ...selectedClients, ...selectedClients];
+    console.log("Assignment query params:", assignParams);
+    
     const [assignmentRows] = await pool.execute(
       `SELECT pe.EMP_ID, pe.PRJ_ID, 
               e.EMP_FST_NAME, e.EMP_LAST_NAME,
@@ -121,9 +268,15 @@ export async function generateInvoices({
        JOIN C_ACCOUNT a ON p.ACCNT_ID = a.ACCNT_ID
        LEFT JOIN C_ACCOUNT ac_client ON p.CLIENT_ID = ac_client.ACCNT_ID
        WHERE pe.START_DT <= ? AND (pe.END_DT >= ? OR pe.END_DT IS NULL)
-       AND e.orgid = ?`,
-      [actualEnd, actualStart, orgid]
+       AND e.orgid = ?${assignEmpFilter}${assignClientFilter}`,
+      assignParams
     );
+    
+    console.log("Assignment rows found:", assignmentRows.length);
+    if (assignmentRows.length > 0) {
+      console.log("Assignment projects returned:", [...new Set(assignmentRows.map(r => `${r.PRJ_ID}: ${r.PRJ_NAME}`))]);
+      console.log("Assignment employees returned:", [...new Set(assignmentRows.map(r => `${r.EMP_ID}: ${r.EMP_FST_NAME}`))]);
+    }
 
     const accountMap = {};
     const days = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];

@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { generateInvoices } from "@/app/serverActions/Invoices/InvoiceActions";
+import React, { useState, useEffect } from "react";
+import { generateInvoices, fetchEmployeesForInvoice, fetchClientsForInvoice } from "@/app/serverActions/Invoices/InvoiceActions";
 import styles from "./Invoice.module.css";
 import ExcelJS from 'exceljs'; 
 import { saveAs } from 'file-saver';
@@ -9,6 +9,18 @@ import JSZip from 'jszip';
 
 const InvoiceOverview = () => {
   const [view, setView] = useState("list"); // 'list' or 'detail'
+  
+  // Filter Options (fetched from server)
+  const [employees, setEmployees] = useState([]);
+  const [clients, setClients] = useState([]);
+  // Project filter (COMMENTED - replaced by client filter)
+  // const [projects, setProjects] = useState([]);
+  
+  // Selected Filters (single select with 'all' option)
+  const [selectedEmployee, setSelectedEmployee] = useState("all");
+  const [selectedClient, setSelectedClient] = useState("all");
+  // Project filter (COMMENTED - replaced by client filter)
+  // const [selectedProject, setSelectedProject] = useState("all");
   
   // Controls
   const [reportType, setReportType] = useState("monthly");
@@ -24,6 +36,43 @@ const InvoiceOverview = () => {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState(null);
+
+  // Fetch employees and clients on mount
+  useEffect(() => {
+    const loadFilterData = async () => {
+      try {
+        const [empRes, clientRes] = await Promise.all([
+          fetchEmployeesForInvoice(),
+          fetchClientsForInvoice()
+        ]);
+        
+        console.log("Employee fetch result:", empRes);
+        console.log("Client fetch result:", clientRes);
+        
+        if (empRes.error) {
+          console.error("Error fetching employees:", empRes.error);
+        } else if (empRes.employees) {
+          setEmployees(empRes.employees);
+        }
+        
+        if (clientRes.error) {
+          console.error("Error fetching clients:", clientRes.error);
+        } else if (clientRes.clients) {
+          setClients(clientRes.clients);
+        }
+        
+        // Project filter (COMMENTED - replaced by client filter)
+        // if (projRes.error) {
+        //   console.error("Error fetching projects:", projRes.error);
+        // } else if (projRes.projects) {
+        //   setProjects(projRes.projects);
+        // }
+      } catch (err) {
+        console.error("Error loading filter data:", err);
+      }
+    };
+    loadFilterData();
+  }, []);
 
   // --- Date Logic ---
   const generateYears = () => {
@@ -102,7 +151,23 @@ const InvoiceOverview = () => {
     const progressInt = runProgress();
 
     try {
-      let params = { reportType };
+      // Keep IDs as-is (they may be strings like "2-1" or "2_2")
+      const empId = selectedEmployee === "all" ? null : selectedEmployee;
+      const clientId = selectedClient === "all" ? null : selectedClient;
+      // Project filter (COMMENTED - replaced by client filter)
+      // const projId = selectedProject === "all" ? null : selectedProject;
+      
+      console.log("Selected filters:", { selectedEmployee, selectedClient, empId, clientId });
+      
+      let params = { 
+        reportType,
+        selectedEmployees: empId ? [empId] : [],
+        selectedClients: clientId ? [clientId] : []
+        // Project filter (COMMENTED - replaced by client filter)
+        // selectedProjects: projId ? [projId] : []
+      };
+      
+      console.log("Params being sent:", params);
       
       if (reportType === "weekly") {
         params = { ...params, ...getWeekRange(selectedDate) };
@@ -289,6 +354,52 @@ const InvoiceOverview = () => {
 
       <div className={styles.card}>
         <div className={styles.controlsGrid}>
+          {/* Employee Filter */}
+          <div className={styles.controlGroup}>
+            <label>Employee</label>
+            <select 
+              value={selectedEmployee}
+              onChange={e => setSelectedEmployee(e.target.value)}
+              className={styles.filterSelect}
+            >
+              <option value="all">All Employees</option>
+              {employees.map(emp => (
+                <option key={emp.id} value={emp.id}>{emp.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Client Filter */}
+          <div className={styles.controlGroup}>
+            <label>Client</label>
+            <select 
+              value={selectedClient}
+              onChange={e => setSelectedClient(e.target.value)}
+              className={styles.filterSelect}
+            >
+              <option value="all">All Clients</option>
+              {clients.map(client => (
+                <option key={client.id} value={client.id}>{client.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Project Filter (COMMENTED - replaced by client filter) */}
+          {/* <div className={styles.controlGroup}>
+            <label>Project</label>
+            <select 
+              value={selectedProject}
+              onChange={e => setSelectedProject(e.target.value)}
+              className={styles.filterSelect}
+            >
+              <option value="all">All Projects</option>
+              {projects.map(proj => (
+                <option key={proj.id} value={proj.id}>{proj.name}</option>
+              ))}
+            </select>
+          </div> */}
+
+          {/* Report Type */}
           <div className={styles.controlGroup}>
              <label>Report Type</label>
              <select value={reportType} onChange={e => setReportType(e.target.value)}>
