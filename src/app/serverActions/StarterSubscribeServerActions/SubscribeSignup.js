@@ -17,7 +17,7 @@ async function getTenantConnection() {
     port: 3306,
     user: 'SAINAMAN',         // Using privileged creds for creation
     password:'SAInaman$8393', // Using privileged creds for creation
-    database: 'COM360_VIEW',       // 🔴 Hardcoded as requested
+    database: 'com360',       // 🔴 Hardcoded as requested
     waitForConnections: true,
     connectionLimit: 5,
     queueLimit: 0,
@@ -198,7 +198,7 @@ export async function completeSubscription(formData) {
     // 🔴 HARDCODED: Database = 'Com360', Plan ID = 1
     await metaConnection.query(
       `INSERT INTO C_SUBSCRIBER_PLAN (subscriber_id, plan_id, subscriber_database, plan_start_date, active, privileged_user_access, password) 
-       VALUES (?, 1, 'COM360_VIEW', CURRENT_DATE(), 'Y', 'SAINAMAN', 'SAInaman$8393')`, 
+       VALUES (?, 1, 'com360', CURRENT_DATE(), 'Y', 'SAINAMAN', 'SAInaman$8393')`, 
       [subscriberId]
     );
 
