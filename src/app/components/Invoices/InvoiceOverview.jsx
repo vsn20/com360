@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { generateInvoices, fetchEmployeesForInvoice, fetchProjectsForInvoice } from "@/app/serverActions/Invoices/InvoiceActions";
+import { generateInvoices, fetchEmployeesForInvoice, fetchProjectsForInvoice, fetchContractEmployeesForInvoice } from "@/app/serverActions/Invoices/InvoiceActions";
 import styles from "./Invoice.module.css";
 import ExcelJS from 'exceljs'; 
 import { saveAs } from 'file-saver';
@@ -9,6 +9,7 @@ import JSZip from 'jszip';
 
 const InvoiceOverview = () => {
   const [view, setView] = useState("list"); // 'list' or 'detail'
+  const [invoiceType, setInvoiceType] = useState("receivable"); // 'receivable' or 'payable'
   
   // Filter Options (fetched from server)
   const [employees, setEmployees] = useState([]);
@@ -38,12 +39,17 @@ const InvoiceOverview = () => {
   const [error, setError] = useState(null);
   const [hasSearched, setHasSearched] = useState(false);
 
-  // Fetch employees and projects on mount
+  // Fetch employees and projects on mount and when invoiceType changes
   useEffect(() => {
     const loadFilterData = async () => {
       try {
+        // Fetch employees based on invoice type
+        const empFetcher = invoiceType === "payable" 
+          ? fetchContractEmployeesForInvoice 
+          : fetchEmployeesForInvoice;
+        
         const [empRes, projRes] = await Promise.all([
-          fetchEmployeesForInvoice(),
+          empFetcher(),
           fetchProjectsForInvoice()
         ]);
         
@@ -73,7 +79,7 @@ const InvoiceOverview = () => {
       }
     };
     loadFilterData();
-  }, []);
+  }, [invoiceType]);
 
   // --- Date Logic ---
   const generateYears = () => {
@@ -159,12 +165,13 @@ const InvoiceOverview = () => {
       // Client filter (COMMENTED - replaced by project filter)
       // const clientId = selectedClient === "all" ? null : selectedClient;
       
-      console.log("Selected filters:", { selectedEmployee, selectedProject, empId, projId });
+      console.log("Selected filters:", { selectedEmployee, selectedProject, empId, projId, invoiceType });
       
       let params = { 
         reportType,
         selectedEmployees: empId ? [empId] : [],
-        selectedProjects: projId ? [projId] : []
+        selectedProjects: projId ? [projId] : [],
+        invoiceType: invoiceType
         // Client filter (COMMENTED - replaced by project filter)
         // selectedClients: clientId ? [clientId] : []
       };
@@ -347,6 +354,14 @@ const InvoiceOverview = () => {
     saveAs(content, `${folderName}.zip`);
   };
 
+  // Handle invoice type change - reset employee selection
+  const handleInvoiceTypeChange = (type) => {
+    setInvoiceType(type);
+    setSelectedEmployee("all");
+    setInvoices([]);
+    setHasSearched(false);
+  };
+
   return (
     <div className={styles.wrapper}>
       <div className={styles.header}>
@@ -354,17 +369,38 @@ const InvoiceOverview = () => {
         <p className={styles.subtitle}>Generate, View, and Export Client Invoices</p>
       </div>
 
+      {/* Invoice Type Toggle Buttons */}
+      <div className={styles.invoiceTypeToggle}>
+        <button 
+          className={`${styles.toggleBtn} ${invoiceType === "receivable" ? styles.toggleBtnActive : ""}`}
+          onClick={() => handleInvoiceTypeChange("receivable")}
+        >
+          Invoice Receivable
+        </button>
+        <button 
+          className={`${styles.toggleBtn} ${invoiceType === "payable" ? styles.toggleBtnActive : ""}`}
+          onClick={() => handleInvoiceTypeChange("payable")}
+        >
+          Invoice Payable
+        </button>
+      </div>
+
       <div className={styles.card}>
+        {invoiceType === "payable" && (
+          <div className={styles.payableNote}>
+            <strong>Invoice Payable Mode:</strong> Showing only Contract employees
+          </div>
+        )}
         <div className={styles.controlsGrid}>
           {/* Employee Filter */}
           <div className={styles.controlGroup}>
-            <label>Employee</label>
+            <label>Employee {invoiceType === "payable" ? "(Contract Only)" : ""}</label>
             <select 
               value={selectedEmployee}
               onChange={e => setSelectedEmployee(e.target.value)}
               className={styles.filterSelect}
             >
-              <option value="all">All Employees</option>
+              <option value="all">All {invoiceType === "payable" ? "Contract " : ""}Employees</option>
               {employees.map(emp => (
                 <option key={emp.id} value={emp.id}>{emp.name}</option>
               ))}

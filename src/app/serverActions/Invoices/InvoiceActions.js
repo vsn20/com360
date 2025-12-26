@@ -61,7 +61,7 @@ const isDateInRange = (date, start, end) => date >= start && date <= end;
 // but usually we keep YYYY-MM-DD for logic and format on client. 
 // We will return ISO strings and let client format to MM/DD/YYYY.
 
-// Fetch employees for filter dropdown
+// Fetch employees for filter dropdown (Receivable - All employees)
 export async function fetchEmployeesForInvoice() {
   const token = cookies().get("jwt_token")?.value;
   if (!token) return { error: "No token found." };
@@ -87,6 +87,54 @@ export async function fetchEmployeesForInvoice() {
     }))};
   } catch (error) {
     console.error("Error fetching employees:", error);
+    return { error: error.message };
+  }
+}
+
+// Fetch employees for filter dropdown (Payable - Contract employees only)
+export async function fetchContractEmployeesForInvoice() {
+  const token = cookies().get("jwt_token")?.value;
+  if (!token) return { error: "No token found." };
+
+  const decoded = decodeJwt(token);
+  if (!decoded || !decoded.orgid) return { error: "Invalid token." };
+
+  try {
+    const pool = await DBconnection();
+    const orgid = decoded.orgid;
+
+    // First, get the Contract type ID from C_GENERIC_VALUES (g_id = 27 for employment types)
+    // Check for org-specific or global (orgid = -1) Contract type
+    const [contractTypeRows] = await pool.execute(
+      `SELECT id FROM C_GENERIC_VALUES 
+       WHERE g_id = 27 AND Name = 'Contract' AND isactive = 1 AND (orgid = ? OR orgid = -1)
+       ORDER BY orgid DESC LIMIT 1`,
+      [orgid]
+    );
+
+    if (contractTypeRows.length === 0) {
+      // If no Contract type found, return empty array
+      console.log("No Contract employment type found for org:", orgid);
+      return { employees: [] };
+    }
+
+    const contractTypeId = contractTypeRows[0].id;
+    console.log("Contract type ID found:", contractTypeId);
+
+    const [employees] = await pool.execute(
+      `SELECT empid, EMP_FST_NAME, EMP_LAST_NAME
+       FROM C_EMP 
+       WHERE orgid = ? AND employment_type = ?
+       ORDER BY EMP_FST_NAME, EMP_LAST_NAME`,
+      [orgid, contractTypeId]
+    );
+
+    return { employees: employees.map(emp => ({
+      id: emp.empid,
+      name: `${emp.EMP_FST_NAME || ""} ${emp.EMP_LAST_NAME || ""}`.trim() || `Employee ${emp.empid}`
+    }))};
+  } catch (error) {
+    console.error("Error fetching contract employees:", error);
     return { error: error.message };
   }
 }
@@ -156,7 +204,7 @@ export async function fetchProjectsForInvoice() {
 
 export async function generateInvoices({ 
   reportType, searchStart, searchEnd, actualStart, actualEnd,
-  selectedEmployees = [], selectedProjects = []
+  selectedEmployees = [], selectedProjects = [], invoiceType = "receivable"
 }) {
   const token = cookies().get("jwt_token")?.value;
   if (!token) return { error: "No token found." };
@@ -170,7 +218,7 @@ export async function generateInvoices({
     
     console.log("generateInvoices params:", { 
       searchStart, searchEnd, actualStart, actualEnd,
-      selectedEmployees, selectedProjects, orgid 
+      selectedEmployees, selectedProjects, orgid, invoiceType 
     });
     
     // Get Organization Details
@@ -181,9 +229,26 @@ export async function generateInvoices({
     const orgDetails = subOrgRows[0] || {};
     const otThreshold = await getOTThreshold(pool, orgid);
 
+    // Get Contract type ID for payable invoices (dynamic lookup)
+    let contractTypeId = null;
+    if (invoiceType === "payable") {
+      const [contractTypeRows] = await pool.execute(
+        `SELECT id FROM C_GENERIC_VALUES 
+         WHERE g_id = 27 AND Name = 'Contract' AND isactive = 1 AND (orgid = ? OR orgid = -1)
+         ORDER BY orgid DESC LIMIT 1`,
+        [orgid]
+      );
+      if (contractTypeRows.length > 0) {
+        contractTypeId = contractTypeRows[0].id;
+        console.log("Contract type ID for invoice generation:", contractTypeId);
+      }
+    }
+
     // Build dynamic WHERE clauses for employee and project filters
     let employeeFilter = "";
     let projectFilter = "";
+    // Contract employee filter for payable invoices (using dynamic contractTypeId)
+    let contractFilter = (invoiceType === "payable" && contractTypeId) ? ` AND e.employment_type = ${contractTypeId}` : "";
     // Client filter (COMMENTED - replaced by project filter)
     // let clientFilter = "";
     const baseParams = [searchStart, searchEnd, orgid];
@@ -207,6 +272,7 @@ export async function generateInvoices({
     const timesheetParams = [...baseParams, ...selectedEmployees, ...selectedProjects];
     console.log("Timesheet query params:", timesheetParams);
     console.log("Project filter:", projectFilter);
+    console.log("Contract filter:", contractFilter);
     
     const [timesheetRows] = await pool.execute(
       `SELECT t.*, 
@@ -222,7 +288,7 @@ export async function generateInvoices({
        LEFT JOIN C_ACCOUNT ac_client ON p.CLIENT_ID = ac_client.ACCNT_ID
        WHERE t.week_start_date >= ? AND t.week_start_date <= ?
        AND t.is_approved = 1
-       AND e.orgid = ?${employeeFilter}${projectFilter}
+       AND e.orgid = ?${employeeFilter}${projectFilter}${contractFilter}
        ORDER BY a.ALIAS_NAME, p.PRJ_NAME, e.EMP_FST_NAME`,
       timesheetParams
     );
@@ -246,6 +312,8 @@ export async function generateInvoices({
       const projPlaceholders = selectedProjects.map(() => '?').join(',');
       assignProjFilter = ` AND p.PRJ_ID IN (${projPlaceholders})`;
     }
+    // Contract filter for payable invoices in assignment query (using dynamic contractTypeId)
+    let assignContractFilter = (invoiceType === "payable" && contractTypeId) ? ` AND e.employment_type = ${contractTypeId}` : "";
     // Client filter (COMMENTED - replaced by project filter)
     // if (selectedClients.length > 0) {
     //   const clientPlaceholders = selectedClients.map(() => '?').join(',');
@@ -268,7 +336,7 @@ export async function generateInvoices({
        JOIN C_ACCOUNT a ON p.ACCNT_ID = a.ACCNT_ID
        LEFT JOIN C_ACCOUNT ac_client ON p.CLIENT_ID = ac_client.ACCNT_ID
        WHERE pe.START_DT <= ? AND (pe.END_DT >= ? OR pe.END_DT IS NULL)
-       AND e.orgid = ?${assignEmpFilter}${assignProjFilter}`,
+       AND e.orgid = ?${assignEmpFilter}${assignProjFilter}${assignContractFilter}`,
       assignParams
     );
     

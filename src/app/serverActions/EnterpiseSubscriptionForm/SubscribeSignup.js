@@ -480,7 +480,8 @@ export async function approveProSubscription(reqData) {
          (3,'18', 'I-983', '1', NULL, '-1', NULL, '3'),
          (4,'19', 'Auto Generated', '1', NULL, '-1', NULL, '1'),
          (5,'20', 'Auto Generated', '1', NULL, '-1', NULL, '1'),
-         (6,'18', 'W-9','1',NULL,'-1',NULL,'4')`
+         (6,'18', 'W-9','1',NULL,'-1',NULL,'4'),
+          ('12', '27', 'Contract', '1', NULL, '-1', NULL, '2');`
     );
 
     // 1. Insert Generic Data

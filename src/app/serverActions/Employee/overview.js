@@ -477,7 +477,7 @@ export async function updateEmployee(prevState, formData) {
    }
       if (employment_type) {
         const [empTypeCheck] = await pool.execute(
-          'SELECT id FROM C_GENERIC_VALUES WHERE id = ? AND g_id = 27 AND orgid = ? AND isactive = 1',
+          'SELECT id FROM C_GENERIC_VALUES WHERE id = ? AND g_id = 27 AND (orgid = ? OR orgid = -1) AND isactive = 1',
           [employment_type, orgid]
         );
         if (empTypeCheck.length === 0) {

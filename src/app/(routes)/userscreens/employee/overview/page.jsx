@@ -171,7 +171,7 @@ export default async function OverviewPage({ searchParams }) {
     
     // Fetch employment types
     [employmentTypes] = await pool.query(
-      'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 27 AND orgid = ? AND isactive = 1',
+      'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 27 AND isactive = 1 AND (orgid = ? OR orgid = -1)',
       [orgid]
     );
 
