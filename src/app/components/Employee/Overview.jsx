@@ -7,7 +7,7 @@ import Image from 'next/image';
 import AddEmployee from './AddEmployee';
 import EditEmployee from './EditEmployee';
 import readXlsxFile from 'read-excel-file';
-import { importEmployeesBatch } from '@/app/serverActions/Employee/addemployee';
+import { importEmployeesBatch } from '@/app/serverActions/addemployee';
 
 const Overview = ({
   roles,
