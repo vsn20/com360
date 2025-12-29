@@ -1,6 +1,6 @@
 "use server";
 
-import DBconnection, { MetaDBconnection } from "@/app/utils/config/db"; // Ensure path is correct
+import DBconnection, { MetaDBconnection } from "@/app/utils/config/db";
 import { cookies } from "next/headers";
 import { assignLeaves } from '@/app/serverActions/Employee/overview';
 
@@ -24,15 +24,12 @@ async function syncEmployeeToMeta(empid, orgid, tenantPool, currentUsername) {
     console.log(`Target EmpID: ${empid}, OrgID: ${orgid}`);
     console.log(`Executed By: ${currentUsername}`);
 
-    // Get Meta Pool from db.js export
     const metaPool = MetaDBconnection(); 
     metaConnection = await metaPool.getConnection();
     console.log(`✅ STEP 1: Connected to Meta DB`);
 
-    // 1. Get Current User's Plan Number and OrgID from Meta DB
     console.log(`🔍 STEP 2: Looking up admin '${currentUsername}' in Meta DB...`);
     
-    // Check both username and email to find the admin
     const [currentUserRows] = await metaConnection.query(
       `SELECT plan_number, org_id FROM C_EMP WHERE username = ? OR email = ?`,
       [currentUsername, currentUsername]
@@ -48,7 +45,6 @@ async function syncEmployeeToMeta(empid, orgid, tenantPool, currentUsername) {
     const { plan_number, org_id: metaOrgId } = currentUserRows[0];
     console.log(`✅ Admin Details Found -> OrgID: ${metaOrgId}, Plan: ${plan_number}`);
 
-    // 2. Get Target Employee Data from Tenant DB
     console.log(`🔍 STEP 3: Fetching new employee data from Tenant DB...`);
     
     const [empRows] = await tenantPool.query(
@@ -65,20 +61,11 @@ async function syncEmployeeToMeta(empid, orgid, tenantPool, currentUsername) {
     const targetEmp = empRows[0];
     console.log(`✅ Employee Found: ${targetEmp.EMP_FST_NAME} (${targetEmp.email})`);
     
-    // 3. Resolve Status ID to 'Y' or 'N'
     let isActive = 'Y';
-    // if (targetEmp.STATUS) {
-
-    //   if (targetEmp.STATUS=="ACTIVE"||targetEmp.STATUS=="Active"||targetEmp.STATUS=="active") {
-    //     isActive = 'Y';
-    //   }
-    // }
     console.log(`✅ Status Resolved: ${isActive}`);
 
-    // 4. Upsert into Meta C_EMP
     console.log(`🚀 STEP 4: Attempting INSERT into Meta C_EMP...`);
 
-    // 🔴 CRITICAL FIX: The INSERT statement now includes 'username' (set to email)
     await metaConnection.query(
       `INSERT INTO C_EMP 
         (emp_first_name, emp_middle_name, org_id, plan_number, email, active, username)
@@ -97,7 +84,7 @@ async function syncEmployeeToMeta(empid, orgid, tenantPool, currentUsername) {
         plan_number, 
         targetEmp.email,
         'Y',
-        targetEmp.email // 👈 Force Email as Username to satisfy DB constraints
+        targetEmp.email
       ]
     );
 
@@ -162,6 +149,8 @@ export async function addemployee(formData) {
   const adminEmpFlag = formData.get('adminEmpFlag') ? 1 : 0;
   const superUserFlag = formData.get('superUserFlag') ? 1 : 0;
   const suborgid = formData.get('suborgid') || null;
+  const employment_type = formData.get('employment_type') || null;
+  const vendor_id = formData.get('vendor_id') || null;
 
   const cookieStore = await cookies();
   const token = cookieStore.get('jwt_token')?.value;
@@ -171,7 +160,7 @@ export async function addemployee(formData) {
   if (!decoded || !decoded.orgid) return { error: 'Invalid token or orgid not found.' };
 
   const orgid = decoded.orgid;
-  const currentUsername = decoded.username; // 🔹 Needed for Meta Sync
+  const currentUsername = decoded.username;
 
   // Validation
   if (!empFstName.trim()) return { error: 'First name is required.' };
@@ -180,6 +169,13 @@ export async function addemployee(formData) {
   if (roleids.length === 0) return { error: 'At least one role is required.' };
   if (!hireDate) return { error: 'Hire date is required.' };
   if (!status) return { error: 'Status is required.' };
+
+  // Validate vendor_id if employment type is 12 or 13
+  if (employment_type && (employment_type === '12' || employment_type === '13')) {
+    if (!vendor_id || vendor_id.trim() === '') {
+      return { error: 'Vendor selection is required for this employment type.' };
+    }
+  }
 
   let empid = null;
 
@@ -217,6 +213,17 @@ export async function addemployee(formData) {
       }
     }
 
+    // Validate vendor if provided
+    if (vendor_id && vendor_id.trim() !== '') {
+      const [existingVendor] = await pool.query(
+        'SELECT ACCNT_ID FROM C_ACCOUNT WHERE ACCNT_ID = ? AND ACTIVE_FLAG = 1',
+        [vendor_id]
+      );
+      if (existingVendor.length === 0) {
+        return { error: 'Selected vendor does not exist or is inactive.' };
+      }
+    }
+
     // Get department name
     let deptName = null;
     if (deptId) {
@@ -247,6 +254,9 @@ export async function addemployee(formData) {
     const empCount = countResult[0].count;
     empid = `${orgid}_${empCount + 1}`;
 
+    // Determine final vendor_id value: if employment_type is NOT 12 or 13, set to null
+    const finalVendorId = (employment_type === '12' || employment_type === '13') ? vendor_id : null;
+
     // Insert Employee
     const insertColumns = [
       'empid', 'orgid', 'EMP_FST_NAME', 'EMP_MID_NAME', 'EMP_LAST_NAME', 'EMP_PREF_NAME', 'email',
@@ -261,7 +271,8 @@ export async function addemployee(formData) {
       'EMERG_CNCT_NAME', 'EMERG_CNCT_PHONE_NUMBER', 'EMERG_CNCT_EMAIL',
       'EMERG_CNCT_ADDR_LINE1', 'EMERG_CNCT_ADDR_LINE2', 'EMERG_CNCT_ADDR_LINE3',
       'EMERG_CNCT_CITY', 'EMERG_CNCT_STATE_ID', 'EMERG_CNCT_STATE_NAME_CUSTOM',
-      'EMERG_CNCT_COUNTRY_ID', 'EMERG_CNCT_POSTAL_CODE', 'MODIFICATION_NUM','suborgid'
+      'EMERG_CNCT_COUNTRY_ID', 'EMERG_CNCT_POSTAL_CODE', 'MODIFICATION_NUM', 'suborgid',
+      'employment_type', 'vendor_id'
     ];
 
     const values = [
@@ -275,7 +286,7 @@ export async function addemployee(formData) {
       deptId, deptName, workCompClass, emergCnctName, emergCnctPhoneNumber, 
       emergCnctEmail, emergCnctAddrLine1, emergCnctAddrLine2, emergCnctAddrLine3, 
       emergCnctCity, emergCnctStateId, emergCnctStateNameCustom, emergCnctCountryId, 
-      emergCnctPostalCode, 1,suborgid
+      emergCnctPostalCode, 1, suborgid, employment_type, finalVendorId
     ];
 
     const placeholders = values.map(() => '?').join(', ');
@@ -284,7 +295,7 @@ export async function addemployee(formData) {
       values
     );
 
-    console.log(`Employee ${empid} inserted successfully`);
+    console.log(`Employee ${empid} inserted successfully with vendor_id: ${finalVendorId}`);
 
     // Insert Roles
     for (const roleid of roleids) {
@@ -326,22 +337,13 @@ export async function addemployee(formData) {
       console.log('All leave assignments completed successfully');
     }
 
-    // 🔴 IMPORTANT: This was missing in your code!
-    // Trigger the Meta Sync so the employee appears in the central Meta DB
+    // Trigger the Meta Sync
     await syncEmployeeToMeta(empid, orgid, pool, currentUsername);
 
     return { success: true };
     
   } catch (error) {
     console.error('Error adding employee:', error);
-    
-    // Attempt Rollback (Manual)
-    if (empid) {
-      // Basic check if employee exists before errors return
-      // (Simplified error handling)
-      return { error: `Failed to add employee: ${error.message}` };
-    } else {
-      return { error: `Failed to add employee: ${error.message}` };
-    }
+    return { error: `Failed to add employee: ${error.message}` };
   }
 }

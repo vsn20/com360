@@ -162,7 +162,7 @@ export async function addProject(prevState, formData) {
       console.log('MySQL connection pool acquired');
 
       const [accountCheck] = await pool.execute(
-        'SELECT ACCNT_ID, suborgid FROM C_ACCOUNT WHERE ACCNT_ID = ? AND ORGID = ? AND ACTIVE_FLAG = 1',
+        'SELECT ACCNT_ID, suborgid, ourorg FROM C_ACCOUNT WHERE ACCNT_ID = ? AND ORGID = ? AND ACTIVE_FLAG = 1',
         [accntId, orgId]
       );
       if (accountCheck.length === 0) {
@@ -170,19 +170,30 @@ export async function addProject(prevState, formData) {
         return { error: 'Invalid or inactive account.' };
       }
 
+      const accountOurorg = accountCheck[0].ourorg;
+
       let effectiveSuborgid = suborgid;
       if (!suborgid && accountCheck[0].suborgid) {
         effectiveSuborgid = accountCheck[0].suborgid;
         console.log(`Using suborgid ${effectiveSuborgid} from account ${accntId}`);
       }
 
+      // Check client and validate ourorg match
       const [clientCheck] = await pool.execute(
-        'SELECT ACCNT_ID FROM C_ACCOUNT WHERE ACCNT_ID = ? AND ORGID = ? AND ACTIVE_FLAG = 1',
+        'SELECT ACCNT_ID, ourorg FROM C_ACCOUNT WHERE ACCNT_ID = ? AND ORGID = ? AND ACTIVE_FLAG = 1',
         [clientId, orgId]
       );
       if (clientCheck.length === 0) {
         console.log('Redirecting: Invalid or inactive client');
         return { error: 'Invalid or inactive client.' };
+      }
+
+      const clientOurorg = clientCheck[0].ourorg;
+
+      // Validate that account and client have the same ourorg value
+      if (accountOurorg !== clientOurorg) {
+        console.log('Redirecting: Account and Client ownership mismatch', { accountOurorg, clientOurorg });
+        return { error: 'Account and Client must both be either "Our Own" or "Outside Account". Mixed ownership is not allowed.' };
       }
 
       if (effectiveSuborgid) {
@@ -231,9 +242,6 @@ export async function addProject(prevState, formData) {
         industries
       ];
 
-      // console.log('Inserting project with columns:', insertColumns);
-      // console.log('Inserting project with values:', values);
-
       if (values.length !== insertColumns.length) {
         console.error('Mismatch: values length =', values.length, 'columns length =', insertColumns.length);
         return { error: 'Internal error: column count mismatch' };
@@ -242,9 +250,7 @@ export async function addProject(prevState, formData) {
       const placeholders = values.map(() => '?').join(', ');
       const query = `INSERT INTO C_PROJECT (${insertColumns.join(', ')}) VALUES (${placeholders})`;
 
-      // console.log('Executing query:', query);
       const [result] = await pool.query(query, values);
-      // console.log(`Project added with PRJ_ID: ${prjId}, affected rows: ${result.affectedRows}`);
 
       return { success: true };
     } catch (error) {
@@ -267,7 +273,7 @@ export async function fetchAccountsByOrgId(orgId) {
     connection = await DBconnection();
     console.log('Fetching accounts for orgId:', orgId);
     const [rows] = await connection.execute(
-      'SELECT a.ACCNT_ID, a.ALIAS_NAME, a.suborgid, s.suborgname FROM C_ACCOUNT a LEFT JOIN C_SUB_ORG s ON a.suborgid = s.suborgid AND a.ORGID = s.orgid WHERE a.ORGID = ? AND a.ACTIVE_FLAG = 1',
+      'SELECT a.ACCNT_ID, a.ALIAS_NAME, a.suborgid, a.ourorg, s.suborgname FROM C_ACCOUNT a LEFT JOIN C_SUB_ORG s ON a.suborgid = s.suborgid AND a.ORGID = s.orgid WHERE a.ORGID = ? AND a.ACTIVE_FLAG = 1',
       [orgId]
     );
     console.log('Fetched accounts:', rows);

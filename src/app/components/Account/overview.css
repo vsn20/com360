@@ -145,8 +145,8 @@
 .account_table.four_column col:nth-child(4) {
   width: 20%;
 }
-.account_table.four_column col:nth-child(4) {
-  width: 20%;
+.account_table.four_column col:nth-child(5) {
+  width: 15%;
 }
 
 
@@ -344,7 +344,7 @@
 
 .account_overview_container {
   padding: 20px;
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
@@ -376,7 +376,16 @@
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   margin-bottom: 30px;
-  position: relative; /* Added for absolute positioning of buttons */
+  position: relative;
+}
+
+.account_details_block h3 {
+  font-size: 18px;
+  font-weight: bold;
+  margin: 0 0 20px 0;
+  color: #1f2937;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #e5e7eb;
 }
 
 /* Account details header */
@@ -409,6 +418,36 @@
   right: 20px;
 }
 
+/* IMPROVED GRID LAYOUT - 3 FIELDS PER ROW */
+.account_form_grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.account_view_grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-top: 20px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .account_form_grid,
+  .account_view_grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .account_form_grid,
+  .account_view_grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .account_form_row,
 .account_details_row {
   display: flex;
@@ -417,26 +456,49 @@
 }
 
 .account_form_group,
-.account_details_group {
+.account_details_group,
+.account_view_group {
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .account_form_group label,
-.account_details_group label {
-  margin-bottom: 5px;
-  font-weight: 500;
+.account_details_group label,
+.account_view_group label {
+  margin-bottom: 8px;
+  font-weight: 600;
   color: #374151;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .account_form_group input,
 .account_form_group select {
   width: 100%;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
   box-sizing: border-box;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  background-color: #ffffff;
+}
+
+.account_form_group input:focus,
+.account_form_group select:focus {
+  outline: none;
+  border-color: #0fd46c;
+  box-shadow: 0 0 0 3px rgba(15, 212, 108, 0.1);
+}
+
+.account_form_group input:disabled,
+.account_form_group select:disabled {
+  background-color: #f3f4f6;
+  cursor: not-allowed;
+  color: #6b7280;
 }
 
 .account_form_group input.account_bg_gray_100 {
@@ -444,17 +506,26 @@
   cursor: not-allowed;
 }
 
-.account_details_group p {
+.account_details_group p,
+.account_view_group p {
   margin: 0;
-  padding: 8px 0;
-  color: #4b5563;
+  padding: 10px 12px;
+  color: #1f2937;
+  background-color: #f9fafb;
+  border-radius: 6px;
+  font-size: 14px;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
 }
 
 .account_form_buttons {
   display: flex;
   justify-content: flex-start;
   gap: 10px;
-  margin-top: 20px;
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #e5e7eb;
 }
 
 .account_error_message {
@@ -462,23 +533,44 @@
   margin-bottom: 15px;
   background-color: #f8d7da;
   border: 1px solid #f5c6cb;
-  padding: 10px;
-  border-radius: 4px;
+  border-left: 4px solid #dc3545;
+  padding: 12px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+}
+
+.account_error_message::before {
+  content: '⚠';
+  margin-right: 10px;
+  font-size: 18px;
 }
 
 .account_success_message {
   color: #155724;
   background-color: #d4edda;
-  border-color: #c3e6cb;
-  padding: 10px;
-  border-radius: 4px;
+  border: 1px solid #c3e6cb;
+  border-left: 4px solid #28a745;
+  padding: 12px 16px;
+  border-radius: 6px;
   margin-bottom: 15px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+}
+
+.account_success_message::before {
+  content: '✓';
+  margin-right: 10px;
+  font-size: 18px;
+  font-weight: bold;
 }
 
 /* Add Account Section Styles */
 .account_add_container {
   padding: 20px;
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
@@ -540,12 +632,13 @@
 
 
 .account_status_badge {
-  display: inline-block; /* Changed from inline-flex */
+  display: inline-block;
   align-items: center;
-  padding: 4px 12px !important; /* Adjusted padding to match */
+  padding: 4px 12px !important;
   border-radius: 9999px;
   margin-left: 0;
   font-size: 12px;
+  font-weight: 500;
 }
 
 .account_status_badge.account_active {
@@ -555,7 +648,7 @@
 
 /* This is the class used in your table for active status */
 .account_status_badge.account_actives {
-  background-color: #dcfce7; /* Changed background to match jobtitles.css */
+  background-color: #dcfce7;
   color: #166534;
   font-size: 12px;
 }
@@ -566,6 +659,6 @@
 }
 
 .account_status_badge.account_inactive {
-  background-color: #fee2e2; /* This style already matches */
+  background-color: #fee2e2;
   color: #dc2626;
 }

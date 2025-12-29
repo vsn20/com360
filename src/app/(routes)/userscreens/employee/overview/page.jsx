@@ -79,6 +79,7 @@ export default async function OverviewPage({ searchParams }) {
   let immigrationStatuses = [];     
   let immigrationDocTypes = [];     
   let immigrationDocSubtypes = [];
+  let vendors = [];  // Add vendors array
   
   // New variables for PAF and FDNS
   let paf_document_types = [];
@@ -173,6 +174,11 @@ export default async function OverviewPage({ searchParams }) {
     [employmentTypes] = await pool.query(
       'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 27 AND isactive = 1 AND (orgid = ? OR orgid = -1)',
       [orgid]
+    );
+
+    // Fetch vendors from C_ACCOUNT table
+    [vendors] = await pool.query(
+      'SELECT ACCNT_ID, EMAIL, ALIAS_NAME, ACCT_TYPE_CD FROM C_ACCOUNT WHERE ACTIVE_FLAG = 1 ORDER BY ALIAS_NAME, EMAIL'
     );
 
     let employeeQuery = `
@@ -284,7 +290,6 @@ export default async function OverviewPage({ searchParams }) {
       [orgid]
     );
      organizationName = orgnizations.length > 0 ? orgnizations[0].orgname : ''; 
-    // ---------------------------
 
     const { success, roles: fetchedRoles, error: fetchError } = await getAllroles();
     if (!success) {
@@ -331,6 +336,7 @@ export default async function OverviewPage({ searchParams }) {
       document_purposes={document_purposes}
       document_subtypes={document_subtypes}
       employmentTypes={employmentTypes}
+      vendors={vendors}
       // New Immigration Props
       immigrationStatuses={immigrationStatuses}
       immigrationDocTypes={immigrationDocTypes}

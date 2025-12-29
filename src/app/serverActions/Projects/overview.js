@@ -132,7 +132,7 @@ export async function updateproject(formData) {
         }
 
         const [accountCheck] = await pool.execute(
-          'SELECT ACCNT_ID, suborgid FROM C_ACCOUNT WHERE ACCNT_ID = ? AND ORGID = ? AND ACTIVE_FLAG = 1',
+          'SELECT ACCNT_ID, suborgid, ourorg FROM C_ACCOUNT WHERE ACCNT_ID = ? AND ORGID = ? AND ACTIVE_FLAG = 1',
           [accntId, orgId]
         );
         if (accountCheck.length === 0) {
@@ -182,7 +182,7 @@ export async function updateproject(formData) {
         const invoicePhone = formData.get('INVOICE_PHONE')?.trim() || null;
 
         console.log('Additional details:', {
-          billRate, billType, otBillRate, otBillType, billableFlag, startDt, endDt,
+          billRate, billType, otBillRate, otBillType, billableFlag,
           clientId, payTerm, invoiceEmail, invoiceFax, invoicePhone, updatedBy
         });
 
@@ -191,13 +191,32 @@ export async function updateproject(formData) {
           return { error: 'Client is required.' };
         }
 
+        // Validate client and check ourorg match with account
         const [clientCheck] = await pool.execute(
-          'SELECT ACCNT_ID FROM C_ACCOUNT WHERE ACCNT_ID = ? AND ORGID = ? AND ACTIVE_FLAG = 1',
+          'SELECT ACCNT_ID, ourorg FROM C_ACCOUNT WHERE ACCNT_ID = ? AND ORGID = ? AND ACTIVE_FLAG = 1',
           [clientId, orgId]
         );
         if (clientCheck.length === 0) {
           console.log('Invalid or inactive client');
           return { error: 'Invalid or inactive client.' };
+        }
+
+        // Get the account's ourorg
+        const [projectAccount] = await pool.execute(
+          'SELECT ACCNT_ID FROM C_PROJECT WHERE PRJ_ID = ? AND ORG_ID = ?',
+          [prjId, orgId]
+        );
+        
+        if (projectAccount.length > 0) {
+          const [accountCheck] = await pool.execute(
+            'SELECT ourorg FROM C_ACCOUNT WHERE ACCNT_ID = ? AND ORGID = ? AND ACTIVE_FLAG = 1',
+            [projectAccount[0].ACCNT_ID, orgId]
+          );
+          
+          if (accountCheck.length > 0 && accountCheck[0].ourorg !== clientCheck[0].ourorg) {
+            console.log('Account and Client ownership mismatch');
+            return { error: 'Account and Client must both be either "Our Own" or "Outside Account". Mixed ownership is not allowed.' };
+          }
         }
 
         if (billType) {
@@ -259,7 +278,6 @@ export async function updateproject(formData) {
         return { error: 'No changes were applied.' };
       }
 
-      //console.log(`Project updated: PRJ_ID ${prjId}, section ${section}, affectedRows: ${affectedRows}`);
       return { success: true, updatedBy };
     } catch (error) {
       console.error('Error updating project:', error.message, error.stack);
@@ -311,7 +329,6 @@ export async function fetchprojectsbyorgid() {
        WHERE p.ORG_ID = ?`,
       [orgId]
     );
-   // console.log('Fetched projects:', rows.map(row => ({ PRJ_ID: row.PRJ_ID, ACCNT_ID: row.ACCNT_ID, suborgid: row.suborgid, suborgname: row.suborgname })));
     return rows;
   } catch (error) {
     console.error('Error fetching projects:', error.message);
@@ -346,13 +363,12 @@ export async function fetchaccountsbyorgid() {
     pool = await DBconnection();
     console.log('MySQL connection pool acquired');
     const [rows] = await pool.execute(
-      `SELECT a.ACCNT_ID, a.ALIAS_NAME, a.suborgid, s.suborgname 
+      `SELECT a.ACCNT_ID, a.ALIAS_NAME, a.suborgid, a.ourorg, s.suborgname 
        FROM C_ACCOUNT a 
        LEFT JOIN C_SUB_ORG s ON a.suborgid = s.suborgid AND a.ORGID = s.orgid 
        WHERE a.ORGID = ? AND a.ACTIVE_FLAG = 1`,
       [orgId]
     );
-   //console.log('Fetched accounts:', rows.map(row => ({ ACCNT_ID: row.ACCNT_ID, ALIAS_NAME: row.ALIAS_NAME, suborgid: row.suborgid, suborgname: row.suborgname })));
     return rows;
   } catch (error) {
     console.error('Error fetching account:', error.message);

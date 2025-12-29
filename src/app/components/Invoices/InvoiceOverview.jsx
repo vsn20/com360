@@ -1,7 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { generateInvoices, fetchEmployeesForInvoice, fetchProjectsForInvoice, fetchContractEmployeesForInvoice, fetchAccountsForPayable } from "@/app/serverActions/Invoices/InvoiceActions";
+import { 
+  generateInvoices, 
+  fetchEmployeesForInvoice, 
+  fetchProjectsForInvoice, 
+  fetchContractEmployeesForInvoice, 
+  fetchAccountsForReceivable,
+  fetchVendorsForPayable 
+} from "@/app/serverActions/Invoices/InvoiceActions";
 import styles from "./Invoice.module.css";
 import ExcelJS from 'exceljs'; 
 import { saveAs } from 'file-saver';
@@ -29,6 +36,9 @@ const InvoiceOverview = () => {
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
 
+  // NEW: Grouping option
+  const [groupingMode, setGroupingMode] = useState("combined"); // "combined" or "separate"
+
   // Data & State
   const [invoices, setInvoices] = useState([]);
   const [currentInvoice, setCurrentInvoice] = useState(null);
@@ -40,39 +50,40 @@ const InvoiceOverview = () => {
   useEffect(() => {
     const loadFilterData = async () => {
       try {
-        const empFetcher = invoiceType === "payable" 
-          ? fetchContractEmployeesForInvoice 
-          : fetchEmployeesForInvoice;
-        
         const fetchPromises = [
-          empFetcher(),
           fetchProjectsForInvoice()
         ];
 
-        if (invoiceType === "payable") {
-          fetchPromises.push(fetchAccountsForPayable());
+        if (invoiceType === "receivable") {
+          fetchPromises.push(fetchEmployeesForInvoice());
+          fetchPromises.push(fetchAccountsForReceivable());
+        } else {
+          fetchPromises.push(fetchContractEmployeesForInvoice());
+          fetchPromises.push(fetchVendorsForPayable());
         }
         
         const results = await Promise.all(fetchPromises);
-        const [empRes, projRes, accRes] = results;
-        
-        if (empRes.error) {
-          console.error("Error fetching employees:", empRes.error);
-        } else if (empRes.employees) {
-          setEmployees(empRes.employees);
-        }
+        const [projRes, empRes, accRes] = results;
         
         if (projRes.error) {
           console.error("Error fetching projects:", projRes.error);
         } else if (projRes.projects) {
           setProjects(projRes.projects);
         }
+        
+        if (empRes.error) {
+          console.error("Error fetching employees:", empRes.error);
+        } else if (empRes.employees) {
+          setEmployees(empRes.employees);
+        }
 
-        if (invoiceType === "payable" && accRes) {
+        if (accRes) {
           if (accRes.error) {
-            console.error("Error fetching accounts:", accRes.error);
+            console.error("Error fetching accounts/vendors:", accRes.error);
           } else if (accRes.accounts) {
             setAccounts(accRes.accounts);
+          } else if (accRes.vendors) {
+            setAccounts(accRes.vendors);
           }
         }
       } catch (err) {
@@ -84,51 +95,35 @@ const InvoiceOverview = () => {
 
   const generateYears = () => {
     const current = new Date().getFullYear();
-    return Array.from({ length: 7 }, (_, i) => current - 5 + i);
+    return Array.from({ length: 10 }, (_, i) => current - 5 + i);
   };
 
   const getWeekRange = (dateStr) => {
     const date = new Date(dateStr);
     const day = date.getDay();
     const start = new Date(date);
-    start.setDate(date.getDate() - day);
+    start.setDate(date.getDate() - day); // Sunday
     const end = new Date(start);
-    end.setDate(start.getDate() + 6);
+    end.setDate(start.getDate() + 6); // Saturday
     return {
-      searchStart: start.toISOString().split("T")[0],
-      searchEnd: end.toISOString().split("T")[0],
-      actualStart: start.toISOString().split("T")[0],
-      actualEnd: end.toISOString().split("T")[0]
+      start: start.toISOString().split("T")[0],
+      end: end.toISOString().split("T")[0]
     };
   };
 
   const getMonthRange = (month, year) => {
     const firstDay = new Date(year, month - 1, 1);
     const lastDay = new Date(year, month, 0);
-    const start = new Date(firstDay);
-    start.setDate(start.getDate() - firstDay.getDay());
-    const end = new Date(lastDay);
-    end.setDate(end.getDate() + (6 - lastDay.getDay()));
     return {
-      searchStart: start.toISOString().split("T")[0],
-      searchEnd: end.toISOString().split("T")[0],
-      actualStart: firstDay.toISOString().split("T")[0],
-      actualEnd: lastDay.toISOString().split("T")[0]
+      start: firstDay.toISOString().split("T")[0],
+      end: lastDay.toISOString().split("T")[0]
     };
   };
 
   const getYearRange = (year) => {
-    const firstDay = new Date(year, 0, 1);
-    const lastDay = new Date(year, 11, 31);
-    const start = new Date(firstDay);
-    start.setDate(start.getDate() - firstDay.getDay());
-    const end = new Date(lastDay);
-    end.setDate(end.getDate() + (6 - lastDay.getDay()));
     return {
-      searchStart: start.toISOString().split("T")[0],
-      searchEnd: end.toISOString().split("T")[0],
-      actualStart: firstDay.toISOString().split("T")[0],
-      actualEnd: lastDay.toISOString().split("T")[0]
+      start: `${year}-01-01`,
+      end: `${year}-12-31`
     };
   };
 
@@ -161,33 +156,28 @@ const InvoiceOverview = () => {
       const projId = selectedProject === "all" ? null : selectedProject;
       const accId = selectedAccount === "all" ? null : selectedAccount;
       
+      let dateRange;
+      if (reportType === "weekly") {
+        dateRange = getWeekRange(selectedDate);
+      } else if (reportType === "monthly") {
+        dateRange = getMonthRange(selectedMonth, selectedYear);
+      } else if (reportType === "yearly") {
+        dateRange = getYearRange(selectedYear);
+      } else if (reportType === "custom") {
+        if (!customStart || !customEnd) throw new Error("Select start and end dates");
+        dateRange = { start: customStart, end: customEnd };
+      }
+      
       let params = { 
         reportType,
+        actualStart: dateRange.start,
+        actualEnd: dateRange.end,
         selectedEmployees: empId ? [empId] : [],
         selectedProjects: projId ? [projId] : [],
         selectedAccounts: accId ? [accId] : [],
-        invoiceType: invoiceType
+        invoiceType: invoiceType,
+        groupingMode: groupingMode
       };
-      
-      if (reportType === "weekly") {
-        params = { ...params, ...getWeekRange(selectedDate) };
-      } else if (reportType === "monthly") {
-        params = { ...params, ...getMonthRange(selectedMonth, selectedYear) };
-      } else if (reportType === "yearly") {
-        params = { ...params, ...getYearRange(selectedYear) };
-      } else if (reportType === "custom") {
-        if (!customStart || !customEnd) throw new Error("Select dates");
-        const startD = new Date(customStart);
-        const endD = new Date(customEnd);
-        const searchS = new Date(startD); searchS.setDate(searchS.getDate() - startD.getDay());
-        const searchE = new Date(endD); searchE.setDate(searchE.getDate() + (6 - endD.getDay()));
-        params = {
-            ...params,
-            actualStart: customStart, actualEnd: customEnd,
-            searchStart: searchS.toISOString().split("T")[0],
-            searchEnd: searchE.toISOString().split("T")[0]
-        };
-      }
 
       const res = await generateInvoices(params);
       clearInterval(progressInt);
@@ -211,10 +201,11 @@ const InvoiceOverview = () => {
     const sheet = workbook.addWorksheet('Invoice');
     
     const titleFont = { name: 'Arial', size: 20, bold: true, color: { argb: 'FFFFFFFF' } };
-    const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2E7D32' } };
+    const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF10B981' } };
     const boldFont = { bold: true };
     const currencyFmt = '"$"#,##0.00';
 
+    // Title
     sheet.mergeCells('A1:E2');
     const titleCell = sheet.getCell('A1');
     titleCell.value = invoiceType === "receivable" ? 'INVOICE - RECEIVABLE' : 'INVOICE - PAYABLE';
@@ -222,15 +213,16 @@ const InvoiceOverview = () => {
     titleCell.font = titleFont;
     titleCell.fill = headerFill;
 
+    // From/To
     sheet.getCell('A4').value = 'FROM:';
     sheet.getCell('A4').font = boldFont;
     sheet.getCell('A5').value = invoice.orgDetails.name;
     sheet.getCell('A6').value = invoice.orgDetails.address1;
     sheet.getCell('A7').value = `${invoice.orgDetails.city}, ${invoice.orgDetails.state} ${invoice.orgDetails.zip}`;
 
-    sheet.getCell('D4').value = invoiceType === "receivable" ? 'BILL TO (CLIENT):' : 'PAY TO (ACCOUNT):';
+    sheet.getCell('D4').value = invoiceType === "receivable" ? 'BILL TO (ACCOUNT):' : 'PAY TO (VENDOR):';
     sheet.getCell('D4').font = boldFont;
-    sheet.getCell('D5').value = invoice.accountName;
+    sheet.getCell('D5').value = invoiceType === "receivable" ? invoice.accountName : invoice.vendorName;
     if (invoice.address) {
       sheet.getCell('D6').value = invoice.address.line1;
       sheet.getCell('D7').value = `${invoice.address.city || ''} ${invoice.address.zip || ''}`;
@@ -243,116 +235,62 @@ const InvoiceOverview = () => {
 
     let currentRow = 13;
 
-    if (invoiceType === "receivable") {
-      // Receivable format: Projects with employees
-      const projects = invoice.projects || [];
+    // Employee-based structure for both receivable and payable
+    const employees = invoice.employees || [];
+    employees.forEach(emp => {
+      sheet.mergeCells(`A${currentRow}:E${currentRow}`);
+      const empHeader = sheet.getCell(`A${currentRow}`);
+      empHeader.value = `Employee: ${emp.empName}`;
+      empHeader.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0F2FE' } };
+      empHeader.font = { bold: true, size: 12 };
+      currentRow += 2;
+
+      const projects = emp.projects || [];
       projects.forEach(proj => {
-        sheet.mergeCells(`A${currentRow}:E${currentRow}`);
-        const projHeader = sheet.getCell(`A${currentRow}`);
-        projHeader.value = `Project: ${proj.projectName} | Pay Terms: ${proj.payTermName}`;
-        projHeader.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEEEEEE' } };
-        projHeader.font = { bold: true, size: 12 };
+        sheet.getCell(`A${currentRow}`).value = `Project: ${proj.projectName}`;
+        sheet.getCell(`A${currentRow}`).font = { bold: true, color: { argb: 'FF10B981' } };
         currentRow++;
 
-        sheet.mergeCells(`A${currentRow}:E${currentRow}`);
-        sheet.getCell(`A${currentRow}`).value = `Client: ${proj.clientName} | Bill Rate: $${proj.billRate}/hr`;
-        currentRow += 2;
+        if (invoiceType === "payable") {
+          sheet.getCell(`A${currentRow}`).value = `Account: ${proj.accountName} | Rate: ${proj.billRate}/hr | OT: ${proj.otBillRate}/hr`;
+        } else {
+          sheet.getCell(`A${currentRow}`).value = `Rate: ${proj.billRate}/hr | OT: ${proj.otBillRate}/hr`;
+        }
+        sheet.getCell(`A${currentRow}`).font = { size: 10, color: { argb: 'FF666666' } };
+        currentRow++;
 
-        const employees = proj.employees || [];
-        employees.forEach(emp => {
-          sheet.getCell(`A${currentRow}`).value = emp.empName;
-          sheet.getCell(`A${currentRow}`).font = { bold: true, color: { argb: 'FF2E7D32' } };
+        if (!proj.hasWorked) {
+          sheet.getCell(`A${currentRow}`).value = "Assigned - Not Worked (0 Hours)";
+          sheet.getCell(`A${currentRow}`).font = { italic: true, color: { argb: 'FF888888' } };
+          currentRow += 2;
+        } else {
+          sheet.getCell(`A${currentRow}`).value = "Date";
+          sheet.getCell(`B${currentRow}`).value = "Reg Hrs";
+          sheet.getCell(`C${currentRow}`).value = "OT Hrs";
+          sheet.getCell(`D${currentRow}`).value = "Amount";
+          ['A','B','C','D'].forEach(c => sheet.getCell(`${c}${currentRow}`).font = { bold: true, underline: true });
           currentRow++;
 
-          if (!emp.hasWorked) {
-            sheet.getCell(`A${currentRow}`).value = "Not Worked (0 Hours)";
-            sheet.getCell(`A${currentRow}`).font = { italic: true, color: { argb: 'FF888888' } };
-            currentRow += 2;
-          } else {
-            sheet.getCell(`A${currentRow}`).value = "Date";
-            sheet.getCell(`B${currentRow}`).value = "Reg Hrs";
-            sheet.getCell(`C${currentRow}`).value = "OT Hrs";
-            sheet.getCell(`D${currentRow}`).value = "Amount";
-            ['A','B','C','D'].forEach(c => sheet.getCell(`${c}${currentRow}`).font = { bold: true, underline: true });
-            currentRow++;
+          proj.dailyLogs.forEach(log => {
+             sheet.getCell(`A${currentRow}`).value = formatMMDDYYYY(log.date);
+             sheet.getCell(`B${currentRow}`).value = log.regularHours;
+             sheet.getCell(`C${currentRow}`).value = log.otHours;
+             sheet.getCell(`D${currentRow}`).value = log.amount;
+             sheet.getCell(`D${currentRow}`).numFmt = currencyFmt;
+             currentRow++;
+          });
 
-            emp.dailyLogs.forEach(log => {
-               sheet.getCell(`A${currentRow}`).value = formatMMDDYYYY(log.date);
-               sheet.getCell(`B${currentRow}`).value = log.regularHours;
-               sheet.getCell(`C${currentRow}`).value = log.otHours;
-               sheet.getCell(`D${currentRow}`).value = log.amount;
-               sheet.getCell(`D${currentRow}`).numFmt = currencyFmt;
-               currentRow++;
-            });
-
-            sheet.getCell(`C${currentRow}`).value = "Subtotal:";
-            sheet.getCell(`C${currentRow}`).font = boldFont;
-            sheet.getCell(`D${currentRow}`).value = emp.totalAmount;
-            sheet.getCell(`D${currentRow}`).numFmt = currencyFmt;
-            sheet.getCell(`D${currentRow}`).font = boldFont;
-            sheet.getCell(`D${currentRow}`).border = { top: { style: 'double' } };
-            currentRow += 2;
-          }
-        });
-        
-        sheet.getCell(`C${currentRow}`).value = "PROJECT TOTAL:";
-        sheet.getCell(`C${currentRow}`).font = boldFont;
-        sheet.getCell(`D${currentRow}`).value = proj.subTotal;
-        sheet.getCell(`D${currentRow}`).numFmt = currencyFmt;
-        sheet.getCell(`D${currentRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
-        currentRow += 3;
+          sheet.getCell(`C${currentRow}`).value = "Project Subtotal:";
+          sheet.getCell(`C${currentRow}`).font = boldFont;
+          sheet.getCell(`D${currentRow}`).value = proj.subTotal;
+          sheet.getCell(`D${currentRow}`).numFmt = currencyFmt;
+          sheet.getCell(`D${currentRow}`).font = boldFont;
+          currentRow += 2;
+        }
       });
-    } else {
-      // Payable format: Employees with their projects
-      const employees = invoice.employees || [];
-      employees.forEach(emp => {
-        sheet.mergeCells(`A${currentRow}:E${currentRow}`);
-        const empHeader = sheet.getCell(`A${currentRow}`);
-        empHeader.value = `Employee: ${emp.empName}`;
-        empHeader.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE3F2FD' } };
-        empHeader.font = { bold: true, size: 12 };
-        currentRow += 2;
 
-        const projects = emp.projects || [];
-        projects.forEach(proj => {
-          sheet.getCell(`A${currentRow}`).value = `Project: ${proj.projectName}`;
-          sheet.getCell(`A${currentRow}`).font = { bold: true, color: { argb: 'FF1976D2' } };
-          currentRow++;
-
-          sheet.getCell(`A${currentRow}`).value = `Client: ${proj.clientName} | Rate: $${proj.billRate}/hr | Terms: ${proj.payTermName}`;
-          sheet.getCell(`A${currentRow}`).font = { size: 10, color: { argb: 'FF666666' } };
-          currentRow++;
-
-          if (!proj.hasWorked) {
-            sheet.getCell(`A${currentRow}`).value = "Assigned - Not Worked (0 Hours)";
-            sheet.getCell(`A${currentRow}`).font = { italic: true, color: { argb: 'FF888888' } };
-            currentRow += 2;
-          } else {
-            sheet.getCell(`A${currentRow}`).value = "Date";
-            sheet.getCell(`B${currentRow}`).value = "Reg Hrs";
-            sheet.getCell(`C${currentRow}`).value = "OT Hrs";
-            sheet.getCell(`D${currentRow}`).value = "Amount";
-            ['A','B','C','D'].forEach(c => sheet.getCell(`${c}${currentRow}`).font = { bold: true, underline: true });
-            currentRow++;
-
-            proj.dailyLogs.forEach(log => {
-               sheet.getCell(`A${currentRow}`).value = formatMMDDYYYY(log.date);
-               sheet.getCell(`B${currentRow}`).value = log.regularHours;
-               sheet.getCell(`C${currentRow}`).value = log.otHours;
-               sheet.getCell(`D${currentRow}`).value = log.amount;
-               sheet.getCell(`D${currentRow}`).numFmt = currencyFmt;
-               currentRow++;
-            });
-
-            sheet.getCell(`C${currentRow}`).value = "Project Subtotal:";
-            sheet.getCell(`C${currentRow}`).font = boldFont;
-            sheet.getCell(`D${currentRow}`).value = proj.subTotal;
-            sheet.getCell(`D${currentRow}`).numFmt = currencyFmt;
-            sheet.getCell(`D${currentRow}`).font = boldFont;
-            currentRow += 2;
-          }
-        });
-
+      // Only show employee total if multiple employees (combined mode)
+      if (employees.length > 1) {
         sheet.getCell(`C${currentRow}`).value = "EMPLOYEE TOTAL:";
         sheet.getCell(`C${currentRow}`).font = { bold: true, size: 11 };
         sheet.getCell(`D${currentRow}`).value = emp.totalAmount;
@@ -360,9 +298,10 @@ const InvoiceOverview = () => {
         sheet.getCell(`D${currentRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFBBDEFB' } };
         sheet.getCell(`D${currentRow}`).font = { bold: true };
         currentRow += 3;
-      });
-    }
+      }
+    });
 
+    // Grand Total
     sheet.mergeCells(`C${currentRow}:D${currentRow + 1}`);
     const grandTotalLabel = sheet.getCell(`B${currentRow}`);
     grandTotalLabel.value = "TOTAL DUE:";
@@ -370,7 +309,7 @@ const InvoiceOverview = () => {
     const grandTotalVal = sheet.getCell(`D${currentRow}`);
     grandTotalVal.value = invoice.totalAmount;
     grandTotalVal.numFmt = currencyFmt;
-    grandTotalVal.font = { size: 16, bold: true, color: { argb: 'FF2E7D32' } };
+    grandTotalVal.font = { size: 16, bold: true, color: { argb: 'FF10B981' } };
 
     sheet.getColumn('A').width = 25;
     sheet.getColumn('B').width = 15;
@@ -383,7 +322,9 @@ const InvoiceOverview = () => {
   const handleDownloadSingle = async (invoice) => {
     const buffer = await generateExcelBuffer(invoice);
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const filename = `${invoiceType}_${invoice.accountName.replace(/\s+/g, '_')}_${formatMMDDYYYY(invoice.dateRange.start).replace(/\//g,'-')}_${formatMMDDYYYY(invoice.dateRange.end).replace(/\//g,'-')}.xlsx`;
+    const entityName = invoiceType === 'receivable' ? invoice.accountName : invoice.vendorName;
+    const empName = invoice.isSeparate ? `_${invoice.employees[0].empName.replace(/\s+/g, '_')}` : '';
+    const filename = `${invoiceType}_${entityName.replace(/\s+/g, '_')}${empName}_${formatMMDDYYYY(invoice.dateRange.start).replace(/\//g,'-')}_${formatMMDDYYYY(invoice.dateRange.end).replace(/\//g,'-')}.xlsx`;
     saveAs(blob, filename);
   };
 
@@ -396,7 +337,9 @@ const InvoiceOverview = () => {
 
     const promises = invoices.map(async (inv) => {
       const buffer = await generateExcelBuffer(inv);
-      const filename = `${invoiceType}_${inv.accountName.replace(/\s+/g, '_')}_${formatMMDDYYYY(inv.dateRange.start).replace(/\//g,'-')}_${formatMMDDYYYY(inv.dateRange.end).replace(/\//g,'-')}.xlsx`;
+      const entityName = invoiceType === 'receivable' ? inv.accountName : inv.vendorName;
+      const empName = inv.isSeparate ? `_${inv.employees[0].empName.replace(/\s+/g, '_')}` : '';
+      const filename = `${invoiceType}_${entityName.replace(/\s+/g, '_')}${empName}_${formatMMDDYYYY(inv.dateRange.start).replace(/\//g,'-')}_${formatMMDDYYYY(inv.dateRange.end).replace(/\//g,'-')}.xlsx`;
       folder.file(filename, buffer);
     });
 
@@ -439,37 +382,39 @@ const InvoiceOverview = () => {
       <div className={styles.card}>
         {invoiceType === "payable" && (
           <div className={styles.payableNote}>
-            <strong>Invoice Payable Mode:</strong> Projects with Net90 terms OR Contract employees. Grouped by Account.
+            <strong>Invoice Payable Mode:</strong> Includes contractors (type 12) and 1099 employees (type 13) with external vendors (ourorg = 0). Rates from C_PROJ_EMP.
           </div>
         )}
+        {invoiceType === "receivable" && (
+          <div className={styles.payableNote}>
+            <strong>Invoice Receivable Mode:</strong> Includes all projects where both account and client are external (ourorg = 0). Rates from C_PROJECT. Grouped by Account.
+          </div>
+        )}
+        
         <div className={styles.controlsGrid}>
-          {invoiceType === "payable" && (
-            <div className={styles.controlGroup}>
-              <label>Account (Net90/Contract)</label>
-              <select 
-                value={selectedAccount}
-                onChange={e => setSelectedAccount(e.target.value)}
-                className={styles.filterSelect}
-              >
-                <option value="all">All Accounts</option>
-                {accounts.map(acc => (
-                  <option key={acc.id} value={acc.id}>{acc.name}</option>
-                ))}
-              </select>
-            </div>
-          )}
+          <div className={styles.controlGroup}>
+            <label>{invoiceType === "receivable" ? "Account" : "Vendor"}</label>
+            <select 
+              value={selectedAccount}
+              onChange={e => setSelectedAccount(e.target.value)}
+              className={styles.filterSelect}
+            >
+              <option value="all">All {invoiceType === "receivable" ? "Accounts" : "Vendors"}</option>
+              {accounts.map(acc => (
+                <option key={acc.id} value={acc.id}>{acc.name}</option>
+              ))}
+            </select>
+          </div>
 
           <div className={styles.controlGroup}>
-            <label>
-              {invoiceType === "payable" ? "Employee (Contract)" : "Employee"}
-            </label>
+            <label>{invoiceType === "payable" ? "Contractor/1099" : "Employee"}</label>
             <select 
               value={selectedEmployee}
               onChange={e => setSelectedEmployee(e.target.value)}
               className={styles.filterSelect}
             >
               <option value="all">
-                {invoiceType === "payable" ? "All Contract Employees" : "All Employees"}
+                {invoiceType === "payable" ? "All Contractors" : "All Employees"}
               </option>
               {employees.map(emp => (
                 <option key={emp.id} value={emp.id}>{emp.name}</option>
@@ -498,6 +443,14 @@ const InvoiceOverview = () => {
                <option value="monthly">Monthly</option>
                <option value="yearly">Yearly</option>
                <option value="custom">Custom Range</option>
+             </select>
+          </div>
+
+          <div className={styles.controlGroup}>
+             <label>Invoice Grouping</label>
+             <select value={groupingMode} onChange={e => setGroupingMode(e.target.value)}>
+               <option value="combined">All Employees Combined</option>
+               <option value="separate">Separate Per Employee</option>
              </select>
           </div>
 
@@ -585,29 +538,25 @@ const InvoiceOverview = () => {
             {invoices.map((inv, idx) => (
               <div key={idx} className={styles.invoiceCard}>
                 <div className={styles.cardHeader}>
-                  <div className={styles.cardAccount}>{inv.accountName}</div>
+                  <div className={styles.cardAccount}>
+                    {invoiceType === "receivable" ? inv.accountName : inv.vendorName}
+                    {inv.isSeparate && (
+                      <div style={{fontSize: '14px', fontWeight: 'normal', marginTop: '4px'}}>
+                        {inv.employees[0].empName}
+                      </div>
+                    )}
+                  </div>
                   <div className={styles.cardAmount}>${inv.totalAmount.toFixed(2)}</div>
                 </div>
                 <div className={styles.cardBody}>
-                   {invoiceType === "receivable" && inv.accountList && (
-                     <div className={styles.cardRow}>
-                       <span>Accounts:</span> {inv.accountList}
-                     </div>
-                   )}
-                   {invoiceType === "payable" && inv.employees && (
-                     <div className={styles.cardRow}>
-                       <span>Employees:</span> {inv.employees.length}
-                     </div>
-                   )}
+                   <div className={styles.cardRow}>
+                     <span>Employees:</span> {inv.employees?.length || 0}
+                   </div>
                    <div className={styles.cardRow}>
                      <span>Period:</span> {formatMMDDYYYY(inv.dateRange.start)} - {formatMMDDYYYY(inv.dateRange.end)}
                    </div>
                    <div className={styles.cardRow}>
-                     <span>{invoiceType === "receivable" ? "Projects" : "Total Projects"}:</span> {
-                       invoiceType === "receivable" 
-                         ? inv.projects?.length || 0
-                         : inv.employees?.reduce((sum, emp) => sum + (emp.projects?.length || 0), 0) || 0
-                     }
+                     <span>Projects:</span> {inv.employees?.reduce((sum, emp) => sum + (emp.projects?.length || 0), 0) || 0}
                    </div>
                 </div>
                 <div className={styles.cardActions}>
@@ -643,119 +592,69 @@ const InvoiceOverview = () => {
                  <strong>FROM:</strong><br/>
                  {currentInvoice.orgDetails.name}<br/>
                  {currentInvoice.orgDetails.address1}<br/>
-                 {currentInvoice.orgDetails.city}, {currentInvoice.orgDetails.zip}
+                 {currentInvoice.orgDetails.city}, {currentInvoice.orgDetails.state} {currentInvoice.orgDetails.zip}
                </div>
                <div className={styles.addrBox}>
-                 <strong>{invoiceType === "receivable" ? "BILL TO (CLIENT):" : "PAY TO (ACCOUNT):"}</strong><br/>
-                 {currentInvoice.accountName}<br/>
+                 <strong>{invoiceType === "receivable" ? "BILL TO (ACCOUNT):" : "PAY TO (VENDOR):"}</strong><br/>
+                 {invoiceType === "receivable" ? currentInvoice.accountName : currentInvoice.vendorName}<br/>
                  {currentInvoice.address?.line1}<br/>
                  {currentInvoice.address?.city}, {currentInvoice.address?.zip}
                </div>
             </div>
 
             <div className={styles.paperBody}>
-              {invoiceType === "receivable" ? (
-                // Receivable: Show projects with employees
-                currentInvoice.projects && currentInvoice.projects.map((proj, i) => (
-                  <div key={i} className={styles.projectSection}>
-                    <div className={styles.projectTitle}>
-                      {proj.projectName}
-                      <span className={styles.projectPayTerm}>Terms: {proj.payTermName}</span>
-                    </div>
-                    <div className={styles.projectSubTitle}>
-                      Account: {proj.accountName} | Rate: ${proj.billRate}/hr | OT: ${proj.otBillRate}/hr
-                    </div>
-
-                    {proj.employees && proj.employees.map((emp, j) => (
-                      <div key={j} className={styles.empSection}>
-                        <div className={styles.empName}>{emp.empName}</div>
-                        
-                        {!emp.hasWorked ? (
-                          <div className={styles.notWorked}>Assigned - Not Worked (0 hrs)</div>
-                        ) : (
-                          <table className={styles.dataTable}>
-                            <thead>
-                              <tr>
-                                <th>Date</th>
-                                <th>Reg</th>
-                                <th>OT</th>
-                                <th>Total</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {emp.dailyLogs.map((log, k) => (
-                                <tr key={k}>
-                                  <td>{formatMMDDYYYY(log.date)}</td>
-                                  <td>{log.regularHours}</td>
-                                  <td>{log.otHours}</td>
-                                  <td>${log.amount.toFixed(2)}</td>
-                                </tr>
-                              ))}
-                              <tr className={styles.empTotalRow}>
-                                 <td colSpan="3">Subtotal</td>
-                                 <td>${emp.totalAmount.toFixed(2)}</td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        )}
-                      </div>
-                    ))}
-                    <div className={styles.projTotal}>Project Total: ${proj.subTotal.toFixed(2)}</div>
+              {currentInvoice.employees && currentInvoice.employees.map((emp, i) => (
+                <div key={i} className={styles.employeeSection}>
+                  <div className={styles.employeeTitle}>
+                    Employee: {emp.empName}
                   </div>
-                ))
-              ) : (
-                // Payable: Show employees with their projects
-                currentInvoice.employees && currentInvoice.employees.map((emp, i) => (
-                  <div key={i} className={styles.employeeSection}>
-                    <div className={styles.employeeTitle}>
-                      Employee: {emp.empName}
-                    </div>
 
-                    {emp.projects && emp.projects.map((proj, j) => (
-                      <div key={j} className={styles.projectSubSection}>
-                        <div className={styles.projectName}>
-                          Project: {proj.projectName}
-                        </div>
-                        <div className={styles.projectInfo}>
-                          Client: {proj.clientName} | Rate: ${proj.billRate}/hr | Terms: {proj.payTermName}
-                          {proj.isNet90 && <span className={styles.net90Badge}>Net 90</span>}
-                        </div>
-
-                        {!proj.hasWorked ? (
-                          <div className={styles.notWorked}>Assigned - Not Worked (0 hrs)</div>
-                        ) : (
-                          <table className={styles.dataTable}>
-                            <thead>
-                              <tr>
-                                <th>Date</th>
-                                <th>Reg</th>
-                                <th>OT</th>
-                                <th>Total</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {proj.dailyLogs.map((log, k) => (
-                                <tr key={k}>
-                                  <td>{formatMMDDYYYY(log.date)}</td>
-                                  <td>{log.regularHours}</td>
-                                  <td>{log.otHours}</td>
-                                  <td>${log.amount.toFixed(2)}</td>
-                                </tr>
-                              ))}
-                              <tr className={styles.projTotalRow}>
-                                 <td colSpan="3">Project Subtotal</td>
-                                 <td>${proj.subTotal.toFixed(2)}</td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        )}
+                  {emp.projects && emp.projects.map((proj, j) => (
+                    <div key={j} className={styles.projectSubSection}>
+                      <div className={styles.projectName}>
+                        Project: {proj.projectName}
                       </div>
-                    ))}
+                      <div className={styles.projectInfo}>
+                        {invoiceType === "payable" && `Account: ${proj.accountName} | `}
+                        Rate: ${proj.billRate}/hr | OT: ${proj.otBillRate}/hr
+                      </div>
 
-                    <div className={styles.empTotal}>Employee Total: ${emp.totalAmount.toFixed(2)}</div>
+                      {!proj.hasWorked ? (
+                        <div className={styles.notWorked}>Assigned - Not Worked (0 hrs)</div>
+                      ) : (
+                        <table className={styles.dataTable}>
+                          <thead>
+                            <tr>
+                              <th>Date</th>
+                              <th>Reg</th>
+                              <th>OT</th>
+                              <th>Total</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {proj.dailyLogs.map((log, k) => (
+                              <tr key={k}>
+                                <td>{formatMMDDYYYY(log.date)}</td>
+                                <td>{log.regularHours}</td>
+                                <td>{log.otHours}</td>
+                                <td>${log.amount.toFixed(2)}</td>
+                              </tr>
+                            ))}
+                            <tr className={styles.projTotalRow}>
+                               <td colSpan="3">Project Subtotal</td>
+                               <td>${proj.subTotal.toFixed(2)}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                                      ))}
+
+                    {!currentInvoice.isSeparate && (
+                      <div className={styles.empTotal}>Employee Total: ${emp.totalAmount.toFixed(2)}</div>
+                    )}
                   </div>
-                ))
-              )}
+                ))}
             </div>
 
             <div className={styles.paperFooter}>

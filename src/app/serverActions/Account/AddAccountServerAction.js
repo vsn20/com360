@@ -68,14 +68,15 @@ export async function addAccount(formData) {
     const mailingStateId = formData.get('mailingStateId') || null;
     const mailingCountryId = formData.get('mailingCountryId') || null;
     const mailingPostalCode = formData.get('mailingPostalCode') || null;
-    const suborgid = formData.get('suborgid') || null; // Added suborgid
+    const suborgid = formData.get('suborgid') || null;
+    const ourorg = formData.get('ourorg') === '1' ? 1 : 0;
 
     console.log('addAccount FormData:', {
       orgId, accountName, acctTypeCd, branchType, email, aliasName,
       businessAddrLine1, businessAddrLine2, businessAddrLine3, businessCity,
       businessStateId, businessCountryId, businessPostalCode,
       mailingAddrLine1, mailingAddrLine2, mailingAddrLine3, mailingCity,
-      mailingStateId, mailingCountryId, mailingPostalCode, suborgid
+      mailingStateId, mailingCountryId, mailingPostalCode, suborgid, ourorg
     });
 
     const cookieStore = cookies();
@@ -221,15 +222,15 @@ export async function addAccount(formData) {
         BUSINESS_STATE_ID, BUSINESS_COUNTRY_ID, BUSINESS_POSTAL_CODE,
         MAILING_ADDR_LINE1, MAILING_ADDR_LINE2, MAILING_ADDR_LINE3, MAILING_CITY,
         MAILING_STATE_ID, MAILING_COUNTRY_ID, MAILING_POSTAL_CODE,
-        CREATED_BY, LAST_UPDATED_BY, BRANCH_TYPE, suborgid
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        CREATED_BY, LAST_UPDATED_BY, BRANCH_TYPE, suborgid, ourorg
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         accntId, orgId, 1, acctTypeCd, email, accountName,
         businessAddrLine1, businessAddrLine2, businessAddrLine3, businessCity,
         businessStateId, businessCountryId, businessPostalCode,
         mailingAddrLine1, mailingAddrLine2, mailingAddrLine3, mailingCity,
         mailingStateId, mailingCountryId, mailingPostalCode,
-        createdBy, createdBy, branchType, suborgid
+        createdBy, createdBy, branchType, suborgid, ourorg
       ]
     );
 

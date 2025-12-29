@@ -19,6 +19,7 @@ const AddEmployee = ({
     employees, 
     currentrole, 
     orgid,
+    vendors,
     onBack 
 }) => {
   const [addform_formError, addform_setFormError] = useState(null);
@@ -30,15 +31,31 @@ const AddEmployee = ({
   const [addform_isDropdownOpen, addform_setIsDropdownOpen] = useState(false);
   const [addform_isSubmitting, addform_setIsSubmitting] = useState(false);
   const [addform_success, addform_setsuccess] = useState(null);
+  const [showVendorField, setShowVendorField] = useState(false);
   const addform_today = new Date().toISOString().split('T')[0];
   
-  // Local formData state to control controlled inputs like suborgid
   const [formData, setFormData] = useState({
-      suborgid: ''
+      suborgid: '',
+      employment_type: '',
+      vendor_id: ''
   });
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
+    
+    if (name === 'employment_type') {
+      const selectedTypeId = value;
+      if (selectedTypeId === '12' || selectedTypeId === '13') {
+        setShowVendorField(true);
+      } else {
+        setShowVendorField(false);
+        setFormData(prev => ({
+          ...prev,
+          vendor_id: ''
+        }));
+      }
+    }
+    
     setFormData(prev => ({
       ...prev,
       [name]: value,
@@ -67,6 +84,13 @@ const AddEmployee = ({
     addform_setIsSubmitting(true);
 
     formDataObj.append('currentRole', currentrole || '');
+    
+    if (showVendorField && formData.vendor_id) {
+      formDataObj.append('vendor_id', formData.vendor_id);
+    } else {
+      formDataObj.append('vendor_id', '');
+    }
+    
     const addform_uniqueRoleIds = [...new Set(addform_selectedRoles)];
     addform_uniqueRoleIds.forEach((roleid) => {
       formDataObj.append('roleids', roleid);
@@ -86,9 +110,10 @@ const AddEmployee = ({
         addform_setSelectedRoles([]);
         addform_setLeaves({});
         addform_setIsDropdownOpen(false);
+        setFormData({ suborgid: '', employment_type: '', vendor_id: '' });
+        setShowVendorField(false);
         document.querySelector('form').reset();
         
-        // Wait 2 seconds to show success message, then go back to table
         setTimeout(() => {
           addform_setsuccess(null);
           onBack();
@@ -380,7 +405,12 @@ const AddEmployee = ({
               </div>
               <div className="form-group">
                 <label htmlFor="employment_type">Employment Type:</label>
-                <select id="employment_type" name="employment_type">
+                <select 
+                  id="employment_type" 
+                  name="employment_type"
+                  value={formData.employment_type}
+                  onChange={handleFormChange}
+                >
                   <option value="">Select Employment Type</option>
                   {employmentTypes.map((type) => (
                     <option key={type.id} value={type.id}>
@@ -390,6 +420,34 @@ const AddEmployee = ({
                 </select>
               </div>
             </div>
+            
+            {/* Vendor Selection - Shows only when employment type is 12 or 13 */}
+            {showVendorField && (
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="vendor_id">Vendor: *</label>
+                  <select
+                    id="vendor_id"
+                    name="vendor_id"
+                    value={formData.vendor_id}
+                    onChange={handleFormChange}
+                    required={showVendorField}
+                  >
+                    <option value="">Select Vendor</option>
+                    {vendors && vendors.length > 0 ? (
+                      vendors.map((vendor) => (
+                        <option key={vendor.ACCNT_ID} value={vendor.ACCNT_ID}>
+                          {vendor.ALIAS_NAME || vendor.EMAIL || vendor.ACCNT_ID}
+                        </option>
+                      ))
+                    ) : (
+                      <option disabled>No vendors available</option>
+                    )}
+                  </select>
+                </div>
+              </div>
+            )}
+            
             <div className="form-row">
                <div className="form-group">
                 <label>Organization</label>
@@ -765,6 +823,7 @@ const AddEmployee = ({
               ))}
             </div>
           </div>
+
 
           {/* Submit Section */}
           <div className="submit-section">

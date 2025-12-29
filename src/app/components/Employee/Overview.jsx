@@ -38,6 +38,7 @@ const Overview = ({
   fdns_document_types,
   fdns_document_subtypes,
   fdns_document_statuses,
+  vendors,
   org_name    
 }) => {
   const [selectedEmpId, setSelectedEmpId] = useState(null);
@@ -226,6 +227,7 @@ const Overview = ({
             employees={employees} 
             currentrole={currentrole}
             orgid={orgid}
+            vendors={vendors}
             onBack={handleBackClick}
         />
       ) : selectedEmpId ? (
