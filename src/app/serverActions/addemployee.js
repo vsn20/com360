@@ -348,11 +348,6 @@ export async function addemployee(formData) {
   }
 }
 
-'use server';
-
-import DBconnection, { MetaDBconnection } from "@/app/utils/config/db";
-import { cookies } from "next/headers";
-import { assignLeaves } from '@/app/serverActions/Employee/overview';
 
 // ... (Keep your existing helper functions like decodeJwt and syncEmployeeToMeta here) ...
 
