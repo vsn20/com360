@@ -303,7 +303,12 @@ export async function generateInvoices({
                 a.BUSINESS_ADDR_LINE1 as account_addr,
                 a.BUSINESS_CITY as account_city,
                 a.BUSINESS_POSTAL_CODE as account_zip,
-                p.CLIENT_ID, ac_client.ALIAS_NAME as client_name, ac_client.ourorg as client_ourorg
+                p.CLIENT_ID, 
+                ac_client.ALIAS_NAME as client_name, 
+                ac_client.ourorg as client_ourorg,
+                ac_client.BUSINESS_ADDR_LINE1 as client_addr,
+                ac_client.BUSINESS_CITY as client_city,
+                ac_client.BUSINESS_POSTAL_CODE as client_zip
          FROM C_TIMESHEETS t
          JOIN C_EMP e ON t.employee_id = e.empid
          JOIN C_PROJECT p ON t.project_id = p.PRJ_ID
@@ -326,7 +331,12 @@ export async function generateInvoices({
                 a.BUSINESS_ADDR_LINE1 as account_addr,
                 a.BUSINESS_CITY as account_city,
                 a.BUSINESS_POSTAL_CODE as account_zip,
-                p.CLIENT_ID, ac_client.ourorg as client_ourorg
+                p.CLIENT_ID, 
+                ac_client.ALIAS_NAME as client_name,
+                ac_client.ourorg as client_ourorg,
+                ac_client.BUSINESS_ADDR_LINE1 as client_addr,
+                ac_client.BUSINESS_CITY as client_city,
+                ac_client.BUSINESS_POSTAL_CODE as client_zip
          FROM C_PROJ_EMP pe
          JOIN C_EMP e ON pe.EMP_ID = e.empid
          JOIN C_PROJECT p ON pe.PRJ_ID = p.PRJ_ID
@@ -342,17 +352,26 @@ export async function generateInvoices({
 
       // Build receivable structure
       const initAccount = (row) => {
-        // Skip if account or client is internal (ourorg = 1)
-        if (row.account_ourorg === 1 || row.client_ourorg === 1) {
+        // Skip if BOTH account AND client are internal
+        if (row.account_ourorg === 1 && row.client_ourorg === 1) {
           return null;
         }
 
-        const accountId = row.ACCNT_ID;
-        if (!invoiceMap[accountId]) {
-          invoiceMap[accountId] = {
-            accountId: accountId,
-            accountName: row.account_name,
-            address: {
+        // If account is internal but client is external, bill the client
+        // If account is external, bill the account
+        const shouldBillClient = row.account_ourorg === 1 && row.client_ourorg === 0;
+        const billingId = shouldBillClient ? row.CLIENT_ID : row.ACCNT_ID;
+        const billingName = shouldBillClient ? row.client_name : row.account_name;
+
+        if (!invoiceMap[billingId]) {
+          invoiceMap[billingId] = {
+            accountId: billingId,
+            accountName: billingName,
+            address: shouldBillClient ? {
+              line1: row.client_addr,
+              city: row.client_city,
+              zip: row.client_zip
+            } : {
               line1: row.account_addr,
               city: row.account_city,
               zip: row.account_zip
@@ -362,7 +381,7 @@ export async function generateInvoices({
             dateRange: { start: actualStart, end: actualEnd }
           };
         }
-        return accountId;
+        return billingId;
       };
 
       const initEmployee = (accountId, row) => {
@@ -630,7 +649,35 @@ export async function generateInvoices({
           };
         }).sort((a, b) => a.empName.localeCompare(b.empName));
 
-        if (groupingMode === "separate") {
+        if (groupingMode === "projects") {
+          // Create separate invoice for each project within each employee
+          employeesList.forEach(emp => {
+            emp.projects.forEach(proj => {
+              invoices.push({
+                accountId: account.accountId,
+                accountName: account.accountName,
+                employees: [{
+                  ...emp,
+                  projects: [proj],
+                  totalAmount: proj.subTotal
+                }],
+                totalAmount: proj.subTotal,
+                dateRange: account.dateRange,
+                address: account.address,
+                isSeparate: true,
+                isProjectSeparate: true,
+                orgDetails: {
+                  name: orgDetails.suborgname || "My Organization",
+                  address1: orgDetails.addresslane1,
+                  city: orgDetails.city,
+                  state: orgDetails.state,
+                  zip: orgDetails.postalcode,
+                  country: orgDetails.country
+                }
+              });
+            });
+          });
+        } else if (groupingMode === "separate") {
           // Create separate invoice for each employee
           employeesList.forEach(emp => {
             invoices.push({
@@ -641,6 +688,7 @@ export async function generateInvoices({
               dateRange: account.dateRange,
               address: account.address,
               isSeparate: true,
+              isProjectSeparate: false,
               orgDetails: {
                 name: orgDetails.suborgname || "My Organization",
                 address1: orgDetails.addresslane1,
@@ -661,6 +709,7 @@ export async function generateInvoices({
             dateRange: account.dateRange,
             address: account.address,
             isSeparate: false,
+            isProjectSeparate: false,
             orgDetails: {
               name: orgDetails.suborgname || "My Organization",
               address1: orgDetails.addresslane1,
@@ -685,7 +734,35 @@ export async function generateInvoices({
           };
         }).sort((a, b) => a.empName.localeCompare(b.empName));
 
-        if (groupingMode === "separate") {
+        if (groupingMode === "projects") {
+          // Create separate invoice for each project within each employee
+          employeesList.forEach(emp => {
+            emp.projects.forEach(proj => {
+              invoices.push({
+                vendorId: vendor.vendorId,
+                vendorName: vendor.vendorName,
+                employees: [{
+                  ...emp,
+                  projects: [proj],
+                  totalAmount: proj.subTotal
+                }],
+                totalAmount: proj.subTotal,
+                dateRange: vendor.dateRange,
+                address: vendor.address,
+                isSeparate: true,
+                isProjectSeparate: true,
+                orgDetails: {
+                  name: orgDetails.suborgname || "My Organization",
+                  address1: orgDetails.addresslane1,
+                  city: orgDetails.city,
+                  state: orgDetails.state,
+                  zip: orgDetails.postalcode,
+                  country: orgDetails.country
+                }
+              });
+            });
+          });
+        } else if (groupingMode === "separate") {
           // Create separate invoice for each employee
           employeesList.forEach(emp => {
             invoices.push({
@@ -696,6 +773,7 @@ export async function generateInvoices({
               dateRange: vendor.dateRange,
               address: vendor.address,
               isSeparate: true,
+              isProjectSeparate: false,
               orgDetails: {
                 name: orgDetails.suborgname || "My Organization",
                 address1: orgDetails.addresslane1,
@@ -716,6 +794,7 @@ export async function generateInvoices({
             dateRange: vendor.dateRange,
             address: vendor.address,
             isSeparate: false,
+            isProjectSeparate: false,
             orgDetails: {
               name: orgDetails.suborgname || "My Organization",
               address1: orgDetails.addresslane1,

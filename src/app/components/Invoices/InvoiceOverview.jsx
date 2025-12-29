@@ -298,6 +298,9 @@ const InvoiceOverview = () => {
         sheet.getCell(`D${currentRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFBBDEFB' } };
         sheet.getCell(`D${currentRow}`).font = { bold: true };
         currentRow += 3;
+      } else {
+        // Single employee - skip to next line
+        currentRow += 1;
       }
     });
 
@@ -322,9 +325,13 @@ const InvoiceOverview = () => {
   const handleDownloadSingle = async (invoice) => {
     const buffer = await generateExcelBuffer(invoice);
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    
+    const dateRange = `${formatMMDDYYYY(invoice.dateRange.start).replace(/\//g,'-')}_${formatMMDDYYYY(invoice.dateRange.end).replace(/\//g,'-')}`;
     const entityName = invoiceType === 'receivable' ? invoice.accountName : invoice.vendorName;
-    const empName = invoice.isSeparate ? `_${invoice.employees[0].empName.replace(/\s+/g, '_')}` : '';
-    const filename = `${invoiceType}_${entityName.replace(/\s+/g, '_')}${empName}_${formatMMDDYYYY(invoice.dateRange.start).replace(/\//g,'-')}_${formatMMDDYYYY(invoice.dateRange.end).replace(/\//g,'-')}.xlsx`;
+    const empName = (invoice.isSeparate || invoice.isProjectSeparate) ? `_${invoice.employees[0].empName.replace(/\s+/g, '_')}` : '';
+    const projName = invoice.isProjectSeparate ? `_${invoice.employees[0].projects[0].projectName.replace(/\s+/g, '_')}` : '';
+    
+    const filename = `${dateRange}_${entityName.replace(/\s+/g, '_')}${empName}${projName}.xlsx`;
     saveAs(blob, filename);
   };
 
@@ -332,14 +339,17 @@ const InvoiceOverview = () => {
     if(!invoices.length) return;
     const zip = new JSZip();
     
-    const folderName = `${invoiceType}_Invoices_${formatMMDDYYYY(invoices[0].dateRange.start).replace(/\//g,'-')}_to_${formatMMDDYYYY(invoices[0].dateRange.end).replace(/\//g,'-')}`;
+    const dateRange = `${formatMMDDYYYY(invoices[0].dateRange.start).replace(/\//g,'-')}_${formatMMDDYYYY(invoices[0].dateRange.end).replace(/\//g,'-')}`;
+    const folderName = `${invoiceType}_Invoices_${dateRange}`;
     const folder = zip.folder(folderName);
 
     const promises = invoices.map(async (inv) => {
       const buffer = await generateExcelBuffer(inv);
       const entityName = invoiceType === 'receivable' ? inv.accountName : inv.vendorName;
-      const empName = inv.isSeparate ? `_${inv.employees[0].empName.replace(/\s+/g, '_')}` : '';
-      const filename = `${invoiceType}_${entityName.replace(/\s+/g, '_')}${empName}_${formatMMDDYYYY(inv.dateRange.start).replace(/\//g,'-')}_${formatMMDDYYYY(inv.dateRange.end).replace(/\//g,'-')}.xlsx`;
+      const empName = (inv.isSeparate || inv.isProjectSeparate) ? `_${inv.employees[0].empName.replace(/\s+/g, '_')}` : '';
+      const projName = inv.isProjectSeparate ? `_${inv.employees[0].projects[0].projectName.replace(/\s+/g, '_')}` : '';
+      
+      const filename = `${dateRange}_${entityName.replace(/\s+/g, '_')}${empName}${projName}.xlsx`;
       folder.file(filename, buffer);
     });
 
@@ -387,13 +397,13 @@ const InvoiceOverview = () => {
         )}
         {invoiceType === "receivable" && (
           <div className={styles.payableNote}>
-            <strong>Invoice Receivable Mode:</strong> Includes all projects where both account and client are external (ourorg = 0). Rates from C_PROJECT. Grouped by Account.
+            <strong>Invoice Receivable Mode:</strong> Bills external clients. If account is internal (ourorg=1) but client is external (ourorg=0), bills the client. Skips when both are internal. Rates from C_PROJECT.
           </div>
         )}
         
         <div className={styles.controlsGrid}>
           <div className={styles.controlGroup}>
-            <label>{invoiceType === "receivable" ? "Account" : "Vendor"}</label>
+            <label>{invoiceType === "receivable" ? "Account (Client)" : "Vendor"}</label>
             <select 
               value={selectedAccount}
               onChange={e => setSelectedAccount(e.target.value)}
@@ -451,6 +461,7 @@ const InvoiceOverview = () => {
              <select value={groupingMode} onChange={e => setGroupingMode(e.target.value)}>
                <option value="combined">All Employees Combined</option>
                <option value="separate">Separate Per Employee</option>
+               <option value="projects">Separate Per Project</option>
              </select>
           </div>
 
@@ -540,9 +551,14 @@ const InvoiceOverview = () => {
                 <div className={styles.cardHeader}>
                   <div className={styles.cardAccount}>
                     {invoiceType === "receivable" ? inv.accountName : inv.vendorName}
-                    {inv.isSeparate && (
+                    {(inv.isSeparate || inv.isProjectSeparate) && (
                       <div style={{fontSize: '14px', fontWeight: 'normal', marginTop: '4px'}}>
                         {inv.employees[0].empName}
+                        {inv.isProjectSeparate && (
+                          <div style={{fontSize: '12px', marginTop: '2px', opacity: 0.9}}>
+                            {inv.employees[0].projects[0].projectName}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -650,7 +666,7 @@ const InvoiceOverview = () => {
                     </div>
                                       ))}
 
-                    {!currentInvoice.isSeparate && (
+                    {!currentInvoice.isSeparate && !currentInvoice.isProjectSeparate && (
                       <div className={styles.empTotal}>Employee Total: ${emp.totalAmount.toFixed(2)}</div>
                     )}
                   </div>
