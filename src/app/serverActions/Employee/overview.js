@@ -953,7 +953,7 @@ export async function notifying_c_user(email) {
     const orgId = decoded.orgid;
     const pool = await DBconnection();
     const [rows] = await pool.execute(
-      'SELECT id FROM C_USER WHERE email = ? AND orgid = ?',
+      'SELECT email FROM C_USER WHERE email = ? AND orgid = ?',
       [email, orgId]
     );
     return { exists: rows.length > 0 };
