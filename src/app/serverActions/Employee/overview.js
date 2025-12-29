@@ -932,6 +932,7 @@ export async function notifyEmployee(email, firstName) {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get('jwt_token')?.value;
+    const loginLink = `https://com360view.com/login`;
 
     if (!token) return { error: 'Unauthorized' };
 
@@ -954,7 +955,7 @@ export async function notifyEmployee(email, firstName) {
           <p>Hello ${firstName},</p>
           <p>You have been added to your organization's employee directory.</p>
           <p>To access your dashboard, please login using the button below:</p>
-          <a href="${process.env.NEXT_PUBLIC_BASE_URL}/login" style="display:inline-block;padding:12px 24px;background:#0fd46c;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold;margin:18px 0 12px 0;">Login Now</a>
+          <a href="${loginLink}" style="display:inline-block;padding:12px 24px;background:#0fd46c;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold;margin:18px 0 12px 0;">Login Now</a>
           <br/>
           <p>If you have any issues, please contact HR.</p>
           <p>Best Regards,<br/><strong>HR Team</strong></p>

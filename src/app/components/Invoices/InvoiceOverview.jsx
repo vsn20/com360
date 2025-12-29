@@ -8,17 +8,20 @@ import {
   fetchContractEmployeesForInvoice, 
   fetchAccountsForReceivable,
   fetchVendorsForPayable,
-  sendInvoiceEmails
+  sendInvoiceEmails,
+  generateInvoiceExcel // Import new server action
 } from "@/app/serverActions/Invoices/InvoiceActions";
 import styles from "./Invoice.module.css";
-import ExcelJS from 'exceljs'; 
 import { saveAs } from 'file-saver';
 import JSZip from 'jszip';
 
 const InvoiceOverview = () => {
   const [view, setView] = useState("list");
   const [invoiceType, setInvoiceType] = useState("receivable");
-  const [sendingEmailIdx, setSendingEmailIdx] = useState(null);
+  
+  // Loading States
+  const [sendingEmailIdx, setSendingEmailIdx] = useState(null); 
+  const [sendingAllEmails, setSendingAllEmails] = useState(false); 
   const [emailResult, setEmailResult] = useState(null);
   
   // Filter Options
@@ -39,10 +42,8 @@ const InvoiceOverview = () => {
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
 
-  // NEW: Grouping option
-  const [groupingMode, setGroupingMode] = useState("combined"); // "combined" or "separate"
+  const [groupingMode, setGroupingMode] = useState("combined"); 
 
-  // Data & State
   const [invoices, setInvoices] = useState([]);
   const [currentInvoice, setCurrentInvoice] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -53,10 +54,7 @@ const InvoiceOverview = () => {
   useEffect(() => {
     const loadFilterData = async () => {
       try {
-        const fetchPromises = [
-          fetchProjectsForInvoice()
-        ];
-
+        const fetchPromises = [fetchProjectsForInvoice()];
         if (invoiceType === "receivable") {
           fetchPromises.push(fetchEmployeesForInvoice());
           fetchPromises.push(fetchAccountsForReceivable());
@@ -68,26 +66,11 @@ const InvoiceOverview = () => {
         const results = await Promise.all(fetchPromises);
         const [projRes, empRes, accRes] = results;
         
-        if (projRes.error) {
-          console.error("Error fetching projects:", projRes.error);
-        } else if (projRes.projects) {
-          setProjects(projRes.projects);
-        }
-        
-        if (empRes.error) {
-          console.error("Error fetching employees:", empRes.error);
-        } else if (empRes.employees) {
-          setEmployees(empRes.employees);
-        }
-
+        if (projRes?.projects) setProjects(projRes.projects);
+        if (empRes?.employees) setEmployees(empRes.employees);
         if (accRes) {
-          if (accRes.error) {
-            console.error("Error fetching accounts/vendors:", accRes.error);
-          } else if (accRes.accounts) {
-            setAccounts(accRes.accounts);
-          } else if (accRes.vendors) {
-            setAccounts(accRes.vendors);
-          }
+          if (accRes.accounts) setAccounts(accRes.accounts);
+          else if (accRes.vendors) setAccounts(accRes.vendors);
         }
       } catch (err) {
         console.error("Error loading filter data:", err);
@@ -102,14 +85,13 @@ const InvoiceOverview = () => {
   };
 
   const getWeekRange = (dateStr) => {
-    const date = new Date(dateStr + 'T00:00:00'); // Parse as local time
+    const date = new Date(dateStr + 'T00:00:00');
     const day = date.getDay();
     const start = new Date(date);
-    start.setDate(date.getDate() - day); // Sunday
+    start.setDate(date.getDate() - day);
     const end = new Date(start);
-    end.setDate(start.getDate() + 6); // Saturday
+    end.setDate(start.getDate() + 6);
     
-    // Format dates manually to avoid timezone issues with toISOString()
     const formatLocalDate = (d) => {
       const y = d.getFullYear();
       const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -117,35 +99,23 @@ const InvoiceOverview = () => {
       return `${y}-${m}-${dd}`;
     };
     
-    return {
-      start: formatLocalDate(start),
-      end: formatLocalDate(end)
-    };
+    return { start: formatLocalDate(start), end: formatLocalDate(end) };
   };
 
   const getMonthRange = (month, year) => {
     const firstDay = new Date(year, month - 1, 1);
     const lastDay = new Date(year, month, 0);
-    
-    // Format dates manually to avoid timezone issues with toISOString()
     const formatLocalDate = (date) => {
       const y = date.getFullYear();
       const m = String(date.getMonth() + 1).padStart(2, '0');
       const d = String(date.getDate()).padStart(2, '0');
       return `${y}-${m}-${d}`;
     };
-    
-    return {
-      start: formatLocalDate(firstDay),
-      end: formatLocalDate(lastDay)
-    };
+    return { start: formatLocalDate(firstDay), end: formatLocalDate(lastDay) };
   };
 
   const getYearRange = (year) => {
-    return {
-      start: `${year}-01-01`,
-      end: `${year}-12-31`
-    };
+    return { start: `${year}-01-01`, end: `${year}-12-31` };
   };
 
   const formatMMDDYYYY = (isoDate) => {
@@ -178,13 +148,10 @@ const InvoiceOverview = () => {
       const accId = selectedAccount === "all" ? null : selectedAccount;
       
       let dateRange;
-      if (reportType === "weekly") {
-        dateRange = getWeekRange(selectedDate);
-      } else if (reportType === "monthly") {
-        dateRange = getMonthRange(selectedMonth, selectedYear);
-      } else if (reportType === "yearly") {
-        dateRange = getYearRange(selectedYear);
-      } else if (reportType === "custom") {
+      if (reportType === "weekly") dateRange = getWeekRange(selectedDate);
+      else if (reportType === "monthly") dateRange = getMonthRange(selectedMonth, selectedYear);
+      else if (reportType === "yearly") dateRange = getYearRange(selectedYear);
+      else if (reportType === "custom") {
         if (!customStart || !customEnd) throw new Error("Select start and end dates");
         dateRange = { start: customStart, end: customEnd };
       }
@@ -217,209 +184,100 @@ const InvoiceOverview = () => {
     }
   };
 
-  const generateExcelBuffer = async (invoice) => {
-    const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet('Invoice');
+  // Helper to fetch Excel buffer from Server Action
+  const getInvoiceExcelBuffer = async (invoice) => {
+    const result = await generateInvoiceExcel(invoice);
+    if (result.error) throw new Error(result.error);
     
-    const titleFont = { name: 'Arial', size: 20, bold: true, color: { argb: 'FFFFFFFF' } };
-    const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF10B981' } };
-    const boldFont = { bold: true };
-    const currencyFmt = '"$"#,##0.00';
-
-    // Title
-    sheet.mergeCells('A1:E2');
-    const titleCell = sheet.getCell('A1');
-    titleCell.value = invoiceType === "receivable" ? 'INVOICE - RECEIVABLE' : 'INVOICE - PAYABLE';
-    titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
-    titleCell.font = titleFont;
-    titleCell.fill = headerFill;
-
-    // From/To
-    sheet.getCell('A4').value = 'FROM:';
-    sheet.getCell('A4').font = boldFont;
-    sheet.getCell('A5').value = invoice.orgDetails.name;
-    sheet.getCell('A6').value = invoice.orgDetails.address1;
-    sheet.getCell('A7').value = `${invoice.orgDetails.city}, ${invoice.orgDetails.state} ${invoice.orgDetails.zip}`;
-
-    sheet.getCell('D4').value = invoiceType === "receivable" ? 'BILL TO (ACCOUNT):' : 'PAY TO (VENDOR):';
-    sheet.getCell('D4').font = boldFont;
-    sheet.getCell('D5').value = invoiceType === "receivable" ? invoice.accountName : invoice.vendorName;
-    if (invoice.address) {
-      sheet.getCell('D6').value = invoice.address.line1;
-      sheet.getCell('D7').value = `${invoice.address.city || ''} ${invoice.address.zip || ''}`;
+    // Convert base64 string back to ArrayBuffer
+    const binaryString = window.atob(result.buffer);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
     }
-
-    sheet.getCell('A9').value = 'Generated Date:';
-    sheet.getCell('B9').value = formatMMDDYYYY(new Date().toISOString().split('T')[0]);
-    sheet.getCell('A10').value = 'Period:';
-    sheet.getCell('B10').value = `${formatMMDDYYYY(invoice.dateRange.start)} to ${formatMMDDYYYY(invoice.dateRange.end)}`;
-
-    let currentRow = 13;
-
-    // Employee-based structure for both receivable and payable
-    const employees = invoice.employees || [];
-    employees.forEach(emp => {
-      sheet.mergeCells(`A${currentRow}:E${currentRow}`);
-      const empHeader = sheet.getCell(`A${currentRow}`);
-      empHeader.value = `Employee: ${emp.empName}`;
-      empHeader.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0F2FE' } };
-      empHeader.font = { bold: true, size: 12 };
-      currentRow += 2;
-
-      const projects = emp.projects || [];
-      projects.forEach(proj => {
-        sheet.getCell(`A${currentRow}`).value = `Project: ${proj.projectName}`;
-        sheet.getCell(`A${currentRow}`).font = { bold: true, color: { argb: 'FF10B981' } };
-        currentRow++;
-
-        if (invoiceType === "payable") {
-          sheet.getCell(`A${currentRow}`).value = `Account: ${proj.accountName} | Rate: ${proj.billRate}/hr | OT: ${proj.otBillRate}/hr`;
-        } else {
-          sheet.getCell(`A${currentRow}`).value = `Rate: ${proj.billRate}/hr | OT: ${proj.otBillRate}/hr`;
-        }
-        sheet.getCell(`A${currentRow}`).font = { size: 10, color: { argb: 'FF666666' } };
-        currentRow++;
-
-        if (!proj.hasWorked) {
-          sheet.getCell(`A${currentRow}`).value = "Assigned - Not Worked (0 Hours)";
-          sheet.getCell(`A${currentRow}`).font = { italic: true, color: { argb: 'FF888888' } };
-          currentRow += 2;
-        } else {
-          sheet.getCell(`A${currentRow}`).value = "Date";
-          sheet.getCell(`B${currentRow}`).value = "Reg Hrs";
-          sheet.getCell(`C${currentRow}`).value = "OT Hrs";
-          sheet.getCell(`D${currentRow}`).value = "Amount";
-          ['A','B','C','D'].forEach(c => sheet.getCell(`${c}${currentRow}`).font = { bold: true, underline: true });
-          currentRow++;
-
-          proj.dailyLogs.forEach(log => {
-             sheet.getCell(`A${currentRow}`).value = formatMMDDYYYY(log.date);
-             sheet.getCell(`B${currentRow}`).value = log.regularHours;
-             sheet.getCell(`C${currentRow}`).value = log.otHours;
-             sheet.getCell(`D${currentRow}`).value = log.amount;
-             sheet.getCell(`D${currentRow}`).numFmt = currencyFmt;
-             currentRow++;
-          });
-
-          sheet.getCell(`C${currentRow}`).value = "Project Subtotal:";
-          sheet.getCell(`C${currentRow}`).font = boldFont;
-          sheet.getCell(`D${currentRow}`).value = proj.subTotal;
-          sheet.getCell(`D${currentRow}`).numFmt = currencyFmt;
-          sheet.getCell(`D${currentRow}`).font = boldFont;
-          currentRow += 2;
-        }
-      });
-
-      // Only show employee total if multiple employees (combined mode)
-      if (employees.length > 1) {
-        sheet.getCell(`C${currentRow}`).value = "EMPLOYEE TOTAL:";
-        sheet.getCell(`C${currentRow}`).font = { bold: true, size: 11 };
-        sheet.getCell(`D${currentRow}`).value = emp.totalAmount;
-        sheet.getCell(`D${currentRow}`).numFmt = currencyFmt;
-        sheet.getCell(`D${currentRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFBBDEFB' } };
-        sheet.getCell(`D${currentRow}`).font = { bold: true };
-        currentRow += 3;
-      } else {
-        // Single employee - skip to next line
-        currentRow += 1;
-      }
-    });
-
-    // Grand Total
-    sheet.mergeCells(`C${currentRow}:D${currentRow + 1}`);
-    const grandTotalLabel = sheet.getCell(`B${currentRow}`);
-    grandTotalLabel.value = "TOTAL DUE:";
-    grandTotalLabel.font = { size: 14, bold: true };
-    const grandTotalVal = sheet.getCell(`D${currentRow}`);
-    grandTotalVal.value = invoice.totalAmount;
-    grandTotalVal.numFmt = currencyFmt;
-    grandTotalVal.font = { size: 16, bold: true, color: { argb: 'FF10B981' } };
-
-    sheet.getColumn('A').width = 25;
-    sheet.getColumn('B').width = 15;
-    sheet.getColumn('C').width = 15;
-    sheet.getColumn('D').width = 20;
-
-    return await workbook.xlsx.writeBuffer();
+    return bytes.buffer;
   };
 
   const handleDownloadSingle = async (invoice) => {
-    const buffer = await generateExcelBuffer(invoice);
-    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    
-    const dateRange = `${formatMMDDYYYY(invoice.dateRange.start).replace(/\//g,'-')}_${formatMMDDYYYY(invoice.dateRange.end).replace(/\//g,'-')}`;
-    const entityName = invoiceType === 'receivable' ? invoice.accountName : invoice.vendorName;
-    const empName = (invoice.isSeparate || invoice.isProjectSeparate) ? `_${invoice.employees[0].empName.replace(/\s+/g, '_')}` : '';
-    const projName = invoice.isProjectSeparate ? `_${invoice.employees[0].projects[0].projectName.replace(/\s+/g, '_')}` : '';
-    
-    const filename = `${dateRange}_${entityName.replace(/\s+/g, '_')}${empName}${projName}.xlsx`;
-    saveAs(blob, filename);
+    try {
+      const buffer = await getInvoiceExcelBuffer(invoice);
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const dateRange = `${formatMMDDYYYY(invoice.dateRange.start).replace(/\//g,'-')}_${formatMMDDYYYY(invoice.dateRange.end).replace(/\//g,'-')}`;
+      const entityName = invoiceType === 'receivable' ? invoice.accountName : invoice.vendorName;
+      const empName = (invoice.isSeparate || invoice.isProjectSeparate) ? `_${invoice.employees[0].empName.replace(/\s+/g, '_')}` : '';
+      const projName = invoice.isProjectSeparate ? `_${invoice.employees[0].projects[0].projectName.replace(/\s+/g, '_')}` : '';
+      const filename = `${dateRange}_${entityName.replace(/\s+/g, '_')}${empName}${projName}.xlsx`;
+      saveAs(blob, filename);
+    } catch (err) {
+      alert("Error downloading invoice: " + err.message);
+    }
   };
 
   const handleDownloadZip = async () => {
     if(!invoices.length) return;
-    const zip = new JSZip();
-    
-    const dateRange = `${formatMMDDYYYY(invoices[0].dateRange.start).replace(/\//g,'-')}_${formatMMDDYYYY(invoices[0].dateRange.end).replace(/\//g,'-')}`;
-    const folderName = `${invoiceType}_Invoices_${dateRange}`;
-    const folder = zip.folder(folderName);
+    try {
+      const zip = new JSZip();
+      const dateRange = `${formatMMDDYYYY(invoices[0].dateRange.start).replace(/\//g,'-')}_${formatMMDDYYYY(invoices[0].dateRange.end).replace(/\//g,'-')}`;
+      const folderName = `${invoiceType}_Invoices_${dateRange}`;
+      const folder = zip.folder(folderName);
 
-    const promises = invoices.map(async (inv) => {
-      const buffer = await generateExcelBuffer(inv);
-      const entityName = invoiceType === 'receivable' ? inv.accountName : inv.vendorName;
-      const empName = (inv.isSeparate || inv.isProjectSeparate) ? `_${inv.employees[0].empName.replace(/\s+/g, '_')}` : '';
-      const projName = inv.isProjectSeparate ? `_${inv.employees[0].projects[0].projectName.replace(/\s+/g, '_')}` : '';
-      
-      const filename = `${dateRange}_${entityName.replace(/\s+/g, '_')}${empName}${projName}.xlsx`;
-      folder.file(filename, buffer);
-    });
+      const promises = invoices.map(async (inv) => {
+        const buffer = await getInvoiceExcelBuffer(inv);
+        const entityName = invoiceType === 'receivable' ? inv.accountName : inv.vendorName;
+        const empName = (inv.isSeparate || inv.isProjectSeparate) ? `_${inv.employees[0].empName.replace(/\s+/g, '_')}` : '';
+        const projName = inv.isProjectSeparate ? `_${inv.employees[0].projects[0].projectName.replace(/\s+/g, '_')}` : '';
+        const filename = `${dateRange}_${entityName.replace(/\s+/g, '_')}${empName}${projName}.xlsx`;
+        folder.file(filename, buffer);
+      });
 
-    await Promise.all(promises);
-    
-    const content = await zip.generateAsync({ type: "blob" });
-    saveAs(content, `${folderName}.zip`);
+      await Promise.all(promises);
+      const content = await zip.generateAsync({ type: "blob" });
+      saveAs(content, `${folderName}.zip`);
+    } catch (err) {
+      alert("Error creating zip: " + err.message);
+    }
   };
 
-  const handleSendEmails = async () => {
+  const handleSendAllEmails = async () => {
     if (!invoices.length || invoiceType !== 'receivable') return;
     
-    setSendingEmails(true);
+    setSendingAllEmails(true); 
     setEmailResult(null);
 
     try {
       const dateRange = `${formatMMDDYYYY(invoices[0].dateRange.start).replace(/\//g,'-')}_${formatMMDDYYYY(invoices[0].dateRange.end).replace(/\//g,'-')}`;
       const period = `${formatMMDDYYYY(invoices[0].dateRange.start)} - ${formatMMDDYYYY(invoices[0].dateRange.end)}`;
       
-      // Group invoices by account email to send one email per account with all their invoices
       const emailGroups = {};
       
       for (const inv of invoices) {
         const email = inv.accountEmail;
         const accountName = inv.accountName;
+        const key = email || `no-email-${accountName}`;
         
-        if (!emailGroups[email || 'no-email']) {
-          emailGroups[email || 'no-email'] = {
+        if (!emailGroups[key]) {
+          emailGroups[key] = {
             email,
             accountName,
             invoices: [],
             totalAmount: 0
           };
         }
-        emailGroups[email || 'no-email'].invoices.push(inv);
-        emailGroups[email || 'no-email'].totalAmount += inv.totalAmount;
+        emailGroups[key].invoices.push(inv);
+        emailGroups[key].totalAmount += inv.totalAmount;
       }
 
-      // Prepare invoice data with excel buffers
       const invoiceData = [];
       
       for (const key of Object.keys(emailGroups)) {
         const group = emailGroups[key];
-        
-        // If multiple invoices for same account, create a zip
+        if(!group.email) continue; 
+
         if (group.invoices.length > 1) {
           const zip = new JSZip();
           for (const inv of group.invoices) {
-            const buffer = await generateExcelBuffer(inv);
+            const buffer = await getInvoiceExcelBuffer(inv);
             const entityName = inv.accountName;
             const empName = (inv.isSeparate || inv.isProjectSeparate) ? `_${inv.employees[0].empName.replace(/\s+/g, '_')}` : '';
             const projName = inv.isProjectSeparate ? `_${inv.employees[0].projects[0].projectName.replace(/\s+/g, '_')}` : '';
@@ -437,18 +295,26 @@ const InvoiceOverview = () => {
             isZip: true
           });
         } else {
-          // Single invoice - send as excel
+          // Pass the invoice object directly; server will generate Excel if buffer is missing
+          // But to be consistent with Zip logic above, let's generate buffer here or pass full object
+          // We will pass full object and let server generate it to save bandwidth? 
+          // Actually, we already have getInvoiceExcelBuffer, let's just use it to keep logic consistent.
           const inv = group.invoices[0];
-          const buffer = await generateExcelBuffer(inv);
+          const buffer = await getInvoiceExcelBuffer(inv);
+          
+          // buffer is ArrayBuffer, convert to base64
+          let binary = '';
+          const bytes = new Uint8Array(buffer);
+          const len = bytes.byteLength;
+          for (let i = 0; i < len; i++) {
+              binary += String.fromCharCode(bytes[i]);
+          }
+          const base64Buffer = window.btoa(binary);
+
           const entityName = inv.accountName;
           const empName = (inv.isSeparate || inv.isProjectSeparate) ? `_${inv.employees[0].empName.replace(/\s+/g, '_')}` : '';
           const projName = inv.isProjectSeparate ? `_${inv.employees[0].projects[0].projectName.replace(/\s+/g, '_')}` : '';
           const filename = `${dateRange}_${entityName.replace(/\s+/g, '_')}${empName}${projName}.xlsx`;
-          
-          // Convert ArrayBuffer to base64
-          const base64Buffer = btoa(
-            new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
-          );
           
           invoiceData.push({
             email: group.email,
@@ -477,7 +343,59 @@ const InvoiceOverview = () => {
     } catch (err) {
       setEmailResult({ type: 'error', message: err.message });
     } finally {
-      setSendingEmails(false);
+      setSendingAllEmails(false);
+    }
+  };
+
+  const handleSendSingleEmail = async (inv, idx) => {
+    setSendingEmailIdx(idx);
+    setEmailResult(null);
+    
+    try {
+      const dateRange = `${formatMMDDYYYY(inv.dateRange.start).replace(/\//g,'-')}_${formatMMDDYYYY(inv.dateRange.end).replace(/\//g,'-')}`;
+      const period = `${formatMMDDYYYY(inv.dateRange.start)} - ${formatMMDDYYYY(inv.dateRange.end)}`;
+      
+      // Generate buffer
+      const buffer = await getInvoiceExcelBuffer(inv);
+      let binary = '';
+      const bytes = new Uint8Array(buffer);
+      const len = bytes.byteLength;
+      for (let i = 0; i < len; i++) {
+          binary += String.fromCharCode(bytes[i]);
+      }
+      const base64Buffer = window.btoa(binary);
+
+      const entityName = inv.accountName;
+      const empName = (inv.isSeparate || inv.isProjectSeparate) ? `_${inv.employees[0].empName.replace(/\s+/g, '_')}` : '';
+      const projName = inv.isProjectSeparate ? `_${inv.employees[0].projects[0].projectName.replace(/\s+/g, '_')}` : '';
+      const filename = `${dateRange}_${entityName.replace(/\s+/g, '_')}${empName}${projName}.xlsx`;
+      
+      const invoiceData = [{
+        email: inv.accountEmail,
+        accountName: inv.accountName,
+        filename,
+        buffer: base64Buffer,
+        period,
+        totalAmount: inv.totalAmount,
+        isZip: false
+      }];
+
+      const result = await sendInvoiceEmails(invoiceData);
+      
+      if (result.error) {
+        setEmailResult({ type: 'error', message: result.error });
+      } else {
+        setEmailResult({
+          type: 'success',
+          sent: result.results.sent,
+          failed: result.results.failed,
+          skipped: result.results.skipped
+        });
+      }
+    } catch (err) {
+      setEmailResult({ type: 'error', message: err.message });
+    } finally {
+      setSendingEmailIdx(null);
     }
   };
 
@@ -670,11 +588,11 @@ const InvoiceOverview = () => {
               {invoiceType === "receivable" && (
                 <button 
                   className={styles.btnZip} 
-                  onClick={handleSendEmails} 
-                  disabled={sendingEmailIdx !== null}
-                  style={{background: sendingEmailIdx !== null ? '#6b7280' : '#10B981'}}
+                  onClick={handleSendAllEmails}
+                  disabled={sendingAllEmails || sendingEmailIdx !== null}
+                  style={{background: (sendingAllEmails) ? '#6b7280' : '#10B981'}}
                 >
-                  {sendingEmailIdx !== null ? '📧 Sending...' : '📧 Send All Emails'}
+                  {sendingAllEmails ? '📧 Sending...' : '📧 Send All Emails'}
                 </button>
               )}
             </div>
@@ -753,46 +671,7 @@ const InvoiceOverview = () => {
                    {invoiceType === "receivable" && inv.accountEmail && (
                      <button
                        className={styles.btnOutline}
-                       onClick={async () => {
-                         setSendingEmailIdx(idx);
-                         setEmailResult(null);
-                         const dateRange = `${formatMMDDYYYY(inv.dateRange.start).replace(/\//g,'-')}_${formatMMDDYYYY(inv.dateRange.end).replace(/\//g,'-')}`;
-                         const period = `${formatMMDDYYYY(inv.dateRange.start)} - ${formatMMDDYYYY(inv.dateRange.end)}`;
-                         const buffer = await generateExcelBuffer(inv);
-                         const entityName = inv.accountName;
-                         const empName = (inv.isSeparate || inv.isProjectSeparate) ? `_${inv.employees[0].empName.replace(/\s+/g, '_')}` : '';
-                         const projName = inv.isProjectSeparate ? `_${inv.employees[0].projects[0].projectName.replace(/\s+/g, '_')}` : '';
-                         const filename = `${dateRange}_${entityName.replace(/\s+/g, '_')}${empName}${projName}.xlsx`;
-                         const base64Buffer = btoa(
-                           new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
-                         );
-                         const invoiceData = [{
-                           email: inv.accountEmail,
-                           accountName: inv.accountName,
-                           filename,
-                           buffer: base64Buffer,
-                           period,
-                           totalAmount: inv.totalAmount,
-                           isZip: false
-                         }];
-                         try {
-                           const result = await sendInvoiceEmails(invoiceData);
-                           if (result.error) {
-                             setEmailResult({ type: 'error', message: result.error });
-                           } else {
-                             setEmailResult({
-                               type: 'success',
-                               sent: result.results.sent,
-                               failed: result.results.failed,
-                               skipped: result.results.skipped
-                             });
-                           }
-                         } catch (err) {
-                           setEmailResult({ type: 'error', message: err.message });
-                         } finally {
-                           setSendingEmailIdx(null);
-                         }
-                       }}
+                       onClick={() => handleSendSingleEmail(inv, idx)}
                        disabled={sendingEmailIdx === idx}
                        style={{ background: sendingEmailIdx === idx ? '#6b7280' : '#10B981' }}
                      >

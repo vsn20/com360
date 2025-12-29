@@ -3,6 +3,9 @@
 import DBconnection from "@/app/utils/config/db";
 import { cookies } from "next/headers";
 import nodemailer from 'nodemailer';
+import ExcelJS from 'exceljs';
+import fs from 'fs';
+import path from 'path';
 
 const decodeJwt = (token) => {
   try {
@@ -266,11 +269,6 @@ export async function generateInvoices({
     const searchStartStr = searchStart.toISOString().split('T')[0];
     const searchEndStr = searchEnd.toISOString().split('T')[0];
 
-    console.log('=== INVOICE GENERATION ===');
-    console.log('Invoice Type:', invoiceType);
-    console.log('Actual Range:', actualStart, 'to', actualEnd);
-    console.log('Search Range:', searchStartStr, 'to', searchEndStr);
-
     // Build filters
     let employeeFilter = "";
     let projectFilter = "";
@@ -293,7 +291,7 @@ export async function generateInvoices({
     const days = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
     if (invoiceType === "receivable") {
-      // RECEIVABLE: Group by Account, only external accounts and clients
+      // RECEIVABLE LOGIC (Same as before)
       const timesheetParams = [searchStartStr, searchEndStr, orgid, ...selectedEmployees, ...selectedProjects, ...selectedAccounts];
       
       const [timesheetRows] = await pool.execute(
@@ -352,18 +350,9 @@ export async function generateInvoices({
         assignParams
       );
 
-      console.log('Receivable - Total timesheets:', timesheetRows.length);
-      console.log('Receivable - Total assignments:', assignmentRows.length);
-
-      // Build receivable structure
       const initAccount = (row) => {
-        // Skip if BOTH account AND client are internal
-        if (row.account_ourorg === 1 && row.client_ourorg === 1) {
-          return null;
-        }
+        if (row.account_ourorg === 1 && row.client_ourorg === 1) return null;
 
-        // If account is internal but client is external, bill the client
-        // If account is external, bill the account
         const shouldBillClient = row.account_ourorg === 1 && row.client_ourorg === 0;
         const billingId = shouldBillClient ? row.CLIENT_ID : row.ACCNT_ID;
         const billingName = shouldBillClient ? row.client_name : row.account_name;
@@ -420,18 +409,10 @@ export async function generateInvoices({
         }
       };
 
-      // Process timesheets
-      let includedCount = 0;
-      let skippedCount = 0;
-
       timesheetRows.forEach(ts => {
         const accountId = initAccount(ts);
-        if (!accountId) {
-          skippedCount++;
-          return; // Skip internal work
-        }
+        if (!accountId) return;
 
-        includedCount++;
         initEmployee(accountId, ts);
         initProject(accountId, ts.employee_id, ts);
         
@@ -447,12 +428,7 @@ export async function generateInvoices({
               hours, otThreshold, project.billRate, project.otBillRate
             );
 
-            project.dailyLogs.push({
-              date: dateStr,
-              regularHours,
-              otHours,
-              amount
-            });
+            project.dailyLogs.push({ date: dateStr, regularHours, otHours, amount });
 
             project.totalRegularHours += regularHours;
             project.totalOTHours += otHours;
@@ -463,19 +439,15 @@ export async function generateInvoices({
         });
       });
 
-      console.log('Receivable filtering:', { includedCount, skippedCount, totalAccounts: Object.keys(invoiceMap).length });
-
-      // Process assignments
       assignmentRows.forEach(assign => {
         const accountId = initAccount(assign);
         if (!accountId) return;
-
         initEmployee(accountId, assign);
         initProject(accountId, assign.EMP_ID, assign);
       });
 
     } else {
-      // PAYABLE: Group by Vendor, only contractors/1099 with external vendors
+      // PAYABLE LOGIC (Same as before)
       const timesheetParams = [searchStartStr, searchEndStr, orgid, ...selectedEmployees, ...selectedProjects, ...selectedAccounts];
       
       const [timesheetRows] = await pool.execute(
@@ -524,16 +496,8 @@ export async function generateInvoices({
         assignParams
       );
 
-      console.log('Payable - Total timesheets:', timesheetRows.length);
-      console.log('Payable - Total assignments:', assignmentRows.length);
-
-      // Build payable structure: Group by Vendor
       const initVendor = (row) => {
-        // Skip if vendor is internal (ourorg = 1)
-        if (row.vendor_ourorg === 1) {
-          return null;
-        }
-
+        if (row.vendor_ourorg === 1) return null;
         const vendorId = row.vendor_id;
         if (!invoiceMap[vendorId]) {
           invoiceMap[vendorId] = {
@@ -583,18 +547,10 @@ export async function generateInvoices({
         }
       };
 
-      // Process timesheets
-      let includedCount = 0;
-      let skippedCount = 0;
-
       timesheetRows.forEach(ts => {
         const vendorId = initVendor(ts);
-        if (!vendorId) {
-          skippedCount++;
-          return; // Skip internal vendors
-        }
+        if (!vendorId) return;
 
-        includedCount++;
         initEmployee(vendorId, ts);
         initProject(vendorId, ts.employee_id, ts);
         
@@ -606,18 +562,11 @@ export async function generateInvoices({
 
           if (hours > 0 && isDateInRange(dateStr, actualStart, actualEnd)) {
             project.hasWorked = true;
-            
-            // Use EMPLOYEE-specific rates from C_PROJ_EMP
             const { regularHours, otHours, amount } = calculateDailyRevenue(
               hours, otThreshold, project.billRate, project.otBillRate
             );
 
-            project.dailyLogs.push({
-              date: dateStr,
-              regularHours,
-              otHours,
-              amount
-            });
+            project.dailyLogs.push({ date: dateStr, regularHours, otHours, amount });
 
             project.totalRegularHours += regularHours;
             project.totalOTHours += otHours;
@@ -628,201 +577,233 @@ export async function generateInvoices({
         });
       });
 
-      console.log('Payable filtering:', { includedCount, skippedCount, totalVendors: Object.keys(invoiceMap).length });
-
-      // Process assignments
       assignmentRows.forEach(assign => {
         const vendorId = initVendor(assign);
         if (!vendorId) return;
-
         initEmployee(vendorId, assign);
         initProject(vendorId, assign.EMP_ID, assign);
       });
     }
 
-    // Format invoices
     const invoices = [];
 
-    if (invoiceType === "receivable") {
-      Object.values(invoiceMap).forEach(account => {
-        const employeesList = Object.values(account.employees).map(emp => {
+    const processMap = (map, type) => {
+      Object.values(map).forEach(entity => {
+        const employeesList = Object.values(entity.employees).map(emp => {
           Object.values(emp.projects).forEach(proj => {
             proj.dailyLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
           });
-          
           return {
             ...emp,
             projects: Object.values(emp.projects).sort((a, b) => a.projectName.localeCompare(b.projectName))
           };
         }).sort((a, b) => a.empName.localeCompare(b.empName));
 
+        const baseObj = {
+          ...entity,
+          dateRange: entity.dateRange,
+          address: entity.address,
+          orgDetails: {
+            orgid: orgid, // <--- ADDED orgid for logo path
+            name: orgDetails.suborgname || "My Organization",
+            address1: orgDetails.addresslane1,
+            city: orgDetails.city,
+            state: orgDetails.state,
+            zip: orgDetails.postalcode,
+            country: orgDetails.country
+          }
+        };
+
         if (groupingMode === "projects") {
-          // Create separate invoice for each project within each employee
           employeesList.forEach(emp => {
             emp.projects.forEach(proj => {
               invoices.push({
-                accountId: account.accountId,
-                accountName: account.accountName,
-                accountEmail: account.accountEmail,
-                employees: [{
-                  ...emp,
-                  projects: [proj],
-                  totalAmount: proj.subTotal
-                }],
+                ...baseObj,
+                employees: [{ ...emp, projects: [proj], totalAmount: proj.subTotal }],
                 totalAmount: proj.subTotal,
-                dateRange: account.dateRange,
-                address: account.address,
                 isSeparate: true,
                 isProjectSeparate: true,
-                orgDetails: {
-                  name: orgDetails.suborgname || "My Organization",
-                  address1: orgDetails.addresslane1,
-                  city: orgDetails.city,
-                  state: orgDetails.state,
-                  zip: orgDetails.postalcode,
-                  country: orgDetails.country
-                }
               });
             });
           });
         } else if (groupingMode === "separate") {
-          // Create separate invoice for each employee
           employeesList.forEach(emp => {
             invoices.push({
-              accountId: account.accountId,
-              accountName: account.accountName,
-              accountEmail: account.accountEmail,
+              ...baseObj,
               employees: [emp],
               totalAmount: emp.totalAmount,
-              dateRange: account.dateRange,
-              address: account.address,
               isSeparate: true,
               isProjectSeparate: false,
-              orgDetails: {
-                name: orgDetails.suborgname || "My Organization",
-                address1: orgDetails.addresslane1,
-                city: orgDetails.city,
-                state: orgDetails.state,
-                zip: orgDetails.postalcode,
-                country: orgDetails.country
-              }
             });
           });
         } else {
-          // Combined invoice with all employees
           invoices.push({
-            accountId: account.accountId,
-            accountName: account.accountName,
-            accountEmail: account.accountEmail,
+            ...baseObj,
             employees: employeesList,
-            totalAmount: account.totalAmount,
-            dateRange: account.dateRange,
-            address: account.address,
+            totalAmount: entity.totalAmount,
             isSeparate: false,
             isProjectSeparate: false,
-            orgDetails: {
-              name: orgDetails.suborgname || "My Organization",
-              address1: orgDetails.addresslane1,
-              city: orgDetails.city,
-              state: orgDetails.state,
-              zip: orgDetails.postalcode,
-              country: orgDetails.country
-            }
           });
         }
       });
-    } else {
-      Object.values(invoiceMap).forEach(vendor => {
-        const employeesList = Object.values(vendor.employees).map(emp => {
-          Object.values(emp.projects).forEach(proj => {
-            proj.dailyLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
-          });
-          
-          return {
-            ...emp,
-            projects: Object.values(emp.projects).sort((a, b) => a.projectName.localeCompare(b.projectName))
-          };
-        }).sort((a, b) => a.empName.localeCompare(b.empName));
+    };
 
-        if (groupingMode === "projects") {
-          // Create separate invoice for each project within each employee
-          employeesList.forEach(emp => {
-            emp.projects.forEach(proj => {
-              invoices.push({
-                vendorId: vendor.vendorId,
-                vendorName: vendor.vendorName,
-                employees: [{
-                  ...emp,
-                  projects: [proj],
-                  totalAmount: proj.subTotal
-                }],
-                totalAmount: proj.subTotal,
-                dateRange: vendor.dateRange,
-                address: vendor.address,
-                isSeparate: true,
-                isProjectSeparate: true,
-                orgDetails: {
-                  name: orgDetails.suborgname || "My Organization",
-                  address1: orgDetails.addresslane1,
-                  city: orgDetails.city,
-                  state: orgDetails.state,
-                  zip: orgDetails.postalcode,
-                  country: orgDetails.country
-                }
-              });
-            });
-          });
-        } else if (groupingMode === "separate") {
-          // Create separate invoice for each employee
-          employeesList.forEach(emp => {
-            invoices.push({
-              vendorId: vendor.vendorId,
-              vendorName: vendor.vendorName,
-              employees: [emp],
-              totalAmount: emp.totalAmount,
-              dateRange: vendor.dateRange,
-              address: vendor.address,
-              isSeparate: true,
-              isProjectSeparate: false,
-              orgDetails: {
-                name: orgDetails.suborgname || "My Organization",
-                address1: orgDetails.addresslane1,
-                city: orgDetails.city,
-                state: orgDetails.state,
-                zip: orgDetails.postalcode,
-                country: orgDetails.country
-              }
-            });
-          });
-        } else {
-          // Combined invoice with all employees
-          invoices.push({
-            vendorId: vendor.vendorId,
-            vendorName: vendor.vendorName,
-            employees: employeesList,
-            totalAmount: vendor.totalAmount,
-            dateRange: vendor.dateRange,
-            address: vendor.address,
-            isSeparate: false,
-            isProjectSeparate: false,
-            orgDetails: {
-              name: orgDetails.suborgname || "My Organization",
-              address1: orgDetails.addresslane1,
-              city: orgDetails.city,
-              state: orgDetails.state,
-              zip: orgDetails.postalcode,
-              country: orgDetails.country
-            }
-          });
-        }
-      });
-    }
-
-    console.log('Generated invoices:', invoices.length);
+    processMap(invoiceMap, invoiceType);
     return { invoices };
 
   } catch (error) {
     console.error("Invoice generation error:", error);
+    return { error: error.message };
+  }
+}
+
+// 🔹 NEW SERVER ACTION: Generate Excel with Logo using fs
+export async function generateInvoiceExcel(invoice) {
+  try {
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Invoice');
+    
+    const titleFont = { name: 'Arial', size: 20, bold: true, color: { argb: 'FFFFFFFF' } };
+    const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF10B981' } };
+    const boldFont = { bold: true };
+    const currencyFmt = '"$"#,##0.00';
+    const formatMMDDYYYY = (isoDate) => {
+      if (!isoDate) return "";
+      const [y, m, d] = isoDate.split("-");
+      return `${m}/${d}/${y}`;
+    };
+
+    // --- LOGO INSERTION START ---
+    // Read the logo from the server file system
+    if (invoice.orgDetails && invoice.orgDetails.orgid) {
+      const logoPath = path.join(process.cwd(), 'public', 'uploads', 'orglogos', `${invoice.orgDetails.orgid}.jpg`);
+      
+      if (fs.existsSync(logoPath)) {
+        const logoBuffer = fs.readFileSync(logoPath);
+        const logoId = workbook.addImage({
+          buffer: logoBuffer,
+          extension: 'jpeg',
+        });
+        
+        sheet.addImage(logoId, {
+          tl: { col: 0, row: 0 },
+          ext: { width: 100, height: 50 }
+        });
+      }
+    }
+    // --- LOGO INSERTION END ---
+
+    // Title
+    sheet.mergeCells('A1:E2');
+    const titleCell = sheet.getCell('A1');
+    titleCell.value = 'INVOICE';
+    titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    titleCell.font = titleFont;
+    titleCell.fill = headerFill;
+
+    // From/To
+    sheet.getCell('A4').value = 'FROM:';
+    sheet.getCell('A4').font = boldFont;
+    sheet.getCell('A5').value = invoice.orgDetails.name;
+    sheet.getCell('A6').value = invoice.orgDetails.address1;
+    sheet.getCell('A7').value = `${invoice.orgDetails.city}, ${invoice.orgDetails.state} ${invoice.orgDetails.zip}`;
+
+    sheet.getCell('D4').value = invoice.vendorName ? 'PAY TO (VENDOR):' : 'BILL TO (ACCOUNT):';
+    sheet.getCell('D4').font = boldFont;
+    sheet.getCell('D5').value = invoice.vendorName || invoice.accountName;
+    if (invoice.address) {
+      sheet.getCell('D6').value = invoice.address.line1;
+      sheet.getCell('D7').value = `${invoice.address.city || ''} ${invoice.address.zip || ''}`;
+    }
+
+    sheet.getCell('A9').value = 'Generated Date:';
+    sheet.getCell('B9').value = formatMMDDYYYY(new Date().toISOString().split('T')[0]);
+    sheet.getCell('A10').value = 'Period:';
+    sheet.getCell('B10').value = `${formatMMDDYYYY(invoice.dateRange.start)} to ${formatMMDDYYYY(invoice.dateRange.end)}`;
+
+    let currentRow = 13;
+
+    const employees = invoice.employees || [];
+    employees.forEach(emp => {
+      sheet.mergeCells(`A${currentRow}:E${currentRow}`);
+      const empHeader = sheet.getCell(`A${currentRow}`);
+      empHeader.value = `Employee: ${emp.empName}`;
+      empHeader.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0F2FE' } };
+      empHeader.font = { bold: true, size: 12 };
+      currentRow += 2;
+
+      const projects = emp.projects || [];
+      projects.forEach(proj => {
+        sheet.getCell(`A${currentRow}`).value = `Project: ${proj.projectName}`;
+        sheet.getCell(`A${currentRow}`).font = { bold: true, color: { argb: 'FF10B981' } };
+        currentRow++;
+
+        sheet.getCell(`A${currentRow}`).value = `Rate: ${proj.billRate}/hr | OT: ${proj.otBillRate}/hr`;
+        sheet.getCell(`A${currentRow}`).font = { size: 10, color: { argb: 'FF666666' } };
+        currentRow++;
+
+        if (!proj.hasWorked) {
+          sheet.getCell(`A${currentRow}`).value = "Assigned - Not Worked (0 Hours)";
+          sheet.getCell(`A${currentRow}`).font = { italic: true, color: { argb: 'FF888888' } };
+          currentRow += 2;
+        } else {
+          sheet.getCell(`A${currentRow}`).value = "Date";
+          sheet.getCell(`B${currentRow}`).value = "Reg Hrs Worked";
+          sheet.getCell(`C${currentRow}`).value = "OT Hrs";
+          sheet.getCell(`D${currentRow}`).value = "Amount";
+          ['A','B','C','D'].forEach(c => sheet.getCell(`${c}${currentRow}`).font = { bold: true, underline: true });
+          currentRow++;
+
+          proj.dailyLogs.forEach(log => {
+             sheet.getCell(`A${currentRow}`).value = formatMMDDYYYY(log.date);
+             sheet.getCell(`B${currentRow}`).value = log.regularHours;
+             sheet.getCell(`C${currentRow}`).value = log.otHours;
+             sheet.getCell(`D${currentRow}`).value = log.amount;
+             sheet.getCell(`D${currentRow}`).numFmt = currencyFmt;
+             currentRow++;
+          });
+
+          sheet.getCell(`C${currentRow}`).value = "Project Subtotal:";
+          sheet.getCell(`C${currentRow}`).font = boldFont;
+          sheet.getCell(`D${currentRow}`).value = proj.subTotal;
+          sheet.getCell(`D${currentRow}`).numFmt = currencyFmt;
+          sheet.getCell(`D${currentRow}`).font = boldFont;
+          currentRow += 2;
+        }
+      });
+
+      if (employees.length > 1) {
+        sheet.getCell(`C${currentRow}`).value = "EMPLOYEE TOTAL:";
+        sheet.getCell(`C${currentRow}`).font = { bold: true, size: 11 };
+        sheet.getCell(`D${currentRow}`).value = emp.totalAmount;
+        sheet.getCell(`D${currentRow}`).numFmt = currencyFmt;
+        sheet.getCell(`D${currentRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFBBDEFB' } };
+        sheet.getCell(`D${currentRow}`).font = { bold: true };
+        currentRow += 3;
+      } else {
+        currentRow += 1;
+      }
+    });
+
+    sheet.mergeCells(`C${currentRow}:D${currentRow + 1}`);
+    const grandTotalLabel = sheet.getCell(`B${currentRow}`);
+    grandTotalLabel.value = "TOTAL DUE:";
+    grandTotalLabel.font = { size: 14, bold: true };
+    const grandTotalVal = sheet.getCell(`D${currentRow}`);
+    grandTotalVal.value = invoice.totalAmount;
+    grandTotalVal.numFmt = currencyFmt;
+    grandTotalVal.font = { size: 16, bold: true, color: { argb: 'FF10B981' } };
+
+    sheet.getColumn('A').width = 25;
+    sheet.getColumn('B').width = 15;
+    sheet.getColumn('C').width = 15;
+    sheet.getColumn('D').width = 20;
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    return { success: true, buffer: Buffer.from(buffer).toString('base64') };
+
+  } catch (error) {
+    console.error("Excel generation error:", error);
     return { error: error.message };
   }
 }
@@ -848,7 +829,6 @@ export async function sendInvoiceEmails(invoiceData) {
     );
     const orgDetails = orgRows[0] || {};
 
-    // Create transporter
     const transporter = nodemailer.createTransport({
       host: process.env.GMAIL_HOST,
       port: 587,
@@ -859,31 +839,40 @@ export async function sendInvoiceEmails(invoiceData) {
       },
     });
 
-    const results = {
-      sent: [],
-      failed: [],
-      skipped: []
-    };
+    const results = { sent: [], failed: [], skipped: [] };
 
-    // Process each invoice
     for (const invoice of invoiceData) {
       const email = invoice.email;
       const accountName = invoice.accountName;
 
       if (!email) {
-        results.skipped.push({
-          accountName,
-          reason: 'No email address found'
-        });
+        results.skipped.push({ accountName, reason: 'No email address found' });
         continue;
       }
 
       try {
-        // Invoice attachment (base64 encoded buffer - either excel or zip)
-        const isZip = invoice.filename.endsWith('.zip');
+        // If buffer is missing, generate it on the server using generateInvoiceExcel
+        let attachmentBuffer;
+        let isZip = invoice.isZip;
+
+        if (!invoice.buffer && !isZip) {
+          // It's a single invoice object, generate Excel here
+          // We assume 'invoice.invoiceObj' contains the full invoice data needed
+          if (invoice.invoiceObj) {
+             const result = await generateInvoiceExcel(invoice.invoiceObj);
+             if (result.success) {
+               attachmentBuffer = Buffer.from(result.buffer, 'base64');
+             } else {
+               throw new Error("Failed to generate invoice Excel");
+             }
+          }
+        } else {
+          attachmentBuffer = Buffer.from(invoice.buffer, 'base64');
+        }
+
         const attachments = [{
           filename: invoice.filename,
-          content: Buffer.from(invoice.buffer, 'base64'),
+          content: attachmentBuffer,
           contentType: isZip ? 'application/zip' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         }];
 
@@ -912,7 +901,6 @@ export async function sendInvoiceEmails(invoiceData) {
               </table>
               <p>If you have any questions regarding this invoice, please don't hesitate to contact us.</p>
               <p style="margin-top: 30px;">Best regards,<br/>${orgDetails.suborgname || 'Our Company'}</p>
-              ${orgDetails.addresslane1 ? `<p style="color: #666; font-size: 12px;">${orgDetails.addresslane1}${orgDetails.state ? ', ' + orgDetails.state : ''} ${orgDetails.postalcode || ''}</p>` : ''}
             </div>
           `,
           attachments
@@ -920,22 +908,14 @@ export async function sendInvoiceEmails(invoiceData) {
 
         await transporter.sendMail(mailOptions);
         results.sent.push({ accountName, email });
-        console.log(`Invoice email sent successfully to: ${email}`);
 
       } catch (emailErr) {
         console.error(`Failed to send email to ${email}:`, emailErr.message);
-        results.failed.push({
-          accountName,
-          email,
-          error: emailErr.message
-        });
+        results.failed.push({ accountName, email, error: emailErr.message });
       }
     }
 
-    return {
-      success: true,
-      results
-    };
+    return { success: true, results };
 
   } catch (error) {
     console.error("Send invoice emails error:", error);
