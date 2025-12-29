@@ -18,7 +18,7 @@ import JSZip from 'jszip';
 const InvoiceOverview = () => {
   const [view, setView] = useState("list");
   const [invoiceType, setInvoiceType] = useState("receivable");
-  const [sendingEmails, setSendingEmails] = useState(false);
+  const [sendingEmailIdx, setSendingEmailIdx] = useState(null);
   const [emailResult, setEmailResult] = useState(null);
   
   // Filter Options
@@ -754,7 +754,7 @@ const InvoiceOverview = () => {
                      <button
                        className={styles.btnOutline}
                        onClick={async () => {
-                         setSendingEmails(true);
+                         setSendingEmailIdx(idx);
                          setEmailResult(null);
                          const dateRange = `${formatMMDDYYYY(inv.dateRange.start).replace(/\//g,'-')}_${formatMMDDYYYY(inv.dateRange.end).replace(/\//g,'-')}`;
                          const period = `${formatMMDDYYYY(inv.dateRange.start)} - ${formatMMDDYYYY(inv.dateRange.end)}`;
@@ -790,13 +790,13 @@ const InvoiceOverview = () => {
                          } catch (err) {
                            setEmailResult({ type: 'error', message: err.message });
                          } finally {
-                           setSendingEmails(false);
+                           setSendingEmailIdx(null);
                          }
                        }}
-                       disabled={sendingEmails}
-                       style={{ background: sendingEmails ? '#6b7280' : '#10B981' }}
+                       disabled={sendingEmailIdx === idx}
+                       style={{ background: sendingEmailIdx === idx ? '#6b7280' : '#10B981' }}
                      >
-                       {sendingEmails ? '📧 Sending...' : '📧 Send Email'}
+                       {sendingEmailIdx === idx ? '📧 Sending...' : '📧 Send Email'}
                      </button>
                    )}
                 </div>

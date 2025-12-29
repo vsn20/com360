@@ -945,7 +945,7 @@ export async function notifyEmployee(email, firstName) {
     });
 
     const mailOptions = {
-      from: process.env.EMAIL_USER,
+      from: process.env.GMAIL_USER,
       to: email,
       subject: 'Invitation to Join Organization',
       html: `
