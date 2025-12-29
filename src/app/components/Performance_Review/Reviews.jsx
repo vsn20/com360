@@ -54,6 +54,7 @@ const Reviews = ({
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingReview, setEditingReview] = useState(null);
+  const [isEditing, setIsEditing] = useState(false); // For edit mode toggle
   const [formData, setFormData] = useState(DEFAULT_FORM_DATA);
   const [formError, setFormError] = useState(null);
   const [formSuccess, setFormSuccess] = useState(null);
@@ -101,6 +102,7 @@ const Reviews = ({
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingReview(null);
+    setIsEditing(false);
     setFormData(DEFAULT_FORM_DATA);
     setFormError(null);
     setFormSuccess(null);
@@ -110,6 +112,7 @@ const Reviews = ({
   const handleAddClick = () => {
     setFormData(DEFAULT_FORM_DATA);
     setEditingReview(null);
+    setIsEditing(true); // Add mode is always editable
     setIsModalOpen(true);
   };
 
@@ -124,6 +127,7 @@ const Reviews = ({
       comments: review.comments || '',
     });
     setEditingReview(review);
+    setIsEditing(false); // Edit mode starts with view mode
     setIsModalOpen(true);
   };
 
@@ -228,6 +232,157 @@ const Reviews = ({
       else setReviewsPerPageInput(reviewsPerPage.toString());
     }
   };
+
+  // Show form view when modal is open (instead of popup)
+  if (isModalOpen) {
+    const isViewMode = editingReview && !isEditing;
+    
+    return (
+      <div className="employee_reviews_container">
+        <div className="employee_reviews_header-section">
+          <h2 className="employee_reviews_title">
+            {editingReview ? (isEditing ? 'Edit Review' : 'View Review') : 'Add New Review'}
+          </h2>
+          <button
+            type="button"
+            className="employee_reviews_back-button"
+            onClick={closeModal}
+          >
+          </button>
+        </div>
+
+        <div className="employee_reviews_form-container">
+          {editingReview && !isEditing && (
+            <div className="employee_reviews_form-header">
+              <button
+                type="button"
+                className="employee_reviews_save employee_reviews_button"
+                onClick={() => setIsEditing(true)}
+              >
+                Edit
+              </button>
+            </div>
+          )}
+          <form className="employee_reviews_form" onSubmit={handleSubmit}>
+            {formError && <div className="employee_reviews_error-message">{formError}</div>}
+            {formSuccess && <div className="employee_reviews_success-message">{formSuccess}</div>}
+
+            <div className="employee_reviews_form-group">
+              <label htmlFor="employee_id">Employee Name</label>
+              <select
+                id="employee_id"
+                name="employee_id"
+                value={formData.employee_id}
+                onChange={handleFormChange}
+                disabled={isViewMode || !!editingReview}
+                required
+              >
+                <option value="" disabled>Select an employee</option>
+                {reviewEmployees.map(emp => (
+                  <option key={emp.empid} value={emp.empid}>{emp.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="employee_reviews_form-group">
+              <label htmlFor="review_year">Review Year</label>
+              <select
+                id="review_year"
+                name="review_year"
+                value={formData.review_year}
+                onChange={handleFormChange}
+                required
+                disabled={isViewMode}
+              >
+                {getYearOptions().map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="employee_reviews_form-row">
+              <div className="employee_reviews_form-group">
+                <label htmlFor="review_date">Review Date</label>
+                <input
+                  type="date"
+                  id="review_date"
+                  name="review_date"
+                  value={formData.review_date}
+                  onChange={handleFormChange}
+                  required
+                  disabled={isViewMode}
+                />
+              </div>
+              <div className="employee_reviews_form-group">
+                <label htmlFor="rating">Rating (1-5)</label>
+                <select
+                  id="rating"
+                  name="rating"
+                  value={formData.rating}
+                  onChange={handleFormChange}
+                  required
+                  disabled={isViewMode}
+                >
+                  <option value="1">1 - Poor</option>
+                  <option value="2">2 - Needs Improvement</option>
+                  <option value="3">3 - Meets Expectations</option>
+                  <option value="4">4 - Exceeds Expectations</option>
+                  <option value="5">5 - Outstanding</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="employee_reviews_form-group">
+              <label htmlFor="review_text">Review Text</label>
+              <textarea
+                id="review_text"
+                name="review_text"
+                value={formData.review_text}
+                onChange={handleFormChange}
+                rows="4"
+                required
+                disabled={isViewMode}
+              />
+            </div>
+
+            <div className="employee_reviews_form-group">
+              <label htmlFor="comments">Optional Comments</label>
+              <textarea
+                id="comments"
+                name="comments"
+                value={formData.comments}
+                onChange={handleFormChange}
+                rows="3"
+                disabled={isViewMode}
+              />
+            </div>
+
+            {isEditing && (
+              <div className="employee_reviews_form-buttons">
+                {editingReview && (
+                  <button
+                    type="button"
+                    className="employee_reviews_cancel employee_reviews_button"
+                    onClick={() => setIsEditing(false)}
+                    disabled={isSubmitting}
+                  >
+                    Cancel
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  className="employee_reviews_save employee_reviews_button"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? 'Saving...' : (editingReview ? 'Update Review' : 'Add Review')}
+                </button>
+              </div>
+            )}
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="employee_reviews_container">
@@ -353,131 +508,6 @@ const Reviews = ({
           className="employee_reviews_rows-per-page-input"
         />
       </div>
-
-      {/* --- ADD/EDIT MODAL --- */}
-      {isModalOpen && (
-        <div className="employee_reviews_modal-overlay" onClick={closeModal}>
-          <div className="employee_reviews_modal-content" onClick={(e) => e.stopPropagation()}>
-            
-            <div className="employee_reviews_modal-header">
-              <h3 className="employee_reviews_modal-title">
-                {editingReview ? 'Edit Review' : 'Add New Review'}
-              </h3>
-              <button className="employee_reviews_modal-close-button" onClick={closeModal}>
-                &times;
-              </button>
-            </div>
-
-            <form className="employee_reviews_form" onSubmit={handleSubmit}>
-              {formError && <div className="employee_reviews_error-message">{formError}</div>}
-              {formSuccess && <div className="employee_reviews_success-message">{formSuccess}</div>}
-
-              <div className="employee_reviews_form-group">
-                <label htmlFor="employee_id">Employee Name</label>
-                <select
-                  id="employee_id"
-                  name="employee_id"
-                  value={formData.employee_id}
-                  onChange={handleFormChange}
-                  disabled={!!editingReview}
-                  required
-                >
-                  <option value="" disabled>Select an employee</option>
-                  {reviewEmployees.map(emp => (
-                    <option key={emp.empid} value={emp.empid}>{emp.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="employee_reviews_form-group">
-                <label htmlFor="review_year">Review Year</label>
-                <select
-                  id="review_year"
-                  name="review_year"
-                  value={formData.review_year}
-                  onChange={handleFormChange}
-                  required
-                >
-                  {getYearOptions().map(year => (
-                    <option key={year} value={year}>{year}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="employee_reviews_form-row">
-                <div className="employee_reviews_form-group">
-                  <label htmlFor="review_date">Review Date</label>
-                  <input
-                    type="date"
-                    id="review_date"
-                    name="review_date"
-                    value={formData.review_date}
-                    onChange={handleFormChange}
-                    required
-                  />
-                </div>
-                <div className="employee_reviews_form-group">
-                  <label htmlFor="rating">Rating (1-5)</label>
-                  <select
-                    id="rating"
-                    name="rating"
-                    value={formData.rating}
-                    onChange={handleFormChange}
-                    required
-                  >
-                    <option value="1">1 - Poor</option>
-                    <option value="2">2 - Needs Improvement</option>
-                    <option value="3">3 - Meets Expectations</option>
-                    <option value="4">4 - Exceeds Expectations</option>
-                    <option value="5">5 - Outstanding</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="employee_reviews_form-group">
-                <label htmlFor="review_text">Review Text</label>
-                <textarea
-                  id="review_text"
-                  name="review_text"
-                  value={formData.review_text}
-                  onChange={handleFormChange}
-                  rows="4"
-                  required
-                />
-              </div>
-
-              <div className="employee_reviews_form-group">
-                <label htmlFor="comments">Optional Comments</label>
-                <textarea
-                  id="comments"
-                  name="comments"
-                  value={formData.comments}
-                  onChange={handleFormChange}
-                  rows="3"
-                />
-              </div>
-
-              <div className="employee_reviews_form-buttons">
-                <button
-                  type="button"
-                  className="employee_reviews_cancel employee_reviews_button"
-                  onClick={closeModal}
-                  disabled={isSubmitting}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="employee_reviews_save employee_reviews_button"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? 'Saving...' : (editingReview ? 'Update Review' : 'Add Review')}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

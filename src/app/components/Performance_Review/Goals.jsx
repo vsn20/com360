@@ -34,6 +34,7 @@ const Goals = ({
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState(null); 
+  const [isEditing, setIsEditing] = useState(false); // For edit mode toggle
   const [formData, setFormData] = useState(DEFAULT_FORM_DATA);
   const [formError, setFormError] = useState(null);
   const [formSuccess, setFormSuccess] = useState(null);
@@ -146,6 +147,7 @@ const Goals = ({
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingGoal(null);
+    setIsEditing(false);
     setFormData(DEFAULT_FORM_DATA);
     setFormError(null);
     setFormSuccess(null);
@@ -159,6 +161,7 @@ const Goals = ({
     }
     setFormData({ ...DEFAULT_FORM_DATA, employee_id: defaultEmployee });
     setEditingGoal(null);
+    setIsEditing(true); // Add mode is always editable
     setIsModalOpen(true);
   };
 
@@ -249,6 +252,7 @@ const Goals = ({
       supervisor_comments: goal.supervisor_comments || '',
     });
     setEditingGoal(goal);
+    setIsEditing(false); // Edit mode starts with view mode
     setIsModalOpen(true);
   };
 
@@ -359,6 +363,279 @@ const Goals = ({
     }
   };
   
+  // Show form view when modal is open (instead of popup)
+  if (isModalOpen) {
+    const isViewMode = editingGoal && !isEditing;
+    
+    return (
+      <div className="employee_goals_container">
+        <div className="employee_goals_header-section">
+          <h2 className="employee_goals_title">
+            {editingGoal ? (isEditing ? 'Edit Goal' : 'View Goal') : 'Add New Goal'}
+          </h2>
+          <button
+            type="button"
+            className="employee_goals_back-button"
+            onClick={closeModal}
+          >
+          </button>
+        </div>
+
+        <div className="employee_goals_form-container">
+          {editingGoal && !isEditing && (
+            <div className="employee_goals_form-header">
+              <button
+                type="button"
+                className="employee_goals_save employee_goals_button"
+                onClick={() => setIsEditing(true)}
+              >
+                Edit
+              </button>
+            </div>
+          )}
+          <form className="employee_goals_form" onSubmit={handleSubmit}>
+            {formError && <div className="employee_goals_error-message">{formError}</div>}
+            {formSuccess && <div className="employee_goals_success-message">{formSuccess}</div>}
+
+            <div className="employee_goals_form-group">
+              <label htmlFor="employee_id">Employee Name</label>
+              <select
+                id="employee_id"
+                name="employee_id"
+                value={formData.employee_id}
+                onChange={handleFormChange}
+                disabled={isViewMode || !canAddForOthers || !!editingGoal} 
+                required
+              >
+                <option value="" disabled>Select an employee</option>
+                {canAddForOthers ? (
+                  sortedEmployeesForDropdown.map(emp => (
+                    <option key={emp.empid} value={emp.empid}>{emp.name}</option>
+                  ))
+                ) : (
+                  <option value={loggedInEmpId}>
+                    {employees.find(e => e.empid === loggedInEmpId)?.name || 'Me'}
+                  </option>
+                )}
+              </select>
+            </div>
+
+            <div className="employee_goals_form-group">
+              <label htmlFor="description">Goal Description</label>
+              <textarea
+                id="description"
+                name="description"
+                value={formData.description}
+                onChange={handleFormChange}
+                rows="3"
+                required
+                disabled={isViewMode}
+              />
+            </div>
+
+            <div className="employee_goals_form-row">
+              <div className="employee_goals_form-group">
+                <label htmlFor="start_date">Start Date</label>
+                <input
+                  type="date"
+                  id="start_date"
+                  name="start_date"
+                  value={formData.start_date}
+                  onChange={handleFormChange}
+                  required
+                  disabled={isViewMode}
+                />
+              </div>
+              <div className="employee_goals_form-group">
+                <label htmlFor="end_date">End Date</label>
+                <input
+                  type="date"
+                  id="end_date"
+                  name="end_date"
+                  value={formData.end_date}
+                  onChange={handleFormChange}
+                  required
+                  disabled={isViewMode}
+                />
+              </div>
+            </div>
+            <div className="employee_goals_form-group">
+              <label htmlFor="completion_percentage">Completion Percentage</label>
+              <input
+                type="number"
+                id="completion_percentage"
+                name="completion_percentage"
+                value={formData.completion_percentage}
+                onChange={handleFormChange}
+                min="0"
+                max="100"
+                disabled={isViewMode}
+              />
+            </div>
+
+            <div className="employee_goals_form-group">
+              <label htmlFor="employee_comments">Employee Comments</label>
+              <textarea
+                id="employee_comments"
+                name="employee_comments"
+                value={formData.employee_comments}
+                onChange={handleFormChange}
+                rows="3"
+                disabled={isViewMode}
+              />
+            </div>
+
+            {canSeeSupervisorComments && ( 
+              <div className="employee_goals_form-group">
+                <label htmlFor="supervisor_comments">Supervisor Comments</label>
+                <textarea
+                  id="supervisor_comments"
+                  name="supervisor_comments"
+                  value={formData.supervisor_comments}
+                  onChange={handleFormChange}
+                  rows="3"
+                  disabled={isViewMode || !canEditSupervisorComments} 
+                />
+              </div>
+            )}
+
+            {isEditing && (
+              <div className="employee_goals_form-buttons">
+                {editingGoal && (
+                  <button
+                    type="button"
+                    className="employee_goals_cancel employee_goals_button"
+                    onClick={() => setIsEditing(false)}
+                    disabled={isSubmitting}
+                  >
+                    Cancel
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  className="employee_goals_save employee_goals_button"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? 'Saving...' : (editingGoal ? 'Update Goal' : 'Save Goal')}
+                </button>
+              </div>
+            )}
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // Show bulk form view when bulk modal is open (instead of popup)
+  if (isBulkModalOpen) {
+    return (
+      <div className="employee_goals_container">
+        <div className="employee_goals_header-section">
+          <h2 className="employee_goals_title">Add Goal for All Employees</h2>
+          <button
+            type="button"
+            className="employee_goals_back-button"
+            onClick={closeBulkModal}
+          >
+          </button>
+        </div>
+
+        <div style={{ marginBottom: '15px', color: '#666', fontSize: '14px' }}>
+          This goal will be added for <strong>{sortedEmployeesForDropdown.length}</strong> employees.
+        </div>
+
+        <div className="employee_goals_form-container">
+          <form className="employee_goals_form" onSubmit={handleBulkSubmit}>
+            {bulkFormError && <div className="employee_goals_error-message">{bulkFormError}</div>}
+            {bulkFormSuccess && <div className="employee_goals_success-message">{bulkFormSuccess}</div>}
+
+            <div className="employee_goals_form-group">
+              <label htmlFor="bulk_description">Goal Description</label>
+              <textarea
+                id="bulk_description"
+                name="description"
+                value={bulkFormData.description}
+                onChange={handleBulkFormChange}
+                rows="3"
+                required
+              />
+            </div>
+
+            <div className="employee_goals_form-row">
+              <div className="employee_goals_form-group">
+                <label htmlFor="bulk_start_date">Start Date</label>
+                <input
+                  type="date"
+                  id="bulk_start_date"
+                  name="start_date"
+                  value={bulkFormData.start_date}
+                  onChange={handleBulkFormChange}
+                  required
+                />
+              </div>
+              <div className="employee_goals_form-group">
+                <label htmlFor="bulk_end_date">End Date</label>
+                <input
+                  type="date"
+                  id="bulk_end_date"
+                  name="end_date"
+                  value={bulkFormData.end_date}
+                  onChange={handleBulkFormChange}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="employee_goals_form-group">
+              <label htmlFor="bulk_completion_percentage">Completion Percentage</label>
+              <input
+                type="number"
+                id="bulk_completion_percentage"
+                name="completion_percentage"
+                value={bulkFormData.completion_percentage}
+                onChange={handleBulkFormChange}
+                min="0"
+                max="100"
+              />
+            </div>
+
+            <div className="employee_goals_form-group">
+              <label htmlFor="bulk_employee_comments">Employee Comments</label>
+              <textarea
+                id="bulk_employee_comments"
+                name="employee_comments"
+                value={bulkFormData.employee_comments}
+                onChange={handleBulkFormChange}
+                rows="3"
+              />
+            </div>
+
+            <div className="employee_goals_form-group">
+              <label htmlFor="bulk_supervisor_comments">Supervisor Comments</label>
+              <textarea
+                id="bulk_supervisor_comments"
+                name="supervisor_comments"
+                value={bulkFormData.supervisor_comments}
+                onChange={handleBulkFormChange}
+                rows="3"
+              />
+            </div>
+
+            <div className="employee_goals_form-buttons">
+              <button
+                type="submit"
+                className="employee_goals_save employee_goals_button"
+                disabled={isBulkSubmitting}
+              >
+                {isBulkSubmitting ? 'Adding Goals...' : `Add Goal for ${sortedEmployeesForDropdown.length} Employees`}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="employee_goals_container">
       <div className="employee_goals_header-section">
@@ -498,259 +775,6 @@ const Goals = ({
           aria-label="Number of rows per page"
         />
       </div>
-
-      {/* --- ADD/EDIT MODAL --- */}
-      {isModalOpen && (
-        <div className="employee_goals_modal-overlay" onClick={closeModal}>
-          <div className="employee_goals_modal-content" onClick={(e) => e.stopPropagation()}>
-            
-            <div className="employee_goals_modal-header">
-              <h3 className="employee_goals_modal-title">
-                {editingGoal ? 'Edit Goal' : 'Add New Goal'}
-              </h3>
-              <button className="employee_goals_modal-close-button" onClick={closeModal}>
-                &times;
-              </button>
-            </div>
-
-            <form className="employee_goals_form" onSubmit={handleSubmit}>
-              {formError && <div className="employee_goals_error-message">{formError}</div>}
-              {formSuccess && <div className="employee_goals_success-message">{formSuccess}</div>}
-
-              <div className="employee_goals_form-group">
-                <label htmlFor="employee_id">Employee Name</label>
-                <select
-                  id="employee_id"
-                  name="employee_id"
-                  value={formData.employee_id}
-                  onChange={handleFormChange}
-                  disabled={!canAddForOthers || !!editingGoal} 
-                  required
-                >
-                  <option value="" disabled>Select an employee</option>
-                  {canAddForOthers ? (
-                    sortedEmployeesForDropdown.map(emp => (
-                      <option key={emp.empid} value={emp.empid}>{emp.name}</option>
-                    ))
-                  ) : (
-                    <option value={loggedInEmpId}>
-                      {employees.find(e => e.empid === loggedInEmpId)?.name || 'Me'}
-                    </option>
-                  )}
-                </select>
-              </div>
-
-              <div className="employee_goals_form-group">
-                <label htmlFor="description">Goal Description</label>
-                <textarea
-                  id="description"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleFormChange}
-                  rows="3"
-                  required
-                />
-              </div>
-
-              <div className="employee_goals_form-row">
-                <div className="employee_goals_form-group">
-                  <label htmlFor="start_date">Start Date</label>
-                  <input
-                    type="date"
-                    id="start_date"
-                    name="start_date"
-                    value={formData.start_date}
-                    onChange={handleFormChange}
-                    required
-                  />
-                </div>
-                <div className="employee_goals_form-group">
-                  <label htmlFor="end_date">End Date</label>
-                  <input
-                    type="date"
-                    id="end_date"
-                    name="end_date"
-                    value={formData.end_date}
-                    onChange={handleFormChange}
-                    required
-                  />
-                </div>
-              </div>
-              <div className="employee_goals_form-group">
-                <label htmlFor="completion_percentage">Completion Percentage</label>
-                <input
-                  type="number"
-                  id="completion_percentage"
-                  name="completion_percentage"
-                  value={formData.completion_percentage}
-                  onChange={handleFormChange}
-                  min="0"
-                  max="100"
-                />
-              </div>
-
-              <div className="employee_goals_form-group">
-                <label htmlFor="employee_comments">Employee Comments</label>
-                <textarea
-                  id="employee_comments"
-                  name="employee_comments"
-                  value={formData.employee_comments}
-                  onChange={handleFormChange}
-                  rows="3"
-                />
-              </div>
-
-              {canSeeSupervisorComments && ( 
-                <div className="employee_goals_form-group">
-                  <label htmlFor="supervisor_comments">Supervisor Comments</label>
-                  <textarea
-                    id="supervisor_comments"
-                    name="supervisor_comments"
-                    value={formData.supervisor_comments}
-                    onChange={handleFormChange}
-                    rows="3"
-                    disabled={!canEditSupervisorComments} 
-                  />
-                </div>
-              )}
-
-              <div className="employee_goals_form-buttons">
-                <button
-                  type="button"
-                  className="employee_goals_cancel employee_goals_button"
-                  onClick={closeModal}
-                  disabled={isSubmitting}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="employee_goals_save employee_goals_button"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? 'Saving...' : (editingGoal ? 'Update Goal' : 'Save Goal')}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* --- BULK ADD MODAL --- */}
-      {isBulkModalOpen && (
-        <div className="employee_goals_modal-overlay" onClick={closeBulkModal}>
-          <div className="employee_goals_modal-content" onClick={(e) => e.stopPropagation()}>
-            
-            <div className="employee_goals_modal-header">
-              <h3 className="employee_goals_modal-title">
-                Add Goal for All Employees
-              </h3>
-              <button className="employee_goals_modal-close-button" onClick={closeBulkModal}>
-                &times;
-              </button>
-            </div>
-
-            <div style={{ padding: '0 20px', marginBottom: '15px', color: '#666', fontSize: '14px' }}>
-              This goal will be added for <strong>{sortedEmployeesForDropdown.length}</strong> employees.
-            </div>
-
-            <form className="employee_goals_form" onSubmit={handleBulkSubmit}>
-              {bulkFormError && <div className="employee_goals_error-message">{bulkFormError}</div>}
-              {bulkFormSuccess && <div className="employee_goals_success-message">{bulkFormSuccess}</div>}
-
-              <div className="employee_goals_form-group">
-                <label htmlFor="bulk_description">Goal Description</label>
-                <textarea
-                  id="bulk_description"
-                  name="description"
-                  value={bulkFormData.description}
-                  onChange={handleBulkFormChange}
-                  rows="3"
-                  required
-                />
-              </div>
-
-              <div className="employee_goals_form-row">
-                <div className="employee_goals_form-group">
-                  <label htmlFor="bulk_start_date">Start Date</label>
-                  <input
-                    type="date"
-                    id="bulk_start_date"
-                    name="start_date"
-                    value={bulkFormData.start_date}
-                    onChange={handleBulkFormChange}
-                    required
-                  />
-                </div>
-                <div className="employee_goals_form-group">
-                  <label htmlFor="bulk_end_date">End Date</label>
-                  <input
-                    type="date"
-                    id="bulk_end_date"
-                    name="end_date"
-                    value={bulkFormData.end_date}
-                    onChange={handleBulkFormChange}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="employee_goals_form-group">
-                <label htmlFor="bulk_completion_percentage">Completion Percentage</label>
-                <input
-                  type="number"
-                  id="bulk_completion_percentage"
-                  name="completion_percentage"
-                  value={bulkFormData.completion_percentage}
-                  onChange={handleBulkFormChange}
-                  min="0"
-                  max="100"
-                />
-              </div>
-
-              <div className="employee_goals_form-group">
-                <label htmlFor="bulk_employee_comments">Employee Comments</label>
-                <textarea
-                  id="bulk_employee_comments"
-                  name="employee_comments"
-                  value={bulkFormData.employee_comments}
-                  onChange={handleBulkFormChange}
-                  rows="3"
-                />
-              </div>
-
-              <div className="employee_goals_form-group">
-                <label htmlFor="bulk_supervisor_comments">Supervisor Comments</label>
-                <textarea
-                  id="bulk_supervisor_comments"
-                  name="supervisor_comments"
-                  value={bulkFormData.supervisor_comments}
-                  onChange={handleBulkFormChange}
-                  rows="3"
-                />
-              </div>
-
-              <div className="employee_goals_form-buttons">
-                <button
-                  type="button"
-                  className="employee_goals_cancel employee_goals_button"
-                  onClick={closeBulkModal}
-                  disabled={isBulkSubmitting}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="employee_goals_save employee_goals_button"
-                  disabled={isBulkSubmitting}
-                >
-                  {isBulkSubmitting ? 'Adding Goals...' : `Add Goal for ${sortedEmployeesForDropdown.length} Employees`}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
