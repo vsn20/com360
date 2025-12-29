@@ -671,10 +671,10 @@ const InvoiceOverview = () => {
                 <button 
                   className={styles.btnZip} 
                   onClick={handleSendEmails} 
-                  disabled={sendingEmails}
-                  style={{background: sendingEmails ? '#6b7280' : '#10B981'}}
+                  disabled={sendingEmailIdx !== null}
+                  style={{background: sendingEmailIdx !== null ? '#6b7280' : '#10B981'}}
                 >
-                  {sendingEmails ? '📧 Sending...' : '📧 Send All Emails'}
+                  {sendingEmailIdx !== null ? '📧 Sending...' : '📧 Send All Emails'}
                 </button>
               )}
             </div>
