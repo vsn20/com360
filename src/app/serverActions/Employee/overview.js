@@ -939,8 +939,8 @@ export async function notifyEmployee(email, firstName) {
     const transporter = nodemailer.createTransport({
       host:  process.env.GMAIL_HOST, // Or use host/port if you prefer
       auth: {
-        user: process.env.EMAIL_USER, 
-        pass: process.env.EMAIL_PASS 
+        user: process.env.GMAIL_USER, 
+        pass: process.env.GMAIL_APP_PASS 
       }
     });
 
