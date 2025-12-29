@@ -658,8 +658,8 @@ const Overview = ({
                       <div className="account_form_group"><label>Active Status</label><select name="activeFlag" value={formData.activeFlag} onChange={handleFormChange}><option value="1">Active</option><option value="0">Inactive</option></select></div>
                     </div>
                     <div className="account_form_buttons">
-                      <button type="submit" className="account_save" disabled={isLoading}>Save</button>
-                      <button type="button" className="account_cancel" onClick={handleCancelBasic}>Cancel</button>
+                      <button type="submit" className="account_save" disabled={isLoading}>{isLoading ? 'Saving...' : 'Save'}</button>
+                      <button type="button" className="account_cancel" onClick={handleCancelBasic} disabled={isLoading}>Cancel</button>
                     </div>
                   </form>
                 ) : (
@@ -697,8 +697,8 @@ const Overview = ({
                       <div className="account_form_group"><label>Postal Code</label><input name="businessPostalCode" value={formData.businessPostalCode} onChange={handleFormChange}/></div>
                     </div>
                     <div className="account_form_buttons">
-                      <button type="submit" className="account_save">Save</button>
-                      <button type="button" className="account_cancel" onClick={handleCancelBusinessAddress}>Cancel</button>
+                      <button type="submit" className="account_save" disabled={isLoading}>{isLoading ? 'Saving...' : 'Save'}</button>
+                      <button type="button" className="account_cancel" onClick={handleCancelBusinessAddress} disabled={isLoading}>Cancel</button>
                     </div>
                   </form>
                 ) : (
@@ -731,8 +731,8 @@ const Overview = ({
                       <div className="account_form_group"><label>Postal Code</label><input name="mailingPostalCode" value={formData.mailingPostalCode} onChange={handleFormChange}/></div>
                     </div>
                     <div className="account_form_buttons">
-                      <button type="submit" className="account_save">Save</button>
-                      <button type="button" className="account_cancel" onClick={handleCancelMailingAddress}>Cancel</button>
+                      <button type="submit" className="account_save" disabled={isLoading}>{isLoading ? 'Saving...' : 'Save'}</button>
+                      <button type="button" className="account_cancel" onClick={handleCancelMailingAddress} disabled={isLoading}>Cancel</button>
                     </div>
                   </form>
                 ) : (

@@ -6,6 +6,7 @@ import { MdApps } from 'react-icons/md';
 import { getUserFromCookie } from '../serverActions/getUserFromCookie';
 import { job_logoutaction } from '../serverActions/job_logoutaction';
 import Link from 'next/link';
+import Image from 'next/image';
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
@@ -40,7 +41,22 @@ export default function Navbar() {
 
   return (
     <nav id="navid" style={{ position: 'relative' }}>
-      <Link href="/jobs">COM@360 jobs</Link>
+     <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            marginRight: '1rem' 
+          }}>
+            <Image 
+              src="/COM360LOGOS.jpg" 
+              alt="logo" 
+              width={120} 
+              height={40}
+              style={{ objectFit: 'contain', maxHeight: '40px' }}
+              priority={true} 
+              unoptimized={true}
+            />
+          </div>
+         
       <Link href="/" className={pathname === '/' ? 'active' : ''}>Home</Link>
       <Link href="/jobs" className={pathname === '/jobs' ? 'active' : ''}>Jobs</Link>
       <Link href="/jobs/jobapplications" className={pathname === '/jobs/jobapplications' ? 'active' : ''}>Applications</Link>

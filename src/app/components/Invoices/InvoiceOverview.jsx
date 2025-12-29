@@ -7,7 +7,8 @@ import {
   fetchProjectsForInvoice, 
   fetchContractEmployeesForInvoice, 
   fetchAccountsForReceivable,
-  fetchVendorsForPayable 
+  fetchVendorsForPayable,
+  sendInvoiceEmails
 } from "@/app/serverActions/Invoices/InvoiceActions";
 import styles from "./Invoice.module.css";
 import ExcelJS from 'exceljs'; 
@@ -17,6 +18,8 @@ import JSZip from 'jszip';
 const InvoiceOverview = () => {
   const [view, setView] = useState("list");
   const [invoiceType, setInvoiceType] = useState("receivable");
+  const [sendingEmails, setSendingEmails] = useState(false);
+  const [emailResult, setEmailResult] = useState(null);
   
   // Filter Options
   const [employees, setEmployees] = useState([]);
@@ -99,24 +102,42 @@ const InvoiceOverview = () => {
   };
 
   const getWeekRange = (dateStr) => {
-    const date = new Date(dateStr);
+    const date = new Date(dateStr + 'T00:00:00'); // Parse as local time
     const day = date.getDay();
     const start = new Date(date);
     start.setDate(date.getDate() - day); // Sunday
     const end = new Date(start);
     end.setDate(start.getDate() + 6); // Saturday
+    
+    // Format dates manually to avoid timezone issues with toISOString()
+    const formatLocalDate = (d) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${dd}`;
+    };
+    
     return {
-      start: start.toISOString().split("T")[0],
-      end: end.toISOString().split("T")[0]
+      start: formatLocalDate(start),
+      end: formatLocalDate(end)
     };
   };
 
   const getMonthRange = (month, year) => {
     const firstDay = new Date(year, month - 1, 1);
     const lastDay = new Date(year, month, 0);
+    
+    // Format dates manually to avoid timezone issues with toISOString()
+    const formatLocalDate = (date) => {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    };
+    
     return {
-      start: firstDay.toISOString().split("T")[0],
-      end: lastDay.toISOString().split("T")[0]
+      start: formatLocalDate(firstDay),
+      end: formatLocalDate(lastDay)
     };
   };
 
@@ -359,12 +380,114 @@ const InvoiceOverview = () => {
     saveAs(content, `${folderName}.zip`);
   };
 
+  const handleSendEmails = async () => {
+    if (!invoices.length || invoiceType !== 'receivable') return;
+    
+    setSendingEmails(true);
+    setEmailResult(null);
+
+    try {
+      const dateRange = `${formatMMDDYYYY(invoices[0].dateRange.start).replace(/\//g,'-')}_${formatMMDDYYYY(invoices[0].dateRange.end).replace(/\//g,'-')}`;
+      const period = `${formatMMDDYYYY(invoices[0].dateRange.start)} - ${formatMMDDYYYY(invoices[0].dateRange.end)}`;
+      
+      // Group invoices by account email to send one email per account with all their invoices
+      const emailGroups = {};
+      
+      for (const inv of invoices) {
+        const email = inv.accountEmail;
+        const accountName = inv.accountName;
+        
+        if (!emailGroups[email || 'no-email']) {
+          emailGroups[email || 'no-email'] = {
+            email,
+            accountName,
+            invoices: [],
+            totalAmount: 0
+          };
+        }
+        emailGroups[email || 'no-email'].invoices.push(inv);
+        emailGroups[email || 'no-email'].totalAmount += inv.totalAmount;
+      }
+
+      // Prepare invoice data with excel buffers
+      const invoiceData = [];
+      
+      for (const key of Object.keys(emailGroups)) {
+        const group = emailGroups[key];
+        
+        // If multiple invoices for same account, create a zip
+        if (group.invoices.length > 1) {
+          const zip = new JSZip();
+          for (const inv of group.invoices) {
+            const buffer = await generateExcelBuffer(inv);
+            const entityName = inv.accountName;
+            const empName = (inv.isSeparate || inv.isProjectSeparate) ? `_${inv.employees[0].empName.replace(/\s+/g, '_')}` : '';
+            const projName = inv.isProjectSeparate ? `_${inv.employees[0].projects[0].projectName.replace(/\s+/g, '_')}` : '';
+            const filename = `${dateRange}_${entityName.replace(/\s+/g, '_')}${empName}${projName}.xlsx`;
+            zip.file(filename, buffer);
+          }
+          const zipBuffer = await zip.generateAsync({ type: 'base64' });
+          invoiceData.push({
+            email: group.email,
+            accountName: group.accountName,
+            filename: `Invoices_${dateRange}_${group.accountName.replace(/\s+/g, '_')}.zip`,
+            buffer: zipBuffer,
+            period,
+            totalAmount: group.totalAmount,
+            isZip: true
+          });
+        } else {
+          // Single invoice - send as excel
+          const inv = group.invoices[0];
+          const buffer = await generateExcelBuffer(inv);
+          const entityName = inv.accountName;
+          const empName = (inv.isSeparate || inv.isProjectSeparate) ? `_${inv.employees[0].empName.replace(/\s+/g, '_')}` : '';
+          const projName = inv.isProjectSeparate ? `_${inv.employees[0].projects[0].projectName.replace(/\s+/g, '_')}` : '';
+          const filename = `${dateRange}_${entityName.replace(/\s+/g, '_')}${empName}${projName}.xlsx`;
+          
+          // Convert ArrayBuffer to base64
+          const base64Buffer = btoa(
+            new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+          );
+          
+          invoiceData.push({
+            email: group.email,
+            accountName: group.accountName,
+            filename,
+            buffer: base64Buffer,
+            period,
+            totalAmount: inv.totalAmount,
+            isZip: false
+          });
+        }
+      }
+
+      const result = await sendInvoiceEmails(invoiceData);
+      
+      if (result.error) {
+        setEmailResult({ type: 'error', message: result.error });
+      } else {
+        setEmailResult({
+          type: 'success',
+          sent: result.results.sent,
+          failed: result.results.failed,
+          skipped: result.results.skipped
+        });
+      }
+    } catch (err) {
+      setEmailResult({ type: 'error', message: err.message });
+    } finally {
+      setSendingEmails(false);
+    }
+  };
+
   const handleInvoiceTypeChange = (type) => {
     setInvoiceType(type);
     setSelectedEmployee("all");
     setSelectedAccount("all");
     setInvoices([]);
     setHasSearched(false);
+    setEmailResult(null);
   };
 
   return (
@@ -540,10 +663,54 @@ const InvoiceOverview = () => {
         <div className={styles.resultsArea}>
           <div className={styles.resultsHeader}>
             <h3>Generated {invoices.length} {invoiceType === "receivable" ? "Receivable" : "Payable"} Invoice{invoices.length > 1 ? 's' : ''}</h3>
-            <button className={styles.btnZip} onClick={handleDownloadZip}>
-              📦 Download All (ZIP)
-            </button>
+            <div style={{display: 'flex', gap: '10px'}}>
+              <button className={styles.btnZip} onClick={handleDownloadZip}>
+                📦 Download All (ZIP)
+              </button>
+              {invoiceType === "receivable" && (
+                <button 
+                  className={styles.btnZip} 
+                  onClick={handleSendEmails} 
+                  disabled={sendingEmails}
+                  style={{background: sendingEmails ? '#6b7280' : '#10B981'}}
+                >
+                  {sendingEmails ? '📧 Sending...' : '📧 Send All Emails'}
+                </button>
+              )}
+            </div>
           </div>
+          
+          {emailResult && (
+            <div style={{
+              padding: '15px',
+              marginBottom: '20px',
+              borderRadius: '8px',
+              background: emailResult.type === 'error' ? '#fef2f2' : '#f0fdf4',
+              border: `1px solid ${emailResult.type === 'error' ? '#fecaca' : '#bbf7d0'}`
+            }}>
+              {emailResult.type === 'error' ? (
+                <p style={{color: '#dc2626', margin: 0}}>❌ Error: {emailResult.message}</p>
+              ) : (
+                <div>
+                  {emailResult.sent.length > 0 && (
+                    <p style={{color: '#16a34a', margin: '0 0 10px 0'}}>
+                      ✅ Successfully sent to {emailResult.sent.length} account(s): {emailResult.sent.map(s => s.accountName).join(', ')}
+                    </p>
+                  )}
+                  {emailResult.skipped.length > 0 && (
+                    <p style={{color: '#ca8a04', margin: '0 0 10px 0'}}>
+                      ⚠️ Skipped {emailResult.skipped.length} account(s) (no email): {emailResult.skipped.map(s => s.accountName).join(', ')}
+                    </p>
+                  )}
+                  {emailResult.failed.length > 0 && (
+                    <p style={{color: '#dc2626', margin: 0}}>
+                      ❌ Failed to send to {emailResult.failed.length} account(s): {emailResult.failed.map(f => `${f.accountName} (${f.error})`).join(', ')}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
           
           <div className={styles.gridList}>
             {invoices.map((inv, idx) => (
@@ -551,6 +718,11 @@ const InvoiceOverview = () => {
                 <div className={styles.cardHeader}>
                   <div className={styles.cardAccount}>
                     {invoiceType === "receivable" ? inv.accountName : inv.vendorName}
+                    {invoiceType === "receivable" && inv.accountEmail && (
+                      <div style={{fontSize: '12px', fontWeight: 'normal', marginTop: '2px', opacity: 0.8}}>
+                        📧 {inv.accountEmail}
+                      </div>
+                    )}
                     {(inv.isSeparate || inv.isProjectSeparate) && (
                       <div style={{fontSize: '14px', fontWeight: 'normal', marginTop: '4px'}}>
                         {inv.employees[0].empName}

@@ -162,7 +162,7 @@ export async function addProject(prevState, formData) {
       console.log('MySQL connection pool acquired');
 
       const [accountCheck] = await pool.execute(
-        'SELECT ACCNT_ID, suborgid, ourorg FROM C_ACCOUNT WHERE ACCNT_ID = ? AND ORGID = ? AND ACTIVE_FLAG = 1',
+        'SELECT ACCNT_ID, suborgid FROM C_ACCOUNT WHERE ACCNT_ID = ? AND ORGID = ? AND ACTIVE_FLAG = 1',
         [accntId, orgId]
       );
       if (accountCheck.length === 0) {
@@ -170,30 +170,20 @@ export async function addProject(prevState, formData) {
         return { error: 'Invalid or inactive account.' };
       }
 
-      const accountOurorg = accountCheck[0].ourorg;
-
       let effectiveSuborgid = suborgid;
       if (!suborgid && accountCheck[0].suborgid) {
         effectiveSuborgid = accountCheck[0].suborgid;
         console.log(`Using suborgid ${effectiveSuborgid} from account ${accntId}`);
       }
 
-      // Check client and validate ourorg match
+      // Check client exists and is active
       const [clientCheck] = await pool.execute(
-        'SELECT ACCNT_ID, ourorg FROM C_ACCOUNT WHERE ACCNT_ID = ? AND ORGID = ? AND ACTIVE_FLAG = 1',
+        'SELECT ACCNT_ID FROM C_ACCOUNT WHERE ACCNT_ID = ? AND ORGID = ? AND ACTIVE_FLAG = 1',
         [clientId, orgId]
       );
       if (clientCheck.length === 0) {
         console.log('Redirecting: Invalid or inactive client');
         return { error: 'Invalid or inactive client.' };
-      }
-
-      const clientOurorg = clientCheck[0].ourorg;
-
-      // Validate that account and client have the same ourorg value
-      if (accountOurorg !== clientOurorg) {
-        console.log('Redirecting: Account and Client ownership mismatch', { accountOurorg, clientOurorg });
-        return { error: 'Account and Client must both be either "Our Own" or "Outside Account". Mixed ownership is not allowed.' };
       }
 
       if (effectiveSuborgid) {

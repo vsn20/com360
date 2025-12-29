@@ -82,16 +82,23 @@ export async function fetchConfigData() {
     const orgId = decoded.orgid;
 
     const pool = await DBconnection();
+    // Fetch both user's org values AND system defaults (orgid=-1)
     const [rows] = await pool.execute(
       `SELECT id, g_id, Name, isactive, parent_value_id, display_order, orgid
        FROM C_GENERIC_VALUES
-       WHERE orgid = ? AND g_id NOT IN (15, 16, 17)
-       ORDER BY g_id, display_order, Name`,
+       WHERE (orgid = ? OR orgid = -1) AND g_id NOT IN (15, 16, 17)
+       ORDER BY g_id, orgid DESC, display_order, Name`,
       [orgId]
     );
     
-    console.log(`Fetched ${rows.length} configuration values for orgId: ${orgId}`);
-    return rows;
+    // Mark default values (orgid=-1) as isDefault for UI to handle
+    const processedRows = rows.map(row => ({
+      ...row,
+      isDefault: row.orgid === -1
+    }));
+    
+    console.log(`Fetched ${processedRows.length} configuration values (including defaults) for orgId: ${orgId}`);
+    return processedRows;
   } catch (error) {
     console.error('Error fetching configuration data:', error.message);
     throw new Error(`Failed to fetch configuration data: ${error.message}`);
@@ -157,6 +164,15 @@ export async function addConfigValue(prevState, formData) {
     );
     if (existing.length > 0) {
       return { error: 'Value already exists in this context.' };
+    }
+
+    // Check for case-insensitive duplicate against system defaults (orgid=-1)
+    const [defaultDuplicate] = await pool.execute(
+      'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = ? AND LOWER(Name) = LOWER(?) AND orgid = -1 AND (parent_value_id = ? OR (parent_value_id IS NULL AND ? IS NULL))',
+      [g_id, valueName, parent_value_id, parent_value_id]
+    );
+    if (defaultDuplicate.length > 0) {
+      return { error: `Cannot add value. "${defaultDuplicate[0].Name}" already exists as a system default.` };
     }
 
     // Get max display_order for this context

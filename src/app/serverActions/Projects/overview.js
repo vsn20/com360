@@ -115,12 +115,13 @@ export async function updateproject(formData) {
         const prjName = formData.get('PRJ_NAME')?.trim();
         const prsDesc = formData.get('PRS_DESC')?.trim() || null;
         const accntId = formData.get('ACCNT_ID')?.trim();
+        const clientId = formData.get('CLIENT_ID')?.trim() || null;
         let suborgid = formData.get('suborgid')?.trim() || null;
         const industries = formData.get('Industries') ? String(formData.get('Industries')).trim() : null;
         const startDt = formData.get('START_DT') || null;
         const endDt = formData.get('END_DT') || null;
 
-        console.log('Basic details before adjustment:', { prjName, prsDesc, accntId, suborgid, industries, startDt, endDt, updatedBy });
+        console.log('Basic details before adjustment:', { prjName, prsDesc, accntId, clientId, suborgid, industries, startDt, endDt, updatedBy });
 
         if (!prjName) {
           console.log('Project name is required');
@@ -130,6 +131,10 @@ export async function updateproject(formData) {
           console.log('Account is required');
           return { error: 'Account is required.' };
         }
+        if (!clientId) {
+          console.log('Client is required');
+          return { error: 'Client is required.' };
+        }
 
         const [accountCheck] = await pool.execute(
           'SELECT ACCNT_ID, suborgid, ourorg FROM C_ACCOUNT WHERE ACCNT_ID = ? AND ORGID = ? AND ACTIVE_FLAG = 1',
@@ -138,6 +143,16 @@ export async function updateproject(formData) {
         if (accountCheck.length === 0) {
           console.log('Invalid or inactive account');
           return { error: 'Invalid or inactive account.' };
+        }
+
+        // Validate client exists and is active
+        const [clientCheck] = await pool.execute(
+          'SELECT ACCNT_ID FROM C_ACCOUNT WHERE ACCNT_ID = ? AND ORGID = ? AND ACTIVE_FLAG = 1',
+          [clientId, orgId]
+        );
+        if (clientCheck.length === 0) {
+          console.log('Invalid or inactive client');
+          return { error: 'Invalid or inactive client.' };
         }
 
         if (!suborgid && accountCheck[0].suborgid) {
@@ -157,14 +172,14 @@ export async function updateproject(formData) {
           console.log('Validated suborg:', suborgCheck[0]);
         }
 
-        console.log('Basic details after adjustment:', { prjName, prsDesc, accntId, suborgid, industries, startDt, endDt, updatedBy });
+        console.log('Basic details after adjustment:', { prjName, prsDesc, accntId, clientId, suborgid, industries, startDt, endDt, updatedBy });
 
         const [result] = await pool.query(
           `UPDATE C_PROJECT 
-           SET PRJ_NAME = ?, PRS_DESC = ?, ACCNT_ID = ?, suborgid = ?, Industries = ?,
+           SET PRJ_NAME = ?, PRS_DESC = ?, ACCNT_ID = ?, CLIENT_ID = ?, suborgid = ?, Industries = ?,
                START_DT = ?, END_DT = ?, Updatedby = ?, last_updated_date = ?
            WHERE PRJ_ID = ? AND ORG_ID = ?`,
-          [prjName, prsDesc, accntId, suborgid, industries, startDt, endDt, updatedBy, new Date(), prjId, orgId]
+          [prjName, prsDesc, accntId, clientId, suborgid, industries, startDt, endDt, updatedBy, new Date(), prjId, orgId]
         );
 
         affectedRows += result.affectedRows;
@@ -175,7 +190,6 @@ export async function updateproject(formData) {
         const otBillRate = formData.get('OT_BILL_RATE') ? parseFloat(formData.get('OT_BILL_RATE')) : null;
         const otBillType = formData.get('OT_BILL_TYPE') ? String(formData.get('OT_BILL_TYPE')).trim() : null;
         const billableFlag = formData.get('BILLABLE_FLAG')?.trim() === '1' ? 1 : 0;
-        const clientId = formData.get('CLIENT_ID')?.trim() || null;
         const payTerm = formData.get('PAY_TERM') ? String(formData.get('PAY_TERM')).trim() : null;
         const invoiceEmail = formData.get('INVOICE_EMAIL')?.trim() || null;
         const invoiceFax = formData.get('INVOICE_FAX')?.trim() || null;
@@ -183,41 +197,8 @@ export async function updateproject(formData) {
 
         console.log('Additional details:', {
           billRate, billType, otBillRate, otBillType, billableFlag,
-          clientId, payTerm, invoiceEmail, invoiceFax, invoicePhone, updatedBy
+          payTerm, invoiceEmail, invoiceFax, invoicePhone, updatedBy
         });
-
-        if (!clientId) {
-          console.log('Client is required');
-          return { error: 'Client is required.' };
-        }
-
-        // Validate client and check ourorg match with account
-        const [clientCheck] = await pool.execute(
-          'SELECT ACCNT_ID, ourorg FROM C_ACCOUNT WHERE ACCNT_ID = ? AND ORGID = ? AND ACTIVE_FLAG = 1',
-          [clientId, orgId]
-        );
-        if (clientCheck.length === 0) {
-          console.log('Invalid or inactive client');
-          return { error: 'Invalid or inactive client.' };
-        }
-
-        // Get the account's ourorg
-        const [projectAccount] = await pool.execute(
-          'SELECT ACCNT_ID FROM C_PROJECT WHERE PRJ_ID = ? AND ORG_ID = ?',
-          [prjId, orgId]
-        );
-        
-        if (projectAccount.length > 0) {
-          const [accountCheck] = await pool.execute(
-            'SELECT ourorg FROM C_ACCOUNT WHERE ACCNT_ID = ? AND ORGID = ? AND ACTIVE_FLAG = 1',
-            [projectAccount[0].ACCNT_ID, orgId]
-          );
-          
-          if (accountCheck.length > 0 && accountCheck[0].ourorg !== clientCheck[0].ourorg) {
-            console.log('Account and Client ownership mismatch');
-            return { error: 'Account and Client must both be either "Our Own" or "Outside Account". Mixed ownership is not allowed.' };
-          }
-        }
 
         if (billType) {
           const [billTypeCheck] = await pool.execute(
@@ -255,13 +236,13 @@ export async function updateproject(formData) {
         const [result] = await pool.query(
           `UPDATE C_PROJECT 
            SET BILL_RATE = ?, BILL_TYPE = ?, OT_BILL_RATE = ?, OT_BILL_TYPE = ?, 
-               BILLABLE_FLAG = ?, CLIENT_ID = ?, 
+               BILLABLE_FLAG = ?, 
                PAY_TERM = ?, INVOICE_EMAIL = ?, INVOICE_FAX = ?, INVOICE_PHONE = ?, 
                Updatedby = ?, last_updated_date = ?
            WHERE PRJ_ID = ? AND ORG_ID = ?`,
           [
             billRate, billType, otBillRate, otBillType, billableFlag,
-            clientId, payTerm, invoiceEmail, invoiceFax, invoicePhone, updatedBy,
+            payTerm, invoiceEmail, invoiceFax, invoicePhone, updatedBy,
             new Date(), prjId, orgId
           ]
         );

@@ -449,17 +449,17 @@ const ConfigHub = () => {
                   {genericValues.map((value, index) => (
                     <tr
                       key={value.id}
-                      draggable={editingId !== value.id && !isAdding}
-                      onDragStart={(e) => handleDragStart(e, index)}
-                      onDragOver={(e) => handleDragOver(e, index)}
+                      draggable={editingId !== value.id && !isAdding && !value.isDefault}
+                      onDragStart={(e) => !value.isDefault && handleDragStart(e, index)}
+                      onDragOver={(e) => !value.isDefault && handleDragOver(e, index)}
                       onDragEnd={handleDragEnd}
                       className={`values-row ${
                         draggedItem === index ? 'dragging' : ''
-                      } ${selectedGenericName?.hasChild && editingId !== value.id ? 'clickable-row' : ''}`}
+                      } ${selectedGenericName?.hasChild && editingId !== value.id ? 'clickable-row' : ''} ${value.isDefault ? 'default-row' : ''}`}
                       onClick={() => editingId !== value.id && !isAdding && handleValueClick(value)}
                     >
                       <td className="values-td drag-handle-cell">
-                        {editingId !== value.id && !isAdding && (
+                        {editingId !== value.id && !isAdding && !value.isDefault && (
                           <span className="drag-handle">⋮⋮</span>
                         )}
                       </td>
@@ -475,6 +475,9 @@ const ConfigHub = () => {
                         ) : (
                           <div className="value-display">
                             <span>{value.Name}</span>
+                            {value.isDefault && (
+                              <span className="default-badge" title="System default - cannot be edited">Default</span>
+                            )}
                             {selectedGenericName?.hasChild && (
                               <span className="value-arrow">›</span>
                             )}
@@ -519,6 +522,8 @@ const ConfigHub = () => {
                               Cancel
                             </button>
                           </div>
+                        ) : value.isDefault ? (
+                          <span className="default-lock" title="System default - cannot be edited">🔒</span>
                         ) : (
                           <button
                             onClick={(e) => {

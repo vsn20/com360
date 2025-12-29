@@ -2,6 +2,7 @@
 
 import DBconnection from "@/app/utils/config/db";
 import { cookies } from "next/headers";
+import nodemailer from 'nodemailer';
 
 const decodeJwt = (token) => {
   try {
@@ -300,12 +301,14 @@ export async function generateInvoices({
                 e.EMP_FST_NAME, e.EMP_LAST_NAME,
                 p.PRJ_ID, p.PRJ_NAME, p.BILL_RATE, p.OT_BILL_RATE,
                 p.ACCNT_ID, a.ALIAS_NAME as account_name, a.ourorg as account_ourorg,
+                a.EMAIL as account_email,
                 a.BUSINESS_ADDR_LINE1 as account_addr,
                 a.BUSINESS_CITY as account_city,
                 a.BUSINESS_POSTAL_CODE as account_zip,
                 p.CLIENT_ID, 
                 ac_client.ALIAS_NAME as client_name, 
                 ac_client.ourorg as client_ourorg,
+                ac_client.EMAIL as client_email,
                 ac_client.BUSINESS_ADDR_LINE1 as client_addr,
                 ac_client.BUSINESS_CITY as client_city,
                 ac_client.BUSINESS_POSTAL_CODE as client_zip
@@ -328,12 +331,14 @@ export async function generateInvoices({
                 e.EMP_FST_NAME, e.EMP_LAST_NAME,
                 p.PRJ_NAME, p.BILL_RATE, p.OT_BILL_RATE,
                 p.ACCNT_ID, a.ALIAS_NAME as account_name, a.ourorg as account_ourorg,
+                a.EMAIL as account_email,
                 a.BUSINESS_ADDR_LINE1 as account_addr,
                 a.BUSINESS_CITY as account_city,
                 a.BUSINESS_POSTAL_CODE as account_zip,
                 p.CLIENT_ID, 
                 ac_client.ALIAS_NAME as client_name,
                 ac_client.ourorg as client_ourorg,
+                ac_client.EMAIL as client_email,
                 ac_client.BUSINESS_ADDR_LINE1 as client_addr,
                 ac_client.BUSINESS_CITY as client_city,
                 ac_client.BUSINESS_POSTAL_CODE as client_zip
@@ -362,11 +367,13 @@ export async function generateInvoices({
         const shouldBillClient = row.account_ourorg === 1 && row.client_ourorg === 0;
         const billingId = shouldBillClient ? row.CLIENT_ID : row.ACCNT_ID;
         const billingName = shouldBillClient ? row.client_name : row.account_name;
+        const billingEmail = shouldBillClient ? row.client_email : row.account_email;
 
         if (!invoiceMap[billingId]) {
           invoiceMap[billingId] = {
             accountId: billingId,
             accountName: billingName,
+            accountEmail: billingEmail || null,
             address: shouldBillClient ? {
               line1: row.client_addr,
               city: row.client_city,
@@ -656,6 +663,7 @@ export async function generateInvoices({
               invoices.push({
                 accountId: account.accountId,
                 accountName: account.accountName,
+                accountEmail: account.accountEmail,
                 employees: [{
                   ...emp,
                   projects: [proj],
@@ -683,6 +691,7 @@ export async function generateInvoices({
             invoices.push({
               accountId: account.accountId,
               accountName: account.accountName,
+              accountEmail: account.accountEmail,
               employees: [emp],
               totalAmount: emp.totalAmount,
               dateRange: account.dateRange,
@@ -704,6 +713,7 @@ export async function generateInvoices({
           invoices.push({
             accountId: account.accountId,
             accountName: account.accountName,
+            accountEmail: account.accountEmail,
             employees: employeesList,
             totalAmount: account.totalAmount,
             dateRange: account.dateRange,
@@ -813,6 +823,122 @@ export async function generateInvoices({
 
   } catch (error) {
     console.error("Invoice generation error:", error);
+    return { error: error.message };
+  }
+}
+
+// Send invoice emails with attachments
+export async function sendInvoiceEmails(invoiceData) {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("jwt_token")?.value;
+  if (!token) return { error: "No token found." };
+
+  const decoded = decodeJwt(token);
+  if (!decoded || !decoded.orgid) return { error: "Invalid token." };
+
+  try {
+    const pool = await DBconnection();
+    const orgid = decoded.orgid;
+
+    // Get organization details for email signature
+    const [orgRows] = await pool.execute(
+      `SELECT suborgname, addresslane1, state, postalcode, country 
+       FROM C_SUB_ORG WHERE orgid = ? AND isstatus = 1 LIMIT 1`,
+      [orgid]
+    );
+    const orgDetails = orgRows[0] || {};
+
+    // Create transporter
+    const transporter = nodemailer.createTransport({
+      host: process.env.GMAIL_HOST,
+      port: 587,
+      secure: false,
+      auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASS,
+      },
+    });
+
+    const results = {
+      sent: [],
+      failed: [],
+      skipped: []
+    };
+
+    // Process each invoice
+    for (const invoice of invoiceData) {
+      const email = invoice.email;
+      const accountName = invoice.accountName;
+
+      if (!email) {
+        results.skipped.push({
+          accountName,
+          reason: 'No email address found'
+        });
+        continue;
+      }
+
+      try {
+        // Invoice attachment (base64 encoded buffer - either excel or zip)
+        const isZip = invoice.filename.endsWith('.zip');
+        const attachments = [{
+          filename: invoice.filename,
+          content: Buffer.from(invoice.buffer, 'base64'),
+          contentType: isZip ? 'application/zip' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        }];
+
+        const mailOptions = {
+          from: process.env.GMAIL_USER,
+          to: email,
+          subject: `Invoice from ${orgDetails.suborgname || 'Our Company'} - ${invoice.period}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #333;">Invoice</h2>
+              <p>Dear ${accountName},</p>
+              <p>Please find attached your invoice for the period <strong>${invoice.period}</strong>.</p>
+              <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                <tr>
+                  <td style="padding: 10px; border: 1px solid #ddd; background: #f9f9f9;"><strong>Account:</strong></td>
+                  <td style="padding: 10px; border: 1px solid #ddd;">${accountName}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px; border: 1px solid #ddd; background: #f9f9f9;"><strong>Period:</strong></td>
+                  <td style="padding: 10px; border: 1px solid #ddd;">${invoice.period}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px; border: 1px solid #ddd; background: #f9f9f9;"><strong>Total Amount:</strong></td>
+                  <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold; color: #10B981;">$${invoice.totalAmount.toFixed(2)}</td>
+                </tr>
+              </table>
+              <p>If you have any questions regarding this invoice, please don't hesitate to contact us.</p>
+              <p style="margin-top: 30px;">Best regards,<br/>${orgDetails.suborgname || 'Our Company'}</p>
+              ${orgDetails.addresslane1 ? `<p style="color: #666; font-size: 12px;">${orgDetails.addresslane1}${orgDetails.state ? ', ' + orgDetails.state : ''} ${orgDetails.postalcode || ''}</p>` : ''}
+            </div>
+          `,
+          attachments
+        };
+
+        await transporter.sendMail(mailOptions);
+        results.sent.push({ accountName, email });
+        console.log(`Invoice email sent successfully to: ${email}`);
+
+      } catch (emailErr) {
+        console.error(`Failed to send email to ${email}:`, emailErr.message);
+        results.failed.push({
+          accountName,
+          email,
+          error: emailErr.message
+        });
+      }
+    }
+
+    return {
+      success: true,
+      results
+    };
+
+  } catch (error) {
+    console.error("Send invoice emails error:", error);
     return { error: error.message };
   }
 }

@@ -242,6 +242,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts,
           prjName: project.PRJ_NAME || '',
           prsDesc: project.PRS_DESC || '',
           accntId: project.ACCNT_ID || '',
+          clientId: project.CLIENT_ID || '',
           startDt: project.START_DT ? formatDate(project.START_DT) : '',
           endDt: project.END_DT ? formatDate(project.END_DT) : '',
           suborgid: project.suborgid || '',
@@ -264,7 +265,6 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts,
           otBillRate: project.OT_BILL_RATE || '',
           otBillType: project.OT_BILL_TYPE || '',
           billableFlag: project.BILLABLE_FLAG ? '1' : '0',
-          clientId: project.CLIENT_ID || '',
           payTerm: project.PAY_TERM || '',
           invoiceEmail: project.INVOICE_EMAIL || '',
           invoiceFax: project.INVOICE_FAX || '',
@@ -286,6 +286,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts,
       formDataToSubmit.append('PRJ_NAME', formData.prjName);
       formDataToSubmit.append('PRS_DESC', formData.prsDesc || '');
       formDataToSubmit.append('ACCNT_ID', formData.accntId);
+      formDataToSubmit.append('CLIENT_ID', formData.clientId || '');
       formDataToSubmit.append('START_DT', formData.startDt || '');
       formDataToSubmit.append('END_DT', formData.endDt || '');
       formDataToSubmit.append('suborgid', formData.suborgid || '');
@@ -296,7 +297,6 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts,
       formDataToSubmit.append('OT_BILL_RATE', formData.otBillRate || '');
       formDataToSubmit.append('OT_BILL_TYPE', formData.otBillType || '');
       formDataToSubmit.append('BILLABLE_FLAG', formData.billableFlag || '0');
-      formDataToSubmit.append('CLIENT_ID', formData.clientId || '');
       formDataToSubmit.append('PAY_TERM', formData.payTerm || '');
       formDataToSubmit.append('INVOICE_EMAIL', formData.invoiceEmail || '');
       formDataToSubmit.append('INVOICE_FAX', formData.invoiceFax || '');
@@ -393,7 +393,6 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts,
   });
 
   const [addform_accounts, addform_setAccounts] = useState([]);
-  const [addform_filteredClients, addform_setFilteredClients] = useState([]);
   const [state, formAction, isPending] = useActionState(addProject, addform_intialstate);
 
   useEffect(() => {
@@ -425,31 +424,15 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts,
           newData.suborgid = selectedAccount.suborgid || '';
           newData.suborgname = selectedAccount.suborgname || '';
           
-          // Filter clients based on the selected account's ourorg value (including the same account)
-          const accountOurorg = selectedAccount.ourorg;
-          const filteredClients = addform_accounts.filter(acc => acc.ourorg === accountOurorg);
-          addform_setFilteredClients(filteredClients);
-          
-          // Reset clientId if it doesn't match the filter
-          if (prev.clientId) {
-            const clientStillValid = filteredClients.some(acc => acc.ACCNT_ID === prev.clientId);
-            if (!clientStillValid) {
-              newData.clientId = '';
-            }
-          }
-          
-          console.log('Add form updated suborg and filtered clients:', { 
+          console.log('Add form updated suborg:', { 
             suborgid: newData.suborgid, 
-            suborgname: newData.suborgname, 
-            accountOurorg,
-            filteredClientsCount: filteredClients.length 
+            suborgname: newData.suborgname
           });
         } else {
           newData.suborgid = '';
           newData.suborgname = '';
           newData.clientId = '';
-          addform_setFilteredClients([]);
-          console.log('Add form no account found, resetting suborg and clients');
+          console.log('Add form no account found, resetting suborg');
         }
       }
       return newData;
@@ -487,7 +470,6 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts,
         suborgname: '',
         industries: ''
       });
-      addform_setFilteredClients([]);
       setaddformsuccess('Project added successfully!');
       setTimeout(() => {
         setaddformsuccess(null);
@@ -668,16 +650,14 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts,
                     value={addformData.clientId}
                     onChange={addform_handleChange}
                     required
-                    disabled={!addformData.accntId || addform_filteredClients.length === 0}
+                    disabled={!addformData.accntId}
                   >
                     <option value="">
                       {!addformData.accntId 
                         ? 'Select Account First' 
-                        : addform_filteredClients.length === 0 
-                          ? 'No Matching Clients Available'
-                          : 'Select Client'}
+                        : 'Select Client'}
                     </option>
-                    {addform_filteredClients.map((account) => (
+                    {addform_accounts.map((account) => (
                       <option key={account.ACCNT_ID} value={account.ACCNT_ID}>
                         {account.ALIAS_NAME}
                       </option>
@@ -760,7 +740,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts,
             <table className="project_table">
               <thead>
                 <tr>
-                  <th className="project_sortable" onClick={() => requestSort('prjId')}>Project ID</th>
+                  {/* <th className="project_sortable" onClick={() => requestSort('prjId')}>Project ID</th> */}
                   <th className="project_sortable" onClick={() => requestSort('prjName')}>Project Name</th>
                   <th className="project_sortable" onClick={() => requestSort('accntId')}>Account</th>
                   <th>Industry</th>
@@ -770,7 +750,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts,
               <tbody>
                 {currentProjects.length > 0 ? currentProjects.map((project) => (
                   <tr key={project.PRJ_ID} onClick={() => handleRowClick(project)} className="project_clickable_row">
-                    <td>{project.PRJ_ID}</td>
+                    {/* <td>{project.PRJ_ID}</td> */}
                     <td>{project.PRJ_NAME}</td>
                     <td>{getAccountName(project.ACCNT_ID)}</td>
                     <td>{getIndustryName(project.Industries)}</td>
@@ -810,6 +790,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts,
                       <div className="project_form_group"><label>Project Name*</label><input type="text" name="prjName" value={formData.prjName} onChange={handleFormChange} required /></div>
                       <div className="project_form_group"><label>Industry</label><select name="industries" value={formData.industries} onChange={handleFormChange}><option value="">Select Industry</option>{industries.map(i => <option key={i.id} value={i.id}>{i.Name}</option>)}</select></div>
                       <div className="project_form_group"><label>Account*</label><select name="accntId" value={formData.accntId} onChange={handleFormChange} required><option value="">Select Account</option>{accounts.map(a => <option key={a.ACCNT_ID} value={a.ACCNT_ID}>{a.ALIAS_NAME}</option>)}</select></div>
+                      <div className="project_form_group"><label>Client*</label><select name="clientId" value={formData.clientId} onChange={handleFormChange} required><option value="">Select Client</option>{accounts.map(a => <option key={a.ACCNT_ID} value={a.ACCNT_ID}>{a.ALIAS_NAME}</option>)}</select></div>
                       <div className="project_form_group"><label>Organization</label><input type="text" value={formData.suborgname || ''} disabled /></div>
                       <div className="project_form_group"><label>Start Date</label><input type="date" name="startDt" value={formData.startDt} onChange={handleFormChange} /></div>
                       <div className="project_form_group"><label>End Date</label><input type="date" name="endDt" value={formData.endDt} onChange={handleFormChange} /></div>
@@ -823,10 +804,11 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts,
                 ) : (
                   <>
                   <div className="project_view_grid">
-                    <div className="project_view_group"><label>Project ID</label><p>{formData.prjId}</p></div>
+                    {/* <div className="project_view_group"><label>Project ID</label><p>{formData.prjId}</p></div> */}
                     <div className="project_view_group"><label>Project Name</label><p>{formData.prjName}</p></div>
                     <div className="project_view_group"><label>Industry</label><p>{getIndustryName(formData.industries)}</p></div>
                     <div className="project_view_group"><label>Account</label><p>{getAccountName(formData.accntId)}</p></div>
+                    <div className="project_view_group"><label>Client</label><p>{getAccountName(formData.clientId)}</p></div>
                     <div className="project_view_group"><label>Organization</label><p>{formData.suborgname || '-'}</p></div>
                     <div className="project_view_group"><label>Start Date</label><p>{formData.startDt || '-'}</p></div>
                     <div className="project_view_group"><label>End Date</label><p>{formData.endDt || '-'}</p></div>
@@ -850,7 +832,6 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts,
                       <div className="project_form_group"><label>OT Bill Rate</label><input type="number" step="0.01" name="otBillRate" value={formData.otBillRate} onChange={handleFormChange} /></div>
                       <div className="project_form_group"><label>OT Bill Type</label><select name="otBillType" value={formData.otBillType} onChange={handleFormChange}><option value="">Select Type</option>{otBillTypes.map(t => <option key={t.id} value={t.id}>{t.Name}</option>)}</select></div>
                       <div className="project_form_group"><label>Billable</label><select name="billableFlag" value={formData.billableFlag} onChange={handleFormChange}><option value="0">No</option><option value="1">Yes</option></select></div>
-                      <div className="project_form_group"><label>Client*</label><select name="clientId" value={formData.clientId} onChange={handleFormChange} required><option value="">Select Client</option>{accounts.map(a => <option key={a.ACCNT_ID} value={a.ACCNT_ID}>{a.ALIAS_NAME}</option>)}</select></div>
                       <div className="project_form_group"><label>Payment Term</label><select name="payTerm" value={formData.payTerm} onChange={handleFormChange}><option value="">Select Term</option>{payTerms.map(t => <option key={t.id} value={t.id}>{t.Name}</option>)}</select></div>
                       <div className="project_form_group"><label>Invoice Email</label><input type="email" name="invoiceEmail" value={formData.invoiceEmail || ''} onChange={handleFormChange} /></div>
                       <div className="project_form_group"><label>Invoice Fax</label><input type="text" name="invoiceFax" value={formData.invoiceFax || ''} onChange={handleFormChange} /></div>
@@ -869,7 +850,6 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts,
                     <div className="project_view_group"><label>OT Bill Rate</label><p>{formData.otBillRate || '-'}</p></div>
                     <div className="project_view_group"><label>OT Bill Type</label><p>{getOtBillTypeName(formData.otBillType)}</p></div>
                     <div className="project_view_group"><label>Billable</label><p>{formData.billableFlag === '1' ? 'Yes' : 'No'}</p></div>
-                    <div className="project_view_group"><label>Client</label><p>{getAccountName(formData.clientId)}</p></div>
                     <div className="project_view_group"><label>Payment Term</label><p>{getPayTermName(formData.payTerm)}</p></div>
                     <div className="project_view_group"><label>Invoice Email</label><p>{formData.invoiceEmail || '-'}</p></div>
                     <div className="project_view_group"><label>Invoice Fax</label><p>{formData.invoiceFax || '-'}</p></div>
