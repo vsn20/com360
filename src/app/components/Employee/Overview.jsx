@@ -6,9 +6,8 @@ import './overview.css';
 import Image from 'next/image'; 
 import AddEmployee from './AddEmployee';
 import EditEmployee from './EditEmployee';
-// 1. Import the secure library
 import readXlsxFile from 'read-excel-file';
-import { importEmployeesBatch } from '@/app/serverActions/addemployee';
+import { importEmployeesBatch } from '@/app/serverActions/Employee/addemployee';
 
 const Overview = ({
   roles,
@@ -132,15 +131,13 @@ const Overview = ({
   const parseDateString = (dateStr) => {
     if (!dateStr) return null;
     
-    // Check if it's already a Date object (read-excel-file sometimes does this automatically)
     if (dateStr instanceof Date) {
         return dateStr.toISOString().split('T')[0];
     }
 
     if (typeof dateStr === 'string') {
-        const parts = dateStr.split('-'); // Split by hyphen
+        const parts = dateStr.split('-'); 
         if (parts.length === 3) {
-            // Assuming MM-DD-YYYY
             const mm = parts[0];
             const dd = parts[1];
             const yyyy = parts[2];
@@ -160,11 +157,9 @@ const Overview = ({
     setImportStatusMsg(null);
 
     try {
-        // Read file using read-excel-file
         const rows = await readXlsxFile(importFile);
         
-        // Remove header row
-        const dataRows = rows.slice(1);
+        const dataRows = rows.slice(1); // Remove header
         
         if (dataRows.length === 0) {
             setImportStatusMsg({ type: 'error', text: 'File appears to be empty.' });
@@ -175,42 +170,59 @@ const Overview = ({
         const formattedEmployees = [];
         const invalidRows = [];
 
-        // Loop through rows
-        // Expecting: FirstName(0), LastName(1), Email(2), Roles(3), HireDate(4), Status(5)
+        // Loop through rows: 
+        // FirstName(0), LastName(1), Email(2), Roles(3), HireDate(4), Status(5)
         for (let i = 0; i < dataRows.length; i++) {
             const row = dataRows[i];
             const firstName = row[0];
             const lastName = row[1];
             const email = row[2];
-            const rolesStr = row[3]; // Comma separated
+            const rolesStr = row[3]; 
             const hireDateRaw = row[4];
             const statusRaw = row[5];
 
             if (!email || !firstName) {
-                invalidRows.push(i + 2); // +2 because 0-index and header row
+                invalidRows.push(i + 2);
                 continue;
             }
 
             // 1. Map Roles
             const roleIds = [];
-            if (rolesStr) {
+            if (rolesStr && roles && Array.isArray(roles)) {
                 const roleNames = rolesStr.toString().split(',').map(r => r.trim().toLowerCase());
                 
-                // Find matching role IDs from the roles prop
                 roles.forEach(dbRole => {
-                    if (roleNames.includes(dbRole.rolename.toLowerCase())) {
+                    if (dbRole.rolename && roleNames.includes(dbRole.rolename.toLowerCase())) {
                         roleIds.push(dbRole.roleid);
                     }
                 });
             }
 
-            // 2. Map Status (Case Insensitive)
-            let finalStatus = 'Active'; // Default fallback
-            if (statusRaw) {
+            // 2. Map Status (Fixed Logic)
+            let finalStatus = 'Active'; 
+            
+            if (statusRaw && statuses && Array.isArray(statuses)) {
                 const inputStatusLower = statusRaw.toString().trim().toLowerCase();
-                const matchedStatus = statuses.find(s => s.toLowerCase() === inputStatusLower);
+                
+                // Find matching status safely (handling Strings and Objects)
+                const matchedStatus = statuses.find(s => {
+                    if (typeof s === 'string') {
+                        return s.toLowerCase() === inputStatusLower;
+                    } 
+                    if (s && typeof s === 'object') {
+                        const name = s.Name || s.name || s.status || '';
+                        return name.toLowerCase() === inputStatusLower;
+                    }
+                    return false;
+                });
+
                 if (matchedStatus) {
-                    finalStatus = matchedStatus;
+                    if (typeof matchedStatus === 'string') {
+                        finalStatus = matchedStatus;
+                    } else if (typeof matchedStatus === 'object') {
+                        // Extract Name if object, fallback to 'Active'
+                        finalStatus = matchedStatus.Name || matchedStatus.name || 'Active';
+                    }
                 }
             }
 
@@ -227,7 +239,6 @@ const Overview = ({
             });
         }
 
-        // Send to Server Action
         const result = await importEmployeesBatch(formattedEmployees);
 
         if (result.error) {
@@ -237,12 +248,11 @@ const Overview = ({
             if (result.skippedCount > 0) {
                 msg += ` Skipped ${result.skippedCount} duplicates.`;
             }
-            if (result.skippedEmails.length > 0) {
-                 msg += ` (Skipped Emails: ${result.skippedEmails.join(', ')})`;
+            if (result.skippedEmails && result.skippedEmails.length > 0) {
+                 msg += ` (Skipped: ${result.skippedEmails.join(', ')})`;
             }
             setImportStatusMsg({ type: 'success', text: msg });
             
-            // Refresh list if successful
             if (result.addedCount > 0) {
                 setTimeout(() => {
                     handleCloseImportModal();
@@ -253,7 +263,7 @@ const Overview = ({
 
     } catch (err) {
         console.error("Import parsing error:", err);
-        setImportStatusMsg({ type: 'error', text: 'Failed to parse Excel file. Check format.' });
+        setImportStatusMsg({ type: 'error', text: 'Failed to parse file. Ensure it is a valid Excel (.xlsx) file.' });
     } finally {
         setImportLoading(false);
     }
