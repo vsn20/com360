@@ -1,10 +1,9 @@
-import DBconnection from '@/app/utils/config/olddb';
+import { getAllExternalJobs, getCandidateApplications } from '@/app/utils/config/jobsdb';
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
 
 export async function GET() {
   try {
-    const pool = await DBconnection();
     const cookieStore = await cookies();
     const token = cookieStore.get('job_jwt_token')?.value;
 
@@ -12,34 +11,47 @@ export async function GET() {
     if (token) {
       try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        // Get all applied jobs for this C_CANDIDATE
-        const [C_APPLICATIONS] = await pool.query(
-          `SELECT jobid FROM C_APPLICATIONS WHERE candidate_id = ?`,
-          [decoded.cid]
-        );
-        appliedJobs = C_APPLICATIONS.map((app) => app.jobid);
+        // Get all applied jobs for this candidate across all databases
+        const applications = await getCandidateApplications(decoded.cid);
+        // Create uniqueId for applied jobs (databaseName_jobid)
+        appliedJobs = applications.map((app) => `${app._databaseName}_${app.jobid}`);
       } catch (jwtError) {
         console.warn('JWT verification failed:', jwtError.message);
       }
     }
 
-    const [orgs] = await pool.query('SELECT orgid, orgname FROM C_ORG');
+    // Get all external jobs from all subscriber databases (cached for 5 minutes)
+    const { jobs, orgs, fromCache, lastUpdated } = await getAllExternalJobs();
 
-    const [jobs] = await pool.query(`
-      SELECT ej.jobid, ej.orgid, ej.lastdate_for_application, ej.active,
-             ej.display_job_name, ej.job_type AS job_type_id, ej.description,
-             ej.countryid, ej.stateid, ej.custom_state_name,
-             o.orgname, c.value AS country_value, s.value AS state_value,
-             g.name AS job_type
-      FROM C_EXTERNAL_JOBS ej
-      JOIN C_ORG o ON ej.orgid = o.orgid
-      LEFT JOIN C_COUNTRY c ON ej.countryid = c.ID
-      LEFT JOIN C_STATE s ON ej.stateid = s.ID
-      LEFT JOIN C_GENERIC_VALUES g ON ej.job_type = g.id
-      WHERE ej.active = 1
-    `);
+    // Add unique identifier and keep database reference for proper job identification
+    const sanitizedJobs = jobs.map(({ _databaseName, ...job }) => ({
+      ...job,
+      // Create unique key combining database and jobid (needed since jobid can repeat across databases)
+      uniqueId: `${_databaseName}_${job.jobid}`,
+      databaseName: _databaseName
+    }));
+    const sanitizedOrgs = orgs.map(({ _databaseName, ...org }) => org);
 
-    return Response.json({ orgs, jobs, appliedJobs });
+    // Deduplicate orgs by orgid (in case same org exists in multiple databases)
+    const uniqueOrgs = [];
+    const seenOrgIds = new Set();
+    for (const org of sanitizedOrgs) {
+      if (!seenOrgIds.has(org.orgid)) {
+        seenOrgIds.add(org.orgid);
+        uniqueOrgs.push(org);
+      }
+    }
+
+    return Response.json({ 
+      orgs: uniqueOrgs, 
+      jobs: sanitizedJobs, 
+      appliedJobs,
+      meta: {
+        fromCache,
+        lastUpdated: lastUpdated ? new Date(lastUpdated).toISOString() : null,
+        totalJobs: sanitizedJobs.length
+      }
+    });
   } catch (error) {
     console.error('Error fetching jobs:', error.message);
     return Response.json({ error: 'Failed to fetch jobs' }, { status: 500 });

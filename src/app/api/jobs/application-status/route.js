@@ -1,9 +1,8 @@
-import DBconnection from '@/app/utils/config/olddb';
+import { getCandidateApplications } from '@/app/utils/config/jobsdb';
 import { verify } from 'jsonwebtoken';
 
 export async function GET(request) {
   try {
-    const pool = await DBconnection();
     const token = request.cookies.get('job_jwt_token')?.value;
 
     console.log('job_jwt_token in application-status:', token ? 'Present' : 'Missing'); // Debug
@@ -28,13 +27,11 @@ export async function GET(request) {
       });
     }
 
-    const [C_APPLICATIONS] = await pool.query(
-      `SELECT jobid FROM C_APPLICATIONS WHERE candidate_id = ?`,
-      [candidate_id]
-    );
+    // Get applications from all databases
+    const applications = await getCandidateApplications(candidate_id);
 
-    console.log('Application Status Query Result:', C_APPLICATIONS); // Debug
-    const appliedJobIds = C_APPLICATIONS.map((app) => app.jobid).filter((id) => id !== undefined);
+    console.log('Application Status Query Result:', applications.length, 'applications found'); // Debug
+    const appliedJobIds = applications.map((app) => app.jobid).filter((id) => id !== undefined);
     
     return new Response(JSON.stringify({ appliedJobIds }), {
       status: 200,

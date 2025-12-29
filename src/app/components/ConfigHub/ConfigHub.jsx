@@ -8,10 +8,16 @@ import {
   updateConfigValue,
   updateDisplayOrder 
 } from '@/app/serverActions/Confighub/Overview';
+import {
+  fetchDepartments,
+  addDepartment,
+  updateDepartment,
+  deleteDepartment
+} from '@/app/serverActions/Confighub/DepartmentActions';
 import './ConfigHub.css';
 
 const ConfigHub = () => {
-  const [view, setView] = useState('menu'); // 'menu', 'category-list', 'values'
+  const [view, setView] = useState('menu'); // 'menu', 'category-list', 'values', 'departments'
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedGenericName, setSelectedGenericName] = useState(null);
   const [breadcrumbs, setBreadcrumbs] = useState([]);
@@ -26,6 +32,13 @@ const ConfigHub = () => {
   const [addForm, setAddForm] = useState({ name: '', isactive: true });
   const [parentValueId, setParentValueId] = useState(null);
   const [navigationStack, setNavigationStack] = useState([]);
+  
+  // Department-specific state
+  const [departments, setDepartments] = useState([]);
+  const [deptEditingId, setDeptEditingId] = useState(null);
+  const [deptEditForm, setDeptEditForm] = useState({ name: '', isactive: true });
+  const [isDeptAdding, setIsDeptAdding] = useState(false);
+  const [deptAddForm, setDeptAddForm] = useState({ name: '', isactive: true });
 
   // UPDATED CATEGORIES LIST
   const categories = [
@@ -44,9 +57,20 @@ const ConfigHub = () => {
     { id: 'orgdocuments', name: 'Organization', dbCategory: 'orgdocuments' }
   ];
 
+  // Jobs submenu items
+  const jobsSubItems = [
+    { id: 'departments', name: 'Departments', type: 'departments' }
+  ];
+
   const handleCategoryClick = async (category) => {
     if (category.id === 'company') {
-      setView('company-blank');
+      setView('company-submenu');
+      setSelectedCategory(category);
+      setBreadcrumbs([{ label: 'Menu', action: () => goToMenu() }, { label: category.name }]);
+      return;
+    }
+    if (category.id === 'jobs') {
+      setView('jobs-submenu');
       setSelectedCategory(category);
       setBreadcrumbs([{ label: 'Menu', action: () => goToMenu() }, { label: category.name }]);
       return;
@@ -195,6 +219,121 @@ const ConfigHub = () => {
       if (previousAction) {
         previousAction();
       }
+    }
+  };
+
+  // Department handlers
+  const handleDepartmentsClick = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const deptList = await fetchDepartments();
+      setDepartments(deptList);
+      setView('departments');
+      setBreadcrumbs([
+        { label: 'Menu', action: () => goToMenu() },
+        { label: 'Jobs', action: () => handleCategoryClick({ id: 'jobs', name: 'Jobs' }) },
+        { label: 'Departments' }
+      ]);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeptEdit = (dept) => {
+    setDeptEditingId(dept.id);
+    setDeptEditForm({ name: dept.name, isactive: dept.isactive === 1 });
+  };
+
+  const handleDeptSave = async () => {
+    if (loading) return;
+    setLoading(true);
+    setError(null);
+
+    const formData = new FormData();
+    formData.append('id', deptEditingId);
+    formData.append('name', deptEditForm.name);
+    formData.append('isactive', deptEditForm.isactive);
+
+    try {
+      const result = await updateDepartment(null, formData);
+      if (result.error) {
+        setError(result.error);
+      } else {
+        // Refresh departments
+        const deptList = await fetchDepartments();
+        setDepartments(deptList);
+        setDeptEditingId(null);
+      }
+    } catch (err) {
+      setError(`Failed to save: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeptCancel = () => {
+    setDeptEditingId(null);
+  };
+
+  const handleDeptAddNew = () => {
+    setIsDeptAdding(true);
+    setDeptAddForm({ name: '', isactive: true });
+  };
+
+  const handleDeptCancelAdd = () => {
+    setIsDeptAdding(false);
+    setDeptAddForm({ name: '', isactive: true });
+  };
+
+  const handleDeptSaveAdd = async () => {
+    if (loading) return;
+    setLoading(true);
+    setError(null);
+
+    const formData = new FormData();
+    formData.append('name', deptAddForm.name);
+    formData.append('isactive', deptAddForm.isactive);
+
+    try {
+      const result = await addDepartment(null, formData);
+      if (result.error) {
+        setError(result.error);
+      } else {
+        // Refresh departments
+        const deptList = await fetchDepartments();
+        setDepartments(deptList);
+        setIsDeptAdding(false);
+        setDeptAddForm({ name: '', isactive: true });
+      }
+    } catch (err) {
+      setError(`Failed to add: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeptDelete = async (deptId) => {
+    if (!confirm('Are you sure you want to deactivate this department?')) return;
+    
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await deleteDepartment(deptId);
+      if (result.error) {
+        setError(result.error);
+      } else {
+        // Refresh departments
+        const deptList = await fetchDepartments();
+        setDepartments(deptList);
+      }
+    } catch (err) {
+      setError(`Failed to delete: ${err.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -382,10 +521,206 @@ const ConfigHub = () => {
           </div>
         )}
 
-        {view === 'company-blank' && (
-          <div className="blank-page">
-            <h2 className="blank-title">Company Configuration</h2>
-            <p className="blank-text">This section is under development.</p>
+        {view === 'company-submenu' && (
+          <div className="list-container">
+            <div className="list-header">
+              <h2 className="list-title">Company</h2>
+              <p className="list-subtitle">Select a configuration type to manage values</p>
+            </div>
+            <div className="list-items">
+              {companySubItems.map(item => (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    if (item.type === 'departments') {
+                      handleDepartmentsClick();
+                    }
+                  }}
+                  className="list-item-button"
+                >
+                  <span className="list-item-text">{item.name}</span>
+                  <span className="list-item-arrow">›</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        
+          {view === 'jobs-submenu' && (
+            <div className="list-container">
+              <div className="list-header">
+                <h2 className="list-title">Jobs</h2>
+                <p className="list-subtitle">Select a configuration type to manage values</p>
+              </div>
+              <div className="list-items">
+                {jobsSubItems.map(item => (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      if (item.type === 'departments') {
+                        handleDepartmentsClick();
+                      }
+                    }}
+                    className="list-item-button"
+                  >
+                    <span className="list-item-text">{item.name}</span>
+                    <span className="list-item-arrow">›</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+        {view === 'departments' && (
+          <div className="values-container">
+            <div className="values-header">
+              <div className="values-header-info">
+                <h2 className="values-title">Departments</h2>
+                <p className="values-count">
+                  {departments.length} department{departments.length !== 1 ? 's' : ''}
+                </p>
+              </div>
+              {!isDeptAdding && (
+                <button
+                  onClick={handleDeptAddNew}
+                  disabled={loading || deptEditingId !== null}
+                  className="add-button"
+                >
+                  <span className="add-icon">+</span>
+                  Add New
+                </button>
+              )}
+            </div>
+
+            <div className="values-table-wrapper">
+              <table className="values-table">
+                <thead>
+                  <tr>
+                    <th className="values-th">Department Name</th>
+                    <th className="values-th status-col">Active</th>
+                    <th className="values-th action-col">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {departments.map((dept) => (
+                    <tr key={dept.id} className="values-row">
+                      <td className="values-td">
+                        {deptEditingId === dept.id ? (
+                          <input
+                            type="text"
+                            value={deptEditForm.name}
+                            onChange={(e) => setDeptEditForm({ ...deptEditForm, name: e.target.value })}
+                            disabled={loading}
+                            className="value-input"
+                          />
+                        ) : (
+                          <span>{dept.name}</span>
+                        )}
+                      </td>
+                      <td className="values-td">
+                        {deptEditingId === dept.id ? (
+                          <select
+                            value={deptEditForm.isactive ? 'true' : 'false'}
+                            onChange={(e) => setDeptEditForm({ ...deptEditForm, isactive: e.target.value === 'true' })}
+                            disabled={loading}
+                            className="active-select"
+                          >
+                            <option value="true">Yes</option>
+                            <option value="false">No</option>
+                          </select>
+                        ) : (
+                          <span className={`status-badge ${dept.isactive === 1 ? 'status-active' : 'status-inactive'}`}>
+                            {dept.isactive === 1 ? 'Yes' : 'No'}
+                          </span>
+                        )}
+                      </td>
+                      <td className="values-td">
+                        {deptEditingId === dept.id ? (
+                          <div className="action-buttons">
+                            <button
+                              onClick={handleDeptSave}
+                              disabled={loading}
+                              className="save-button"
+                            >
+                              {loading ? 'Saving...' : 'Save'}
+                            </button>
+                            <button
+                              onClick={handleDeptCancel}
+                              disabled={loading}
+                              className="cancel-button"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="action-buttons">
+                            <button
+                              onClick={() => handleDeptEdit(dept)}
+                              disabled={loading || isDeptAdding}
+                              className="edit-button"
+                              title="Edit department"
+                            >
+                              ✏️
+                            </button>
+                            <button
+                              onClick={() => handleDeptDelete(dept.id)}
+                              disabled={loading || isDeptAdding}
+                              className="delete-button"
+                              title="Deactivate department"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                  {isDeptAdding && (
+                    <tr className="values-row add-row">
+                      <td className="values-td">
+                        <input
+                          type="text"
+                          value={deptAddForm.name}
+                          onChange={(e) => setDeptAddForm({ ...deptAddForm, name: e.target.value })}
+                          disabled={loading}
+                          placeholder="Enter department name"
+                          className="value-input"
+                        />
+                      </td>
+                      <td className="values-td">
+                        <select
+                          value={deptAddForm.isactive ? 'true' : 'false'}
+                          onChange={(e) => setDeptAddForm({ ...deptAddForm, isactive: e.target.value === 'true' })}
+                          disabled={loading}
+                          className="active-select"
+                        >
+                          <option value="true">Yes</option>
+                          <option value="false">No</option>
+                        </select>
+                      </td>
+                      <td className="values-td">
+                        <div className="action-buttons">
+                          <button
+                            onClick={handleDeptSaveAdd}
+                            disabled={loading || !deptAddForm.name}
+                            className="save-button"
+                          >
+                            {loading ? 'Saving...' : 'Save'}
+                          </button>
+                          <button
+                            onClick={handleDeptCancelAdd}
+                            disabled={loading}
+                            className="cancel-button"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 

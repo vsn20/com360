@@ -1,12 +1,10 @@
-import DBconnection from '@/app/utils/config/olddb';
+import { getAllExternalJobs, getPoolForDatabase } from '@/app/utils/config/jobsdb';
 import { verify } from 'jsonwebtoken';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 
 export async function POST(request) {
   try {
-    const pool = await DBconnection();
-
     // Extract JWT from 'job_jwt_token' cookie using request.cookies
     const token = request.cookies.get('job_jwt_token')?.value;
     console.log('job_jwt_token:', token ? 'Present' : 'Missing'); // Debug log
@@ -27,13 +25,13 @@ export async function POST(request) {
 
     // Parse form data
     const formData = await request.formData();
-    const jobid = formData.get('jobid');
+    const uniqueId = formData.get('jobid'); // This is now uniqueId format: databaseName_jobid
     const resume = formData.get('resume');
     const salary_expected = formData.get('salary_expected');
 
-    console.log('Form data - jobid:', jobid, 'resume:', resume ? 'Present' : 'Missing', 'salary_expected:', salary_expected); // Debug log
+    console.log('Form data - uniqueId:', uniqueId, 'resume:', resume ? 'Present' : 'Missing', 'salary_expected:', salary_expected); // Debug log
 
-    if (!jobid || !resume || !salary_expected) {
+    if (!uniqueId || !resume || !salary_expected) {
       return Response.json({ error: 'Missing jobid, resume, or salary_expected' }, { status: 400 });
     }
 
@@ -41,7 +39,32 @@ export async function POST(request) {
       return Response.json({ error: 'Invalid salary_expected value' }, { status: 400 });
     }
 
-    // Check if the C_CANDIDATE has already applied for this job
+    // Parse uniqueId format: databaseName_jobid
+    const lastUnderscoreIndex = uniqueId.lastIndexOf('_');
+    if (lastUnderscoreIndex === -1) {
+      return Response.json({ error: 'Invalid job identifier format' }, { status: 400 });
+    }
+    const databaseName = uniqueId.substring(0, lastUnderscoreIndex);
+    const jobid = parseInt(uniqueId.substring(lastUnderscoreIndex + 1));
+
+    console.log('Parsed databaseName:', databaseName, 'jobid:', jobid);
+
+    // Find the job in the cache to verify it exists and get orgid
+    const { jobs } = await getAllExternalJobs();
+    const job = jobs.find(j => j._databaseName === databaseName && j.jobid === jobid);
+    
+    if (!job) {
+      return Response.json({ error: 'Job not found or inactive' }, { status: 404 });
+    }
+
+    const { orgid } = job;
+
+    console.log(`Job ${jobid} belongs to database: ${databaseName}, orgid: ${orgid}`);
+
+    // Get pool for the correct database
+    const pool = await getPoolForDatabase(databaseName);
+
+    // Check if the candidate has already applied for this job
     const [existingApplication] = await pool.query(
       `SELECT applicationid FROM C_APPLICATIONS WHERE jobid = ? AND candidate_id = ?`,
       [jobid, candidate_id]
@@ -52,20 +75,7 @@ export async function POST(request) {
       return Response.json({ error: 'You have already applied for this job' }, { status: 400 });
     }
 
-    // Fetch job details to get orgid
-    const [jobDetails] = await pool.query(
-      `SELECT orgid FROM C_EXTERNAL_JOBS WHERE jobid = ? AND active = 1`,
-      [jobid]
-    );
-    console.log('Job details:', jobDetails); // Debug log
-
-    if (jobDetails.length === 0) {
-      return Response.json({ error: 'Job not found or inactive' }, { status: 404 });
-    }
-
-    const { orgid } = jobDetails[0];
-
-    // Generate applicationid as (orgid-no of C_APPLICATIONS+1)
+    // Generate applicationid as (orgid-no of applications+1)
     const [applicationCount] = await pool.query(
       `SELECT COUNT(*) as count FROM C_APPLICATIONS WHERE jobid IN (
         SELECT jobid FROM C_EXTERNAL_JOBS WHERE orgid = ?
@@ -82,17 +92,18 @@ export async function POST(request) {
     );
     console.log('Status g_id:', statusGid); // Debug log
 
-    if (statusGid.length === 0) {
-      return Response.json({ error: 'Application status not found in C_GENERIC_NAMES' }, { status: 500 });
+    let applicationStatus = 'applied'; // Default status
+    if (statusGid.length > 0) {
+      const [statusValue] = await pool.query(
+        `SELECT Name FROM C_GENERIC_VALUES WHERE g_id = ? AND orgid = ? AND isactive = 1 AND cutting = 1`,
+        [statusGid[0].g_id, orgid]
+      );
+      console.log('Status value:', statusValue); // Debug log
+
+      if (statusValue.length > 0) {
+        applicationStatus = statusValue[0].Name;
+      }
     }
-
-    const [statusValue] = await pool.query(
-      `SELECT Name FROM C_GENERIC_VALUES WHERE g_id = ? AND orgid = ? AND isactive = 1 AND cutting = 1`,
-      [statusGid[0].g_id, orgid]
-    );
-    console.log('Status value:', statusValue); // Debug log
-
-    const applicationStatus = statusValue.length > 0 ? statusValue[0].Name : 'applied';
     console.log('Using application status:', applicationStatus); // Debug log
 
     // Ensure the uploads/resumes directory exists
@@ -122,14 +133,16 @@ export async function POST(request) {
       return Response.json({ error: 'Failed to save resume file' }, { status: 500 });
     }
 
-    // Insert application into the database
+    // Insert application into the respective company's database
+    console.log(`Inserting application into database: ${databaseName} for orgid: ${orgid}`);
     await pool.query(
       `INSERT INTO C_APPLICATIONS (applicationid, orgid, jobid, applieddate, status, resumepath, candidate_id, salary_expected)
        VALUES (?, ?, ?, CURDATE(), ?, ?, ?, ?)`,
       [applicationid, orgid, jobid, applicationStatus, resumePath, candidate_id, salary_expected]
     );
 
-    return Response.json({ success: true });
+    console.log(`Application ${applicationid} successfully inserted into ${databaseName}.C_APPLICATIONS`);
+    return Response.json({ success: true, databaseName, applicationid });
   } catch (error) {
     console.error('Error submitting application:', error);
     return Response.json({ error: 'Failed to submit application' }, { status: 500 });

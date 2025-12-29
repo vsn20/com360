@@ -1,13 +1,11 @@
 import { verify } from 'jsonwebtoken';
-import DBconnection from '@/app/utils/config/olddb';
+import { getCandidateApplicationsWithDetails } from '@/app/utils/config/jobsdb';
 import { cookies } from 'next/headers';
 
 export async function GET(request) {
   try {
-    const pool = await DBconnection();
-
     // Extract JWT from 'job_jwt_token' cookie
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const token = cookieStore.get('job_jwt_token')?.value;
     if (!token) {
       return new Response(JSON.stringify({ error: 'Unauthorized: Missing job_jwt_token' }), {
@@ -28,26 +26,10 @@ export async function GET(request) {
       });
     }
 
-    // Fetch C_APPLICATIONS with organization and job details
-    const [C_APPLICATIONS] = await pool.query(`
-      SELECT 
-        a.applicationid,
-        a.orgid,
-        a.jobid,
-        a.applieddate,
-        a.status,
-        a.resumepath,
-        a.candidate_id,
-        a.salary_expected,
-        o.orgname,
-        ej.display_job_name
-      FROM C_APPLICATIONS a
-      JOIN C_ORG o ON a.orgid = o.orgid
-      JOIN C_EXTERNAL_JOBS ej ON a.jobid = ej.jobid
-      WHERE a.candidate_id = ?
-    `, [candidate_id]);
+    // Fetch applications from ALL company databases
+    const C_APPLICATIONS = await getCandidateApplicationsWithDetails(candidate_id);
 
-    console.log('Applications Query Result:', C_APPLICATIONS); // Debug: Log query result
+    console.log('Applications Query Result:', C_APPLICATIONS.length, 'applications found across all databases');
 
     return new Response(JSON.stringify({ C_APPLICATIONS }), {
       status: 200,

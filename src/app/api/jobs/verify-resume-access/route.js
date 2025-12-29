@@ -1,4 +1,4 @@
-import DBconnection from '@/app/utils/config/olddb';
+import { getCandidateApplications } from '@/app/utils/config/jobsdb';
 import { verify } from 'jsonwebtoken';
 
 export async function POST(request) {
@@ -19,26 +19,21 @@ export async function POST(request) {
       return Response.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    // Check database
-    const pool = await DBconnection();
-    const [application] = await pool.query(
-      `SELECT candidate_id, applicationid FROM C_APPLICATIONS WHERE applicationid = ?`,
-      [applicationId]
-    );
+    // Get all applications for this candidate across all databases
+    const applications = await getCandidateApplications(candidate_id);
+    
+    // Find the specific application
+    const application = applications.find(app => app.applicationid === applicationId);
 
-    if (application.length === 0) {
+    if (!application) {
       return Response.json({ error: 'Application not found' }, { status: 404 });
     }
 
-    const dbCandidateId = application[0].candidate_id;
-    if (candidate_id.toString() !== dbCandidateId.toString()) {
-      return Response.json({ error: 'Access denied' }, { status: 403 });
-    }
-
+    // The candidate owns this application (since we searched by candidate_id)
     return Response.json({ success: true, candidate_id, applicationId });
 
   } catch (error) {
-    console.error('Database error while checking application:', error.message);
+    console.error('Error while checking application:', error.message);
     return Response.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

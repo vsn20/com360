@@ -6,6 +6,9 @@ import './overview.css';
 import Image from 'next/image'; 
 import AddEmployee from './AddEmployee';
 import EditEmployee from './EditEmployee';
+// 1. Import the secure library
+import readXlsxFile from 'read-excel-file';
+import { importEmployeesBatch } from '@/app/serverActions/Employee/addemployee';
 
 const Overview = ({
   roles,
@@ -54,6 +57,12 @@ const Overview = ({
   const [error, setError] = useState(initialError);
   const [hasMounted, setHasMounted] = useState(false);
   
+  // --- NEW STATES FOR IMPORT ---
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importFile, setImportFile] = useState(null);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importStatusMsg, setImportStatusMsg] = useState(null);
+
   const router = useRouter();
   const searchparams = useSearchParams();
 
@@ -101,6 +110,156 @@ const Overview = ({
     setError(null);
     setisadd(true);
   };
+
+  // --- IMPORT LOGIC START ---
+
+  const handleOpenImportModal = () => {
+    setIsImportModalOpen(true);
+    setImportFile(null);
+    setImportStatusMsg(null);
+  };
+
+  const handleCloseImportModal = () => {
+    setIsImportModalOpen(false);
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) setImportFile(file);
+  };
+
+  // Helper to parse MM-DD-YYYY to YYYY-MM-DD
+  const parseDateString = (dateStr) => {
+    if (!dateStr) return null;
+    
+    // Check if it's already a Date object (read-excel-file sometimes does this automatically)
+    if (dateStr instanceof Date) {
+        return dateStr.toISOString().split('T')[0];
+    }
+
+    if (typeof dateStr === 'string') {
+        const parts = dateStr.split('-'); // Split by hyphen
+        if (parts.length === 3) {
+            // Assuming MM-DD-YYYY
+            const mm = parts[0];
+            const dd = parts[1];
+            const yyyy = parts[2];
+            return `${yyyy}-${mm}-${dd}`;
+        }
+    }
+    return null;
+  };
+
+  const processImport = async () => {
+    if (!importFile) {
+        setImportStatusMsg({ type: 'error', text: 'Please select a file first.' });
+        return;
+    }
+
+    setImportLoading(true);
+    setImportStatusMsg(null);
+
+    try {
+        // Read file using read-excel-file
+        const rows = await readXlsxFile(importFile);
+        
+        // Remove header row
+        const dataRows = rows.slice(1);
+        
+        if (dataRows.length === 0) {
+            setImportStatusMsg({ type: 'error', text: 'File appears to be empty.' });
+            setImportLoading(false);
+            return;
+        }
+
+        const formattedEmployees = [];
+        const invalidRows = [];
+
+        // Loop through rows
+        // Expecting: FirstName(0), LastName(1), Email(2), Roles(3), HireDate(4), Status(5)
+        for (let i = 0; i < dataRows.length; i++) {
+            const row = dataRows[i];
+            const firstName = row[0];
+            const lastName = row[1];
+            const email = row[2];
+            const rolesStr = row[3]; // Comma separated
+            const hireDateRaw = row[4];
+            const statusRaw = row[5];
+
+            if (!email || !firstName) {
+                invalidRows.push(i + 2); // +2 because 0-index and header row
+                continue;
+            }
+
+            // 1. Map Roles
+            const roleIds = [];
+            if (rolesStr) {
+                const roleNames = rolesStr.toString().split(',').map(r => r.trim().toLowerCase());
+                
+                // Find matching role IDs from the roles prop
+                roles.forEach(dbRole => {
+                    if (roleNames.includes(dbRole.rolename.toLowerCase())) {
+                        roleIds.push(dbRole.roleid);
+                    }
+                });
+            }
+
+            // 2. Map Status (Case Insensitive)
+            let finalStatus = 'Active'; // Default fallback
+            if (statusRaw) {
+                const inputStatusLower = statusRaw.toString().trim().toLowerCase();
+                const matchedStatus = statuses.find(s => s.toLowerCase() === inputStatusLower);
+                if (matchedStatus) {
+                    finalStatus = matchedStatus;
+                }
+            }
+
+            // 3. Format Date
+            const formattedHireDate = parseDateString(hireDateRaw);
+
+            formattedEmployees.push({
+                firstName,
+                lastName,
+                email,
+                roleIds,
+                hireDate: formattedHireDate,
+                status: finalStatus
+            });
+        }
+
+        // Send to Server Action
+        const result = await importEmployeesBatch(formattedEmployees);
+
+        if (result.error) {
+            setImportStatusMsg({ type: 'error', text: result.error });
+        } else {
+            let msg = `Successfully added ${result.addedCount} employees.`;
+            if (result.skippedCount > 0) {
+                msg += ` Skipped ${result.skippedCount} duplicates.`;
+            }
+            if (result.skippedEmails.length > 0) {
+                 msg += ` (Skipped Emails: ${result.skippedEmails.join(', ')})`;
+            }
+            setImportStatusMsg({ type: 'success', text: msg });
+            
+            // Refresh list if successful
+            if (result.addedCount > 0) {
+                setTimeout(() => {
+                    handleCloseImportModal();
+                    router.refresh();
+                }, 3000);
+            }
+        }
+
+    } catch (err) {
+        console.error("Import parsing error:", err);
+        setImportStatusMsg({ type: 'error', text: 'Failed to parse Excel file. Check format.' });
+    } finally {
+        setImportLoading(false);
+    }
+  };
+
+  // --- IMPORT LOGIC END ---
 
   const sortEmployees = (a, b, column, direction) => {
     let aValue, bValue;
@@ -252,7 +411,6 @@ const Overview = ({
             immigrationStatuses={immigrationStatuses}
             immigrationDocTypes={immigrationDocTypes}
             immigrationDocSubtypes={immigrationDocSubtypes}
-            // Pass New Props
             paf_document_types={paf_document_types}
             paf_document_subtypes={paf_document_subtypes}
             paf_document_statuses={paf_document_statuses}
@@ -269,7 +427,17 @@ const Overview = ({
         <div className="roles-list">
           <div className="header-section">
             <h2 className="title">Employees</h2>
-            <button className="button save" onClick={handleaddemployee}>Add Employee</button>
+            <div className="header-buttons">
+                {/* IMPORT BUTTON */}
+                <button 
+                  className="button import-btn" 
+                  onClick={handleOpenImportModal}
+                  style={{marginRight: '10px', backgroundColor: '#6c757d', color: 'white'}}
+                >
+                  Import Employee File
+                </button>
+                <button className="button save" onClick={handleaddemployee}>Add Employee</button>
+            </div>
           </div>
           
           <div className="search-filter-container">
@@ -412,6 +580,58 @@ const Overview = ({
 
         </div>
       )}
+
+      {/* --- IMPORT MODAL --- */}
+      {isImportModalOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content import-modal">
+             <div className="modal-header">
+                <h3>Import Employees</h3>
+                <button className="close-btn" onClick={handleCloseImportModal}>&times;</button>
+             </div>
+             
+             <div className="modal-body">
+                <div className="info-box">
+                    <p><strong>Required Format (.xlsx):</strong></p>
+                    <p>Row 1: Headers (First Name, Last Name, Email, Roles, Hire Date, Status)</p>
+                    <p>Row 2+: Data</p>
+                    <ul style={{fontSize:'12px', marginTop:'5px', paddingLeft:'20px'}}>
+                        <li><strong>Roles:</strong> Comma separated (e.g. "Admin, User")</li>
+                        <li><strong>Hire Date:</strong> Format MM-DD-YYYY</li>
+                        <li><strong>Status:</strong> e.g. "Active" or "Inactive"</li>
+                    </ul>
+                </div>
+
+                <div className="file-input-container">
+                    <input 
+                        type="file" 
+                        accept=".xlsx, .xls"
+                        onChange={handleFileChange} 
+                        className="file-input"
+                    />
+                </div>
+
+                {importStatusMsg && (
+                    <div className={`status-message ${importStatusMsg.type}`}>
+                        {importStatusMsg.text}
+                    </div>
+                )}
+             </div>
+
+             <div className="modal-footer">
+                <button className="button cancel" onClick={handleCloseImportModal}>Cancel</button>
+                <button 
+                    className="button save" 
+                    onClick={processImport}
+                    disabled={importLoading || !importFile}
+                >
+                    {importLoading ? 'Importing...' : 'Submit Import'}
+                </button>
+             </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

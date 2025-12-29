@@ -139,8 +139,8 @@ const JobsPage = () => {
               )
               .map((job) => (
                 <div
-                  key={job.jobid}
-                  className={`${styles.jobCard} ${selectedJob?.jobid === job.jobid ? styles.selected : ''}`}
+                  key={job.uniqueId}
+                  className={`${styles.jobCard} ${selectedJob?.uniqueId === job.uniqueId ? styles.selected : ''}`}
                   onClick={() => setSelectedJob(job)}
                 >
                   <div className={styles.jobTitle}><Briefcase size={16} /> {job.display_job_name}</div>
@@ -156,10 +156,10 @@ const JobsPage = () => {
                     </span>
                   </div>
                   <div className={styles.jobDate}><Calendar size={14} /> Apply by: {job.lastdate_for_application}</div>
-                  {hasApplied(job.jobid) ? (
+                  {hasApplied(job.uniqueId) ? (
                     <div className={styles.alreadyApplied}>Already Applied</div>
                   ) : (
-                    <Link href={`/jobs/apply/${job.jobid}`}>
+                    <Link href={`/jobs/apply/${job.uniqueId}`}>
                       <button className={styles.applyInline}>Apply Now</button>
                     </Link>
                   )}
