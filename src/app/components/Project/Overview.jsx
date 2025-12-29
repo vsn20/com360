@@ -324,9 +324,9 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts,
           endDt: updatedProject.END_DT ? formatDate(updatedProject.END_DT) : '',
           clientId: updatedProject.CLIENT_ID,
           payTerm: updatedProject.PAY_TERM,
-          invoiceEmail: updatedProject.INVOICE_EMAIL,
-          invoiceFax: updatedProject.INVOICE_FAX,
-          invoicePhone: updatedProject.INVOICE_PHONE,
+          invoiceEmail: updatedProject.INVOICE_EMAIL || '',
+          invoiceFax: updatedProject.INVOICE_FAX || '',
+          invoicePhone: updatedProject.INVOICE_PHONE || '',
           suborgid: updatedProject.suborgid,
           suborgname: updatedProject.suborgname,
           industries: updatedProject.Industries
@@ -816,8 +816,8 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts,
                       <div className="project_form_group"><label>Description</label><input type="text" name="prsDesc" value={formData.prsDesc} onChange={handleFormChange} /></div>
                     </div>
                     <div className="project_form_buttons">
-                      <button type="submit" className="project_submit_button" disabled={isLoading}>Save</button>
-                      <button type="button" className="project_cancel_button" onClick={handleCancelBasic}>Cancel</button>
+                      <button type="submit" className="project_submit_button" disabled={isLoading}>{isLoading ? 'Saving...' : 'Save'}</button>
+                      <button type="button" className="project_cancel_button" onClick={handleCancelBasic} disabled={isLoading}>Cancel</button>
                     </div>
                   </form>
                 ) : (
@@ -852,13 +852,13 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts,
                       <div className="project_form_group"><label>Billable</label><select name="billableFlag" value={formData.billableFlag} onChange={handleFormChange}><option value="0">No</option><option value="1">Yes</option></select></div>
                       <div className="project_form_group"><label>Client*</label><select name="clientId" value={formData.clientId} onChange={handleFormChange} required><option value="">Select Client</option>{accounts.map(a => <option key={a.ACCNT_ID} value={a.ACCNT_ID}>{a.ALIAS_NAME}</option>)}</select></div>
                       <div className="project_form_group"><label>Payment Term</label><select name="payTerm" value={formData.payTerm} onChange={handleFormChange}><option value="">Select Term</option>{payTerms.map(t => <option key={t.id} value={t.id}>{t.Name}</option>)}</select></div>
-                      <div className="project_form_group"><label>Invoice Email</label><input type="email" name="invoiceEmail" value={formData.invoiceEmail} onChange={handleFormChange} /></div>
-                      <div className="project_form_group"><label>Invoice Fax</label><input type="text" name="invoiceFax" value={formData.invoiceFax} onChange={handleFormChange} /></div>
-                      <div className="project_form_group"><label>Invoice Phone</label><input type="text" name="invoicePhone" value={formData.invoicePhone} onChange={handleFormChange} /></div>
+                      <div className="project_form_group"><label>Invoice Email</label><input type="email" name="invoiceEmail" value={formData.invoiceEmail || ''} onChange={handleFormChange} /></div>
+                      <div className="project_form_group"><label>Invoice Fax</label><input type="text" name="invoiceFax" value={formData.invoiceFax || ''} onChange={handleFormChange} /></div>
+                      <div className="project_form_group"><label>Invoice Phone</label><input type="text" name="invoicePhone" value={formData.invoicePhone || ''} onChange={handleFormChange} /></div>
                     </div>
                     <div className="project_form_buttons">
-                      <button type="submit" className="project_submit_button" disabled={isLoading}>Save</button>
-                      <button type="button" className="project_cancel_button" onClick={handleCancelAdditional}>Cancel</button>
+                      <button type="submit" className="project_submit_button" disabled={isLoading}>{isLoading ? 'Saving...' : 'Save'}</button>
+                      <button type="button" className="project_cancel_button" onClick={handleCancelAdditional} disabled={isLoading}>Cancel</button>
                     </div>
                   </form>
                 ) : (

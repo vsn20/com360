@@ -263,6 +263,7 @@ const Overview = ({
             permissionLevel={permissionLevel}
             onBack={handleBackClick}
             org_name={org_name}
+            vendors={vendors}
         />
       ) : (
         <div className="roles-list">

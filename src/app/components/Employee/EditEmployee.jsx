@@ -68,11 +68,13 @@ const EditEmployee = ({
   loggedInEmpId,      
   permissionLevel,
   onBack,
-  org_name
+  org_name,
+  vendors
 }) => {
   const [employeeDetails, setEmployeeDetails] = useState(null);
   const [leaveAssignments, setLeaveAssignments] = useState({});
   const [selectedRoles, setSelectedRoles] = useState([]);
+  const [showVendorField, setShowVendorField] = useState(false);
   const [activeTab, setActiveTab] = useState('personal');
   const [selecteddocument,setselecteddocument]=useState(null);
   
@@ -125,6 +127,7 @@ const EditEmployee = ({
     suborgid: '',
     employee_number: '',
     employment_type: '',
+    vendor_id: '',
     workAddrLine1: '',
     workAddrLine2: '',
     workAddrLine3: '',
@@ -202,6 +205,7 @@ const EditEmployee = ({
     setImmigrationData([]); 
     setExperienceData([]); 
     setEducationData([]); 
+    setShowVendorField(false);
     
     setImgSrc(`/uploads/profile_photos/${selectedEmpId}.png?${new Date().getTime()}`);
     setSignatureSrc(`/uploads/signatures/${selectedEmpId}.jpg?${new Date().getTime()}`);
@@ -294,7 +298,12 @@ const EditEmployee = ({
             emergCnctStateNameCustom: employee.EMERG_CNCT_STATE_NAME_CUSTOM || '',
             emergCnctCountryId: employee.EMERG_CNCT_COUNTRY_ID ? String(employee.EMERG_CNCT_COUNTRY_ID) : '185',
             emergCnctPostalCode: employee.EMERG_CNCT_POSTAL_CODE || '',
+            vendor_id: employee.vendor_id ? String(employee.vendor_id) : '',
           });
+        
+        // Set showVendorField based on employment_type (12 = Contract, 13 = 1099)
+        const empType = employee.employment_type ? String(employee.employment_type) : '';
+        setShowVendorField(empType === '12' || empType === '13');
         
         setFormLeaves(leaveData);
         setError(null);
@@ -758,6 +767,12 @@ function onImageLoad(e) {
      formDataToSubmit.append('workCompClass', formData.workCompClass || '');
      formDataToSubmit.append('suborgid', formData.suborgid || '');
      formDataToSubmit.append('employment_type', formData.employment_type || '');
+     // Include vendor_id - if showVendorField is true, use the value, otherwise send empty
+     if (showVendorField && formData.vendor_id) {
+       formDataToSubmit.append('vendor_id', formData.vendor_id);
+     } else {
+       formDataToSubmit.append('vendor_id', '');
+     }
   } else if (section === 'leaves') {
     Object.entries(formLeaves).forEach(([leaveid, noofleaves]) => {
       if (noofleaves !== '' && noofleaves !== null && noofleaves !== undefined) {
@@ -854,6 +869,24 @@ function onImageLoad(e) {
 
   const handleFormChange = (e) => {
     const { name, value, type, checked } = e.target;
+    
+    // Handle employment_type change to show/hide vendor field
+    if (name === 'employment_type') {
+      const selectedTypeId = value;
+      if (selectedTypeId === '12' || selectedTypeId === '13') {
+        setShowVendorField(true);
+      } else {
+        setShowVendorField(false);
+        // Clear vendor_id when employment type is not contract/1099
+        setFormData(prev => ({
+          ...prev,
+          employment_type: value,
+          vendor_id: ''
+        }));
+        return;
+      }
+    }
+    
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
@@ -899,7 +932,11 @@ function onImageLoad(e) {
       workCompClass: employeeDetails.WORK_COMP_CLASS || '',
       suborgid: employeeDetails.suborgid || '',
       employment_type: employeeDetails.employment_type || '',
+      vendor_id: employeeDetails.vendor_id ? String(employeeDetails.vendor_id) : '',
     }));
+    // Reset showVendorField based on original employment_type
+    const empType = employeeDetails.employment_type ? String(employeeDetails.employment_type) : '';
+    setShowVendorField(empType === '12' || empType === '13');
     setSelectedRoles(employeeDetails.roleids || []);
   };
 
@@ -1211,6 +1248,8 @@ function onImageLoad(e) {
                  canEdit={canEdit('employment')}
                  helpers={helpers}
                  isSaving={isSaving && savingSection === 'employment'}
+                 vendors={vendors}
+                 showVendorField={showVendorField}
                />
                           
                <LeaveAssignments 

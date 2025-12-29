@@ -365,10 +365,11 @@ export async function updateEmployee(prevState, formData) {
       const workCompClass = formData.get('workCompClass') || null;
       const suborgid = formData.get('suborgid') || null;
       const employment_type = formData.get('employment_type') || null;
+      const vendor_id = formData.get('vendor_id') || null;
 
       console.log('Employment details:', {
         roleids, hireDate, lastWorkDate, terminatedDate, rejoinDate, superior,
-        status, jobTitle, payFrequency, deptId, deptName, workCompClass,
+        status, jobTitle, payFrequency, deptId, deptName, workCompClass, vendor_id,
       });
 
       if (roleids.length === 0) {
@@ -486,6 +487,24 @@ export async function updateEmployee(prevState, formData) {
         }
       }
 
+      // Validate vendor_id if employment type is 12 (Contract) or 13 (1099)
+      let finalVendorId = null;
+      if (employment_type && (employment_type === '12' || employment_type === '13')) {
+        if (!vendor_id || vendor_id.trim() === '') {
+          return { error: 'Vendor selection is required for this employment type.' };
+        }
+        // Validate vendor exists and is active
+        const [vendorCheck] = await pool.execute(
+          'SELECT ACCNT_ID FROM C_ACCOUNT WHERE ACCNT_ID = ? AND ACTIVE_FLAG = 1',
+          [vendor_id]
+        );
+        if (vendorCheck.length === 0) {
+          console.log('Invalid vendor selected');
+          return { error: 'Selected vendor does not exist or is inactive.' };
+        }
+        finalVendorId = vendor_id;
+      }
+
       // Update C_EMP with the first roleid (for backward compatibility with existing schema)
       const primaryRoleId = roleids[0] || null;
       const [result] = await pool.query(
@@ -503,13 +522,14 @@ export async function updateEmployee(prevState, formData) {
            WORK_COMP_CLASS = ?,
            suborgid = ?, 
            employment_type = ?, 
+           vendor_id = ?,
            LAST_UPDATED_DATE = CURRENT_TIMESTAMP, 
            LAST_UPDATED_BY = ? 
          WHERE empid = ? AND orgid = ?`,
         [
            hireDate, lastWorkDate, terminatedDate, rejoinDate, superior,
-          status, jobTitle, payFrequency, deptId, finalDeptName, workCompClass,suborgid,
-          employment_type,
+          status, jobTitle, payFrequency, deptId, finalDeptName, workCompClass, suborgid,
+          employment_type, finalVendorId,
           'system', empid, orgid,
         ]
       );
@@ -1022,7 +1042,7 @@ export async function fetchEmployeeById(empid) {
           roleid, GENDER, MOBILE_NUMBER, PHONE_NUMBER, DOB, HIRE, LAST_WORK_DATE, 
           TERMINATED_DATE, REJOIN_DATE, CREATED_BY, LAST_UPDATED_BY, superior, 
           STATUS, JOB_TITLE, PAY_FREQUENCY, DEPT_ID, DEPT_NAME, WORK_COMP_CLASS, 
-          SSN, LINKEDIN_URL, employee_number, employment_type,
+          SSN, LINKEDIN_URL, employee_number, employment_type, vendor_id,
           WORK_ADDR_LINE1, WORK_ADDR_LINE2, WORK_ADDR_LINE3, WORK_CITY, WORK_STATE_ID,
           WORK_STATE_NAME_CUSTOM, WORK_COUNTRY_ID, WORK_POSTAL_CODE,
           HOME_ADDR_LINE1, HOME_ADDR_LINE2, HOME_ADDR_LINE3, HOME_CITY, HOME_STATE_ID,

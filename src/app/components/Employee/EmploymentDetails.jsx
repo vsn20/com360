@@ -38,7 +38,9 @@ const EmploymentDetails = ({
   employmentTypes,
   canEdit,
   helpers,
-  isSaving
+  isSaving,
+  vendors,
+  showVendorField
 }) => {
   const { 
     getRoleNames, 
@@ -50,6 +52,13 @@ const EmploymentDetails = ({
     getSuperiorName, 
     getSuborgName 
   } = helpers;
+  
+  // Helper function to get vendor name
+  const getVendorName = (vendorId) => {
+    if (!vendorId || !vendors) return '-';
+    const vendor = vendors.find(v => String(v.ACCNT_ID) === String(vendorId));
+    return vendor ? (vendor.ALIAS_NAME || vendor.EMAIL || vendor.ACCNT_ID) : '-';
+  };
 
   return (
     <div className="role-details-block96">
@@ -226,6 +235,33 @@ const EmploymentDetails = ({
             </div>
           </div>
 
+          {/* Vendor Selection - Shows only when employment type is Contract (12) or 1099 (13) */}
+          {showVendorField && (
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="vendor_id">Vendor: {showVendorField ? '*' : ''}</label>
+                <select
+                  id="vendor_id"
+                  name="vendor_id"
+                  value={formData.vendor_id}
+                  onChange={handleFormChange}
+                  required={showVendorField}
+                >
+                  <option value="">Select Vendor</option>
+                  {vendors && vendors.length > 0 ? (
+                    vendors.map((vendor) => (
+                      <option key={vendor.ACCNT_ID} value={vendor.ACCNT_ID}>
+                        {vendor.ALIAS_NAME || vendor.EMAIL || vendor.ACCNT_ID}
+                      </option>
+                    ))
+                  ) : (
+                    <option disabled>No vendors available</option>
+                  )}
+                </select>
+              </div>
+            </div>
+          )}
+
           <div className="form-buttons">
             {isSaving && <p style={{ color: '#007bff', marginBottom: '10px' }}>Saving changes, please wait...</p>}
             <button type="submit" className="save" disabled={isSaving}>
@@ -302,6 +338,13 @@ const EmploymentDetails = ({
               <label>Employment Type</label>
               <p>{employmentTypes.find(t => t.id == employeeDetails.employment_type)?.Name || '-'}</p>
             </div>
+            {(employeeDetails.employment_type === 12 || employeeDetails.employment_type === 13 || 
+              employeeDetails.employment_type === '12' || employeeDetails.employment_type === '13') && (
+              <div className="details-g">
+                <label>Vendor</label>
+                <p>{getVendorName(employeeDetails.vendor_id)}</p>
+              </div>
+            )}
           </div>
 
           {canEdit && (
