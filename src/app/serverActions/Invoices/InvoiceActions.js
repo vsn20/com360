@@ -48,7 +48,6 @@ const calculateDailyRevenue = (dailyHours, threshold, billRate, otBillRate) => {
   };
 };
 
-// Date Helpers
 const getDateForDay = (weekStart, dayIndex) => {
   const date = new Date(weekStart);
   date.setDate(date.getDate() + dayIndex);
@@ -57,11 +56,7 @@ const getDateForDay = (weekStart, dayIndex) => {
 
 const isDateInRange = (date, start, end) => date >= start && date <= end;
 
-// Format YYYY-MM-DD to MM/DD/YYYY for internal storage if needed, 
-// but usually we keep YYYY-MM-DD for logic and format on client. 
-// We will return ISO strings and let client format to MM/DD/YYYY.
-
-// Fetch employees for filter dropdown (Receivable - All employees)
+// Fetch all employees for receivable filter
 export async function fetchEmployeesForInvoice() {
   const token = cookies().get("jwt_token")?.value;
   if (!token) return { error: "No token found." };
@@ -91,7 +86,7 @@ export async function fetchEmployeesForInvoice() {
   }
 }
 
-// Fetch employees for filter dropdown (Payable - Contract employees only)
+// Fetch employees for payable filter (all employees who work on eligible projects)
 export async function fetchContractEmployeesForInvoice() {
   const token = cookies().get("jwt_token")?.value;
   if (!token) return { error: "No token found." };
@@ -103,30 +98,21 @@ export async function fetchContractEmployeesForInvoice() {
     const pool = await DBconnection();
     const orgid = decoded.orgid;
 
-    // First, get the Contract type ID from C_GENERIC_VALUES (g_id = 27 for employment types)
-    // Check for org-specific or global (orgid = -1) Contract type
-    const [contractTypeRows] = await pool.execute(
-      `SELECT id FROM C_GENERIC_VALUES 
-       WHERE g_id = 27 AND Name = 'Contract' AND isactive = 1 AND (orgid = ? OR orgid = -1)
-       ORDER BY orgid DESC LIMIT 1`,
-      [orgid]
-    );
+    const NET90_PAY_TERM_ID = 13;
+    const CONTRACT_TYPE_ID = 12;
 
-    if (contractTypeRows.length === 0) {
-      // If no Contract type found, return empty array
-      console.log("No Contract employment type found for org:", orgid);
-      return { employees: [] };
-    }
-
-    const contractTypeId = contractTypeRows[0].id;
-    console.log("Contract type ID found:", contractTypeId);
-
+    // Get all employees who either:
+    // 1. Work on Net90 projects (any employment type)
+    // 2. Are contract employees (on any project)
     const [employees] = await pool.execute(
-      `SELECT empid, EMP_FST_NAME, EMP_LAST_NAME
-       FROM C_EMP 
-       WHERE orgid = ? AND employment_type = ?
-       ORDER BY EMP_FST_NAME, EMP_LAST_NAME`,
-      [orgid, contractTypeId]
+      `SELECT DISTINCT e.empid, e.EMP_FST_NAME, e.EMP_LAST_NAME
+       FROM C_EMP e
+       JOIN C_PROJ_EMP pe ON e.empid = pe.EMP_ID
+       JOIN C_PROJECT p ON pe.PRJ_ID = p.PRJ_ID
+       WHERE e.orgid = ?
+       AND (p.PAY_TERM = ? OR e.employment_type = ?)
+       ORDER BY e.EMP_FST_NAME, e.EMP_LAST_NAME`,
+      [orgid, NET90_PAY_TERM_ID, CONTRACT_TYPE_ID]
     );
 
     return { employees: employees.map(emp => ({
@@ -134,7 +120,66 @@ export async function fetchContractEmployeesForInvoice() {
       name: `${emp.EMP_FST_NAME || ""} ${emp.EMP_LAST_NAME || ""}`.trim() || `Employee ${emp.empid}`
     }))};
   } catch (error) {
-    console.error("Error fetching contract employees:", error);
+    console.error("Error fetching payable employees:", error);
+    return { error: error.message };
+  }
+}
+
+// Fetch accounts that have payable projects (Net90 or has contract employees)
+export async function fetchAccountsForPayable() {
+  const token = cookies().get("jwt_token")?.value;
+  if (!token) return { error: "No token found." };
+
+  const decoded = decodeJwt(token);
+  if (!decoded || !decoded.orgid) return { error: "Invalid token." };
+
+  try {
+    const pool = await DBconnection();
+    const orgid = decoded.orgid;
+
+    // Find the actual Net90 pay term ID
+    const [net90Rows] = await pool.execute(
+      `SELECT id FROM C_GENERIC_VALUES 
+       WHERE g_id = 27 AND (Name LIKE '%Net%90%' OR Name LIKE '%net%90%' OR Name = 'Net 90' OR id = 13)
+       AND isactive = 1 AND (orgid = ? OR orgid = -1)
+       ORDER BY orgid DESC LIMIT 1`,
+      [orgid]
+    );
+
+    // Find the actual Contract employment type ID
+    const [contractRows] = await pool.execute(
+      `SELECT id FROM C_GENERIC_VALUES 
+       WHERE g_id = 27 AND (Name = 'Contract' OR id = 12)
+       AND isactive = 1 AND (orgid = ? OR orgid = -1)
+       ORDER BY orgid DESC LIMIT 1`,
+      [orgid]
+    );
+
+    const NET90_PAY_TERM_ID = net90Rows.length > 0 ? net90Rows[0].id : 13;
+    const CONTRACT_TYPE_ID = contractRows.length > 0 ? contractRows[0].id : 12;
+
+    console.log('DEBUG - Net90 ID:', NET90_PAY_TERM_ID, 'Contract ID:', CONTRACT_TYPE_ID);
+
+    const [accounts] = await pool.execute(
+      `SELECT DISTINCT a.ACCNT_ID, a.ALIAS_NAME
+       FROM C_ACCOUNT a
+       JOIN C_PROJECT p ON a.ACCNT_ID = p.ACCNT_ID
+       LEFT JOIN C_PROJ_EMP pe ON p.PRJ_ID = pe.PRJ_ID
+       LEFT JOIN C_EMP e ON pe.EMP_ID = e.empid
+       WHERE a.ORGID = ?
+       AND (p.PAY_TERM = ? OR e.employment_type = ?)
+       ORDER BY a.ALIAS_NAME`,
+      [orgid, NET90_PAY_TERM_ID, CONTRACT_TYPE_ID]
+    );
+
+    console.log('DEBUG - Found accounts:', accounts.length);
+
+    return { accounts: accounts.map(acc => ({
+      id: acc.ACCNT_ID,
+      name: acc.ALIAS_NAME || `Account ${acc.ACCNT_ID}`
+    }))};
+  } catch (error) {
+    console.error("Error fetching accounts:", error);
     return { error: error.message };
   }
 }
@@ -171,40 +216,9 @@ export async function fetchProjectsForInvoice() {
   }
 }
 
-// Fetch clients for filter dropdown (COMMENTED - replaced by project filter)
-// export async function fetchClientsForInvoice() {
-//   const token = cookies().get("jwt_token")?.value;
-//   if (!token) return { error: "No token found." };
-
-//   const decoded = decodeJwt(token);
-//   if (!decoded || !decoded.orgid) return { error: "Invalid token." };
-
-//   try {
-//     const pool = await DBconnection();
-//     const orgid = decoded.orgid;
-
-//     const [clients] = await pool.execute(
-//       `SELECT DISTINCT a.ACCNT_ID, a.ALIAS_NAME
-//        FROM C_ACCOUNT a
-//        JOIN C_PROJECT p ON p.CLIENT_ID = a.ACCNT_ID OR p.ACCNT_ID = a.ACCNT_ID
-//        WHERE p.ORG_ID = ?
-//        ORDER BY a.ALIAS_NAME`,
-//       [orgid]
-//     );
-
-//     return { clients: clients.map(client => ({
-//       id: client.ACCNT_ID,
-//       name: client.ALIAS_NAME || `Client ${client.ACCNT_ID}`
-//     }))};
-//   } catch (error) {
-//     console.error("Error fetching clients:", error);
-//     return { error: error.message };
-//   }
-// }
-
 export async function generateInvoices({ 
   reportType, searchStart, searchEnd, actualStart, actualEnd,
-  selectedEmployees = [], selectedProjects = [], invoiceType = "receivable"
+  selectedEmployees = [], selectedProjects = [], selectedAccounts = [], invoiceType = "receivable"
 }) {
   const token = cookies().get("jwt_token")?.value;
   if (!token) return { error: "No token found." };
@@ -216,10 +230,32 @@ export async function generateInvoices({
     const pool = await DBconnection();
     const orgid = decoded.orgid;
     
-    console.log("generateInvoices params:", { 
-      searchStart, searchEnd, actualStart, actualEnd,
-      selectedEmployees, selectedProjects, orgid, invoiceType 
-    });
+    // Dynamically find the correct IDs from C_GENERIC_VALUES
+    const [net90Rows] = await pool.execute(
+      `SELECT id, Name FROM C_GENERIC_VALUES 
+       WHERE g_id = 27 AND (Name LIKE '%Net%90%' OR Name LIKE '%net%90%' OR Name = 'Net 90' OR id = 13)
+       AND isactive = 1 AND (orgid = ? OR orgid = -1)
+       ORDER BY orgid DESC LIMIT 1`,
+      [orgid]
+    );
+
+    const [contractRows] = await pool.execute(
+      `SELECT id, Name FROM C_GENERIC_VALUES 
+       WHERE g_id = 27 AND (Name = 'Contract' OR id = 12)
+       AND isactive = 1 AND (orgid = ? OR orgid = -1)
+       ORDER BY orgid DESC LIMIT 1`,
+      [orgid]
+    );
+
+    const NET90_PAY_TERM_ID = net90Rows.length > 0 ? net90Rows[0].id : 13;
+    const CONTRACT_TYPE_ID = contractRows.length > 0 ? contractRows[0].id : 12;
+
+    console.log('=== INVOICE DEBUG ===');
+    console.log('Invoice Type:', invoiceType);
+    console.log('Net90 Pay Term ID:', NET90_PAY_TERM_ID, net90Rows.length > 0 ? `(${net90Rows[0].Name})` : '(default)');
+    console.log('Contract Type ID:', CONTRACT_TYPE_ID, contractRows.length > 0 ? `(${contractRows[0].Name})` : '(default)');
+    console.log('Date Range:', actualStart, 'to', actualEnd);
+    console.log('Search Range:', searchStart, 'to', searchEnd);
     
     // Get Organization Details
     const [subOrgRows] = await pool.execute(
@@ -229,28 +265,11 @@ export async function generateInvoices({
     const orgDetails = subOrgRows[0] || {};
     const otThreshold = await getOTThreshold(pool, orgid);
 
-    // Get Contract type ID for payable invoices (dynamic lookup)
-    let contractTypeId = null;
-    if (invoiceType === "payable") {
-      const [contractTypeRows] = await pool.execute(
-        `SELECT id FROM C_GENERIC_VALUES 
-         WHERE g_id = 27 AND Name = 'Contract' AND isactive = 1 AND (orgid = ? OR orgid = -1)
-         ORDER BY orgid DESC LIMIT 1`,
-        [orgid]
-      );
-      if (contractTypeRows.length > 0) {
-        contractTypeId = contractTypeRows[0].id;
-        console.log("Contract type ID for invoice generation:", contractTypeId);
-      }
-    }
-
-    // Build dynamic WHERE clauses for employee and project filters
+    // Build filters
     let employeeFilter = "";
     let projectFilter = "";
-    // Contract employee filter for payable invoices (using dynamic contractTypeId)
-    let contractFilter = (invoiceType === "payable" && contractTypeId) ? ` AND e.employment_type = ${contractTypeId}` : "";
-    // Client filter (COMMENTED - replaced by project filter)
-    // let clientFilter = "";
+    let accountFilter = "";
+    
     const baseParams = [searchStart, searchEnd, orgid];
     const assignBaseParams = [actualEnd, actualStart, orgid];
     
@@ -262,197 +281,363 @@ export async function generateInvoices({
       const projPlaceholders = selectedProjects.map(() => '?').join(',');
       projectFilter = ` AND p.PRJ_ID IN (${projPlaceholders})`;
     }
-    // Client filter (COMMENTED - replaced by project filter)
-    // if (selectedClients.length > 0) {
-    //   const clientPlaceholders = selectedClients.map(() => '?').join(',');
-    //   clientFilter = ` AND (p.CLIENT_ID IN (${clientPlaceholders}) OR p.ACCNT_ID IN (${clientPlaceholders}))`;
-    // }
-
-    // Fetch Timesheet Data with filters
-    const timesheetParams = [...baseParams, ...selectedEmployees, ...selectedProjects];
-    console.log("Timesheet query params:", timesheetParams);
-    console.log("Project filter:", projectFilter);
-    console.log("Contract filter:", contractFilter);
-    
-    const [timesheetRows] = await pool.execute(
-      `SELECT t.*, 
-              e.EMP_FST_NAME, e.EMP_LAST_NAME,
-              p.PRJ_ID, p.PRJ_NAME, p.BILL_RATE, p.OT_BILL_RATE, p.PAY_TERM,
-              p.CLIENT_ID, ac_client.ALIAS_NAME as client_name,
-              a.ACCNT_ID, a.ALIAS_NAME as account_name,
-              a.BUSINESS_ADDR_LINE1, a.BUSINESS_CITY, a.BUSINESS_STATE_ID, a.BUSINESS_COUNTRY_ID, a.BUSINESS_POSTAL_CODE
-       FROM C_TIMESHEETS t
-       JOIN C_EMP e ON t.employee_id = e.empid
-       JOIN C_PROJECT p ON t.project_id = p.PRJ_ID
-       JOIN C_ACCOUNT a ON p.ACCNT_ID = a.ACCNT_ID
-       LEFT JOIN C_ACCOUNT ac_client ON p.CLIENT_ID = ac_client.ACCNT_ID
-       WHERE t.week_start_date >= ? AND t.week_start_date <= ?
-       AND t.is_approved = 1
-       AND e.orgid = ?${employeeFilter}${projectFilter}${contractFilter}
-       ORDER BY a.ALIAS_NAME, p.PRJ_NAME, e.EMP_FST_NAME`,
-      timesheetParams
-    );
-    
-    console.log("Timesheet rows found:", timesheetRows.length);
-    if (timesheetRows.length > 0) {
-      console.log("Timesheet projects returned:", [...new Set(timesheetRows.map(r => `${r.PRJ_ID}: ${r.PRJ_NAME}`))]);
-      console.log("Timesheet employees returned:", [...new Set(timesheetRows.map(r => `${r.employee_id}: ${r.EMP_FST_NAME}`))]);
+    if (selectedAccounts.length > 0) {
+      const accPlaceholders = selectedAccounts.map(() => '?').join(',');
+      accountFilter = ` AND p.ACCNT_ID IN (${accPlaceholders})`;
     }
 
-    // Build filters for assignment query
-    let assignEmpFilter = "";
-    let assignProjFilter = "";
-    // Client filter (COMMENTED - replaced by project filter)
-    // let assignClientFilter = "";
-    if (selectedEmployees.length > 0) {
-      const empPlaceholders = selectedEmployees.map(() => '?').join(',');
-      assignEmpFilter = ` AND pe.EMP_ID IN (${empPlaceholders})`;
-    }
-    if (selectedProjects.length > 0) {
-      const projPlaceholders = selectedProjects.map(() => '?').join(',');
-      assignProjFilter = ` AND p.PRJ_ID IN (${projPlaceholders})`;
-    }
-    // Contract filter for payable invoices in assignment query (using dynamic contractTypeId)
-    let assignContractFilter = (invoiceType === "payable" && contractTypeId) ? ` AND e.employment_type = ${contractTypeId}` : "";
-    // Client filter (COMMENTED - replaced by project filter)
-    // if (selectedClients.length > 0) {
-    //   const clientPlaceholders = selectedClients.map(() => '?').join(',');
-    //   assignClientFilter = ` AND (p.CLIENT_ID IN (${clientPlaceholders}) OR p.ACCNT_ID IN (${clientPlaceholders}))`;
-    // }
-
-    const assignParams = [...assignBaseParams, ...selectedEmployees, ...selectedProjects];
-    console.log("Assignment query params:", assignParams);
-    
-    const [assignmentRows] = await pool.execute(
-      `SELECT pe.EMP_ID, pe.PRJ_ID, 
-              e.EMP_FST_NAME, e.EMP_LAST_NAME,
-              p.PRJ_NAME, p.ACCNT_ID, p.BILL_RATE, p.OT_BILL_RATE, p.PAY_TERM,
-              a.ALIAS_NAME as account_name,
-              ac_client.ALIAS_NAME as client_name,
-              a.BUSINESS_ADDR_LINE1, a.BUSINESS_CITY, a.BUSINESS_POSTAL_CODE
-       FROM C_PROJ_EMP pe
-       JOIN C_EMP e ON pe.EMP_ID = e.empid
-       JOIN C_PROJECT p ON pe.PRJ_ID = p.PRJ_ID
-       JOIN C_ACCOUNT a ON p.ACCNT_ID = a.ACCNT_ID
-       LEFT JOIN C_ACCOUNT ac_client ON p.CLIENT_ID = ac_client.ACCNT_ID
-       WHERE pe.START_DT <= ? AND (pe.END_DT >= ? OR pe.END_DT IS NULL)
-       AND e.orgid = ?${assignEmpFilter}${assignProjFilter}${assignContractFilter}`,
-      assignParams
-    );
-    
-    console.log("Assignment rows found:", assignmentRows.length);
-    if (assignmentRows.length > 0) {
-      console.log("Assignment projects returned:", [...new Set(assignmentRows.map(r => `${r.PRJ_ID}: ${r.PRJ_NAME}`))]);
-      console.log("Assignment employees returned:", [...new Set(assignmentRows.map(r => `${r.EMP_ID}: ${r.EMP_FST_NAME}`))]);
-    }
-
-    const accountMap = {};
+    const invoiceMap = {};
     const days = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
     const allPayTermIds = new Set();
 
-    const initAccount = (row) => {
-      if (!accountMap[row.ACCNT_ID]) {
-        accountMap[row.ACCNT_ID] = {
-          accountId: row.ACCNT_ID,
-          accountName: row.account_name,
-          address: {
-            line1: row.BUSINESS_ADDR_LINE1,
-            city: row.BUSINESS_CITY,
-            zip: row.BUSINESS_POSTAL_CODE
-          },
-          projects: {},
-          clients: new Set(),
-          totalAmount: 0,
-          dateRange: { start: actualStart, end: actualEnd }
-        };
-      }
-    };
+    if (invoiceType === "receivable") {
+      // RECEIVABLE: All projects, grouped by CLIENT (not account)
+      const timesheetParams = [...baseParams, ...selectedEmployees, ...selectedProjects, ...selectedAccounts];
+      
+      const [timesheetRows] = await pool.execute(
+        `SELECT t.*, 
+                e.EMP_FST_NAME, e.EMP_LAST_NAME,
+                p.PRJ_ID, p.PRJ_NAME, p.BILL_RATE, p.OT_BILL_RATE, p.PAY_TERM,
+                p.CLIENT_ID, 
+                COALESCE(ac_client.ACCNT_ID, a.ACCNT_ID) as BILLING_CLIENT_ID,
+                COALESCE(ac_client.ALIAS_NAME, a.ALIAS_NAME) as client_name,
+                COALESCE(ac_client.BUSINESS_ADDR_LINE1, a.BUSINESS_ADDR_LINE1) as client_addr,
+                COALESCE(ac_client.BUSINESS_CITY, a.BUSINESS_CITY) as client_city,
+                COALESCE(ac_client.BUSINESS_POSTAL_CODE, a.BUSINESS_POSTAL_CODE) as client_zip,
+                a.ACCNT_ID, a.ALIAS_NAME as account_name
+         FROM C_TIMESHEETS t
+         JOIN C_EMP e ON t.employee_id = e.empid
+         JOIN C_PROJECT p ON t.project_id = p.PRJ_ID
+         JOIN C_ACCOUNT a ON p.ACCNT_ID = a.ACCNT_ID
+         LEFT JOIN C_ACCOUNT ac_client ON p.CLIENT_ID = ac_client.ACCNT_ID
+         WHERE t.week_start_date >= ? AND t.week_start_date <= ?
+         AND t.is_approved = 1
+         AND e.orgid = ?${employeeFilter}${projectFilter}${accountFilter}
+         ORDER BY client_name, p.PRJ_NAME, e.EMP_FST_NAME`,
+        timesheetParams
+      );
 
-    const initProject = (accId, row) => {
-      if (!accountMap[accId].projects[row.PRJ_ID]) {
-        if (row.PAY_TERM) allPayTermIds.add(row.PAY_TERM);
+      const assignParams = [...assignBaseParams, ...selectedEmployees, ...selectedProjects, ...selectedAccounts];
+      
+      const [assignmentRows] = await pool.execute(
+        `SELECT pe.EMP_ID, pe.PRJ_ID, 
+                e.EMP_FST_NAME, e.EMP_LAST_NAME,
+                p.PRJ_NAME, p.ACCNT_ID, p.BILL_RATE, p.OT_BILL_RATE, p.PAY_TERM,
+                COALESCE(ac_client.ACCNT_ID, a.ACCNT_ID) as BILLING_CLIENT_ID,
+                COALESCE(ac_client.ALIAS_NAME, a.ALIAS_NAME) as client_name,
+                COALESCE(ac_client.BUSINESS_ADDR_LINE1, a.BUSINESS_ADDR_LINE1) as client_addr,
+                COALESCE(ac_client.BUSINESS_CITY, a.BUSINESS_CITY) as client_city,
+                COALESCE(ac_client.BUSINESS_POSTAL_CODE, a.BUSINESS_POSTAL_CODE) as client_zip,
+                a.ALIAS_NAME as account_name
+         FROM C_PROJ_EMP pe
+         JOIN C_EMP e ON pe.EMP_ID = e.empid
+         JOIN C_PROJECT p ON pe.PRJ_ID = p.PRJ_ID
+         JOIN C_ACCOUNT a ON p.ACCNT_ID = a.ACCNT_ID
+         LEFT JOIN C_ACCOUNT ac_client ON p.CLIENT_ID = ac_client.ACCNT_ID
+         WHERE pe.START_DT <= ? AND (pe.END_DT >= ? OR pe.END_DT IS NULL)
+         AND e.orgid = ?${employeeFilter.replace('t.employee_id', 'pe.EMP_ID')}${projectFilter}${accountFilter}`,
+        assignParams
+      );
+
+      // Build receivable structure - GROUP BY CLIENT
+      const initClient = (row) => {
+        const clientId = row.BILLING_CLIENT_ID;
+        if (!invoiceMap[clientId]) {
+          invoiceMap[clientId] = {
+            clientId: clientId,
+            clientName: row.client_name,
+            address: {
+              line1: row.client_addr,
+              city: row.client_city,
+              zip: row.client_zip
+            },
+            projects: {},
+            accounts: new Set(),
+            totalAmount: 0,
+            dateRange: { start: actualStart, end: actualEnd }
+          };
+        }
+      };
+
+      const initProject = (clientId, row) => {
+        if (!invoiceMap[clientId].projects[row.PRJ_ID]) {
+          if (row.PAY_TERM) allPayTermIds.add(row.PAY_TERM);
+          
+          invoiceMap[clientId].projects[row.PRJ_ID] = {
+            projectId: row.PRJ_ID,
+            projectName: row.PRJ_NAME,
+            accountName: row.account_name,
+            billRate: parseFloat(row.BILL_RATE) || 0,
+            otBillRate: parseFloat(row.OT_BILL_RATE) || 0,
+            payTermId: row.PAY_TERM,
+            payTermName: "Net 30",
+            employees: {},
+            subTotal: 0
+          };
+          invoiceMap[clientId].accounts.add(row.account_name);
+        }
+      };
+
+      timesheetRows.forEach(ts => {
+        const clientId = ts.BILLING_CLIENT_ID;
+        initClient(ts);
+        initProject(clientId, ts);
         
-        accountMap[accId].projects[row.PRJ_ID] = {
-          projectId: row.PRJ_ID,
-          projectName: row.PRJ_NAME,
-          clientName: row.client_name || row.account_name,
-          billRate: parseFloat(row.BILL_RATE) || 0,
-          otBillRate: parseFloat(row.OT_BILL_RATE) || 0,
-          payTermId: row.PAY_TERM,
-          payTermName: "Net 30", // Default
-          employees: {},
-          subTotal: 0
-        };
-        accountMap[accId].clients.add(row.client_name || row.account_name);
-      }
-    };
+        const project = invoiceMap[clientId].projects[ts.PRJ_ID];
+        const empId = ts.employee_id;
+        
+        if (!project.employees[empId]) {
+          project.employees[empId] = {
+            empId, 
+            empName: `${ts.EMP_FST_NAME} ${ts.EMP_LAST_NAME || ""}`.trim(),
+            dailyLogs: [],
+            totalRegularHours: 0,
+            totalOTHours: 0,
+            totalAmount: 0,
+            hasWorked: false
+          };
+        }
 
-    // Process Timesheets
-    timesheetRows.forEach(ts => {
-      initAccount(ts);
-      initProject(ts.ACCNT_ID, ts);
-      
-      const project = accountMap[ts.ACCNT_ID].projects[ts.PRJ_ID];
-      const empId = ts.employee_id;
-      
-      if (!project.employees[empId]) {
-        project.employees[empId] = {
-          empId, 
-          empName: `${ts.EMP_FST_NAME} ${ts.EMP_LAST_NAME || ""}`.trim(),
-          dailyLogs: [],
-          totalRegularHours: 0,
-          totalOTHours: 0,
-          totalAmount: 0,
-          hasWorked: false
-        };
-      }
+        const employee = project.employees[empId];
 
-      const employee = project.employees[empId];
+        days.forEach((day, idx) => {
+          const hours = parseFloat(ts[`${day}_hours`]) || 0;
+          const dateStr = getDateForDay(ts.week_start_date, idx);
 
-      days.forEach((day, idx) => {
-        const hours = parseFloat(ts[`${day}_hours`]) || 0;
-        const dateStr = getDateForDay(ts.week_start_date, idx);
+          if (hours > 0 && isDateInRange(dateStr, actualStart, actualEnd)) {
+            employee.hasWorked = true;
+            const { regularHours, otHours, amount } = calculateDailyRevenue(
+              hours, otThreshold, project.billRate, project.otBillRate
+            );
 
-        if (hours > 0 && isDateInRange(dateStr, actualStart, actualEnd)) {
-          employee.hasWorked = true;
-          const { regularHours, otHours, amount } = calculateDailyRevenue(
-            hours, otThreshold, project.billRate, project.otBillRate
-          );
+            employee.dailyLogs.push({
+              date: dateStr,
+              regularHours,
+              otHours,
+              amount
+            });
 
-          employee.dailyLogs.push({
-            date: dateStr,
-            regularHours,
-            otHours,
-            amount
-          });
+            employee.totalRegularHours += regularHours;
+            employee.totalOTHours += otHours;
+            employee.totalAmount += amount;
+            project.subTotal += amount;
+            invoiceMap[clientId].totalAmount += amount;
+          }
+        });
+      });
 
-          employee.totalRegularHours += regularHours;
-          employee.totalOTHours += otHours;
-          employee.totalAmount += amount;
-          project.subTotal += amount;
-          accountMap[ts.ACCNT_ID].totalAmount += amount;
+      assignmentRows.forEach(assign => {
+        const clientId = assign.BILLING_CLIENT_ID;
+        initClient(assign);
+        initProject(clientId, assign);
+        
+        const project = invoiceMap[clientId].projects[assign.PRJ_ID];
+        if (!project.employees[assign.EMP_ID]) {
+          project.employees[assign.EMP_ID] = {
+            empId: assign.EMP_ID, 
+            empName: `${assign.EMP_FST_NAME} ${assign.EMP_LAST_NAME || ""}`.trim(),
+            dailyLogs: [],
+            totalRegularHours: 0,
+            totalOTHours: 0,
+            totalAmount: 0,
+            hasWorked: false
+          };
         }
       });
-    });
 
-    // Process Assignments (For Not Worked)
-    assignmentRows.forEach(assign => {
-      initAccount(assign);
-      initProject(assign.ACCNT_ID, assign);
+    } else {
+      // PAYABLE: Grouped by Account -> Employee -> Projects
+      // Include if: (Net90 project with ANY employee) OR (Contract employee on any project)
       
-      const project = accountMap[assign.ACCNT_ID].projects[assign.PRJ_ID];
-      if (!project.employees[assign.EMP_ID]) {
-         project.employees[assign.EMP_ID] = {
-          empId: assign.EMP_ID, 
-          empName: `${assign.EMP_FST_NAME} ${assign.EMP_LAST_NAME || ""}`.trim(),
-          dailyLogs: [],
-          totalRegularHours: 0,
-          totalOTHours: 0,
-          totalAmount: 0,
-          hasWorked: false
-        };
+      console.log('=== PAYABLE QUERY DEBUG ===');
+      console.log('Filters:', { employeeFilter, projectFilter, accountFilter });
+      
+      const timesheetParams = [...baseParams, ...selectedEmployees, ...selectedProjects, ...selectedAccounts];
+      
+      const [timesheetRows] = await pool.execute(
+        `SELECT t.*, 
+                e.EMP_FST_NAME, e.EMP_LAST_NAME, e.employment_type,
+                p.PRJ_ID, p.PRJ_NAME, p.BILL_RATE, p.OT_BILL_RATE, p.PAY_TERM,
+                p.CLIENT_ID, ac_client.ALIAS_NAME as client_name,
+                a.ACCNT_ID, a.ALIAS_NAME as account_name,
+                a.BUSINESS_ADDR_LINE1, a.BUSINESS_CITY, a.BUSINESS_STATE_ID, a.BUSINESS_POSTAL_CODE
+         FROM C_TIMESHEETS t
+         JOIN C_EMP e ON t.employee_id = e.empid
+         JOIN C_PROJECT p ON t.project_id = p.PRJ_ID
+         JOIN C_ACCOUNT a ON p.ACCNT_ID = a.ACCNT_ID
+         LEFT JOIN C_ACCOUNT ac_client ON p.CLIENT_ID = ac_client.ACCNT_ID
+         WHERE t.week_start_date >= ? AND t.week_start_date <= ?
+         AND t.is_approved = 1
+         AND e.orgid = ?${employeeFilter}${projectFilter}${accountFilter}
+         ORDER BY a.ALIAS_NAME, e.EMP_FST_NAME, p.PRJ_NAME`,
+        timesheetParams
+      );
+
+      console.log('Total timesheets fetched:', timesheetRows.length);
+      
+      // Debug: Show sample of fetched data
+      if (timesheetRows.length > 0) {
+        const sample = timesheetRows[0];
+        console.log('Sample timesheet:', {
+          employee: `${sample.EMP_FST_NAME} ${sample.EMP_LAST_NAME}`,
+          employment_type: sample.employment_type,
+          project: sample.PRJ_NAME,
+          pay_term: sample.PAY_TERM,
+          isNet90: sample.PAY_TERM === NET90_PAY_TERM_ID,
+          isContract: sample.employment_type === CONTRACT_TYPE_ID
+        });
       }
-    });
+
+      const assignParams = [...assignBaseParams, ...selectedEmployees, ...selectedProjects, ...selectedAccounts];
+      
+      const [assignmentRows] = await pool.execute(
+        `SELECT pe.EMP_ID, pe.PRJ_ID, 
+                e.EMP_FST_NAME, e.EMP_LAST_NAME, e.employment_type,
+                p.PRJ_NAME, p.ACCNT_ID, p.BILL_RATE, p.OT_BILL_RATE, p.PAY_TERM,
+                a.ALIAS_NAME as account_name,
+                ac_client.ALIAS_NAME as client_name,
+                a.BUSINESS_ADDR_LINE1, a.BUSINESS_CITY, a.BUSINESS_POSTAL_CODE
+         FROM C_PROJ_EMP pe
+         JOIN C_EMP e ON pe.EMP_ID = e.empid
+         JOIN C_PROJECT p ON pe.PRJ_ID = p.PRJ_ID
+         JOIN C_ACCOUNT a ON p.ACCNT_ID = a.ACCNT_ID
+         LEFT JOIN C_ACCOUNT ac_client ON p.CLIENT_ID = ac_client.ACCNT_ID
+         WHERE pe.START_DT <= ? AND (pe.END_DT >= ? OR pe.END_DT IS NULL)
+         AND e.orgid = ?${employeeFilter.replace('t.employee_id', 'pe.EMP_ID')}${projectFilter}${accountFilter}`,
+        assignParams
+      );
+
+      console.log('Total assignments fetched:', assignmentRows.length);
+
+      // Build payable structure: Group by Account -> Employee
+      const initAccount = (row) => {
+        if (!invoiceMap[row.ACCNT_ID]) {
+          invoiceMap[row.ACCNT_ID] = {
+            accountId: row.ACCNT_ID,
+            accountName: row.account_name,
+            address: {
+              line1: row.BUSINESS_ADDR_LINE1,
+              city: row.BUSINESS_CITY,
+              zip: row.BUSINESS_POSTAL_CODE
+            },
+            employees: {},
+            totalAmount: 0,
+            dateRange: { start: actualStart, end: actualEnd }
+          };
+        }
+      };
+
+      const initEmployee = (accId, row) => {
+        const empId = row.employee_id || row.EMP_ID;
+        if (!invoiceMap[accId].employees[empId]) {
+          invoiceMap[accId].employees[empId] = {
+            empId,
+            empName: `${row.EMP_FST_NAME} ${row.EMP_LAST_NAME || ""}`.trim(),
+            employmentType: row.employment_type,
+            projects: {},
+            totalAmount: 0
+          };
+        }
+      };
+
+      const initProject = (accId, empId, row) => {
+        const employee = invoiceMap[accId].employees[empId];
+        if (!employee.projects[row.PRJ_ID]) {
+          if (row.PAY_TERM) allPayTermIds.add(row.PAY_TERM);
+          
+          employee.projects[row.PRJ_ID] = {
+            projectId: row.PRJ_ID,
+            projectName: row.PRJ_NAME,
+            clientName: row.client_name || row.account_name,
+            billRate: parseFloat(row.BILL_RATE) || 0,
+            otBillRate: parseFloat(row.OT_BILL_RATE) || 0,
+            payTermId: row.PAY_TERM,
+            payTermName: "Net 30",
+            isNet90: row.PAY_TERM === NET90_PAY_TERM_ID,
+            dailyLogs: [],
+            totalRegularHours: 0,
+            totalOTHours: 0,
+            subTotal: 0,
+            hasWorked: false
+          };
+        }
+      };
+
+      // Process timesheets - Apply payable logic
+      let includedCount = 0;
+      let skippedCount = 0;
+      
+      timesheetRows.forEach(ts => {
+        // Convert to string for comparison since DB stores as string
+        const isNet90Project = String(ts.PAY_TERM) === String(NET90_PAY_TERM_ID);
+        const isContractEmployee = String(ts.employment_type) === String(CONTRACT_TYPE_ID);
+        
+        console.log('Checking timesheet:', {
+          employee: `${ts.EMP_FST_NAME} ${ts.EMP_LAST_NAME}`,
+          pay_term: ts.PAY_TERM,
+          employment_type: ts.employment_type,
+          isNet90Project,
+          isContractEmployee,
+          willInclude: isNet90Project || isContractEmployee
+        });
+        
+        // Include if: Net90 project (any employee) OR Contract employee (any project)
+        if (!isNet90Project && !isContractEmployee) {
+          skippedCount++;
+          return; // Skip - not payable
+        }
+
+        includedCount++;
+        initAccount(ts);
+        initEmployee(ts.ACCNT_ID, ts);
+        initProject(ts.ACCNT_ID, ts.employee_id, ts);
+        
+        const project = invoiceMap[ts.ACCNT_ID].employees[ts.employee_id].projects[ts.PRJ_ID];
+
+        days.forEach((day, idx) => {
+          const hours = parseFloat(ts[`${day}_hours`]) || 0;
+          const dateStr = getDateForDay(ts.week_start_date, idx);
+
+          if (hours > 0 && isDateInRange(dateStr, actualStart, actualEnd)) {
+            project.hasWorked = true;
+            
+            // Use PROJECT bill rate (not employee individual rate)
+            const { regularHours, otHours, amount } = calculateDailyRevenue(
+              hours, otThreshold, project.billRate, project.otBillRate
+            );
+
+            project.dailyLogs.push({
+              date: dateStr,
+              regularHours,
+              otHours,
+              amount
+            });
+
+            project.totalRegularHours += regularHours;
+            project.totalOTHours += otHours;
+            project.subTotal += amount;
+            invoiceMap[ts.ACCNT_ID].employees[ts.employee_id].totalAmount += amount;
+            invoiceMap[ts.ACCNT_ID].totalAmount += amount;
+          }
+        });
+      });
+
+      console.log('Payable filtering:', { includedCount, skippedCount, totalAccounts: Object.keys(invoiceMap).length });
+
+      // Process assignments
+      assignmentRows.forEach(assign => {
+        const isNet90Project = String(assign.PAY_TERM) === String(NET90_PAY_TERM_ID);
+        const isContractEmployee = String(assign.employment_type) === String(CONTRACT_TYPE_ID);
+        
+        if (!isNet90Project && !isContractEmployee) {
+          return;
+        }
+
+        initAccount(assign);
+        initEmployee(assign.ACCNT_ID, assign);
+        initProject(assign.ACCNT_ID, assign.EMP_ID, assign);
+      });
+    }
 
     // Resolve Pay Terms
     if (allPayTermIds.size > 0) {
@@ -464,38 +649,90 @@ export async function generateInvoices({
       const ptMap = {};
       ptRows.forEach(r => ptMap[r.id] = r.Name);
       
-      Object.values(accountMap).forEach(acc => {
-        Object.values(acc.projects).forEach(proj => {
-          if (proj.payTermId && ptMap[proj.payTermId]) {
-            proj.payTermName = ptMap[proj.payTermId];
+      if (invoiceType === "receivable") {
+        Object.values(invoiceMap).forEach(acc => {
+          Object.values(acc.projects).forEach(proj => {
+            if (proj.payTermId && ptMap[proj.payTermId]) {
+              proj.payTermName = ptMap[proj.payTermId];
+            }
+          });
+        });
+      } else {
+        Object.values(invoiceMap).forEach(acc => {
+          Object.values(acc.employees).forEach(emp => {
+            Object.values(emp.projects).forEach(proj => {
+              if (proj.payTermId && ptMap[proj.payTermId]) {
+                proj.payTermName = ptMap[proj.payTermId];
+              }
+            });
+          });
+        });
+      }
+    }
+
+    // Format invoices
+    const invoices = [];
+
+    if (invoiceType === "receivable") {
+      Object.values(invoiceMap).forEach(client => {
+        Object.values(client.projects).forEach(proj => {
+          Object.values(proj.employees).forEach(emp => {
+            emp.dailyLogs.sort((a,b) => new Date(a.date) - new Date(b.date));
+          });
+          proj.employees = Object.values(proj.employees).sort((a,b) => a.empName.localeCompare(b.empName));
+        });
+
+        invoices.push({
+          clientId: client.clientId,
+          clientName: client.clientName,
+          accountName: client.clientName, // For compatibility with frontend
+          accountList: Array.from(client.accounts).join(", "),
+          projects: Object.values(client.projects),
+          totalAmount: client.totalAmount,
+          dateRange: client.dateRange,
+          address: client.address,
+          orgDetails: {
+            name: orgDetails.suborgname || "My Organization",
+            address1: orgDetails.addresslane1,
+            city: orgDetails.city,
+            state: orgDetails.state,
+            zip: orgDetails.postalcode,
+            country: orgDetails.country
+          }
+        });
+      });
+    } else {
+      // PAYABLE: One invoice per account showing employees
+      Object.values(invoiceMap).forEach(acc => {
+        const employeesList = Object.values(acc.employees).map(emp => {
+          Object.values(emp.projects).forEach(proj => {
+            proj.dailyLogs.sort((a,b) => new Date(a.date) - new Date(b.date));
+          });
+          
+          return {
+            ...emp,
+            projects: Object.values(emp.projects).sort((a,b) => a.projectName.localeCompare(b.projectName))
+          };
+        }).sort((a,b) => a.empName.localeCompare(b.empName));
+
+        invoices.push({
+          accountId: acc.accountId,
+          accountName: acc.accountName,
+          employees: employeesList,
+          totalAmount: acc.totalAmount,
+          dateRange: acc.dateRange,
+          address: acc.address,
+          orgDetails: {
+            name: orgDetails.suborgname || "My Organization",
+            address1: orgDetails.addresslane1,
+            city: orgDetails.city,
+            state: orgDetails.state,
+            zip: orgDetails.postalcode,
+            country: orgDetails.country
           }
         });
       });
     }
-
-    // Format for Frontend
-    const invoices = Object.values(accountMap).map(acc => {
-      Object.values(acc.projects).forEach(proj => {
-        Object.values(proj.employees).forEach(emp => {
-          emp.dailyLogs.sort((a,b) => new Date(a.date) - new Date(b.date));
-        });
-        proj.employees = Object.values(proj.employees).sort((a,b) => a.empName.localeCompare(b.empName));
-      });
-
-      return {
-        ...acc,
-        clientList: Array.from(acc.clients).join(", "),
-        projects: Object.values(acc.projects),
-        orgDetails: {
-          name: orgDetails.suborgname || "My Organization",
-          address1: orgDetails.addresslane1,
-          city: orgDetails.city,
-          state: orgDetails.state,
-          zip: orgDetails.postalcode,
-          country: orgDetails.country
-        }
-      };
-    });
 
     return { invoices };
 
