@@ -5,6 +5,7 @@ import { cookies } from 'next/headers';
 import fs from 'fs/promises';
 import path from 'path';
 import { MetaDBconnection } from '@/app/utils/config/db';
+import nodemailer from 'nodemailer';
 
 const decodeJwt = (token) => {
   try {
@@ -883,40 +884,30 @@ export async function assignLeaves(empid, leaveid, noofleaves, orgid) {
   }
 }
 
+// 🔹 UPDATED: Fetch Employees with Registration Status (Checking C_USER via EMAIL)
 export async function fetchEmployeesByOrgId() {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const token = cookieStore.get('jwt_token')?.value;
 
-    if (!token) {
-      console.log('No token found');
-      throw new Error('No token found. Please log in.');
-    }
+    if (!token) throw new Error('No token found. Please log in.');
 
     const decoded = decodeJwt(token);
-    if (!decoded || !decoded.orgid) {
-      console.log('Invalid token or orgid not found');
-      throw new Error('Invalid token or orgid not found.');
-    }
+    if (!decoded || !decoded.orgid) throw new Error('Invalid token or orgid not found.');
 
     const orgId = decoded.orgid;
-    if (!orgId) {
-      console.log('orgId is undefined or invalid');
-      throw new Error('Organization ID is missing or invalid.');
-    }
-
-    console.log(`Fetching employees for orgId: ${orgId}`);
-
     const pool = await DBconnection();
-    console.log('MySQL connection pool acquired');
+    
+    // JOIN C_USER using EMAIL to determine if registered
     const [rows] = await pool.execute(
-      `SELECT empid, EMP_FST_NAME, EMP_LAST_NAME, roleid, email, HIRE, MOBILE_NUMBER, GENDER, STATUS, employee_number 
-       FROM C_EMP 
-       WHERE orgid = ?`,
+      `SELECT e.empid, e.EMP_FST_NAME, e.EMP_LAST_NAME, e.EMP_PREF_NAME, e.EMP_MID_NAME, e.roleid, e.email, e.HIRE, e.MOBILE_NUMBER, e.GENDER, e.STATUS, e.employee_number,
+              CASE WHEN u.email IS NOT NULL THEN 1 ELSE 0 END as is_registered
+       FROM C_EMP e
+       LEFT JOIN C_USER u ON e.email = u.email
+       WHERE e.orgid = ?`,
       [orgId]
     );
 
-    // Fetch roleids for each employee from C_EMP_ROLE_ASSIGN
     const employees = await Promise.all(
       rows.map(async (employee) => {
         const [roleRows] = await pool.execute(
@@ -930,14 +921,53 @@ export async function fetchEmployeesByOrgId() {
       })
     );
 
-    console.log('Fetched employees with roleids:', employees);
     return employees;
   } catch (error) {
     console.error('Error fetching employees:', error.message);
     throw new Error(`Failed to fetch employees: ${error.message}`);
   }
 }
+// 🔹 NEW: Notify Employee Action via Email
+export async function notifyEmployee(email, firstName) {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('jwt_token')?.value;
 
+    if (!token) return { error: 'Unauthorized' };
+
+    // Set up Nodemailer transporter
+    const transporter = nodemailer.createTransport({
+      host:  process.env.GMAIL_HOST, // Or use host/port if you prefer
+      auth: {
+        user: process.env.EMAIL_USER, 
+        pass: process.env.EMAIL_PASS 
+      }
+    });
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: 'Invitation to Join Organization',
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+          <h2 style="color: #0fd46c;">Welcome to CloudWorks!</h2>
+          <p>Hello ${firstName},</p>
+          <p>You have been added to the organization's employee directory.</p>
+          <p>Please register your account to access the dashboard.</p>
+          <br/>
+          <p>Best Regards,<br/><strong>HR Team</strong></p>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+    return { success: true, message: `Notification sent successfully to ${email}` };
+
+  } catch (error) {
+    console.error('Error sending notification:', error);
+    return { error: 'Failed to send notification email. Please check server logs.' };
+  }
+}
 export async function fetchdocumentsbyid(empid) {
   try {
     const cookieStore = cookies();

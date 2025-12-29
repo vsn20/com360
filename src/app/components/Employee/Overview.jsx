@@ -7,7 +7,9 @@ import Image from 'next/image';
 import AddEmployee from './AddEmployee';
 import EditEmployee from './EditEmployee';
 import readXlsxFile from 'read-excel-file';
+
 import { importEmployeesBatch } from '@/app/serverActions/addemployee';
+import { notifyEmployee } from '@/app/serverActions/Employee/overview';
 
 const Overview = ({
   roles,
@@ -62,6 +64,9 @@ const Overview = ({
   const [importLoading, setImportLoading] = useState(false);
   const [importStatusMsg, setImportStatusMsg] = useState(null);
 
+  // --- NEW STATE FOR NOTIFY ---
+  const [notifyingMap, setNotifyingMap] = useState({});
+
   const router = useRouter();
   const searchparams = useSearchParams();
 
@@ -90,7 +95,10 @@ const Overview = ({
     setEmployeesPerPageInput(employeesPerPage.toString());
   }, [employeesPerPage]);
 
-  const handleRowClick = (empid) => {
+  const handleRowClick = (empid, e) => {
+    // Prevent navigating to edit page if clicking the notify button
+    if (e.target.closest('.notify-btn')) return;
+
     setSelectedEmpId(empid);
     setisadd(false);
     setError(null);
@@ -110,8 +118,31 @@ const Overview = ({
     setisadd(true);
   };
 
-  // --- IMPORT LOGIC START ---
+  // --- NOTIFY LOGIC START ---
+  const handleNotify = async (e, employee) => {
+    e.stopPropagation();
+    if (!employee.email) {
+      alert("This employee does not have an email address.");
+      return;
+    }
 
+    // Set loading state for this specific employee
+    setNotifyingMap(prev => ({ ...prev, [employee.empid]: true }));
+
+    const result = await notifyEmployee(employee.email, employee.EMP_FST_NAME);
+
+    // Clear loading state
+    setNotifyingMap(prev => ({ ...prev, [employee.empid]: false }));
+
+    if (result.success) {
+      alert(result.message);
+    } else {
+      alert(result.error);
+    }
+  };
+  // --- NOTIFY LOGIC END ---
+
+  // --- IMPORT LOGIC START ---
   const handleOpenImportModal = () => {
     setIsImportModalOpen(true);
     setImportFile(null);
@@ -127,14 +158,11 @@ const Overview = ({
     if (file) setImportFile(file);
   };
 
-  // Helper to parse MM-DD-YYYY to YYYY-MM-DD
   const parseDateString = (dateStr) => {
     if (!dateStr) return null;
-    
     if (dateStr instanceof Date) {
         return dateStr.toISOString().split('T')[0];
     }
-
     if (typeof dateStr === 'string') {
         const parts = dateStr.split('-'); 
         if (parts.length === 3) {
@@ -158,8 +186,7 @@ const Overview = ({
 
     try {
         const rows = await readXlsxFile(importFile);
-        
-        const dataRows = rows.slice(1); // Remove header
+        const dataRows = rows.slice(1); 
         
         if (dataRows.length === 0) {
             setImportStatusMsg({ type: 'error', text: 'File appears to be empty.' });
@@ -168,10 +195,7 @@ const Overview = ({
         }
 
         const formattedEmployees = [];
-        const invalidRows = [];
-
-        // Loop through rows: 
-        // FirstName(0), LastName(1), Email(2), Roles(3), HireDate(4), Status(5)
+        
         for (let i = 0; i < dataRows.length; i++) {
             const row = dataRows[i];
             const firstName = row[0];
@@ -181,16 +205,11 @@ const Overview = ({
             const hireDateRaw = row[4];
             const statusRaw = row[5];
 
-            if (!email || !firstName) {
-                invalidRows.push(i + 2);
-                continue;
-            }
+            if (!email || !firstName) continue;
 
-            // 1. Map Roles
             const roleIds = [];
             if (rolesStr && roles && Array.isArray(roles)) {
                 const roleNames = rolesStr.toString().split(',').map(r => r.trim().toLowerCase());
-                
                 roles.forEach(dbRole => {
                     if (dbRole.rolename && roleNames.includes(dbRole.rolename.toLowerCase())) {
                         roleIds.push(dbRole.roleid);
@@ -198,17 +217,11 @@ const Overview = ({
                 });
             }
 
-            // 2. Map Status (Fixed Logic)
             let finalStatus = 'Active'; 
-            
             if (statusRaw && statuses && Array.isArray(statuses)) {
                 const inputStatusLower = statusRaw.toString().trim().toLowerCase();
-                
-                // Find matching status safely (handling Strings and Objects)
                 const matchedStatus = statuses.find(s => {
-                    if (typeof s === 'string') {
-                        return s.toLowerCase() === inputStatusLower;
-                    } 
+                    if (typeof s === 'string') return s.toLowerCase() === inputStatusLower;
                     if (s && typeof s === 'object') {
                         const name = s.Name || s.name || s.status || '';
                         return name.toLowerCase() === inputStatusLower;
@@ -217,16 +230,11 @@ const Overview = ({
                 });
 
                 if (matchedStatus) {
-                    if (typeof matchedStatus === 'string') {
-                        finalStatus = matchedStatus;
-                    } else if (typeof matchedStatus === 'object') {
-                        // Extract Name if object, fallback to 'Active'
-                        finalStatus = matchedStatus.Name || matchedStatus.name || 'Active';
-                    }
+                    if (typeof matchedStatus === 'string') finalStatus = matchedStatus;
+                    else if (typeof matchedStatus === 'object') finalStatus = matchedStatus.Name || matchedStatus.name || 'Active';
                 }
             }
 
-            // 3. Format Date
             const formattedHireDate = parseDateString(hireDateRaw);
 
             formattedEmployees.push({
@@ -245,12 +253,8 @@ const Overview = ({
             setImportStatusMsg({ type: 'error', text: result.error });
         } else {
             let msg = `Successfully added ${result.addedCount} employees.`;
-            if (result.skippedCount > 0) {
-                msg += ` Skipped ${result.skippedCount} duplicates.`;
-            }
-            if (result.skippedEmails && result.skippedEmails.length > 0) {
-                 msg += ` (Skipped: ${result.skippedEmails.join(', ')})`;
-            }
+            if (result.skippedCount > 0) msg += ` Skipped ${result.skippedCount} duplicates.`;
+            if (result.skippedEmails && result.skippedEmails.length > 0) msg += ` (Skipped: ${result.skippedEmails.join(', ')})`;
             setImportStatusMsg({ type: 'success', text: msg });
             
             if (result.addedCount > 0) {
@@ -268,7 +272,6 @@ const Overview = ({
         setImportLoading(false);
     }
   };
-
   // --- IMPORT LOGIC END ---
 
   const sortEmployees = (a, b, column, direction) => {
@@ -486,6 +489,7 @@ const Overview = ({
                       <col />
                       <col />
                       <col />
+                      <col style={{width: '10%'}} /> {/* Extra column for actions */}
                     </colgroup>
                     <thead>
                       <tr>
@@ -509,16 +513,15 @@ const Overview = ({
                           Hire Date
                         </th>
                         <th>Mobile</th>
-                        <th>
-                          Status
-                        </th>
+                        <th>Status</th>
+                        <th>Action</th> 
                       </tr>
                     </thead>
                     <tbody>
                       {currentEmployees.map((employee) => (
                         <tr
                           key={employee.empid}
-                          onClick={() => handleRowClick(employee.empid)}
+                          onClick={(e) => handleRowClick(employee.empid, e)}
                           className={selectedEmpId === employee.empid ? 'selected-row' : ''}
                         >
                           <td>
@@ -534,6 +537,29 @@ const Overview = ({
                               <span className={`status-badge ${employee.STATUS.toLowerCase() === 'active' ? 'active' : 'inactive'}`}>
                                 {employee.STATUS}
                               </span>
+                            )}
+                          </td>
+                          {/* Notify Button Logic */}
+                          <td>
+                            {!employee.is_registered ? (
+                              <button 
+                                className="button notify-btn"
+                                onClick={(e) => handleNotify(e, employee)}
+                                disabled={notifyingMap[employee.empid]}
+                                style={{
+                                  padding: '4px 10px', 
+                                  fontSize: '12px', 
+                                  backgroundColor: '#ff9800', 
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                {notifyingMap[employee.empid] ? 'Sending...' : 'Notify'}
+                              </button>
+                            ) : (
+                              <span style={{fontSize: '12px', color: '#0fd46c', fontWeight:'bold'}}>Registered</span>
                             )}
                           </td>
                         </tr>

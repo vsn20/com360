@@ -750,6 +750,55 @@ const InvoiceOverview = () => {
                 <div className={styles.cardActions}>
                    <button className={styles.btnOutline} onClick={() => { setCurrentInvoice(inv); setView("detail"); }}>👁 Preview</button>
                    <button className={styles.btnOutline} onClick={() => handleDownloadSingle(inv)}>📊 Excel</button>
+                   {invoiceType === "receivable" && inv.accountEmail && (
+                     <button
+                       className={styles.btnOutline}
+                       onClick={async () => {
+                         setSendingEmails(true);
+                         setEmailResult(null);
+                         const dateRange = `${formatMMDDYYYY(inv.dateRange.start).replace(/\//g,'-')}_${formatMMDDYYYY(inv.dateRange.end).replace(/\//g,'-')}`;
+                         const period = `${formatMMDDYYYY(inv.dateRange.start)} - ${formatMMDDYYYY(inv.dateRange.end)}`;
+                         const buffer = await generateExcelBuffer(inv);
+                         const entityName = inv.accountName;
+                         const empName = (inv.isSeparate || inv.isProjectSeparate) ? `_${inv.employees[0].empName.replace(/\s+/g, '_')}` : '';
+                         const projName = inv.isProjectSeparate ? `_${inv.employees[0].projects[0].projectName.replace(/\s+/g, '_')}` : '';
+                         const filename = `${dateRange}_${entityName.replace(/\s+/g, '_')}${empName}${projName}.xlsx`;
+                         const base64Buffer = btoa(
+                           new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+                         );
+                         const invoiceData = [{
+                           email: inv.accountEmail,
+                           accountName: inv.accountName,
+                           filename,
+                           buffer: base64Buffer,
+                           period,
+                           totalAmount: inv.totalAmount,
+                           isZip: false
+                         }];
+                         try {
+                           const result = await sendInvoiceEmails(invoiceData);
+                           if (result.error) {
+                             setEmailResult({ type: 'error', message: result.error });
+                           } else {
+                             setEmailResult({
+                               type: 'success',
+                               sent: result.results.sent,
+                               failed: result.results.failed,
+                               skipped: result.results.skipped
+                             });
+                           }
+                         } catch (err) {
+                           setEmailResult({ type: 'error', message: err.message });
+                         } finally {
+                           setSendingEmails(false);
+                         }
+                       }}
+                       disabled={sendingEmails}
+                       style={{ background: sendingEmails ? '#6b7280' : '#10B981' }}
+                     >
+                       {sendingEmails ? '📧 Sending...' : '📧 Send Email'}
+                     </button>
+                   )}
                 </div>
               </div>
             ))}
