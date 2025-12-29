@@ -9,7 +9,7 @@ import EditEmployee from './EditEmployee';
 import readXlsxFile from 'read-excel-file';
 
 import { importEmployeesBatch } from '@/app/serverActions/addemployee';
-import { notifyEmployee } from '@/app/serverActions/Employee/overview';
+import { notifyEmployee, notifying_c_user } from '@/app/serverActions/Employee/overview'; // notifying_c_user can be used for direct C_USER check if needed
 
 const Overview = ({
   roles,
@@ -66,6 +66,23 @@ const Overview = ({
 
   // --- NEW STATE FOR NOTIFY ---
   const [notifyingMap, setNotifyingMap] = useState({});
+  const [cUserMap, setCUserMap] = useState({}); // empid: true if in C_USER
+  // On mount, check C_USER status for all employees and cache in cUserMap
+  useEffect(() => {
+    const checkAllCUsers = async () => {
+      const map = {};
+      for (const emp of employees) {
+        if (emp.email) {
+          const res = await notifying_c_user(emp.email);
+          map[emp.empid] = !!(res && res.exists);
+        } else {
+          map[emp.empid] = false;
+        }
+      }
+      setCUserMap(map);
+    };
+    checkAllCUsers();
+  }, [employees]);
 
   const router = useRouter();
   const searchparams = useSearchParams();
@@ -128,6 +145,19 @@ const Overview = ({
 
     // Set loading state for this specific employee
     setNotifyingMap(prev => ({ ...prev, [employee.empid]: true }));
+
+    // Check C_USER directly before attempting notification
+    const check = await notifying_c_user(employee.email);
+    if (check.error) {
+      setNotifyingMap(prev => ({ ...prev, [employee.empid]: false }));
+      alert(check.error);
+      return;
+    }
+    if (check.exists) {
+      setNotifyingMap(prev => ({ ...prev, [employee.empid]: false }));
+      alert('User already registered in C_USER.');
+      return;
+    }
 
     const result = await notifyEmployee(employee.email, employee.EMP_FST_NAME);
 
@@ -539,9 +569,9 @@ const Overview = ({
                               </span>
                             )}
                           </td>
-                          {/* Notify Button Logic */}
+                          {/* Notify Button Logic (dynamic C_USER check) */}
                           <td>
-                            {!employee.is_registered ? (
+                            {cUserMap[employee.empid] === false ? (
                               <button 
                                 className="button notify-btn"
                                 onClick={(e) => handleNotify(e, employee)}
@@ -558,8 +588,10 @@ const Overview = ({
                               >
                                 {notifyingMap[employee.empid] ? 'Sending...' : 'Notify'}
                               </button>
-                            ) : (
+                            ) : cUserMap[employee.empid] === true ? (
                               <span style={{fontSize: '12px', color: '#0fd46c', fontWeight:'bold'}}>Registered</span>
+                            ) : (
+                              <span style={{fontSize: '12px', color: '#888'}}>Checking...</span>
                             )}
                           </td>
                         </tr>

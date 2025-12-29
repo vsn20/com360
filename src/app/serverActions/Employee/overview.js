@@ -887,27 +887,38 @@ export async function assignLeaves(empid, leaveid, noofleaves, orgid) {
 // 🔹 UPDATED: Fetch Employees with Registration Status (Checking C_USER via EMAIL)
 export async function fetchEmployeesByOrgId() {
   try {
-    const cookieStore = await cookies();
+    const cookieStore = cookies();
     const token = cookieStore.get('jwt_token')?.value;
 
-    if (!token) throw new Error('No token found. Please log in.');
+    if (!token) {
+      console.log('No token found');
+      throw new Error('No token found. Please log in.');
+    }
 
     const decoded = decodeJwt(token);
-    if (!decoded || !decoded.orgid) throw new Error('Invalid token or orgid not found.');
+    if (!decoded || !decoded.orgid) {
+      console.log('Invalid token or orgid not found');
+      throw new Error('Invalid token or orgid not found.');
+    }
 
     const orgId = decoded.orgid;
+    if (!orgId) {
+      console.log('orgId is undefined or invalid');
+      throw new Error('Organization ID is missing or invalid.');
+    }
+
+    console.log(`Fetching employees for orgId: ${orgId}`);
+
     const pool = await DBconnection();
-    
-    // JOIN C_USER using EMAIL to determine if registered
+    console.log('MySQL connection pool acquired');
     const [rows] = await pool.execute(
-      `SELECT e.empid, e.EMP_FST_NAME, e.EMP_LAST_NAME, e.EMP_PREF_NAME, e.EMP_MID_NAME, e.roleid, e.email, e.HIRE, e.MOBILE_NUMBER, e.GENDER, e.STATUS, e.employee_number,
-              CASE WHEN u.email IS NOT NULL THEN 1 ELSE 0 END as is_registered
-       FROM C_EMP e
-       LEFT JOIN C_USER u ON e.email = u.email
-       WHERE e.orgid = ?`,
+      `SELECT empid, EMP_FST_NAME, EMP_LAST_NAME, roleid, email, HIRE, MOBILE_NUMBER, GENDER 
+       FROM C_EMP 
+       WHERE orgid = ?`,
       [orgId]
     );
 
+    // Fetch roleids for each employee from C_EMP_ROLE_ASSIGN
     const employees = await Promise.all(
       rows.map(async (employee) => {
         const [roleRows] = await pool.execute(
@@ -921,15 +932,47 @@ export async function fetchEmployeesByOrgId() {
       })
     );
 
+    console.log('Fetched employees with roleids:', employees);
     return employees;
   } catch (error) {
     console.error('Error fetching employees:', error.message);
     throw new Error(`Failed to fetch employees: ${error.message}`);
   }
 }
-// 🔹 NEW: Notify Employee Action via Email
+
+
+// 🔹 Check if email exists in C_USER
+export async function notifying_c_user(email) {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('jwt_token')?.value;
+    if (!token) return { error: 'Unauthorized' };
+
+    const decoded = decodeJwt(token);
+    if (!decoded || !decoded.orgid) return { error: 'Invalid token or orgid not found.' };
+    const orgId = decoded.orgid;
+    const pool = await DBconnection();
+    const [rows] = await pool.execute(
+      'SELECT id FROM C_USER WHERE email = ? AND orgid = ?',
+      [email, orgId]
+    );
+    return { exists: rows.length > 0 };
+  } catch (error) {
+    console.error('Error checking C_USER:', error);
+    return { error: 'Failed to check C_USER.' };
+  }
+}
+
+// 🔹 Notify Employee Action via Email (uses notifying_c_user)
 export async function notifyEmployee(email, firstName) {
   try {
+    // Check if user already exists in C_USER
+    const check = await notifying_c_user(email);
+    if (check.error) return { error: check.error };
+    if (check.exists) {
+      return { error: 'User already registered in C_USER.' };
+    }
+
     const cookieStore = await cookies();
     const token = cookieStore.get('jwt_token')?.value;
     const loginLink = `https://com360view.com/login`;
