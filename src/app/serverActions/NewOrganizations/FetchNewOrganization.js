@@ -1,7 +1,7 @@
 'use server';
 
 import { MetaDBconnection } from "@/app/utils/config/db"; 
-import { approveProSubscription } from "@/app/serverActions/ProSubscriptionForm/SubscribeSignup";
+import { approveProSubscription } from "@/app/serverActions/SharedSubscriptionForm/SubscribeSignup";
 import nodemailer from 'nodemailer';
 
 

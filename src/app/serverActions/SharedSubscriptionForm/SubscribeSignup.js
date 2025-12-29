@@ -147,10 +147,10 @@ export async function submitSubscriptionRequest(formData) {
   }
 }
 
-// 6. APPROVE PRO SUBSCRIPTION (Called by Admin Panel)
-// REPLACE your existing approveProSubscription function with this:
+// 6. APPROVE SUBSCRIPTION (Called by Admin Panel)
+// Used for Growth, Pro, and Enterprise plans
 
-export async function approveProSubscription(reqData) {
+export async function approveSubscription(reqData) {
   const metaPool = MetaDBconnection();
   let metaConnection = null;
   let newTenantPool = null;
@@ -162,7 +162,7 @@ export async function approveProSubscription(reqData) {
         mobile_number, gender, dob, username, password_hash, logo_path, plan_id 
     } = reqData;
 
-    console.log(`🚀 Starting PRO Subscription Approval for: ${company_name}`);
+    console.log(`🚀 Starting Subscription Approval for: ${company_name}`);
 
     // --- A. PREPARE DB CREDENTIALS ---
     const cleanName = company_name.replace(/[^a-zA-Z0-9]/g, '').substring(0, 8);
@@ -481,7 +481,7 @@ export async function approveProSubscription(reqData) {
          (4,'19', 'Auto Generated', '1', NULL, '-1', NULL, '1'),
          (5,'20', 'Auto Generated', '1', NULL, '-1', NULL, '1'),
          (6,'18', 'W-9','1',NULL,'-1',NULL,'4'),
-          ('12', '27', 'Contract', '1', NULL, '-1', NULL, '2');`
+         ('12', '27', 'Contract', '1', NULL, '-1', NULL, '2');`
     );
     await newTenantConnection.query(
         `INSERT INTO C_GENERIC_VALUES (id, g_id, Name, isactive, cutting, orgid, parent_value_id, display_order) 
@@ -492,7 +492,6 @@ export async function approveProSubscription(reqData) {
         ('10', '29', 'Request For Evidence', '1', NULL, '', '-1', '4'), 
         ('11', '29', 'Pending', '1', NULL, '-1', NULL, '5')`
        );
-
     // 1. Insert Generic Data
     const genericValues = rawGenericData.map(item => [item[0], item[1], item[2], item[3], tenantOrgId, item[4], item[5]]);
     if (genericValues.length > 0) {
@@ -522,7 +521,7 @@ export async function approveProSubscription(reqData) {
   } catch (error) {
     if (metaConnection) await metaConnection.rollback();
     if (newTenantConnection) await newTenantConnection.rollback();
-    console.error("Pro Approval Failed:", error);
+    console.error("Subscription Approval Failed:", error);
     return { success: false, error: error.message };
   } finally {
     if (metaConnection) metaConnection.release();
@@ -532,3 +531,8 @@ export async function approveProSubscription(reqData) {
     }
   }
 }
+
+// Backward compatibility aliases for existing code
+export const approveProSubscription = approveSubscription;
+export const approveGrowthSubscription = approveSubscription;
+export const approveEnterpriseSubscription = approveSubscription;

@@ -1,8 +1,8 @@
 'use client'
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
-// Import the new submitSubscriptionRequest function
-import { checkOrgName, initiateSignupOTP, validateSignupOTP, submitSubscriptionRequest, checkEmail, checkUsername } from '@/app/serverActions/GrowthSubscriptionForm/SubscribeSignup'
+// Import from shared subscription form
+import { checkOrgName, initiateSignupOTP, validateSignupOTP, submitSubscriptionRequest, checkEmail, checkUsername } from '@/app/serverActions/SharedSubscriptionForm/SubscribeSignup'
 import './GrowthSubscription.module.css'
 
 const CompanyForm = ({ planId }) => {
