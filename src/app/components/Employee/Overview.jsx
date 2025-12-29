@@ -8,7 +8,7 @@ import AddEmployee from './AddEmployee';
 import EditEmployee from './EditEmployee';
 // 1. Import the secure library
 import readXlsxFile from 'read-excel-file';
-import { importEmployeesBatch } from '@/app/serverActions/Employee/addemployee';
+import { importEmployeesBatch } from '@/app/serverActions/addemployee';
 
 const Overview = ({
   roles,
