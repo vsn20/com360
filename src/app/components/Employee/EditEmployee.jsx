@@ -10,7 +10,8 @@ import {
   fetchFdnsDocumentsById,
   uploadProfilePhoto,
   deleteProfilePhoto,
-  uploadSignature 
+  uploadSignature,
+  deleteSignature // ADDED THIS IMPORT
 } from '@/app/serverActions/Employee/overview';
 // IMPORT FETCH IMMIGRATION DATA
 import { fetchImmigrationData } from '@/app/serverActions/Employee/Immigration'; 
@@ -619,6 +620,34 @@ const handleDeleteProfilePhoto = async (empId) => {
     setImageToCrop(null);
 };
 
+// --- NEW FUNCTION TO HANDLE SIGNATURE DELETION ---
+const handleDeleteSignature = async () => {
+  if (!employeeDetails?.empid) return;
+
+  // If user just selected a file but hasn't saved yet, clear it
+  if (signatureFile) {
+    setSignatureFile(null);
+    return;
+  }
+
+  // If there's a signature on the server, delete it
+  if (signatureSrc && !signatureSrc.includes('default')) {
+    try {
+      const result = await deleteSignature(employeeDetails.empid);
+      if (result.success) {
+        setSignatureSrc(null);
+        setSignatureFile(null);
+        setError(null);
+      } else {
+        setError(result.message || 'Failed to delete signature.');
+      }
+    } catch (err) {
+      console.error('Error deleting signature:', err);
+      setError('Failed to delete signature.');
+    }
+  }
+};
+
 function onImageLoad(e) {
   const { width, height } = e.currentTarget;
   const cropWidth = Math.min(width, height) * 0.9;
@@ -753,6 +782,10 @@ function onImageLoad(e) {
      if (selectedRoles.length === 0) { setError('At least one role is required.'); return; }
      if (!formData.hireDate) { setError('Hire Date is required.'); return; }
      if (!formData.status) { setError('Status is required.'); return; }
+     
+     // --- ADDED VALIDATION FOR ORGANIZATION ---
+     if (!formData.suborgid) { setError('Organization is required.'); return; }
+
      selectedRoles.forEach((roleid) => formDataToSubmit.append('roleids', roleid));
      formDataToSubmit.append('hireDate', formData.hireDate || '');
      formDataToSubmit.append('lastWorkDate', formData.lastWorkDate || '');
@@ -1214,10 +1247,7 @@ function onImageLoad(e) {
                       setSignatureFile(e.target.files[0]);
                     }
                   }}
-                  onDeleteSignature={() => {
-                    setSignatureSrc(null);
-                    setSignatureFile(null);
-                  }}
+                  onDeleteSignature={handleDeleteSignature} // CHANGED: Passed the new handler
                   isSaving={isSaving && savingSection === 'personal'}
                 />
             )}

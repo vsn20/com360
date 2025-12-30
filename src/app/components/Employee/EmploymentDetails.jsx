@@ -208,13 +208,14 @@ const EmploymentDetails = ({
               <input type="date" name="rejoinDate" value={formData.rejoinDate} onChange={handleFormChange} className="date-input" />
             </div>
             <div className="form-group">
-              <label>Organization</label>
+              <label>Organization*</label>
               <select
                 name="suborgid"
                 value={formData.suborgid}
                 onChange={handleFormChange}
+                required
               >
-                <option value="">Select Sub Organization</option>
+                <option value="">Select Organization</option>
                 {suborgs.map((sub) => (
                   <option key={sub.suborgid} value={sub.suborgid}>
                     {sub.suborgname}

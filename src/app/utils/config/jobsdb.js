@@ -412,3 +412,262 @@ export async function getCandidateApplicationsWithDetails(candidateId) {
 }
 
 export { metaPool };
+
+
+
+// // app/utils/config/jobsdb.js
+// // ✅ HARDCODED FOR AWS RDS (NO ENV DEPENDENCY)
+
+// import mysql from 'mysql2/promise';
+
+// // ---------------------------------------------------------
+// // RDS MASTER CONFIG (HARDCODED)
+// // ---------------------------------------------------------
+// const RDS_CONFIG = {
+//   host: 'database-1.cvscmsgqsmyw.us-east-1.rds.amazonaws.com',
+//   port: 3306,
+//   user: 'admin',
+//   password: 'SaiLpgCsg$8393',
+// };
+
+// // ---------------------------------------------------------
+// // META DATABASE CONNECTION
+// // ---------------------------------------------------------
+// const metaPool = mysql.createPool({
+//   host: RDS_CONFIG.host,
+//   port: RDS_CONFIG.port,
+//   user: RDS_CONFIG.user,
+//   password: RDS_CONFIG.password,
+//   database: 'Com360_Meta',
+//   waitForConnections: true,
+//   connectionLimit: 10,
+//   queueLimit: 0,
+//   connectTimeout: 10000,
+// });
+
+// // Cache for tenant DB pools
+// const tenantPools = new Map();
+
+// // Cache for aggregated jobs data
+// let jobsCache = {
+//   jobs: [],
+//   orgs: [],
+//   lastUpdated: null,
+//   isRefreshing: false,
+// };
+
+// // Cache refresh interval: 5 minutes
+// const CACHE_TTL = 5 * 60 * 1000;
+
+// // Auto refresh
+// setInterval(() => {
+//   refreshJobsCache().catch(err =>
+//     console.error('Automatic jobs cache refresh failed:', err)
+//   );
+// }, CACHE_TTL);
+
+// // ---------------------------------------------------------
+// // GET / CREATE TENANT POOL
+// // ---------------------------------------------------------
+// function getTenantPool(databaseName, username, password) {
+//   if (tenantPools.has(databaseName)) {
+//     return tenantPools.get(databaseName);
+//   }
+
+//   const pool = mysql.createPool({
+//     host: RDS_CONFIG.host,
+//     port: RDS_CONFIG.port,
+//     user: username || RDS_CONFIG.user,
+//     password: password || RDS_CONFIG.password,
+//     database: databaseName,
+//     waitForConnections: true,
+//     connectionLimit: 5,
+//     queueLimit: 0,
+//     connectTimeout: 10000,
+//   });
+
+//   tenantPools.set(databaseName, pool);
+//   return pool;
+// }
+
+// // ---------------------------------------------------------
+// // FETCH ALL ACTIVE SUBSCRIBER DATABASES
+// // ---------------------------------------------------------
+// async function getAllSubscriberDatabases() {
+//   try {
+//     const [rows] = await metaPool.execute(`
+//       SELECT DISTINCT
+//         sp.subscriber_database AS databasename,
+//         sp.privileged_user_access AS username,
+//         sp.password,
+//         s.org_id
+//       FROM C_SUBSCRIBER s
+//       JOIN C_SUBSCRIBER_PLAN sp ON s.subscriber_id = sp.subscriber_id
+//       WHERE s.active = 'Y' AND sp.active = 'Y'
+//       GROUP BY sp.subscriber_database
+//     `);
+
+//     console.log(`Found ${rows.length} active subscriber databases`);
+//     return rows;
+//   } catch (error) {
+//     console.error('Error fetching subscriber databases:', error.message);
+//     return [];
+//   }
+// }
+
+// // ---------------------------------------------------------
+// // FETCH JOBS FROM ONE DATABASE
+// // ---------------------------------------------------------
+// async function fetchJobsFromDatabase(pool, databaseName) {
+//   try {
+//     const [tables] = await pool.query(`
+//       SELECT TABLE_NAME 
+//       FROM information_schema.TABLES 
+//       WHERE TABLE_SCHEMA = ? 
+//         AND TABLE_NAME IN ('C_EXTERNAL_JOBS', 'C_ORG')
+//     `, [databaseName]);
+
+//     const tableNames = tables.map(t => t.TABLE_NAME);
+//     if (!tableNames.includes('C_EXTERNAL_JOBS') || !tableNames.includes('C_ORG')) {
+//       console.log(`Skipping ${databaseName}, missing tables`);
+//       return { jobs: [], orgs: [] };
+//     }
+
+//     const [orgs] = await pool.query(
+//       'SELECT orgid, orgname FROM C_ORG'
+//     );
+
+//     const [jobs] = await pool.query(`
+//       SELECT 
+//         ej.jobid, ej.orgid, ej.lastdate_for_application, ej.active,
+//         ej.display_job_name, ej.job_type AS job_type_id, ej.description,
+//         ej.countryid, ej.stateid, ej.custom_state_name,
+//         o.orgname, c.value AS country_value, s.value AS state_value,
+//         g.Name AS job_type
+//       FROM C_EXTERNAL_JOBS ej
+//       JOIN C_ORG o ON ej.orgid = o.orgid
+//       LEFT JOIN C_COUNTRY c ON ej.countryid = c.ID
+//       LEFT JOIN C_STATE s ON ej.stateid = s.ID
+//       LEFT JOIN C_GENERIC_VALUES g ON ej.job_type = g.id
+//       WHERE ej.active = 1
+//     `);
+
+//     return {
+//       jobs: jobs.map(j => ({ ...j, _databaseName: databaseName })),
+//       orgs: orgs.map(o => ({ ...o, _databaseName: databaseName })),
+//     };
+//   } catch (error) {
+//     console.error(`Error fetching jobs from ${databaseName}:`, error.message);
+//     return { jobs: [], orgs: [] };
+//   }
+// }
+
+// // ---------------------------------------------------------
+// // REFRESH JOB CACHE
+// // ---------------------------------------------------------
+// async function refreshJobsCache() {
+//   if (jobsCache.isRefreshing) return jobsCache;
+
+//   jobsCache.isRefreshing = true;
+//   console.log('Refreshing jobs cache...');
+
+//   try {
+//     const databases = await getAllSubscriberDatabases();
+//     const allJobs = [];
+//     const allOrgs = [];
+//     const jobSet = new Set();
+//     const orgSet = new Set();
+
+//     const batchSize = 5;
+//     for (let i = 0; i < databases.length; i += batchSize) {
+//       const batch = databases.slice(i, i + batchSize);
+
+//       const results = await Promise.all(
+//         batch.map(db => {
+//           const pool = getTenantPool(db.databasename, db.username, db.password);
+//           return fetchJobsFromDatabase(pool, db.databasename);
+//         })
+//       );
+
+//       for (const res of results) {
+//         for (const job of res.jobs) {
+//           const key = `${job._databaseName}_${job.jobid}`;
+//           if (!jobSet.has(key)) {
+//             jobSet.add(key);
+//             allJobs.push(job);
+//           }
+//         }
+
+//         for (const org of res.orgs) {
+//           const key = `${org._databaseName}_${org.orgid}`;
+//           if (!orgSet.has(key)) {
+//             orgSet.add(key);
+//             allOrgs.push(org);
+//           }
+//         }
+//       }
+//     }
+
+//     jobsCache = {
+//       jobs: allJobs,
+//       orgs: allOrgs,
+//       lastUpdated: Date.now(),
+//       isRefreshing: false,
+//     };
+
+//     console.log(`Jobs cache refreshed (${allJobs.length} jobs)`);
+//     return jobsCache;
+
+//   } catch (error) {
+//     console.error('Jobs cache refresh failed:', error.message);
+//     jobsCache.isRefreshing = false;
+//     return jobsCache;
+//   }
+// }
+
+// // ---------------------------------------------------------
+// // PUBLIC API
+// // ---------------------------------------------------------
+// export async function getAllExternalJobs() {
+//   const now = Date.now();
+
+//   if (jobsCache.lastUpdated && now - jobsCache.lastUpdated < CACHE_TTL) {
+//     return { ...jobsCache, fromCache: true };
+//   }
+
+//   await refreshJobsCache();
+//   return { ...jobsCache, fromCache: false };
+// }
+
+// export async function forceRefreshJobsCache() {
+//   return await refreshJobsCache();
+// }
+
+// export async function getPoolForDatabase(databaseName) {
+//   const [rows] = await metaPool.execute(`
+//     SELECT 
+//       sp.subscriber_database AS databasename,
+//       sp.privileged_user_access AS username,
+//       sp.password
+//     FROM C_SUBSCRIBER_PLAN sp
+//     WHERE sp.subscriber_database = ?
+//       AND sp.active = 'Y'
+//     LIMIT 1
+//   `, [databaseName]);
+
+//   if (!rows.length) {
+//     throw new Error(`Database ${databaseName} not found`);
+//   }
+
+//   return getTenantPool(databaseName, rows[0].username, rows[0].password);
+// }
+
+// export async function findJobDatabase(jobId, orgId) {
+//   const { jobs } = await getAllExternalJobs();
+//   const job = jobs.find(
+//     j => j.jobid === Number(jobId) && j.orgid === Number(orgId)
+//   );
+//   return job ? job._databaseName : null;
+// }
+
+// export { metaPool };

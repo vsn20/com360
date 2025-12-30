@@ -1437,3 +1437,24 @@ export async function fetchFdnsDocumentsById(empid) {
     throw new Error(`Failed to fetch employee FDNS documents: ${error.message}`);
   }
 }
+
+export async function deleteSignature(empId) {
+  if (!empId) {
+    throw new Error('Employee ID is missing.');
+  }
+
+  const uploadDir = path.join(process.cwd(), 'public/uploads/signatures');
+  const filePath = path.join(uploadDir, `${empId}.jpg`);
+
+  try {
+    await fs.access(filePath);
+    await fs.unlink(filePath);
+    return { success: true, message: 'Signature deleted successfully.' };
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return { success: true, message: 'No signature to delete.' };
+    }
+    console.error('Error deleting signature:', error);
+    throw new Error('Failed to delete signature.');
+  }
+}
