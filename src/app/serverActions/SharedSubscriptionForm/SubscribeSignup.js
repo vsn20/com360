@@ -3,7 +3,8 @@
 import { MetaDBconnection } from "@/app/utils/config/db"; 
 import { createTenantDatabase, addPrivilegedUserToDatabase, allowRemoteAccess } from "@/app/utils/config/cpanelApi"; 
 import { cloneDatabaseSchema } from "@/app/utils/config/dbCloner"; 
-import mysql from 'mysql2/promise'; 
+// Updated Import: Added getDynamicTenantConnection
+import { getTenantConnection, getDynamicTenantConnection } from "@/app/utils/config/com360db";
 import bcrypt from 'bcrypt';
 import fs from 'fs/promises';
 import path from 'path';
@@ -11,20 +12,7 @@ import nodemailer from 'nodemailer';
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Helper: Get Hardcoded Tenant Connection (Com360) for OTPs
-async function getTenantConnection() {
-  const pool = mysql.createPool({
-    host: '132.148.221.65',
-    port: 3306,
-    user: 'SAINAMAN',         
-    password: 'SAInaman$8393',
-    database: 'com360',       
-    waitForConnections: true,
-    connectionLimit: 5,
-    queueLimit: 0,
-  });
-  return pool;
-}
+// ... [Keep existing checkOrgName, checkEmail, checkUsername, sendSignupOTP, initiateSignupOTP, validateSignupOTP, submitSubscriptionRequest functions as they are] ...
 
 // 1. Check Organization Name
 export async function checkOrgName(orgName) {
@@ -56,7 +44,7 @@ export async function checkUsername(username) {
 // 4. Send Signup OTP
 export async function sendSignupOTP(formData) {
   const email = formData.get('email');
-  const tenantPool = await getTenantConnection(); 
+  const tenantPool = getTenantConnection();
   try {
     await tenantPool.query(`CREATE TABLE IF NOT EXISTS C_OTP (email VARCHAR(255) PRIMARY KEY, otp VARCHAR(6) NOT NULL, expiry DATETIME NOT NULL)`);
     const [userRows] = await tenantPool.query(`SELECT COUNT(*) AS count FROM C_USER WHERE email=?`, [email]);
@@ -76,7 +64,7 @@ export async function initiateSignupOTP(formData) { return await sendSignupOTP(f
 export async function validateSignupOTP(formData) {
   const email = formData.get('email');
   const otp = formData.get('otp');
-  const tenantPool = await getTenantConnection(); 
+  const tenantPool = getTenantConnection();
   try {
     const [rows] = await tenantPool.query('SELECT * FROM C_OTP WHERE email = ? AND otp = ?', [email, otp]);
     await tenantPool.end();
@@ -88,7 +76,7 @@ export async function validateSignupOTP(formData) {
   } catch (e) { if (tenantPool) await tenantPool.end(); return { success: false, error: "Database error" }; }
 }
 
-// 5. Submit Subscription Request (Replaces immediate creation)
+// 5. Submit Subscription Request
 export async function submitSubscriptionRequest(formData) {
   const metaPool = MetaDBconnection(); 
   let metaConnection = null;
@@ -147,9 +135,7 @@ export async function submitSubscriptionRequest(formData) {
   }
 }
 
-// 6. APPROVE SUBSCRIPTION (Called by Admin Panel)
-// Used for Growth, Pro, and Enterprise plans
-
+// 6. APPROVE SUBSCRIPTION
 export async function approveSubscription(reqData) {
   const metaPool = MetaDBconnection();
   let metaConnection = null;
@@ -176,7 +162,6 @@ export async function approveSubscription(reqData) {
     await delay(3000);
 
     await allowRemoteAccess(process.env.SERVER_IP || '%'); 
-    //  await allowRemoteAccess('%'); 
     await addPrivilegedUserToDatabase(dbName, 'SAINAMAN'); 
     await delay(2000);
 
@@ -210,10 +195,9 @@ export async function approveSubscription(reqData) {
       [first_name, last_name, metaOrgId, username, plan_id, email]
     );
 
-    // --- D. CONNECT TO NEW TENANT DB ---
-    newTenantPool = mysql.createPool({
-        host: '132.148.221.65', user: 'SAINAMAN', password: 'SAInaman$8393', database: dbName, waitForConnections: true, connectionLimit: 5
-    });
+    // --- D. CONNECT TO NEW TENANT DB (Using Helper) ---
+    // 🔴 REFACTORED: Now uses the helper instead of raw mysql call
+    newTenantPool = getDynamicTenantConnection(dbName);
 
     let attempts = 0;
     while (attempts < 5) {
@@ -239,7 +223,6 @@ export async function approveSubscription(reqData) {
     // --- HANDLE LOGO (ROBUST VERSION) ---
     if (logo_path) {
         try {
-            // Remove leading slashes for Windows path compatibility
             const cleanLogoPath = logo_path.startsWith('/') || logo_path.startsWith('\\') 
                 ? logo_path.slice(1) 
                 : logo_path;
@@ -249,7 +232,6 @@ export async function approveSubscription(reqData) {
             const newDir = path.join(process.cwd(), 'public/uploads/orglogos');
             const newPath = path.join(newDir, newFileName);
 
-            // Check if Source exists (Prevents crash if moved in previous failed run)
             let sourceExists = false;
             try {
                 await fs.access(oldPath);
@@ -259,7 +241,6 @@ export async function approveSubscription(reqData) {
             }
 
             if (sourceExists) {
-                // Normal Case: Move file
                 await fs.mkdir(newDir, { recursive: true });
                 await fs.rename(oldPath, newPath);
                 
@@ -268,10 +249,8 @@ export async function approveSubscription(reqData) {
                     [`/uploads/orglogos/${newFileName}`, tenantOrgId]
                 );
             } else {
-                // Recovery Case: Check if file is already at destination
                  try {
                     await fs.access(newPath);
-                    // File exists at destination, just update DB
                     await newTenantConnection.query(
                         'UPDATE C_ORG SET orglogo_url = ?, is_logo_set = 1 WHERE orgid = ?', 
                         [`/uploads/orglogos/${newFileName}`, tenantOrgId]
@@ -493,7 +472,7 @@ export async function approveSubscription(reqData) {
         ('10', '29', 'Request For Evidence', '1', NULL, '-1', NULL, '4'), 
         ('11', '29', 'Pending', '1', NULL, '-1', NULL, '5')`
        );
-    // 1. Insert Generic Data
+
     const genericValues = rawGenericData.map(item => [item[0], item[1], item[2], item[3], tenantOrgId, item[4], item[5]]);
     if (genericValues.length > 0) {
       await newTenantConnection.query(
@@ -501,9 +480,6 @@ export async function approveSubscription(reqData) {
         [genericValues]
       );
     }
-
-    // 2. Insert Tax Forms (Corrected: NO IDs)
-   
 
     const suborgid = `${tenantOrgId}-1`;
     await newTenantConnection.query(
@@ -533,7 +509,6 @@ export async function approveSubscription(reqData) {
   }
 }
 
-// Backward compatibility aliases for existing code
 export const approveProSubscription = approveSubscription;
 export const approveGrowthSubscription = approveSubscription;
 export const approveEnterpriseSubscription = approveSubscription;

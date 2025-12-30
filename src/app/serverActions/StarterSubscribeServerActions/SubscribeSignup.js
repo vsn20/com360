@@ -7,23 +7,24 @@ import fs from 'fs/promises';
 import path from 'path';
 import nodemailer from 'nodemailer';
 import { verifyOTP } from '../SignupAction';
+import { getTenantConnection } from "@/app/utils/config/com360db";
 
 // 🔹 HELPER: Get Hardcoded Tenant Connection (Com360)
 // We need this because standard DBconnection() requires a logged-in user (JWT).
 // During signup, we must connect explicitly to the 'Com360' database.
-async function getTenantConnection() {
-  const pool = mysql.createPool({
-    host: '132.148.221.65',
-    port: 3306,
-    user: 'SAINAMAN',         // Using privileged creds for creation
-    password:'SAInaman$8393', // Using privileged creds for creation
-    database: 'com360',       // 🔴 Hardcoded as requested
-    waitForConnections: true,
-    connectionLimit: 5,
-    queueLimit: 0,
-  });
-  return pool;
-}
+// async function getTenantConnection() {
+//   const pool = mysql.createPool({
+//     host: '132.148.221.65',
+//     port: 3306,
+//     user: 'SAINAMAN',         // Using privileged creds for creation
+//     password:'SAInaman$8393', // Using privileged creds for creation
+//     database: 'com360',       // 🔴 Hardcoded as requested
+//     waitForConnections: true,
+//     connectionLimit: 5,
+//     queueLimit: 0,
+//   });
+//   return pool;
+// }
 
 // 1. Check Organization Name (Checks Meta DB: C_ORGANIZATION)
 export async function checkOrgName(orgName) {
@@ -64,7 +65,7 @@ export async function checkUsername(username) {
 // 4. Send Signup OTP (Stores in Tenant DB: Com360 -> C_OTP)
 export async function sendSignupOTP(formData) {
   const email = formData.get('email');
-  const tenantPool = await getTenantConnection(); // Connect to Com360
+  const tenantPool =  getTenantConnection(); // Connect to Com360
 
   try {
     // Create OTP table if not exists
@@ -130,7 +131,7 @@ export async function initiateSignupOTP(formData) {
 export async function validateSignupOTP(formData) {
   const email = formData.get('email');
   const otp = formData.get('otp');
-  const tenantPool = await getTenantConnection(); 
+  const tenantPool =  getTenantConnection(); 
 
   try {
     const [rows] = await tenantPool.query('SELECT * FROM C_OTP WHERE email = ? AND otp = ?', [email, otp]);
@@ -151,7 +152,7 @@ export async function validateSignupOTP(formData) {
 // 6. Complete Subscription (Meta + Tenant Transactions)
 export async function completeSubscription(formData) {
   const metaPool = MetaDBconnection();
-  const tenantPool = await getTenantConnection();
+  const tenantPool =  getTenantConnection();
   
   let metaConnection = null;
   let tenantConnection = null;
