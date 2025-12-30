@@ -856,24 +856,30 @@ function onImageLoad(e) {
       setemployeedocuments(updatedDocuments);
       setSelectedRoles(updatedEmployee.roleids || []);
       
-      if (section === 'personal') {
-        setEditingPersonal(false);
-        if (signatureFile) {
-          try {
-            const sigData = new FormData();
-            sigData.append('file', signatureFile);
-            sigData.append('empId', formData.empid);
-            const sigResult = await uploadSignature(sigData);
-            if (sigResult.success) {
-               setSignatureSrc(`/uploads/signatures/${formData.empid}.jpg?${new Date().getTime()}`);
-               setSignatureFile(null); 
-            }
-          } catch (sigErr) {
-            console.error('Failed to upload signature:', sigErr);
-          }
-        }
-      }
+     if (section === 'personal') {
+  if (signatureFile) {
+    try {
+      const sigData = new FormData();
+      sigData.append('file', signatureFile);
+      sigData.append('empId', formData.empid);
       
+      console.log('Uploading signature for empId:', formData.empid);
+      const sigResult = await uploadSignature(sigData);
+      console.log('Signature upload result:', sigResult);
+      
+      if (sigResult.success) {
+        const newTimestamp = new Date().getTime();
+        const newSignatureSrc = `/uploads/signatures/${formData.empid}.jpg?${newTimestamp}`;
+        console.log('Setting new signature source:', newSignatureSrc);
+        setSignatureSrc(newSignatureSrc);
+        setSignatureFile(null);
+      }
+    } catch (sigErr) {
+      console.error('Failed to upload signature:', sigErr);
+    }
+  }
+  setEditingPersonal(false);  // MOVED THIS LINE TO THE END
+} 
       if (section === 'employment') {
         setEditingEmployment(false);
       }

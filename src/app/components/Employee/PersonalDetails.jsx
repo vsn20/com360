@@ -117,13 +117,18 @@ const PersonalDetails = ({
                 <div style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <div style={{ border: '1px solid #ccc', display: 'inline-block', padding: '5px' }}>
                     <Image 
-                      src={signatureSrc} 
-                      alt="Signature" 
-                      width={150} 
-                      height={60} 
-                      unoptimized 
-                      onError={(e) => e.target.style.display = 'none'}
-                    />
+  key={signatureSrc}  // ADD THIS LINE
+  src={signatureSrc} 
+  alt="Signature" 
+  width={150} 
+  height={60} 
+  unoptimized 
+  onError={(e) => {
+    console.error('Failed to load signature image');
+    e.target.style.display = 'none';
+  }}
+  onLoad={() => console.log('Signature image loaded:', signatureSrc)}
+/>
                   </div>
                   <button 
                     type="button" 
