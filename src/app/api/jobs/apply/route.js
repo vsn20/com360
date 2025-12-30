@@ -57,6 +57,30 @@ export async function POST(request) {
       return Response.json({ error: 'Job not found or inactive' }, { status: 404 });
     }
 
+    // ============================================================
+    // START CHANGE: DATE VALIDATION LOGIC
+    // ============================================================
+    
+    // Normalize current date to YYYY-MM-DD for comparison
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Ensure we handle the job date correctly (whether it's a string or Date object)
+    let jobLastDate = job.lastdate_for_application;
+    if (jobLastDate instanceof Date) {
+        jobLastDate = jobLastDate.toISOString().split('T')[0];
+    }
+    
+    // Check if the application date has passed
+    // Logic: If the last date is strictly less than today, it is expired.
+    if (!jobLastDate || jobLastDate < today) {
+        console.log(`Application rejected: Job expired. Last Date: ${jobLastDate}, Today: ${today}`);
+        return Response.json({ error: 'This job is no longer accepting applications' }, { status: 400 });
+    }
+
+    // ============================================================
+    // END CHANGE
+    // ============================================================
+
     const { orgid } = job;
 
     console.log(`Job ${jobid} belongs to database: ${databaseName}, orgid: ${orgid}`);
