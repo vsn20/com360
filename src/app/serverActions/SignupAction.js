@@ -2,12 +2,42 @@
 
 import nodemailer from 'nodemailer';
 import bcrypt from 'bcrypt';
-import loginDBconnection, { metaPool } from "../utils/config/logindb"; // 🔹 Import metaPool to access Meta DB
+import loginDBconnection, { metaPool } from "../utils/config/logindb";
+import { checkEmailRateLimit } from "../utils/rateLimiter";
+
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Create email transporter with optimized Zoho settings
+function createEmailTransporter() {
+  return nodemailer.createTransport({
+    host: process.env.GMAIL_HOST,
+    port: 465,
+    secure: true,
+    auth: {
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_APP_PASS,
+    },
+    tls: {
+      rejectUnauthorized: false
+    },
+    pool: true,
+    maxConnections: 5,
+    maxMessages: 10,
+  });
+}
 
 export async function sendOTP(formData) {
   const email = formData.get('email');
   
-  // 🔹 Use 'email' mode to find the DB without a cookie
+  // Rate limit check
+  const rateCheck = checkEmailRateLimit(email, 3, 600000);
+  if (!rateCheck.allowed) {
+    return { 
+      success: false, 
+      error: `Too many OTP requests. Please wait ${rateCheck.waitTime} minutes before trying again.` 
+    };
+  }
+  
   const pool = await loginDBconnection(email, 'email');
 
   if (!pool) {
@@ -43,28 +73,51 @@ export async function sendOTP(formData) {
     ON DUPLICATE KEY UPDATE otp = ?, expiry = ?
   `, [email, otp, expiry, otp, expiry]);
 
-  // Send email
-  const transporter = nodemailer.createTransport({
-    host: process.env.GMAIL_HOST,
-    port: 587,
-    secure: false,
-    auth: {
-      user: process.env.GMAIL_USER,
-      pass: process.env.GMAIL_APP_PASS,
-    },
-  });
+  // Send email with delay
+  const transporter = createEmailTransporter();
+  
+  // Add delay to prevent rate limiting
+  await delay(2000);
 
   try {
     await transporter.sendMail({
-      from: process.env.GMAIL_USER,
+      from: `"Com360 Support" <${process.env.GMAIL_USER}>`,
       to: email,
       subject: 'Your OTP for Signup',
       text: `Your OTP is ${otp}, valid for 10 minutes.`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+          <h2 style="color: #333; margin-bottom: 20px;">Com360 Signup Verification</h2>
+          <p style="font-size: 16px; color: #555;">Your OTP code is:</p>
+          <div style="background-color: #f5f5f5; padding: 15px; text-align: center; border-radius: 5px; margin: 20px 0;">
+            <span style="font-size: 32px; font-weight: bold; color: #007bff; letter-spacing: 5px;">${otp}</span>
+          </div>
+          <p style="font-size: 14px; color: #666;">This code is valid for <strong>10 minutes</strong>.</p>
+          <p style="font-size: 12px; color: #999; margin-top: 30px; border-top: 1px solid #e0e0e0; padding-top: 15px;">
+            If you didn't request this code, please ignore this email.
+          </p>
+        </div>
+      `
     });
     return { success: true };
   } catch (err) {
     console.error('Email sending error:', err);
-    return { success: false, error: "Failed to send OTP email." };
+    
+    if (err.responseCode === 550 || err.code === 'EMESSAGE') {
+      return { 
+        success: false, 
+        error: "Email service temporarily busy. Please wait 2-3 minutes and try again." 
+      };
+    }
+    
+    if (err.code === 'EAUTH') {
+      return { 
+        success: false, 
+        error: "Email authentication failed. Please contact support." 
+      };
+    }
+    
+    return { success: false, error: "Failed to send OTP email. Please try again later." };
   }
 }
 
@@ -72,7 +125,6 @@ export async function verifyOTP(formData) {
   const email = formData.get('email');
   const otp = formData.get('otp');
   
-  // 🔹 Connect using Email
   const pool = await loginDBconnection(email, 'email');
 
   if (!pool) {
@@ -102,11 +154,10 @@ export async function verifyOTP(formData) {
 
 export async function finalSignup(formData) {
   const email = formData.get('email');
-  const user_id = formData.get('user_id'); // This is the NEW username
+  const user_id = formData.get('user_id');
   const password = formData.get('password');
   const confirm_password = formData.get('confirm_password');
   
-  // 🔹 Connect using Email (Database location is defined by Employee Email)
   const pool = await loginDBconnection(email, 'email');
 
   if (!pool) {
@@ -151,7 +202,7 @@ export async function finalSignup(formData) {
     [user_id, email, hashedPassword, empid, orgid]
   );
 
-  // 2. 🔹 CRITICAL UPDATE: Sync Username to Meta Database (C_EMP)
+  // 2. Sync Username to Meta Database (C_EMP)
   try {
     const [metaResult] = await metaPool.query(
       `UPDATE C_EMP SET username = ? WHERE email = ?`,
@@ -160,9 +211,6 @@ export async function finalSignup(formData) {
     console.log(`Meta DB Sync: Username updated for ${email}. Rows affected: ${metaResult.affectedRows}`);
   } catch (err) {
     console.error("Meta DB Sync Error: Failed to update username in Meta C_EMP:", err);
-    // Optional: You might want to return an error here if strict consistency is required,
-    // but usually, we don't want to rollback the Tenant signup if just the Meta sync has a hiccup.
-    // However, if Meta isn't updated, they can't log in next time.
     return { success: false, error: "Account created, but system synchronization failed. Please contact support." };
   }
 
