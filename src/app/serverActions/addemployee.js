@@ -151,6 +151,8 @@ export async function addemployee(formData) {
   const suborgid = formData.get('suborgid') || null;
   const employment_type = formData.get('employment_type') || null;
   const vendor_id = formData.get('vendor_id') || null;
+  // 🟢 NEW: Extract employee number
+  const employee_number = formData.get('employee_number')?.trim() || null;
 
   const cookieStore = await cookies();
   const token = cookieStore.get('jwt_token')?.value;
@@ -170,7 +172,6 @@ export async function addemployee(formData) {
   if (!hireDate) return { error: 'Hire date is required.' };
   if (!status) return { error: 'Status is required.' };
 
-  // Validate vendor_id if employment type is 12 or 13
   if (employment_type && (employment_type === '12' || employment_type === '13')) {
     if (!vendor_id || vendor_id.trim() === '') {
       return { error: 'Vendor selection is required for this employment type.' };
@@ -191,7 +192,17 @@ export async function addemployee(formData) {
       return { error: 'Email already exists.' };
     }
 
-    // Validate superior
+    // 🟢 NEW: Check if employee_number exists
+    if (employee_number) {
+        const [existingEmpNum] = await pool.query(
+            'SELECT empid FROM C_EMP WHERE employee_number = ? AND orgid = ?',
+            [employee_number, orgid]
+        );
+        if (existingEmpNum.length > 0) {
+            return { error: 'Employee number already in use by another employee.' };
+        }
+    }
+
     if (superior) {
       const [existingSuperior] = await pool.query(
         'SELECT empid FROM C_EMP WHERE empid = ? AND orgid = ?',
@@ -202,7 +213,6 @@ export async function addemployee(formData) {
       }
     }
 
-    // Validate roles
     for (const roleid of roleids) {
       const [existingRole] = await pool.query(
         'SELECT roleid FROM C_ORG_ROLE_TABLE WHERE roleid = ? AND orgid = ?',
@@ -213,7 +223,6 @@ export async function addemployee(formData) {
       }
     }
 
-    // Validate vendor if provided
     if (vendor_id && vendor_id.trim() !== '') {
       const [existingVendor] = await pool.query(
         'SELECT ACCNT_ID FROM C_ACCOUNT WHERE ACCNT_ID = ? AND ACTIVE_FLAG = 1',
@@ -224,7 +233,6 @@ export async function addemployee(formData) {
       }
     }
 
-    // Get department name
     let deptName = null;
     if (deptId) {
       const [deptResult] = await pool.query(
@@ -238,7 +246,6 @@ export async function addemployee(formData) {
       }
     }
     
-    // Validate SubOrg
     if (suborgid) {
        const [suborgResult] = await pool.query(
        'SELECT suborgid FROM C_SUB_ORG WHERE suborgid = ? AND orgid = ? AND isstatus = 1',
@@ -249,15 +256,13 @@ export async function addemployee(formData) {
       }
     }
 
-    // Generate employee ID
     const [countResult] = await pool.query('SELECT COUNT(*) AS count FROM C_EMP WHERE orgid = ?', [orgid]);
     const empCount = countResult[0].count;
     empid = `${orgid}_${empCount + 1}`;
 
-    // Determine final vendor_id value: if employment_type is NOT 12 or 13, set to null
     const finalVendorId = (employment_type === '12' || employment_type === '13') ? vendor_id : null;
 
-    // Insert Employee
+    // 🟢 UPDATED: Added employee_number to columns and values
     const insertColumns = [
       'empid', 'orgid', 'EMP_FST_NAME', 'EMP_MID_NAME', 'EMP_LAST_NAME', 'EMP_PREF_NAME', 'email',
       'GENDER', 'MOBILE_NUMBER', 'DOB', 'HIRE', 'LAST_WORK_DATE',
@@ -272,7 +277,7 @@ export async function addemployee(formData) {
       'EMERG_CNCT_ADDR_LINE1', 'EMERG_CNCT_ADDR_LINE2', 'EMERG_CNCT_ADDR_LINE3',
       'EMERG_CNCT_CITY', 'EMERG_CNCT_STATE_ID', 'EMERG_CNCT_STATE_NAME_CUSTOM',
       'EMERG_CNCT_COUNTRY_ID', 'EMERG_CNCT_POSTAL_CODE', 'MODIFICATION_NUM', 'suborgid',
-      'employment_type', 'vendor_id'
+      'employment_type', 'vendor_id', 'employee_number'
     ];
 
     const values = [
@@ -286,7 +291,7 @@ export async function addemployee(formData) {
       deptId, deptName, workCompClass, emergCnctName, emergCnctPhoneNumber, 
       emergCnctEmail, emergCnctAddrLine1, emergCnctAddrLine2, emergCnctAddrLine3, 
       emergCnctCity, emergCnctStateId, emergCnctStateNameCustom, emergCnctCountryId, 
-      emergCnctPostalCode, 1, suborgid, employment_type, finalVendorId
+      emergCnctPostalCode, 1, suborgid, employment_type, finalVendorId, employee_number
     ];
 
     const placeholders = values.map(() => '?').join(', ');
@@ -297,7 +302,6 @@ export async function addemployee(formData) {
 
     console.log(`Employee ${empid} inserted successfully with vendor_id: ${finalVendorId}`);
 
-    // Insert Roles
     for (const roleid of roleids) {
       await pool.query(
         `INSERT INTO C_EMP_ROLE_ASSIGN (empid, orgid, roleid) 
@@ -308,7 +312,6 @@ export async function addemployee(formData) {
       console.log(`Assigned role ${roleid} to employee ${empid}`);
     }
 
-    // Process Leaves
     const leaves = {};
     for (let [key, value] of formData.entries()) {
       if (key.startsWith('leaves[') && key.endsWith(']')) {
@@ -337,7 +340,6 @@ export async function addemployee(formData) {
       console.log('All leave assignments completed successfully');
     }
 
-    // Trigger the Meta Sync
     await syncEmployeeToMeta(empid, orgid, pool, currentUsername);
 
     return { success: true };
@@ -348,24 +350,12 @@ export async function addemployee(formData) {
   }
 }
 
-
-// ... (Keep your existing helper functions like decodeJwt and syncEmployeeToMeta here) ...
-
-// NOTE: Ensure syncEmployeeToMeta is available in this file's scope.
-// If it is not exported or available, copy the definition from your other files or 
-// keep the one you already have in addemployee.js if it exists.
-
-// ... (Keep your existing addemployee function here) ...
-
-
-// 🔹 ADD THIS NEW FUNCTION AT THE BOTTOM OF THE FILE
 export async function importEmployeesBatch(employeesData) {
   const cookieStore = await cookies();
   const token = cookieStore.get('jwt_token')?.value;
 
   if (!token) return { error: 'No token found. Please log in.' };
   
-  // Basic JWT decoding (duplicate logic if decodeJwt is not exported, otherwise use helper)
   let decoded = null;
   try {
     const base64Url = token.split('.')[1];
@@ -387,7 +377,6 @@ export async function importEmployeesBatch(employeesData) {
   let errors = [];
 
   try {
-    // 1. Get current max employee count for ID generation
     const [countResult] = await pool.query('SELECT COUNT(*) AS count FROM C_EMP WHERE orgid = ?', [orgid]);
     let currentCount = countResult[0].count;
 
@@ -396,18 +385,16 @@ export async function importEmployeesBatch(employeesData) {
         firstName,
         lastName,
         email,
-        roleIds, // Array of role IDs resolved on frontend
-        hireDate, // Format YYYY-MM-DD
-        status,   // Status Name resolved on frontend
+        roleIds, 
+        hireDate, 
+        status,   
       } = empData;
 
-      // Basic Validation
       if (!email || !firstName || !lastName) {
         errors.push(`Missing required fields for row with email: ${email || 'Unknown'}`);
         continue;
       }
 
-      // 2. Check for Duplicate Email
       const [existing] = await pool.query(
         'SELECT empid FROM C_EMP WHERE email = ? AND orgid = ?',
         [email, orgid]
@@ -415,16 +402,12 @@ export async function importEmployeesBatch(employeesData) {
 
       if (existing.length > 0) {
         skippedEmails.push(email);
-        continue; // Skip this iteration
+        continue; 
       }
 
-      // 3. Generate ID
       currentCount++;
       const empid = `${orgid}_${currentCount}`;
 
-      // 4. Insert Employee
-      // Note: We use defaults for fields not in Excel (system, 185 for country, active flags, etc.)
-      // We assume Country ID 185 (USA) as default since it wasn't in the excel file
       const insertQuery = `
         INSERT INTO C_EMP (
           empid, orgid, EMP_FST_NAME, EMP_LAST_NAME, email, 
@@ -441,7 +424,6 @@ export async function importEmployeesBatch(employeesData) {
         0, 0, 1
       ]);
 
-      // 5. Insert Roles
       if (roleIds && roleIds.length > 0) {
         for (const roleid of roleIds) {
           await pool.query(
@@ -453,15 +435,7 @@ export async function importEmployeesBatch(employeesData) {
         }
       }
 
-      // 6. Sync to Meta DB (Reuse the function defined in this file)
-      // Assuming syncEmployeeToMeta exists in this file as shown in your previous upload
-      // If not, you must copy the syncEmployeeToMeta function definition here as well.
        try {
-        // We define a mini version here just in case it's not in scope, 
-        // strictly for this function context if the main one isn't exported.
-        // If the main one IS in the file, you can remove this inner function definition.
-        /* Call your existing syncEmployeeToMeta(empid, orgid, pool, currentUsername);
-        */
        } catch (syncErr) {
          console.error("Meta sync failed for imported user", email, syncErr);
        }

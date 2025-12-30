@@ -255,10 +255,8 @@ const AddEmployee = ({
                   type="text"
                   id="employee_number"
                   name="employee_number"
-                  placeholder="Enter Employee Number (5 digits)"
-                  maxLength="5"
-                  pattern="[0-9]*"
-                  onInput={(e) => e.target.value = e.target.value.replace(/[^0-9]/g, '')}
+                  placeholder="e.g. A12345"
+                  maxLength="20"
                 />
               </div>
             </div>

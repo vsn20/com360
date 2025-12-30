@@ -269,11 +269,12 @@ export async function updateEmployee(prevState, formData) {
 
       let formattedEmployeeNumber = null;
       if (employee_number) {
-        if (!/^\d{1,5}$/.test(employee_number)) {
-          console.log('Invalid employee number format');
-          return { error: 'Employee number must be 1-5 digits.' };
+        // 🟢 UPDATED: Allow alphanumeric, removed padding and strict numeric check
+        if (employee_number.length > 20) {
+             return { error: 'Employee number is too long (max 20 characters).' };
         }
-        formattedEmployeeNumber = employee_number.padStart(5, '0');
+        formattedEmployeeNumber = employee_number; 
+
         const [empNumCheck] = await pool.execute(
           'SELECT empid FROM C_EMP WHERE employee_number = ? AND orgid = ? AND empid != ?',
           [formattedEmployeeNumber, orgid, empid]

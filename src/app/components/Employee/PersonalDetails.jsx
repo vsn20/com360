@@ -105,9 +105,8 @@ const PersonalDetails = ({
                 name="employee_number"
                 value={formData.employee_number}
                 onChange={handleFormChange}
-                maxLength="5"
-                pattern="[0-9]*"
-                onInput={(e) => e.target.value = e.target.value.replace(/[^0-9]/g, '')}
+                maxLength="20"
+                placeholder="e.g. A12345"
               />
             </div>
           </div>
