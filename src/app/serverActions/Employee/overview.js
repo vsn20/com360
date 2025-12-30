@@ -1284,21 +1284,67 @@ export async function uploadSignature(formData) {
   const file = formData.get('file');
   const empId = formData.get('empId');
 
+  console.log('=== SIGNATURE UPLOAD DEBUG ===');
+  console.log('1. Received file:', file ? 'YES' : 'NO');
+  console.log('2. File name:', file?.name);
+  console.log('3. File size:', file?.size);
+  console.log('4. File type:', file?.type);
+  console.log('5. Employee ID:', empId);
+
   if (!file || !empId) {
+    console.error('Missing file or empId');
     throw new Error('File or employee ID is missing.');
   }
 
   const uploadDir = path.join(process.cwd(), 'public/uploads/signatures');
-  const filePath = path.join(uploadDir, `${empId}.jpg`); 
+  const filePath = path.join(uploadDir, `${empId}.jpg`);
+
+  console.log('6. Process CWD:', process.cwd());
+  console.log('7. Upload directory:', uploadDir);
+  console.log('8. Full file path:', filePath);
 
   try {
-    await fs.mkdir(uploadDir, { recursive: true });
+    // Check if directory exists
+    try {
+      await fs.access(uploadDir);
+      console.log('9. Directory exists: YES');
+    } catch {
+      console.log('9. Directory exists: NO - Creating...');
+      await fs.mkdir(uploadDir, { recursive: true });
+      console.log('10. Directory created successfully');
+    }
+
+    // Check directory permissions
+    const stats = await fs.stat(uploadDir);
+    console.log('11. Directory permissions:', stats.mode.toString(8));
+    console.log('12. Directory owner UID:', stats.uid);
+    console.log('13. Current process UID:', process.getuid?.() || 'N/A');
+
+    // Convert file to buffer
+    console.log('14. Converting file to buffer...');
     const arrayBuffer = await file.arrayBuffer();
-    await fs.writeFile(filePath, Buffer.from(arrayBuffer));
+    const buffer = Buffer.from(arrayBuffer);
+    console.log('15. Buffer size:', buffer.length);
+
+    // Write file
+    console.log('16. Writing file...');
+    await fs.writeFile(filePath, buffer);
+    console.log('17. File written successfully');
+
+    // Verify file was written
+    const fileStats = await fs.stat(filePath);
+    console.log('18. File size on disk:', fileStats.size);
+    console.log('19. File permissions:', fileStats.mode.toString(8));
+
+    console.log('=== UPLOAD SUCCESS ===');
     return { success: true, message: 'Signature uploaded successfully.' };
   } catch (error) {
-    console.error('Error uploading signature:', error);
-    throw new Error('Failed to upload signature.');
+    console.error('=== UPLOAD FAILED ===');
+    console.error('Error name:', error.name);
+    console.error('Error code:', error.code);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    throw new Error(`Failed to upload signature: ${error.message}`);
   }
 }
 
