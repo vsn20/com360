@@ -1,21 +1,68 @@
 import mysql from 'mysql2/promise';
 import { cookies } from 'next/headers';
 
-// Remote MySQL credentials (META DB)
-const pools = mysql.createPool({
-  host: '132.148.221.65', 
-  port: 3306, 
-  user:'SAINAMAN',
+// ---------------------------------------------------------
+// 1. GLOBAL CACHE SETUP (Shared with logindb.js)
+// ---------------------------------------------------------
+if (!globalThis.dbCache) {
+  globalThis.dbCache = {
+    users: new Map(), // Maps 'username' -> Creds
+    pools: new Map(), // Maps 'dbName' -> Pool
+  };
+}
+
+const CACHE_TTL = 10 * 60 * 1000; // 10 Minutes
+const POOL_CONNECTION_LIMIT = 5;  // Limit connections per Tenant DB
+
+// ---------------------------------------------------------
+// 2. META DATABASE CONNECTION
+// ---------------------------------------------------------
+const metaPool = mysql.createPool({
+  host: '132.148.221.65',
+  port: 3306,
+  user: 'SAINAMAN',
   password: 'SAInaman$8393',
   database: 'Com360_Meta',
   waitForConnections: true,
-  connectionLimit: 5, 
+  connectionLimit: 3, 
   queueLimit: 0,
+  enableKeepAlive: true,
 });
 
-// Cache for tenant DB pools
-const dbPools = new Map();
+export function MetaDBconnection() {
+  return metaPool;
+}
 
+// ---------------------------------------------------------
+// 3. HELPER: GET TENANT POOL (Layer 2 Cache)
+// ---------------------------------------------------------
+function getTenantPool(dbName, dbUser, dbPass) {
+  if (globalThis.dbCache.pools.has(dbName)) {
+    console.log(`[db.js] 🟢 POOL HIT: Reusing active pool for '${dbName}'`);
+    return globalThis.dbCache.pools.get(dbName);
+  }
+
+  console.log(`[db.js] 🔴 POOL MISS: Creating NEW pool for '${dbName}'`);
+
+  const pool = mysql.createPool({
+    host: '132.148.221.65',
+    port: 3306,
+    user: dbUser,
+    password: dbPass,
+    database: dbName,
+    waitForConnections: true,
+    connectionLimit: POOL_CONNECTION_LIMIT,
+    queueLimit: 0,
+    enableKeepAlive: true,
+  });
+
+  globalThis.dbCache.pools.set(dbName, pool);
+  return pool;
+}
+
+// ---------------------------------------------------------
+// 4. HELPER: JWT DECODER
+// ---------------------------------------------------------
 const decodeJwt = (token) => {
   try {
     const base64Url = token.split('.')[1];
@@ -28,76 +75,59 @@ const decodeJwt = (token) => {
   }
 };
 
-function createpoolusingdatabasename(databasename,privileged_password,privileged_user_access) {
-  if (dbPools.has(databasename)) {
-    return dbPools.get(databasename);
-  }
-
-  const pool = mysql.createPool({
-    host: '132.148.221.65',
-    port: 3306,
-    user: privileged_user_access,
-    password: privileged_password,
-    database: databasename,
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0,
-  });
-
-  dbPools.set(databasename, pool);
-  return pool;
-}
-
-export function MetaDBconnection() {
-  return pools;
-}
-
+// ---------------------------------------------------------
+// 5. MAIN CONNECTION FUNCTION
+// ---------------------------------------------------------
 async function DBconnection() {
   let metaConnection;
 
   try {
-    // 🔹 1) Read JWT from cookies (Added await for Next.js 15+ compatibility)
+    // A. Get Token & Username
     const cookieStore = await cookies();
     const token = cookieStore.get('jwt_token')?.value;
 
-    if (!token) {
-      console.log('No token found');
-      return { error: 'No token found. Please log in.' };
-    }
+    if (!token) return { error: 'No token found. Please log in.' };
 
     const decoded = decodeJwt(token);
-    if (!decoded || !decoded.orgid) {
-      console.log('Invalid token or orgid not found in JWT');
-      return { error: 'Invalid token or orgid not found.' };
-    }
+    if (!decoded || !decoded.username) return { error: 'Invalid token.' };
 
     const username = decoded.username;
+    const now = Date.now();
 
-    // 🔹 2) Get connection from META pool
-    metaConnection = await pools.getConnection();
+    // ---------------------------------------------------------
+    // B. LAYER 1: CHECK CACHE (User Credentials)
+    // ---------------------------------------------------------
+    let userCreds = globalThis.dbCache.users.get(username);
+    let isCacheValid = userCreds && (now - userCreds.timestamp < CACHE_TTL);
 
-    // 🔹 3) Get employee row using username (UPDATED COLUMNS)
-    // Fixed: organizationid -> org_id, status -> active
+    if (isCacheValid) {
+      // 🟢 HIT: Skip Meta DB entirely!
+      console.log(`[db.js] 🟢 CRED HIT: Found credentials for '${username}'`);
+      return getTenantPool(userCreds.dbName, userCreds.dbUser, userCreds.dbPass);
+    }
+
+    console.log(`[db.js] 🔴 CRED MISS: Querying Meta DB for '${username}'...`);
+
+    // ---------------------------------------------------------
+    // C. CACHE MISS: QUERY META DB
+    // ---------------------------------------------------------
+    metaConnection = await metaPool.getConnection();
+
     const [rows] = await metaConnection.query(
-      `
-      SELECT 
+      `SELECT 
           sp.subscriber_database AS databasename,
           sp.privileged_user_access,
           sp.password
-      FROM C_EMP e
-      JOIN C_SUBSCRIBER s
-          ON e.org_id = s.org_id
-      JOIN C_SUBSCRIBER_PLAN sp
-          ON s.subscriber_id = sp.subscriber_id
-      WHERE e.username = ?
-        AND e.active = 'Y'
-        AND s.active = 'Y'
-        AND sp.active = 'Y'
-      `,
+       FROM C_EMP e
+       JOIN C_SUBSCRIBER s ON e.org_id = s.org_id
+       JOIN C_SUBSCRIBER_PLAN sp ON s.subscriber_id = sp.subscriber_id
+       WHERE e.username = ?
+         AND e.active = 'Y'
+         AND s.active = 'Y'
+         AND sp.active = 'Y'`,
       [username]
     );
 
-    // Always release META connection
     metaConnection.release();
     metaConnection = null;
 
@@ -105,20 +135,29 @@ async function DBconnection() {
       throw new Error(`No active subscription found for username: ${username}`);
     }
 
-    const dbName = rows[0].databasename;
-    const privileged_user_access=rows[0].privileged_user_access;
-    const privileged_password=rows[0].password;
-    
-    // 🔹 5) Get (or create) pool for that database
-    const pool = createpoolusingdatabasename(dbName,privileged_password,privileged_user_access);
+    const { databasename: dbName, privileged_user_access: dbUser, password: dbPass } = rows[0];
 
-    return pool;
+    // ---------------------------------------------------------
+    // D. UPDATE CACHE
+    // ---------------------------------------------------------
+    console.log(`[db.js] 💾 SAVING: Caching credentials for '${username}'`);
+    
+    globalThis.dbCache.users.set(username, {
+      dbName,
+      dbUser,
+      dbPass,
+      timestamp: now
+    });
+
+    // ---------------------------------------------------------
+    // E. RETURN POOL
+    // ---------------------------------------------------------
+    return getTenantPool(dbName, dbUser, dbPass);
+
   } catch (error) {
-    if (metaConnection) {
-      metaConnection.release();
-    }
-    console.error('Error connecting to remote MySQL:', error);
-    throw new Error('Failed to connect to remote MySQL');
+    if (metaConnection) metaConnection.release();
+    console.error('[db.js] ❌ Error in DBconnection:', error);
+    throw new Error('Database connection failed');
   }
 }
 

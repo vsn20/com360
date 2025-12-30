@@ -36,7 +36,6 @@ const formatDateToInput = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-// 🔹 HELPER: Sync Employee to Meta Database
 async function syncEmployeeToMeta(empid, orgid, tenantPool, currentUsername, oldEmail = null) {
   let metaConnection;
   try {
@@ -45,12 +44,10 @@ async function syncEmployeeToMeta(empid, orgid, tenantPool, currentUsername, old
     console.log(`Executed By: ${currentUsername}`);
     console.log(`Old Email: ${oldEmail || 'N/A (new employee)'}`);
 
-    // Get Meta Pool from db.js export
     const metaPool = MetaDBconnection(); 
     metaConnection = await metaPool.getConnection();
     console.log(`✅ STEP 1: Connected to Meta DB`);
 
-    // 1. Get Current User's Plan Number and OrgID from Meta DB
     console.log(`🔍 STEP 2: Looking up admin '${currentUsername}' in Meta DB...`);
     
     const [currentUserRows] = await metaConnection.query(
@@ -68,7 +65,6 @@ async function syncEmployeeToMeta(empid, orgid, tenantPool, currentUsername, old
     const { plan_number, org_id: metaOrgId } = currentUserRows[0];
     console.log(`✅ Admin Details Found -> OrgID: ${metaOrgId}, Plan: ${plan_number}`);
 
-    // 2. Get Target Employee Data from Tenant DB
     console.log(`🔍 STEP 3: Fetching new employee data from Tenant DB...`);
     
     const [empRows] = await tenantPool.query(
@@ -85,13 +81,10 @@ async function syncEmployeeToMeta(empid, orgid, tenantPool, currentUsername, old
     const targetEmp = empRows[0];
     console.log(`✅ Employee Found: ${targetEmp.EMP_FST_NAME} (${targetEmp.email})`);
     
-    // 3. Resolve Status ID to 'Y' or 'N'
     let isActive = 'Y';
     console.log(`✅ Status Resolved: ${isActive}`);
 
-    // 4. Update or Insert into Meta C_EMP
     if (oldEmail) {
-      // Email was changed - UPDATE existing record by old email
       console.log(`🚀 STEP 4: Updating Meta C_EMP using old email: ${oldEmail}`);
       
       const [updateResult] = await metaConnection.query(
@@ -110,7 +103,7 @@ async function syncEmployeeToMeta(empid, orgid, tenantPool, currentUsername, old
           plan_number, 
           targetEmp.email,
           isActive,
-          oldEmail // Match by old email to update the correct record
+          oldEmail 
         ]
       );
       
@@ -118,7 +111,6 @@ async function syncEmployeeToMeta(empid, orgid, tenantPool, currentUsername, old
       
       if (updateResult.affectedRows === 0) {
         console.log(`⚠️ No record found with old email, attempting INSERT...`);
-        // Fallback to INSERT if no record found with old email
         await metaConnection.query(
           `INSERT INTO C_EMP 
             (emp_first_name, emp_middle_name, org_id, plan_number, email, active, username)
@@ -135,7 +127,6 @@ async function syncEmployeeToMeta(empid, orgid, tenantPool, currentUsername, old
         );
       }
     } else {
-      // New employee or no email change - use INSERT ON DUPLICATE KEY UPDATE
       console.log(`🚀 STEP 4: Attempting INSERT into Meta C_EMP...`);
       console.log(`Payload:`, {
           first: targetEmp.EMP_FST_NAME,
@@ -207,14 +198,13 @@ export async function updateEmployee(prevState, formData) {
     }
 
     const jwtOrgId = decoded.orgid;
-    const currentUsername = decoded.username; // 🔹 Needed for Meta Sync
+    const currentUsername = decoded.username; 
 
     console.log(`JWT orgid: ${jwtOrgId}, type: ${typeof jwtOrgId}`);
 
     const pool = await DBconnection();
     console.log('MySQL connection pool acquired');
 
-    // Fetch orgid from C_EMP if missing
     if (!orgid || orgid === '') {
       console.log('orgid missing or empty in FormData, fetching from C_EMP for empid:', empid);
       const [employee] = await pool.execute('SELECT orgid FROM C_EMP WHERE empid = ?', [empid]);
@@ -226,13 +216,11 @@ export async function updateEmployee(prevState, formData) {
       console.log(`Fetched orgid from C_EMP: ${orgid}, type: ${typeof orgid}`);
     }
 
-    // Validate orgid
     if (!orgid || orgid === '' || String(orgid) !== String(jwtOrgId)) {
       console.log(`Invalid or mismatched orgid. FormData orgid: ${orgid} (${typeof orgid}), JWT orgid: ${jwtOrgId} (${typeof jwtOrgId})`);
       return { error: 'Organization ID is missing or invalid.' };
     }
 
-    // Validate empid
     if (!empid) {
       console.log('empid is missing');
       return { error: 'Employee ID is required.' };
@@ -244,7 +232,7 @@ export async function updateEmployee(prevState, formData) {
       return { error: 'Employee not found.' };
     }
 
-    const oldEmail = existing[0].email; // Store old email for meta sync
+    const oldEmail = existing[0].email; 
     let affectedRows = 0;
 
     if (section === 'personal') {
@@ -279,7 +267,6 @@ export async function updateEmployee(prevState, formData) {
         return { error: 'Email is required.' };
       }
 
-      // Validate and format employee_number
       let formattedEmployeeNumber = null;
       if (employee_number) {
         if (!/^\d{1,5}$/.test(employee_number)) {
@@ -287,7 +274,6 @@ export async function updateEmployee(prevState, formData) {
           return { error: 'Employee number must be 1-5 digits.' };
         }
         formattedEmployeeNumber = employee_number.padStart(5, '0');
-        // Check uniqueness within orgid
         const [empNumCheck] = await pool.execute(
           'SELECT empid FROM C_EMP WHERE employee_number = ? AND orgid = ? AND empid != ?',
           [formattedEmployeeNumber, orgid, empid]
@@ -298,7 +284,6 @@ export async function updateEmployee(prevState, formData) {
         }
       }
 
-      // Check for email uniqueness (excluding current employee)
       const [emailCheck] = await pool.execute(
         'SELECT empid FROM C_EMP WHERE email = ? AND orgid = ? AND empid != ?',
         [email, orgid, empid]
@@ -341,18 +326,15 @@ export async function updateEmployee(prevState, formData) {
       affectedRows += result.affectedRows;
       console.log(`Personal details update result: ${result.affectedRows} rows affected for empid ${empid}`);
 
-      // 🔹 TRIGGER META SYNC (Personal Details change)
       if (affectedRows > 0) {
-        // Pass old email if it changed, so meta DB can find the correct record
         const emailChanged = oldEmail !== email;
         await syncEmployeeToMeta(empid, orgid, pool, currentUsername, emailChanged ? oldEmail : null);
       }
 
     } else if (section === 'employment') {
-      // Handle both single roleid and multiple roleids
       const roleids = formData.getAll('roleids').length > 0 
-        ? [...new Set(formData.getAll('roleids'))] // Deduplicate if multiple
-        : [formData.get('roleid')].filter(Boolean); // Use single roleid if provided
+        ? [...new Set(formData.getAll('roleids'))] 
+        : [formData.get('roleid')].filter(Boolean); 
       const hireDate = formData.get('hireDate') || null;
       const lastWorkDate = formData.get('lastWorkDate') || null;
       const terminatedDate = formData.get('terminatedDate') || null;
@@ -386,7 +368,6 @@ export async function updateEmployee(prevState, formData) {
         return { error: 'Status is required.' };
       }
 
-      // Validate roles
       for (const roleid of roleids) {
         const [role] = await pool.execute(
           'SELECT roleid FROM C_ORG_ROLE_TABLE WHERE roleid = ? AND orgid = ? AND is_active = 1',
@@ -398,7 +379,6 @@ export async function updateEmployee(prevState, formData) {
         }
       }
 
-      // Validate superior
       if (superior) {
         const [existingSuperior] = await pool.execute(
           'SELECT empid FROM C_EMP WHERE empid = ? AND orgid = ?',
@@ -414,7 +394,6 @@ export async function updateEmployee(prevState, formData) {
         }
       }
 
-      // Validate status
       if (status) {
         const [statusCheck] = await pool.execute(
           'SELECT id FROM C_GENERIC_VALUES WHERE g_id = 3 AND Name = ? AND orgid = ? AND isactive = 1',
@@ -426,7 +405,6 @@ export async function updateEmployee(prevState, formData) {
         }
       }
 
-      // Validate job title
       if (jobTitle) {
         const [jobTitleCheck] = await pool.execute(
           'SELECT job_title FROM C_ORG_JOBTITLES WHERE job_title_id = ? AND orgid = ? AND is_active = 1',
@@ -438,7 +416,6 @@ export async function updateEmployee(prevState, formData) {
         }
       }
 
-      // Validate pay frequency
       if (payFrequency) {
         const [payFrequencyCheck] = await pool.execute(
           'SELECT id FROM C_GENERIC_VALUES WHERE g_id = 4 AND Name = ? AND orgid = ? AND isactive = 1',
@@ -450,7 +427,6 @@ export async function updateEmployee(prevState, formData) {
         }
       }
 
-      // Validate department and fetch DEPT_NAME if deptId is provided
       let finalDeptName = deptName;
       if (deptId) {
         const [deptCheck] = await pool.execute(
@@ -461,9 +437,9 @@ export async function updateEmployee(prevState, formData) {
           console.log('Invalid department selected:', deptId);
           return { error: 'Selected department is invalid or inactive.' };
         }
-        finalDeptName = deptCheck[0].name; // Override with name from C_ORG_DEPARTMENTS
+        finalDeptName = deptCheck[0].name; 
       } else {
-        finalDeptName = null; // Clear DEPT_NAME if deptId is not provided
+        finalDeptName = null; 
       }
     if(suborgid) 
     {
@@ -488,13 +464,11 @@ export async function updateEmployee(prevState, formData) {
         }
       }
 
-      // Validate vendor_id if employment type is 12 (Contract) or 13 (1099)
       let finalVendorId = null;
       if (employment_type && (employment_type === '12' || employment_type === '13')) {
         if (!vendor_id || vendor_id.trim() === '') {
           return { error: 'Vendor selection is required for this employment type.' };
         }
-        // Validate vendor exists and is active
         const [vendorCheck] = await pool.execute(
           'SELECT ACCNT_ID FROM C_ACCOUNT WHERE ACCNT_ID = ? AND ACTIVE_FLAG = 1',
           [vendor_id]
@@ -506,8 +480,6 @@ export async function updateEmployee(prevState, formData) {
         finalVendorId = vendor_id;
       }
 
-      // Update C_EMP with the first roleid (for backward compatibility with existing schema)
-      const primaryRoleId = roleids[0] || null;
       const [result] = await pool.query(
         `UPDATE C_EMP SET         
            HIRE = ?, 
@@ -538,15 +510,12 @@ export async function updateEmployee(prevState, formData) {
       affectedRows += result.affectedRows;
       console.log(`Employment details update result: ${result.affectedRows} rows affected for empid ${empid}, deptId: ${deptId}, deptName: ${finalDeptName}`);
 
-      // Update role assignments in C_EMP_ROLE_ASSIGN
-      // First, remove existing role assignments
       const [deleteResult] = await pool.query(
         'DELETE FROM C_EMP_ROLE_ASSIGN WHERE empid = ? AND orgid = ?',
         [empid, orgid]
       );
       console.log(`Removed ${deleteResult.affectedRows} existing role assignments for empid ${empid}`);
 
-      // Insert new role assignments
       for (const roleid of roleids) {
         const [roleAssignResult] = await pool.query(
           `INSERT INTO C_EMP_ROLE_ASSIGN (empid, orgid, roleid) 
@@ -558,7 +527,6 @@ export async function updateEmployee(prevState, formData) {
         console.log(`Assigned role ${roleid} to employee ${empid}, affectedRows: ${roleAssignResult.affectedRows}`);
       }
 
-      // 🔹 TRIGGER META SYNC (Employment details/Status change)
       if (affectedRows > 0) {
         await syncEmployeeToMeta(empid, orgid, pool, currentUsername);
       }
@@ -616,7 +584,6 @@ export async function updateEmployee(prevState, formData) {
         workStateId, workStateNameCustom, workCountryId, workPostalCode,
       });
 
-      // Validate country
       if (workCountryId) {
         const [countryCheck] = await pool.execute(
           'SELECT ID FROM C_COUNTRY WHERE ID = ? AND ACTIVE = 1',
@@ -628,7 +595,6 @@ export async function updateEmployee(prevState, formData) {
         }
       }
 
-      // Validate state
       if (workStateId && workCountryId === '185') {
         const [stateCheck] = await pool.execute(
           'SELECT ID FROM C_STATE WHERE ID = ? AND ACTIVE = 1',
@@ -678,7 +644,6 @@ export async function updateEmployee(prevState, formData) {
         homeStateId, homeStateNameCustom, homeCountryId, homePostalCode,
       });
 
-      // Validate country
       if (homeCountryId) {
         const [countryCheck] = await pool.execute(
           'SELECT ID FROM C_COUNTRY WHERE ID = ? AND ACTIVE = 1',
@@ -690,7 +655,6 @@ export async function updateEmployee(prevState, formData) {
         }
       }
 
-      // Validate state
       if (homeStateId && homeCountryId === '185') {
         const [stateCheck] = await pool.execute(
           'SELECT ID FROM C_STATE WHERE ID = ? AND ACTIVE = 1',
@@ -744,7 +708,6 @@ export async function updateEmployee(prevState, formData) {
         emergCnctStateNameCustom, emergCnctCountryId, emergCnctPostalCode,
       });
 
-      // Validate country
       if (emergCnctCountryId) {
         const [countryCheck] = await pool.execute(
           'SELECT ID FROM C_COUNTRY WHERE ID = ? AND ACTIVE = 1',
@@ -756,7 +719,6 @@ export async function updateEmployee(prevState, formData) {
         }
       }
 
-      // Validate state
       if (emergCnctStateId && emergCnctCountryId === '185') {
         const [stateCheck] = await pool.execute(
           'SELECT ID FROM C_STATE WHERE ID = ? AND ACTIVE = 1',
@@ -884,7 +846,6 @@ export async function assignLeaves(empid, leaveid, noofleaves, orgid) {
   }
 }
 
-// 🔹 UPDATED: Fetch Employees with Registration Status (Checking C_USER via EMAIL)
 export async function fetchEmployeesByOrgId() {
   try {
     const cookieStore = cookies();
@@ -918,7 +879,6 @@ export async function fetchEmployeesByOrgId() {
       [orgId]
     );
 
-    // Fetch roleids for each employee from C_EMP_ROLE_ASSIGN
     const employees = await Promise.all(
       rows.map(async (employee) => {
         const [roleRows] = await pool.execute(
@@ -940,48 +900,30 @@ export async function fetchEmployeesByOrgId() {
   }
 }
 
-
-// 🔹 Check if email exists in C_USER
-export async function notifying_c_user(email) {
-  try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('jwt_token')?.value;
-    if (!token) return { error: 'Unauthorized' };
-
-    const decoded = decodeJwt(token);
-    if (!decoded || !decoded.orgid) return { error: 'Invalid token or orgid not found.' };
-    const orgId = decoded.orgid;
-    const pool = await DBconnection();
-    const [rows] = await pool.execute(
-      'SELECT email FROM C_USER WHERE email = ? AND orgid = ?',
-      [email, orgId]
-    );
-    return { exists: rows.length > 0 };
-  } catch (error) {
-    console.error('Error checking C_USER:', error);
-    return { error: 'Failed to check C_USER.' };
-  }
-}
-
-// 🔹 Notify Employee Action via Email (uses notifying_c_user)
 export async function notifyEmployee(email, firstName) {
   try {
-    // Check if user already exists in C_USER
-    const check = await notifying_c_user(email);
-    if (check.error) return { error: check.error };
-    if (check.exists) {
-      return { error: 'User already registered in C_USER.' };
-    }
-
     const cookieStore = await cookies();
     const token = cookieStore.get('jwt_token')?.value;
+    
+    if (!token) return { error: 'Unauthorized' };
+    
+    const decoded = decodeJwt(token);
+    if (!decoded || !decoded.orgid) return { error: 'Invalid token.' };
+    
+    const pool = await DBconnection();
+    
+    const [existing] = await pool.execute(
+        'SELECT email FROM C_USER WHERE email = ? AND orgid = ?', 
+        [email, decoded.orgid]
+    );
+    if (existing.length > 0) {
+        return { error: 'User already registered in C_USER.' };
+    }
+
     const loginLink = `https://com360view.com/login`;
 
-    if (!token) return { error: 'Unauthorized' };
-
-    // Set up Nodemailer transporter
     const transporter = nodemailer.createTransport({
-      host:  process.env.GMAIL_HOST, // Or use host/port if you prefer
+      host:  process.env.GMAIL_HOST,
       auth: {
         user: process.env.GMAIL_USER, 
         pass: process.env.GMAIL_APP_PASS 
@@ -1014,6 +956,7 @@ export async function notifyEmployee(email, firstName) {
     return { error: 'Failed to send notification email. Please check server logs.' };
   }
 }
+
 export async function fetchdocumentsbyid(empid) {
   try {
     const cookieStore = cookies();
@@ -1067,7 +1010,6 @@ export async function fetchdocumentsbyid(empid) {
       return [];
     }
 
-    // Map over rows to format last_updated_date, startdate, and enddate for each document
     const formattedDocuments = rows.map((doc) => ({
       ...doc,
       last_updated_date: formatDate(doc.last_updated_date),
@@ -1082,6 +1024,7 @@ export async function fetchdocumentsbyid(empid) {
     throw new Error(`Failed to fetch employee documents: ${error.message}`);
   }
 }
+
 export async function fetchEmployeeById(empid) {
   try {
     const cookieStore = cookies();
@@ -1136,13 +1079,11 @@ export async function fetchEmployeeById(empid) {
       throw new Error('Employee not found.');
     }
 
-    // Fetch roleids from C_EMP_ROLE_ASSIGN
     const [roleRows] = await pool.execute(
       'SELECT roleid FROM C_EMP_ROLE_ASSIGN WHERE empid = ? AND orgid = ?',
       [empid, orgId]
     );
 
-    // Helper function to format date as YYYY-MM-DD without timezone conversion
     const formatDateString = (date) => {
       if (!date) return null;
       const d = new Date(date);
@@ -1152,7 +1093,6 @@ export async function fetchEmployeeById(empid) {
       return `${year}-${month}-${day}`;
     };
 
-    // Convert Date objects to date strings for proper serialization
     const rawEmployee = rows[0];
     const employee = {
       ...rawEmployee,
@@ -1295,6 +1235,7 @@ export async function fetchLeaveAssignments(empid) {
     return {};
   }
 }
+
 export async function uploadProfilePhoto(formData) {
   const file = formData.get('file');
   const empId = formData.get('empId');
@@ -1307,13 +1248,9 @@ export async function uploadProfilePhoto(formData) {
   const filePath = path.join(uploadDir, `${empId}.png`);
 
   try {
-    // Ensure upload directory exists
     await fs.mkdir(uploadDir, { recursive: true });
-
-    // Convert file to buffer and write to disk (overwrites if exists)
     const arrayBuffer = await file.arrayBuffer();
     await fs.writeFile(filePath, Buffer.from(arrayBuffer));
-
     return { success: true, message: 'Profile photo uploaded successfully.' };
   } catch (error) {
     console.error('Error uploading profile photo:', error);
@@ -1330,13 +1267,11 @@ export async function deleteProfilePhoto(empId) {
   const filePath = path.join(uploadDir, `${empId}.png`);
 
   try {
-    // Check if file exists before attempting to delete
     await fs.access(filePath);
     await fs.unlink(filePath);
     return { success: true, message: 'Profile photo deleted successfully.' };
   } catch (error) {
     if (error.code === 'ENOENT') {
-      // File doesn't exist, which is fine
       return { success: true, message: 'No profile photo to delete.' };
     }
     console.error('Error deleting profile photo:', error);
@@ -1344,9 +1279,6 @@ export async function deleteProfilePhoto(empId) {
   }
 }
 
-// -----------------------------------------------------------
-// 🔹 NEW: Upload Signature Function
-// -----------------------------------------------------------
 export async function uploadSignature(formData) {
   const file = formData.get('file');
   const empId = formData.get('empId');
@@ -1356,7 +1288,6 @@ export async function uploadSignature(formData) {
   }
 
   const uploadDir = path.join(process.cwd(), 'public/uploads/signatures');
-  // Use .jpg as requested
   const filePath = path.join(uploadDir, `${empId}.jpg`); 
 
   try {
@@ -1369,8 +1300,6 @@ export async function uploadSignature(formData) {
     throw new Error('Failed to upload signature.');
   }
 }
-
-// Add these functions to app/serverActions/Employee/overview.js
 
 export async function fetchPafDocumentsById(empid) {
   try {
@@ -1425,7 +1354,6 @@ export async function fetchPafDocumentsById(empid) {
       return [];
     }
 
-    // Map over rows to format last_updated_date, startdate, and enddate for each document
     const formattedDocuments = rows.map((doc) => ({
       ...doc,
       last_updated_date: formatDate(doc.last_updated_date),
@@ -1494,7 +1422,6 @@ export async function fetchFdnsDocumentsById(empid) {
       return [];
     }
 
-    // Map over rows to format last_updated_date, startdate, and enddate for each document
     const formattedDocuments = rows.map((doc) => ({
       ...doc,
       last_updated_date: formatDate(doc.last_updated_date),

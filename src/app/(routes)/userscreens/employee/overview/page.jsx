@@ -5,7 +5,6 @@ import DBconnection from '@/app/utils/config/db';
 import { fetchLeaveTypes } from '@/app/serverActions/Employee/overview';
 import { getAllroles } from "@/app/serverActions/getAllroles";
 
-// Simple function to decode JWT without verification
 const decodeJwt = (token) => {
   try {
     const base64Url = token.split('.')[1];
@@ -18,9 +17,6 @@ const decodeJwt = (token) => {
   }
 };
 
-/**
- * Fetches all direct and indirect subordinates for a given superior.
- */
 async function getSubordinates(pool, superiorId, orgid) {
   const subordinateIds = new Set();
   const recursiveQuery = `
@@ -79,9 +75,8 @@ export default async function OverviewPage({ searchParams }) {
   let immigrationStatuses = [];     
   let immigrationDocTypes = [];     
   let immigrationDocSubtypes = [];
-  let vendors = [];  // Add vendors array
+  let vendors = [];  
   
-  // New variables for PAF and FDNS
   let paf_document_types = [];
   let paf_document_subtypes = [];
   let paf_document_statuses = [];
@@ -170,13 +165,11 @@ export default async function OverviewPage({ searchParams }) {
       permissionLevel = 'individual';
     }
     
-    // Fetch employment types
     [employmentTypes] = await pool.query(
       'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 27 AND isactive = 1 AND (orgid = ? OR orgid = -1)',
       [orgid]
     );
 
-    // Fetch vendors from C_ACCOUNT table
     [vendors] = await pool.query(
       'SELECT ACCNT_ID, EMAIL, ALIAS_NAME, ACCT_TYPE_CD FROM C_ACCOUNT WHERE ACTIVE_FLAG = 1 ORDER BY ALIAS_NAME, EMAIL'
     );
@@ -195,14 +188,11 @@ export default async function OverviewPage({ searchParams }) {
     if (permissionLevel === 'team') {
         const subordinateIds = await getSubordinates(pool, empid, orgid);
         const visibleEmpIds = [empid, ...subordinateIds];
-        
         employeeQuery += ` AND e.empid IN (?)`;
         queryParams.push(visibleEmpIds);
-
     } else if (permissionLevel === 'individual') {
         employeeQuery += ` AND e.empid = ?`;
         queryParams.push(empid);
-
     } else if (permissionLevel === 'none') {
         employeeQuery += ` AND 1=0`;
     } 
@@ -211,10 +201,20 @@ export default async function OverviewPage({ searchParams }) {
 
     const [employeeRows] = await pool.query(employeeQuery, queryParams);
 
+    // ------------------------------------------------------------------
+    // OPTIMIZATION: Fetch all registered C_USER emails in one query
+    // ------------------------------------------------------------------
+    const [cUserRows] = await pool.query(
+      'SELECT email FROM C_USER WHERE orgid = ?',
+      [orgid]
+    );
+    const registeredEmails = new Set(cUserRows.map(u => u.email));
+
     employees = employeeRows.map(emp => ({
       ...emp,
       roleids: emp.roleids ? emp.roleids.split(',').map(id => id.trim()) : [],
-      formattedHireDate: formatDateForDisplay(emp.HIRE)
+      formattedHireDate: formatDateForDisplay(emp.HIRE),
+      isRegistered: emp.email && registeredEmails.has(emp.email)
     }));
     
     [departments] = await pool.query('SELECT id, name FROM C_ORG_DEPARTMENTS WHERE orgid = ? AND isactive = 1', [orgid]);
@@ -230,34 +230,28 @@ export default async function OverviewPage({ searchParams }) {
       'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 18 AND isactive = 1 AND (orgid = ? OR orgid = -1)',
       [orgid]
     );
-
     [document_purposes] = await pool.query(
       'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 20 AND isactive = 1 AND (orgid = ? OR orgid = -1)',
       [orgid]
     );
-
     [document_subtypes] = await pool.query(
       'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 19 AND isactive = 1 AND (orgid = ? OR orgid = -1)',
       [orgid]
     );
 
-    // --- IMMIGRATION FETCHES ---
     [immigrationStatuses] = await pool.query(
       'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 29 AND isactive = 1 AND (orgid = ? OR orgid = -1)',
       [orgid]
     );
-
     [immigrationDocTypes] = await pool.query(
       'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 30 AND isactive = 1 AND (orgid = ? OR orgid = -1)',
       [orgid]
     );
-
     [immigrationDocSubtypes] = await pool.query(
       'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 31 AND isactive = 1 AND (orgid = ? OR orgid = -1)',
       [orgid]
     );
 
-    // --- PAF DOCUMENT FETCHES ---
     [paf_document_types] = await pool.query(
       'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 33 AND isactive = 1 AND (orgid = ? OR orgid = -1)',
       [orgid]
@@ -271,7 +265,6 @@ export default async function OverviewPage({ searchParams }) {
       [orgid]
     );
 
-    // --- FDNS DOCUMENT FETCHES ---
     [fdns_document_types] = await pool.query(
       'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 34 AND isactive = 1 AND (orgid = ? OR orgid = -1)',
       [orgid]
@@ -337,15 +330,12 @@ export default async function OverviewPage({ searchParams }) {
       document_subtypes={document_subtypes}
       employmentTypes={employmentTypes}
       vendors={vendors}
-      // New Immigration Props
       immigrationStatuses={immigrationStatuses}
       immigrationDocTypes={immigrationDocTypes}
       immigrationDocSubtypes={immigrationDocSubtypes}
-      // New PAF Props
       paf_document_types={paf_document_types}
       paf_document_subtypes={paf_document_subtypes}
       paf_document_statuses={paf_document_statuses}
-      // New FDNS Props
       fdns_document_types={fdns_document_types}
       fdns_document_subtypes={fdns_document_subtypes}
       fdns_document_statuses={fdns_document_statuses}

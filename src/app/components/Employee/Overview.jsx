@@ -9,14 +9,14 @@ import EditEmployee from './EditEmployee';
 import readXlsxFile from 'read-excel-file';
 
 import { importEmployeesBatch } from '@/app/serverActions/addemployee';
-import { notifyEmployee, notifying_c_user } from '@/app/serverActions/Employee/overview'; // notifying_c_user can be used for direct C_USER check if needed
+import { notifyEmployee } from '@/app/serverActions/Employee/overview'; 
 
 const Overview = ({
   roles,
   currentrole,
   orgid,
   error: initialError,
-  employees,
+  employees, 
   leaveTypes,
   countries,
   states,
@@ -58,31 +58,12 @@ const Overview = ({
   const [error, setError] = useState(initialError);
   const [hasMounted, setHasMounted] = useState(false);
   
-  // --- NEW STATES FOR IMPORT ---
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [importFile, setImportFile] = useState(null);
   const [importLoading, setImportLoading] = useState(false);
   const [importStatusMsg, setImportStatusMsg] = useState(null);
 
-  // --- NEW STATE FOR NOTIFY ---
   const [notifyingMap, setNotifyingMap] = useState({});
-  const [cUserMap, setCUserMap] = useState({}); // empid: true if in C_USER
-  // On mount, check C_USER status for all employees and cache in cUserMap
-  useEffect(() => {
-    const checkAllCUsers = async () => {
-      const map = {};
-      for (const emp of employees) {
-        if (emp.email) {
-          const res = await notifying_c_user(emp.email);
-          map[emp.empid] = !!(res && res.exists);
-        } else {
-          map[emp.empid] = false;
-        }
-      }
-      setCUserMap(map);
-    };
-    checkAllCUsers();
-  }, [employees]);
 
   const router = useRouter();
   const searchparams = useSearchParams();
@@ -100,22 +81,8 @@ const Overview = ({
     setError(initialError);
   }, [initialError]);
  
-  useEffect(() => {
-    handleBackClick();
-  }, [searchparams.get('refresh')]);
-
-  useEffect(() => {
-    setPageInputValue(currentPage.toString());
-  }, [currentPage]);
-
-  useEffect(() => {
-    setEmployeesPerPageInput(employeesPerPage.toString());
-  }, [employeesPerPage]);
-
   const handleRowClick = (empid, e) => {
-    // Prevent navigating to edit page if clicking the notify button
     if (e.target.closest('.notify-btn')) return;
-
     setSelectedEmpId(empid);
     setisadd(false);
     setError(null);
@@ -135,7 +102,6 @@ const Overview = ({
     setisadd(true);
   };
 
-  // --- NOTIFY LOGIC START ---
   const handleNotify = async (e, employee) => {
     e.stopPropagation();
     if (!employee.email) {
@@ -143,36 +109,20 @@ const Overview = ({
       return;
     }
 
-    // Set loading state for this specific employee
     setNotifyingMap(prev => ({ ...prev, [employee.empid]: true }));
-
-    // Check C_USER directly before attempting notification
-    const check = await notifying_c_user(employee.email);
-    if (check.error) {
-      setNotifyingMap(prev => ({ ...prev, [employee.empid]: false }));
-      alert(check.error);
-      return;
-    }
-    if (check.exists) {
-      setNotifyingMap(prev => ({ ...prev, [employee.empid]: false }));
-      alert('User already registered in C_USER.');
-      return;
-    }
 
     const result = await notifyEmployee(employee.email, employee.EMP_FST_NAME);
 
-    // Clear loading state
     setNotifyingMap(prev => ({ ...prev, [employee.empid]: false }));
 
     if (result.success) {
       alert(result.message);
+      router.refresh(); 
     } else {
       alert(result.error);
     }
   };
-  // --- NOTIFY LOGIC END ---
 
-  // --- IMPORT LOGIC START ---
   const handleOpenImportModal = () => {
     setIsImportModalOpen(true);
     setImportFile(null);
@@ -302,7 +252,6 @@ const Overview = ({
         setImportLoading(false);
     }
   };
-  // --- IMPORT LOGIC END ---
 
   const sortEmployees = (a, b, column, direction) => {
     let aValue, bValue;
@@ -468,10 +417,9 @@ const Overview = ({
         />
       ) : (
         <div className="roles-list">
-          <div className="header-section">
+           <div className="header-section">
             <h2 className="title">Employees</h2>
             <div className="header-buttons">
-                {/* IMPORT BUTTON */}
                 <button 
                   className="button import-btn" 
                   onClick={handleOpenImportModal}
@@ -519,29 +467,14 @@ const Overview = ({
                       <col />
                       <col />
                       <col />
-                      <col style={{width: '10%'}} /> {/* Extra column for actions */}
+                      <col style={{width: '10%'}} />
                     </colgroup>
                     <thead>
                       <tr>
-                        <th 
-                          className={`sortable ${sortConfig.column === 'empid' ? `sort-${sortConfig.direction}` : ''}`}
-                          onClick={() => requestSort('empid')}
-                        >
-                          Employee Number
-                        </th>
-                        <th 
-                          className={`sortable ${sortConfig.column === 'name' ? `sort-${sortConfig.direction}` : ''}`}
-                          onClick={() => requestSort('name')}
-                        >
-                          Name
-                        </th>
+                        <th className={`sortable ${sortConfig.column === 'empid' ? `sort-${sortConfig.direction}` : ''}`} onClick={() => requestSort('empid')}>Employee Number</th>
+                        <th className={`sortable ${sortConfig.column === 'name' ? `sort-${sortConfig.direction}` : ''}`} onClick={() => requestSort('name')}>Name</th>
                         <th>Email</th>
-                        <th 
-                          className={`sortable ${sortConfig.column === 'hireDate' ? `sort-${sortConfig.direction}` : ''}`}
-                          onClick={() => requestSort('hireDate')}
-                        >
-                          Hire Date
-                        </th>
+                        <th className={`sortable ${sortConfig.column === 'hireDate' ? `sort-${sortConfig.direction}` : ''}`} onClick={() => requestSort('hireDate')}>Hire Date</th>
                         <th>Mobile</th>
                         <th>Status</th>
                         <th>Action</th> 
@@ -569,10 +502,11 @@ const Overview = ({
                               </span>
                             )}
                           </td>
-                          {/* Notify Button Logic (dynamic C_USER check) */}
                           <td>
-                            {cUserMap[employee.empid] === false ? (
-                              <button 
+                            {employee.isRegistered ? (
+                               <span style={{fontSize: '12px', color: '#0fd46c', fontWeight:'bold'}}>Registered</span>
+                            ) : (
+                               <button 
                                 className="button notify-btn"
                                 onClick={(e) => handleNotify(e, employee)}
                                 disabled={notifyingMap[employee.empid]}
@@ -588,10 +522,6 @@ const Overview = ({
                               >
                                 {notifyingMap[employee.empid] ? 'Sending...' : 'Notify'}
                               </button>
-                            ) : cUserMap[employee.empid] === true ? (
-                              <span style={{fontSize: '12px', color: '#0fd46c', fontWeight:'bold'}}>Registered</span>
-                            ) : (
-                              <span style={{fontSize: '12px', color: '#888'}}>Checking...</span>
                             )}
                           </td>
                         </tr>
@@ -603,45 +533,15 @@ const Overview = ({
               
               {filteredEmployees.length > employeesPerPage && (
                 <div className="pagination-container">
-                  <button
-                    className="button"
-                    onClick={handlePrevPage}
-                    disabled={currentPage === 1}
-                  >
-                    ← Previous
-                  </button>
-                  <span className="pagination-text">
-                    Page{' '}
-                    <input
-                      type="text"
-                      value={pageInputValue}
-                      onChange={handlePageInputChange}
-                      onKeyPress={handlePageInputKeyPress}
-                      className="pagination-input"
-                    />{' '}
-                    of {totalPages}
-                  </span>
-                  <button
-                    className="button"
-                    onClick={handleNextPage}
-                    disabled={currentPage === totalPages}
-                  >
-                    Next →
-                  </button>
+                  <button className="button" onClick={handlePrevPage} disabled={currentPage === 1}>← Previous</button>
+                  <span className="pagination-text">Page <input type="text" value={pageInputValue} onChange={handlePageInputChange} onKeyPress={handlePageInputKeyPress} className="pagination-input"/> of {totalPages}</span>
+                  <button className="button" onClick={handleNextPage} disabled={currentPage === totalPages}>Next →</button>
                 </div>
               )}
               
               <div className="rows-per-page-container">
                 <label className="rows-per-page-label">Rows per Page:</label>
-                <input
-                  type="text"
-                  value={employeesPerPageInput}
-                  onChange={handleEmployeesPerPageInputChange}
-                  onKeyPress={handleEmployeesPerPageInputKeyPress}
-                  placeholder="Employees per page"
-                  className="rows-per-page-input"
-                  aria-label="Number of rows per page"
-                />
+                <input type="text" value={employeesPerPageInput} onChange={handleEmployeesPerPageInputChange} onKeyPress={handleEmployeesPerPageInputKeyPress} placeholder="Employees per page" className="rows-per-page-input" aria-label="Number of rows per page"/>
               </div>
             </>
           )}
@@ -649,8 +549,7 @@ const Overview = ({
         </div>
       )}
 
-      {/* --- IMPORT MODAL --- */}
-      {isImportModalOpen && (
+       {isImportModalOpen && (
         <div className="modal-overlay">
           <div className="modal-content import-modal">
              <div className="modal-header">
