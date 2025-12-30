@@ -6,124 +6,154 @@ import bcrypt from 'bcrypt';
 import fs from 'fs/promises';
 import path from 'path';
 import nodemailer from 'nodemailer';
-import { verifyOTP } from '../SignupAction';
 import { getTenantConnection } from "@/app/utils/config/com360db";
+import { checkEmailRateLimit } from "../utils/rateLimiter";
 
-// 🔹 HELPER: Get Hardcoded Tenant Connection (Com360)
-// We need this because standard DBconnection() requires a logged-in user (JWT).
-// During signup, we must connect explicitly to the 'Com360' database.
-// async function getTenantConnection() {
-//   const pool = mysql.createPool({
-//     host: '132.148.221.65',
-//     port: 3306,
-//     user: 'SAINAMAN',         // Using privileged creds for creation
-//     password:'SAInaman$8393', // Using privileged creds for creation
-//     database: 'com360',       // 🔴 Hardcoded as requested
-//     waitForConnections: true,
-//     connectionLimit: 5,
-//     queueLimit: 0,
-//   });
-//   return pool;
-// }
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-// 1. Check Organization Name (Checks Meta DB: C_ORGANIZATION)
+// Create email transporter with optimized settings
+function createEmailTransporter() {
+  return nodemailer.createTransport({
+    host: process.env.GMAIL_HOST,
+    port: 465,
+    secure: true,
+    auth: {
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_APP_PASS,
+    },
+    tls: {
+      rejectUnauthorized: false
+    },
+    pool: true,
+    maxConnections: 5,
+    maxMessages: 10,
+  });
+}
+
+// 1. Check Organization Name
 export async function checkOrgName(orgName) {
   const metaPool = MetaDBconnection(); 
   try {
-    const [rows] = await metaPool.query('SELECT org_id FROM C_ORG WHERE LOWER(name) = LOWER(?)', [orgName]);
+    const [rows] = await metaPool.query('SELECT org_id FROM C_ORG WHERE LOWER(org_name) = LOWER(?)', [orgName]);
     return { exists: rows.length > 0 };
-  } catch (error) {
-    console.error("Error checking org name in Meta:", error);
-    return { exists: false, error: "Database error checking name" };
+  } catch (error) { 
+    console.error("Error checking org name:", error);
+    return { exists: false, error: "Database error" }; 
   }
 }
 
-// 2. Check Email Duplication (Checks Meta DB: C_EMP)
+// 2. Check Email
 export async function checkEmail(email) {
   const metaPool = MetaDBconnection(); 
   try {
     const [rows] = await metaPool.query('SELECT emp_id FROM C_EMP WHERE email = ?', [email]);
     return { exists: rows.length > 0 };
-  } catch (error) {
-    console.error("Error checking email in Meta:", error);
-    return { exists: false, error: "Database error checking email" };
+  } catch (error) { 
+    console.error("Error checking email:", error);
+    return { exists: false, error: "Database error" }; 
   }
 }
 
-// 3. Check Username Duplication (Checks Meta DB: C_EMP)
+// 3. Check Username
 export async function checkUsername(username) {
   const metaPool = MetaDBconnection(); 
   try {
     const [rows] = await metaPool.query('SELECT username FROM C_EMP WHERE username = ?', [username]);
     return { exists: rows.length > 0 };
-  } catch (error) {
-    console.error("Error checking username in Meta:", error);
-    return { exists: false, error: "Database error checking username" };
+  } catch (error) { 
+    console.error("Error checking username:", error);
+    return { exists: false, error: "Database error" }; 
   }
 }
 
-// 4. Send Signup OTP (Stores in Tenant DB: Com360 -> C_OTP)
+// 4. Send Signup OTP (WITH RATE LIMITING)
 export async function sendSignupOTP(formData) {
   const email = formData.get('email');
-  const tenantPool =  getTenantConnection(); // Connect to Com360
-
+  
+  // Rate limit check - 3 attempts per 10 minutes
+  const rateCheck = checkEmailRateLimit(email, 3, 600000);
+  if (!rateCheck.allowed) {
+    return { 
+      success: false, 
+      error: `Too many OTP requests. Please wait ${rateCheck.waitTime} minutes before trying again.` 
+    };
+  }
+  
+  const tenantPool = getTenantConnection();
+  
   try {
-    // Create OTP table if not exists
     await tenantPool.query(`
       CREATE TABLE IF NOT EXISTS C_OTP (
-        email VARCHAR(255) PRIMARY KEY,
-        otp VARCHAR(6) NOT NULL,
+        email VARCHAR(255) PRIMARY KEY, 
+        otp VARCHAR(6) NOT NULL, 
         expiry DATETIME NOT NULL
       )
     `);
-
-    // Check if user exists in Tenant DB (Duplicate check)
+    
     const [userRows] = await tenantPool.query(`SELECT COUNT(*) AS count FROM C_USER WHERE email=?`, [email]);
-    if (userRows[0].count > 0) {
+    if (userRows[0].count > 0) { 
       await tenantPool.end(); 
-      return { success: false, error: "This email is already registered. Please login." };
+      return { success: false, error: "This email is already registered." }; 
     }
-
+    
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiry = new Date(Date.now() + 10 * 60 * 1000);
-
-    // Insert OTP
+    
     await tenantPool.query(`
-      INSERT INTO C_OTP (email, otp, expiry) VALUES (?, ?, ?)
+      INSERT INTO C_OTP (email, otp, expiry) VALUES (?, ?, ?) 
       ON DUPLICATE KEY UPDATE otp = ?, expiry = ?
     `, [email, otp, expiry, otp, expiry]);
-
+    
     await tenantPool.end(); 
-
-    // Send Email
-    const transporter = nodemailer.createTransport({
-      host: process.env.GMAIL_HOST,
-      port: 587,
-      secure: false,
-      auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_APP_PASS,
-      },
+    
+    // Send email with delay
+    const transporter = createEmailTransporter();
+    await delay(2000);
+    
+    await transporter.sendMail({ 
+      from: `"Com360 Support" <${process.env.GMAIL_USER}>`,
+      to: email, 
+      subject: 'Your OTP for Signup',
+      text: `Your OTP is ${otp}, valid for 10 minutes.`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+          <h2 style="color: #333; margin-bottom: 20px;">Com360 Signup Verification</h2>
+          <p style="font-size: 16px; color: #555;">Your OTP code is:</p>
+          <div style="background-color: #f5f5f5; padding: 15px; text-align: center; border-radius: 5px; margin: 20px 0;">
+            <span style="font-size: 32px; font-weight: bold; color: #007bff; letter-spacing: 5px;">${otp}</span>
+          </div>
+          <p style="font-size: 14px; color: #666;">This code is valid for <strong>10 minutes</strong>.</p>
+          <p style="font-size: 12px; color: #999; margin-top: 30px; border-top: 1px solid #e0e0e0; padding-top: 15px;">
+            If you didn't request this code, please ignore this email.
+          </p>
+        </div>
+      `
     });
-
-    const mailOptions = {
-      from: process.env.GMAIL_USER,
-      to: email,
-      subject: 'Com360 Signup Verification',
-      text: `Your verification code for Com360 is ${otp}. It is valid for 10 minutes.`,
-    };
-
-    await transporter.sendMail(mailOptions);
+    
     return { success: true };
-
+    
   } catch (err) {
     console.error('Signup OTP Error:', err);
     if (tenantPool) await tenantPool.end();
-    return { success: false, error: "Failed to send OTP email. Check server configuration." };
+    
+    if (err.responseCode === 550 || err.code === 'EMESSAGE') {
+      return { 
+        success: false, 
+        error: "Email service temporarily busy. Please wait 2-3 minutes and try again." 
+      };
+    }
+    
+    if (err.code === 'EAUTH') {
+      return { 
+        success: false, 
+        error: "Email authentication failed. Please contact support." 
+      };
+    }
+    
+    return { success: false, error: "Failed to send OTP email. Please try again later." };
   }
 }
 
-// 5. Wrappers
 export async function initiateSignupOTP(formData) {
   return await sendSignupOTP(formData);
 }
@@ -131,28 +161,30 @@ export async function initiateSignupOTP(formData) {
 export async function validateSignupOTP(formData) {
   const email = formData.get('email');
   const otp = formData.get('otp');
-  const tenantPool =  getTenantConnection(); 
-
+  const tenantPool = getTenantConnection();
+  
   try {
     const [rows] = await tenantPool.query('SELECT * FROM C_OTP WHERE email = ? AND otp = ?', [email, otp]);
     await tenantPool.end();
-
+    
     if (rows.length > 0) {
-      const expiry = new Date(rows[0].expiry);
-      if (Date.now() > expiry) return { success: false, error: "OTP has expired" };
+      if (Date.now() > new Date(rows[0].expiry)) {
+        return { success: false, error: "OTP has expired" };
+      }
       return { success: true };
     }
     return { success: false, error: "Invalid OTP" };
-  } catch (e) {
-    if (tenantPool) await tenantPool.end();
-    return { success: false, error: "Database error during OTP validation" };
+  } catch (e) { 
+    if (tenantPool) await tenantPool.end(); 
+    console.error("OTP validation error:", e);
+    return { success: false, error: "Database error" }; 
   }
 }
 
-// 6. Complete Subscription (Meta + Tenant Transactions)
+// 5. Complete Subscription
 export async function completeSubscription(formData) {
   const metaPool = MetaDBconnection();
-  const tenantPool =  getTenantConnection();
+  const tenantPool = getTenantConnection();
   
   let metaConnection = null;
   let tenantConnection = null;
@@ -164,7 +196,6 @@ export async function completeSubscription(formData) {
     await metaConnection.beginTransaction();
     await tenantConnection.beginTransaction();
 
-    // --- Extract Data ---
     const firstName = formData.get('firstName');
     const lastName = formData.get('lastName');
     const gender = formData.get('gender');
@@ -176,18 +207,13 @@ export async function completeSubscription(formData) {
     const password = formData.get('password');
     const logoFile = formData.get('logo');
 
-    // ---------------------------------------------------------
-    // 🌍 PART 1: META DATABASE OPERATIONS (Com360_Meta)
-    // ---------------------------------------------------------
-
-    // 1. Create Organization (C_ORGANIZATION)
+    // META DATABASE OPERATIONS
     const [metaOrgResult] = await metaConnection.query(
       `INSERT INTO C_ORG (org_name, active) VALUES (?, 'Y')`,
       [companyName]
     );
     const metaOrgId = metaOrgResult.insertId;
 
-    // 2. Create Subscriber (C_SUBSCRIBER)
     const [subResult] = await metaConnection.query(
       `INSERT INTO C_SUBSCRIBER (admin_first_name, admin_last_name, org_id, active) 
        VALUES (?, ?, ?, 'Y')`,
@@ -195,35 +221,27 @@ export async function completeSubscription(formData) {
     );
     const subscriberId = subResult.insertId;
 
-    // 3. Create Subscriber Plan (C_SUBSCRIBER_PLAN)
-    // 🔴 HARDCODED: Database = 'Com360', Plan ID = 1
     await metaConnection.query(
       `INSERT INTO C_SUBSCRIBER_PLAN (subscriber_id, plan_id, subscriber_database, plan_start_date, active, privileged_user_access, password) 
        VALUES (?, 1, 'com360', CURRENT_DATE(), 'Y', 'SAINAMAN', 'SAInaman$8393')`, 
       [subscriberId]
     );
 
-    // 4. Create Employee in Meta (C_EMP)
-    // We insert username here as the final step of Meta setup
     await metaConnection.query(
       `INSERT INTO C_EMP (emp_first_name, emp_middle_name, org_id, username, plan_number, email, active) 
        VALUES (?, ?, ?, ?, 1, ?, 'Y')`,
       [firstName, lastName, metaOrgId, username, email]
     );
 
-    // ---------------------------------------------------------
-    // 🏢 PART 2: TENANT DATABASE OPERATIONS (Com360)
-    // ---------------------------------------------------------
-
-    // 1. Create Organization in Tenant (C_ORG)
+    // TENANT DATABASE OPERATIONS
     const [tenantOrgResult] = await tenantConnection.query(
-      `INSERT INTO C_ORG (orgid,orgname, orglogo_url, is_logo_set, org_status, CREATED_BY, LAST_UPDATED_BY) 
+      `INSERT INTO C_ORG (orgid, orgname, orglogo_url, is_logo_set, org_status, CREATED_BY, LAST_UPDATED_BY) 
        VALUES (?, ?, NULL, 0, 'ACTIVE', 'SYSTEM', 'SYSTEM')`,
-      [metaOrgId,companyName]
+      [metaOrgId, companyName]
     );
     const tenantOrgId = metaOrgId;
 
-    // 2. Handle Logo Upload
+    // Handle Logo Upload
     let logoPath = null;
     if (logoFile && logoFile.size > 0) {
       const uploadDir = path.join(process.cwd(), 'public/uploads/orglogos');
@@ -236,7 +254,6 @@ export async function completeSubscription(formData) {
       await tenantConnection.query('UPDATE C_ORG SET orglogo_url = ?, is_logo_set = 1 WHERE orgid = ?', [logoPath, tenantOrgId]);
     }
 
-    // 3. Create Admin Employee (C_EMP in Tenant)
     const tenantEmpId = `${tenantOrgId}_1`;
     const employee_number = '00001';
 
@@ -249,14 +266,12 @@ export async function completeSubscription(formData) {
       [tenantEmpId, tenantOrgId, firstName, lastName, email, gender, mobileNumber, dob, employee_number]
     );
 
-    // 4. Create User (C_USER in Tenant)
     const hashedPassword = await bcrypt.hash(password, 10);
     await tenantConnection.query(
       `INSERT INTO C_USER (username, empid, orgid, password, email) VALUES (?, ?, ?, ?, ?)`,
       [username, tenantEmpId, tenantOrgId, hashedPassword, email]
     );
 
-    // 5. Create Admin Role
     const roleId = `${tenantOrgId}-1`;
     await tenantConnection.query(
       `INSERT INTO C_ORG_ROLE_TABLE (roleid, orgid, rolename, isadmin, is_active) 
@@ -264,19 +279,17 @@ export async function completeSubscription(formData) {
       [roleId, tenantOrgId]
     );
 
-    // 6. Assign Role
     await tenantConnection.query(
       `INSERT INTO C_EMP_ROLE_ASSIGN (empid, orgid, roleid) VALUES (?, ?, ?)`,
       [tenantEmpId, tenantOrgId, roleId]
     );
 
-    // 7. Assign Permissions & Menu Priorities
+    // Assign Permissions & Menu Priorities
     const [menus] = await tenantConnection.query('SELECT id, hassubmenu FROM C_MENU WHERE is_active = 1 ORDER BY id');
     const [submenus] = await tenantConnection.query('SELECT id, menuid FROM C_SUBMENU WHERE is_active = 1 ORDER BY id');
 
     const permissionsValues = [];
     
-    // Permission Scope Logic
     const getScopes = (mid, smid) => {
         let scopes = { alldata: 0, teamdata: 0, individualdata: 0 };
         const supportsData = 
@@ -306,7 +319,6 @@ export async function completeSubscription(formData) {
       );
     }
 
-    // Priorities
     let priorityCounter = 1;
     const priorityValues = [];
     for (const menu of menus) {
@@ -326,7 +338,7 @@ export async function completeSubscription(formData) {
       );
     }
 
-    // 8. Generic Values (Using tenantOrgId)
+    // Generic Values (Full List Restored)
     // Format: [g_id, Name, isactive, cutting, parent_value_id, display_order]
     const rawGenericData = [
         [5, 'Service and Billing', 1, null, null, 1],
@@ -441,15 +453,8 @@ export async function completeSubscription(formData) {
         [4, 'Quarterly', 1, null, null, 5]
     ];
 
-    // Map raw data to include the new orgId
     const genericValues = rawGenericData.map(item => [
-      item[0], // g_id
-      item[1], // Name
-      item[2], // isactive
-      item[3], // cutting
-      tenantOrgId, // orgid (Dynamic from creation)
-      item[4], // parent_value_id
-      item[5]  // display_order
+      item[0], item[1], item[2], item[3], tenantOrgId, item[4], item[5]
     ]);
 
     if (genericValues.length > 0) {
@@ -459,14 +464,12 @@ export async function completeSubscription(formData) {
       );
     }
 
-    // --- 9. Create Sub Organization ---
     const suborgid= `${tenantOrgId}-1`;
     await tenantConnection.query(
       `INSERT INTO C_SUB_ORG (suborgid, orgid, suborgname, isstatus, created_by) VALUES (?, ?, ?, ?, ?)`,
       [suborgid, tenantOrgId, companyName, '1', 'SYSTEM']
     );
     
-    // Commit All Changes
     await metaConnection.commit();
     await tenantConnection.commit();
     return { success: true };

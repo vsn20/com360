@@ -3,16 +3,34 @@
 import { MetaDBconnection } from "@/app/utils/config/db"; 
 import { createTenantDatabase, addPrivilegedUserToDatabase, allowRemoteAccess } from "@/app/utils/config/cpanelApi"; 
 import { cloneDatabaseSchema } from "@/app/utils/config/dbCloner"; 
-// Updated Import: Added getDynamicTenantConnection
 import { getTenantConnection, getDynamicTenantConnection } from "@/app/utils/config/com360db";
 import bcrypt from 'bcrypt';
 import fs from 'fs/promises';
 import path from 'path';
 import nodemailer from 'nodemailer';
+// Added Import for Rate Limiter
+import { checkEmailRateLimit } from "../utils/rateLimiter";
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-// ... [Keep existing checkOrgName, checkEmail, checkUsername, sendSignupOTP, initiateSignupOTP, validateSignupOTP, submitSubscriptionRequest functions as they are] ...
+// Create email transporter with optimized settings
+function createEmailTransporter() {
+  return nodemailer.createTransport({
+    host: process.env.GMAIL_HOST,
+    port: 465,
+    secure: true,
+    auth: {
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_APP_PASS,
+    },
+    tls: {
+      rejectUnauthorized: false
+    },
+    pool: true,
+    maxConnections: 5,
+    maxMessages: 10,
+  });
+}
 
 // 1. Check Organization Name
 export async function checkOrgName(orgName) {
@@ -20,7 +38,10 @@ export async function checkOrgName(orgName) {
   try {
     const [rows] = await metaPool.query('SELECT org_id FROM C_ORG WHERE LOWER(org_name) = LOWER(?)', [orgName]);
     return { exists: rows.length > 0 };
-  } catch (error) { return { exists: false, error: "Database error" }; }
+  } catch (error) { 
+    console.error("Error checking org name in Meta:", error);
+    return { exists: false, error: "Database error" }; 
+  }
 }
 
 // 2. Check Email
@@ -29,7 +50,10 @@ export async function checkEmail(email) {
   try {
     const [rows] = await metaPool.query('SELECT emp_id FROM C_EMP WHERE email = ?', [email]);
     return { exists: rows.length > 0 };
-  } catch (error) { return { exists: false, error: "Database error" }; }
+  } catch (error) { 
+    console.error("Error checking email in Meta:", error);
+    return { exists: false, error: "Database error" }; 
+  }
 }
 
 // 3. Check Username
@@ -38,25 +62,100 @@ export async function checkUsername(username) {
   try {
     const [rows] = await metaPool.query('SELECT username FROM C_EMP WHERE username = ?', [username]);
     return { exists: rows.length > 0 };
-  } catch (error) { return { exists: false, error: "Database error" }; }
+  } catch (error) { 
+    console.error("Error checking username in Meta:", error);
+    return { exists: false, error: "Database error" }; 
+  }
 }
 
-// 4. Send Signup OTP
+// 4. Send Signup OTP (WITH RATE LIMITING AND HTML EMAIL)
 export async function sendSignupOTP(formData) {
   const email = formData.get('email');
+  
+  // Rate limit check - 3 attempts per 10 minutes
+  const rateCheck = checkEmailRateLimit(email, 3, 600000);
+  if (!rateCheck.allowed) {
+    return { 
+      success: false, 
+      error: `Too many OTP requests. Please wait ${rateCheck.waitTime} minutes before trying again.` 
+    };
+  }
+  
   const tenantPool = getTenantConnection();
+  
   try {
-    await tenantPool.query(`CREATE TABLE IF NOT EXISTS C_OTP (email VARCHAR(255) PRIMARY KEY, otp VARCHAR(6) NOT NULL, expiry DATETIME NOT NULL)`);
+    await tenantPool.query(`
+      CREATE TABLE IF NOT EXISTS C_OTP (
+        email VARCHAR(255) PRIMARY KEY, 
+        otp VARCHAR(6) NOT NULL, 
+        expiry DATETIME NOT NULL
+      )
+    `);
+    
     const [userRows] = await tenantPool.query(`SELECT COUNT(*) AS count FROM C_USER WHERE email=?`, [email]);
-    if (userRows[0].count > 0) { await tenantPool.end(); return { success: false, error: "This email is already registered." }; }
+    if (userRows[0].count > 0) { 
+      await tenantPool.end(); 
+      return { success: false, error: "This email is already registered." }; 
+    }
+    
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiry = new Date(Date.now() + 10 * 60 * 1000);
-    await tenantPool.query(`INSERT INTO C_OTP (email, otp, expiry) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE otp = ?, expiry = ?`, [email, otp, expiry, otp, expiry]);
+    
+    await tenantPool.query(`
+      INSERT INTO C_OTP (email, otp, expiry) VALUES (?, ?, ?) 
+      ON DUPLICATE KEY UPDATE otp = ?, expiry = ?
+    `, [email, otp, expiry, otp, expiry]);
+    
     await tenantPool.end(); 
-    const transporter = nodemailer.createTransport({ host: process.env.GMAIL_HOST, port: 587, secure: false, auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASS } });
-    await transporter.sendMail({ from: process.env.GMAIL_USER, to: email, subject: 'Com360 Signup Verification', text: `Your verification code for Com360 is ${otp}.` });
+    
+    // Send email with delay
+    const transporter = createEmailTransporter();
+    
+    // Add delay to prevent rate limiting issues with SMTP
+    await delay(2000);
+    
+    await transporter.sendMail({ 
+      from: `"Com360 Support" <${process.env.GMAIL_USER}>`,
+      to: email, 
+      subject: 'Your OTP for Signup',
+      text: `Your OTP is ${otp}, valid for 10 minutes.`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+          <h2 style="color: #333; margin-bottom: 20px;">Com360 Signup Verification</h2>
+          <p style="font-size: 16px; color: #555;">Your OTP code is:</p>
+          <div style="background-color: #f5f5f5; padding: 15px; text-align: center; border-radius: 5px; margin: 20px 0;">
+            <span style="font-size: 32px; font-weight: bold; color: #007bff; letter-spacing: 5px;">${otp}</span>
+          </div>
+          <p style="font-size: 14px; color: #666;">This code is valid for <strong>10 minutes</strong>.</p>
+          <p style="font-size: 12px; color: #999; margin-top: 30px; border-top: 1px solid #e0e0e0; padding-top: 15px;">
+            If you didn't request this code, please ignore this email.
+          </p>
+        </div>
+      `
+    });
+    
     return { success: true };
-  } catch (err) { if (tenantPool) await tenantPool.end(); return { success: false, error: "Failed to send OTP." }; }
+    
+  } catch (err) {
+    console.error('Signup OTP Error:', err);
+    if (tenantPool) await tenantPool.end();
+    
+    if (err.responseCode === 550 || err.code === 'EMESSAGE') {
+      return { 
+        success: false, 
+        error: "Email service temporarily busy. Please wait 2-3 minutes and try again." 
+      };
+    }
+    
+    if (err.code === 'EAUTH') {
+      return { 
+        success: false, 
+        error: "Email authentication failed. Please contact support." 
+      };
+    }
+    
+    return { success: false, error: "Failed to send OTP email. Please try again later." };
+  }
 }
 
 export async function initiateSignupOTP(formData) { return await sendSignupOTP(formData); }
@@ -65,15 +164,23 @@ export async function validateSignupOTP(formData) {
   const email = formData.get('email');
   const otp = formData.get('otp');
   const tenantPool = getTenantConnection();
+  
   try {
     const [rows] = await tenantPool.query('SELECT * FROM C_OTP WHERE email = ? AND otp = ?', [email, otp]);
     await tenantPool.end();
+    
     if (rows.length > 0) {
-      if (Date.now() > new Date(rows[0].expiry)) return { success: false, error: "OTP has expired" };
+      if (Date.now() > new Date(rows[0].expiry)) {
+        return { success: false, error: "OTP has expired" };
+      }
       return { success: true };
     }
     return { success: false, error: "Invalid OTP" };
-  } catch (e) { if (tenantPool) await tenantPool.end(); return { success: false, error: "Database error" }; }
+  } catch (e) { 
+    if (tenantPool) await tenantPool.end(); 
+    console.error("OTP validation error:", e);
+    return { success: false, error: "Database error" }; 
+  }
 }
 
 // 5. Submit Subscription Request
