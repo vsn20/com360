@@ -9,7 +9,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import nodemailer from 'nodemailer';
 // Added Import for Rate Limiter
-import { checkEmailRateLimit } from "../utils/rateLimiter";
+import { checkEmailRateLimit } from "@/app/utils/rateLimiter";
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 

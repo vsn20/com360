@@ -7,8 +7,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import nodemailer from 'nodemailer';
 import { getTenantConnection } from "@/app/utils/config/com360db";
-import { checkEmailRateLimit } from "../utils/rateLimiter";
-
+import { checkEmailRateLimit } from "@/app/utils/rateLimiter";
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Create email transporter with optimized settings
