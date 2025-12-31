@@ -28,7 +28,7 @@ const convertBitToBoolean = (bitValue) => {
 // Fetch generic names for a specific category
 export async function fetchGenericNames(category) {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const token = cookieStore.get('jwt_token')?.value;
 
     if (!token) {
@@ -67,7 +67,7 @@ export async function fetchGenericNames(category) {
 // Fetch all configuration data (generic values)
 export async function fetchConfigData() {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const token = cookieStore.get('jwt_token')?.value;
 
     if (!token) {
@@ -115,7 +115,7 @@ export async function addConfigValue(prevState, formData) {
 
     console.log("Form data received:", { g_id, valueName, isactive, parent_value_id });
 
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const token = cookieStore.get('jwt_token')?.value;
 
     if (!token) {
@@ -208,7 +208,7 @@ export async function updateConfigValue(prevState, formData) {
 
     console.log("Form data received for update:", { id, g_id, valueName, isactive, parent_value_id });
 
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const token = cookieStore.get('jwt_token')?.value;
 
     if (!token) {
@@ -260,10 +260,14 @@ export async function updateConfigValue(prevState, formData) {
   }
 }
 
-// Update display order for multiple values (drag-drop)
+/**
+ * Update display order for multiple values (drag-drop)
+ * ✅ OPTIMIZED: Uses a single BATCH query instead of a loop.
+ * This drastically reduces database traffic.
+ */
 export async function updateDisplayOrder(orderUpdates) {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const token = cookieStore.get('jwt_token')?.value;
 
     if (!token) {
@@ -276,17 +280,50 @@ export async function updateDisplayOrder(orderUpdates) {
     }
 
     const orgId = decoded.orgid;
-    const pool = await DBconnection();
-
-    // Update each item's display_order
-    for (const update of orderUpdates) {
-      await pool.query(
-        `UPDATE C_GENERIC_VALUES SET display_order = ? WHERE id = ? AND orgid = ?`,
-        [update.display_order, update.id, orgId]
-      );
+    
+    // Safety check for empty updates
+    if (!orderUpdates || orderUpdates.length === 0) {
+      return { success: true };
     }
 
-    console.log(`Updated display order for ${orderUpdates.length} items`);
+    const pool = await DBconnection();
+
+    // ---------------------------------------------------------
+    // BATCH UPDATE LOGIC
+    // Constructs one large query: UPDATE ... SET order = CASE id WHEN 'x' THEN 1 WHEN 'y' THEN 2 END ...
+    // ---------------------------------------------------------
+
+    const caseParts = [];
+    const queryParams = [];
+    const ids = [];
+
+    orderUpdates.forEach(item => {
+      // Build "WHEN id = ? THEN ?" part
+      caseParts.push("WHEN ? THEN ?");
+      queryParams.push(item.id, parseInt(item.display_order)); // Ensure order is an integer
+      ids.push(item.id);
+    });
+
+    // We also need to restrict the update to the specific IDs and the specific Organization
+    // The query looks like:
+    // UPDATE C_GENERIC_VALUES
+    // SET display_order = CASE id WHEN ? THEN ? WHEN ? THEN ? ... END
+    // WHERE orgid = ? AND id IN (?, ?, ...)
+
+    const query = `
+      UPDATE C_GENERIC_VALUES 
+      SET display_order = CASE id 
+        ${caseParts.join(' ')} 
+      END
+      WHERE orgid = ? AND id IN (${ids.map(() => '?').join(',')})
+    `;
+
+    // Combine all parameters: [id1, order1, id2, order2, ..., orgId, id1, id2, ...]
+    const finalParams = [...queryParams, orgId, ...ids];
+
+    await pool.query(query, finalParams);
+
+    console.log(`✅ Optimized: Updated display order for ${orderUpdates.length} items in a single query.`);
     return { success: true };
   } catch (error) {
     console.error('Error updating display order:', error.message);
