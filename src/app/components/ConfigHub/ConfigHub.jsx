@@ -40,15 +40,15 @@ const ConfigHub = () => {
   const [isDeptAdding, setIsDeptAdding] = useState(false);
   const [deptAddForm, setDeptAddForm] = useState({ name: '', isactive: true });
 
-  // UPDATED CATEGORIES LIST
+  // CATEGORIES LIST
   const categories = [
     { id: 'company', name: 'Company', dbCategory: null },
     { id: 'employment', name: 'Employment', dbCategory: 'Employment' },
-    { id: 'immigration', name: 'Immigration', dbCategory: 'Immigration' }, // Added Immigration
+    { id: 'immigration', name: 'Immigration', dbCategory: 'Immigration' },
     { id: 'documents', name: 'Documents', dbCategory: 'Documents' },
     { id: 'account', name: 'Account', dbCategory: 'Account' },
     { id: 'expense', name: 'Expense', dbCategory: 'Expense' },
-    { id: 'jobs', name: 'Jobs', dbCategory: 'Jobs' },
+    { id: 'jobs', name: 'Jobs', dbCategory: 'jobs' },
     { id: 'project', name: 'Project', dbCategory: 'Project' },
     { id: 'service', name: 'Service', dbCategory: 'Service' },
     { id: 'reports', name: 'Reports', dbCategory: 'Reports' },
@@ -57,25 +57,25 @@ const ConfigHub = () => {
     { id: 'orgdocuments', name: 'Organization', dbCategory: 'orgdocuments' }
   ];
 
-  // Jobs submenu items
+  // Jobs submenu items (Hardcoded items)
   const jobsSubItems = [
     { id: 'departments', name: 'Departments', type: 'departments' }
   ];
 
+  // Company submenu items (assuming these exist based on logic)
+  const companySubItems = []; 
+
   const handleCategoryClick = async (category) => {
+    // Company has no DB category, so it stays separate
     if (category.id === 'company') {
       setView('company-submenu');
       setSelectedCategory(category);
       setBreadcrumbs([{ label: 'Menu', action: () => goToMenu() }, { label: category.name }]);
       return;
     }
-    if (category.id === 'jobs') {
-      setView('jobs-submenu');
-      setSelectedCategory(category);
-      setBreadcrumbs([{ label: 'Menu', action: () => goToMenu() }, { label: category.name }]);
-      return;
-    }
 
+    // --- FIX START: Removed early return for 'jobs' here ---
+    
     setLoading(true);
     setError(null);
     try {
@@ -100,7 +100,14 @@ const ConfigHub = () => {
         });
 
       setGenericNames(display);
-      setView('category-list');
+
+      // Check if it is jobs to set specific view, otherwise default list
+      if (category.id === 'jobs') {
+        setView('jobs-submenu');
+      } else {
+        setView('category-list');
+      }
+
       setBreadcrumbs([
         { label: 'Menu', action: () => goToMenu() },
         { label: category.name }
@@ -232,7 +239,7 @@ const ConfigHub = () => {
       setView('departments');
       setBreadcrumbs([
         { label: 'Menu', action: () => goToMenu() },
-        { label: 'Jobs', action: () => handleCategoryClick({ id: 'jobs', name: 'Jobs' }) },
+        { label: 'Jobs', action: () => handleCategoryClick({ id: 'jobs', name: 'Jobs', dbCategory: 'jobs' }) },
         { label: 'Departments' }
       ]);
     } catch (err) {
@@ -532,9 +539,7 @@ const ConfigHub = () => {
                 <button
                   key={item.id}
                   onClick={() => {
-                    if (item.type === 'departments') {
-                      handleDepartmentsClick();
-                    }
+                    // Logic for company subitems if needed
                   }}
                   className="list-item-button"
                 >
@@ -546,30 +551,43 @@ const ConfigHub = () => {
           </div>
         )}
         
-          {view === 'jobs-submenu' && (
-            <div className="list-container">
-              <div className="list-header">
-                <h2 className="list-title">Jobs</h2>
-                <p className="list-subtitle">Select a configuration type to manage values</p>
-              </div>
-              <div className="list-items">
-                {jobsSubItems.map(item => (
-                  <button
-                    key={item.id}
-                    onClick={() => {
-                      if (item.type === 'departments') {
-                        handleDepartmentsClick();
-                      }
-                    }}
-                    className="list-item-button"
-                  >
-                    <span className="list-item-text">{item.name}</span>
-                    <span className="list-item-arrow">›</span>
-                  </button>
-                ))}
-              </div>
+        {view === 'jobs-submenu' && (
+          <div className="list-container">
+            <div className="list-header">
+              <h2 className="list-title">Jobs</h2>
+              <p className="list-subtitle">Select a configuration type to manage values</p>
             </div>
-          )}
+            <div className="list-items">
+              {/* 1. Render Hardcoded Items (Departments) */}
+              {jobsSubItems.map(item => (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    if (item.type === 'departments') {
+                      handleDepartmentsClick();
+                    }
+                  }}
+                  className="list-item-button"
+                >
+                  <span className="list-item-text">{item.name}</span>
+                  <span className="list-item-arrow">›</span>
+                </button>
+              ))}
+
+              {/* 2. Render Fetched Items from DB (e.g. application_status, job_type) */}
+              {genericNames.map(gn => (
+                <button
+                  key={gn.g_id}
+                  onClick={() => handleGenericNameClick(gn)}
+                  className="list-item-button"
+                >
+                  <span className="list-item-text">{gn.displayName}</span>
+                  <span className="list-item-arrow">›</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {view === 'departments' && (
           <div className="values-container">
