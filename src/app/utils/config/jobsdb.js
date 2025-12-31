@@ -1,18 +1,33 @@
+// app/utils/config/jobsdb.js
+// ✅ OPTIMIZED FOR GODADDY (Prevent max_user_connections error)
+
 import mysql from 'mysql2/promise';
 
-// Remote MySQL credentials (META DB)
-const metaPool = mysql.createPool({
+// ---------------------------------------------------------
+// GODADDY CONFIGURATION
+// ---------------------------------------------------------
+const DB_CONFIG = {
   host: '132.148.221.65',
   port: 3306,
   user: 'SAINAMAN',
   password: 'SAInaman$8393',
+};
+
+// ---------------------------------------------------------
+// META DATABASE CONNECTION
+// ---------------------------------------------------------
+const metaPool = mysql.createPool({
+  host: DB_CONFIG.host,
+  port: DB_CONFIG.port,
+  user: DB_CONFIG.user,
+  password: DB_CONFIG.password,
   database: 'Com360_Meta',
   waitForConnections: true,
-  connectionLimit: 5,
+  connectionLimit: 5, // Keep low for shared hosting
   queueLimit: 0,
 });
 
-// Cache for tenant DB pools
+// Cache for LONG-LIVED tenant DB pools (Only for active user sessions)
 const tenantPools = new Map();
 
 // Cache for aggregated jobs data
@@ -23,44 +38,55 @@ let jobsCache = {
   isRefreshing: false
 };
 
-// Cache refresh interval: 5 minutes (300000 ms)
+// Cache refresh interval: 5 minutes
 const CACHE_TTL = 5 * 60 * 1000;
 
-// Automatically refresh jobs cache every 5 minutes
+// Auto refresh
 setInterval(() => {
   refreshJobsCache().catch((err) => {
     console.error('Automatic jobs cache refresh failed:', err);
   });
 }, CACHE_TTL);
 
+// ---------------------------------------------------------
+// GET / CREATE TENANT POOL
+// ---------------------------------------------------------
 /**
- * Get or create a pool for a specific tenant database
+ * @param {string} databaseName 
+ * @param {string} username 
+ * @param {string} password 
+ * @param {boolean} useCache - If false, creates a temporary pool that MUST be closed manually
  */
-function getTenantPool(databaseName, username, password) {
-  const key = databaseName;
-  
-  if (tenantPools.has(key)) {
-    return tenantPools.get(key);
+function getTenantPool(databaseName, username, password, useCache = true) {
+  // 1. If caching is enabled, check if we already have an open pool
+  if (useCache && tenantPools.has(databaseName)) {
+    return tenantPools.get(databaseName);
   }
 
+  // 2. Create new pool
+  // OPTIMIZATION: Very low limit (2) because GoDaddy shared hosting has strict limits
   const pool = mysql.createPool({
-    host: '132.148.221.65',
-    port: 3306,
-    user: username,
-    password: password,
+    host: DB_CONFIG.host,
+    port: DB_CONFIG.port,
+    user: username || DB_CONFIG.user,
+    password: password || DB_CONFIG.password,
     database: databaseName,
     waitForConnections: true,
-    connectionLimit: 3,
+    connectionLimit: 2, 
     queueLimit: 0,
   });
 
-  tenantPools.set(key, pool);
+  // 3. Store in cache ONLY if requested (for recurring operations like applying)
+  if (useCache) {
+    tenantPools.set(databaseName, pool);
+  }
+
   return pool;
 }
 
-/**
- * Fetch all active subscriber databases from Com360_Meta
- */
+// ---------------------------------------------------------
+// FETCH ALL ACTIVE SUBSCRIBER DATABASES
+// ---------------------------------------------------------
 async function getAllSubscriberDatabases() {
   try {
     const [rows] = await metaPool.execute(`
@@ -74,8 +100,6 @@ async function getAllSubscriberDatabases() {
       WHERE s.active = 'Y' AND sp.active = 'Y'
       GROUP BY sp.subscriber_database
     `);
-    
-    console.log(`Found ${rows.length} active subscriber databases`);
     return rows;
   } catch (error) {
     console.error('Error fetching subscriber databases:', error.message);
@@ -83,34 +107,29 @@ async function getAllSubscriberDatabases() {
   }
 }
 
-/**
- * Fetch external jobs from a single tenant database
- */
+// ---------------------------------------------------------
+// FETCH JOBS FROM ONE DATABASE
+// ---------------------------------------------------------
 async function fetchJobsFromDatabase(pool, databaseName) {
   try {
-    // First check if the required tables exist
     const [tables] = await pool.query(`
-      SELECT TABLE_NAME 
-      FROM information_schema.TABLES 
+      SELECT TABLE_NAME FROM information_schema.TABLES 
       WHERE TABLE_SCHEMA = ? AND TABLE_NAME IN ('C_EXTERNAL_JOBS', 'C_ORG')
     `, [databaseName]);
     
     const tableNames = tables.map(t => t.TABLE_NAME);
     if (!tableNames.includes('C_EXTERNAL_JOBS') || !tableNames.includes('C_ORG')) {
-      console.log(`Database ${databaseName} missing required tables, skipping`);
       return { jobs: [], orgs: [] };
     }
 
-    // Fetch organizations
     const [orgs] = await pool.query('SELECT orgid, orgname FROM C_ORG');
-
-    // Fetch external jobs with all required data
     const [jobs] = await pool.query(`
-      SELECT ej.jobid, ej.orgid, ej.lastdate_for_application, ej.active,
-             ej.display_job_name, ej.job_type AS job_type_id, ej.description,
-             ej.countryid, ej.stateid, ej.custom_state_name,
-             o.orgname, c.value AS country_value, s.value AS state_value,
-             g.Name AS job_type
+      SELECT 
+        ej.jobid, ej.orgid, ej.lastdate_for_application, ej.active,
+        ej.display_job_name, ej.job_type AS job_type_id, ej.description,
+        ej.countryid, ej.stateid, ej.custom_state_name,
+        o.orgname, c.value AS country_value, s.value AS state_value,
+        g.Name AS job_type
       FROM C_EXTERNAL_JOBS ej
       JOIN C_ORG o ON ej.orgid = o.orgid
       LEFT JOIN C_COUNTRY c ON ej.countryid = c.ID
@@ -119,70 +138,58 @@ async function fetchJobsFromDatabase(pool, databaseName) {
       WHERE ej.active = 1
     `);
 
-    // Add database reference to each job for later use (applying, etc.)
-    const jobsWithDb = jobs.map(job => ({
-      ...job,
-      _databaseName: databaseName
-    }));
-
-    // Add database reference to orgs too
-    const orgsWithDb = orgs.map(org => ({
-      ...org,
-      _databaseName: databaseName
-    }));
-
-    console.log(`Fetched ${jobs.length} jobs from ${databaseName}`);
-    return { jobs: jobsWithDb, orgs: orgsWithDb };
+    return {
+      jobs: jobs.map(j => ({ ...j, _databaseName: databaseName })),
+      orgs: orgs.map(o => ({ ...o, _databaseName: databaseName })),
+    };
   } catch (error) {
     console.error(`Error fetching jobs from ${databaseName}:`, error.message);
     return { jobs: [], orgs: [] };
   }
 }
 
-/**
- * Refresh the jobs cache by fetching from all databases
- */
+// ---------------------------------------------------------
+// REFRESH JOB CACHE (OPTIMIZED)
+// ---------------------------------------------------------
 async function refreshJobsCache() {
-  if (jobsCache.isRefreshing) {
-    console.log('Cache refresh already in progress, skipping');
-    return jobsCache;
-  }
+  if (jobsCache.isRefreshing) return jobsCache;
 
   jobsCache.isRefreshing = true;
-  console.log('Starting jobs cache refresh...');
+  console.log('Refreshing jobs cache...');
 
   try {
     const databases = await getAllSubscriberDatabases();
-    
     const allJobs = [];
     const allOrgs = [];
-    const orgSet = new Set(); // To deduplicate orgs
-    const jobSet = new Set(); // To deduplicate jobs
+    const jobSet = new Set();
+    const orgSet = new Set();
 
-    // Fetch jobs from all databases in parallel (with concurrency limit)
-    const batchSize = 5;
+    // OPTIMIZATION: Process in batches of 3 (Lower than AWS due to shared hosting limits)
+    const batchSize = 3;
     for (let i = 0; i < databases.length; i += batchSize) {
       const batch = databases.slice(i, i + batchSize);
-      
+
       const results = await Promise.all(
         batch.map(async (db) => {
-          const pool = getTenantPool(db.databasename, db.username, db.password);
-          return fetchJobsFromDatabase(pool, db.databasename);
+          // KEY CHANGE: useCache = false. Open, Fetch, Close.
+          const pool = getTenantPool(db.databasename, db.username, db.password, false);
+          try {
+            return await fetchJobsFromDatabase(pool, db.databasename);
+          } finally {
+            await pool.end(); // FORCE CLOSE CONNECTION
+          }
         })
       );
 
-      for (const result of results) {
-        // Deduplicate jobs based on databaseName + jobid
-        for (const job of result.jobs) {
+      for (const res of results) {
+        for (const job of res.jobs) {
           const key = `${job._databaseName}_${job.jobid}`;
           if (!jobSet.has(key)) {
             jobSet.add(key);
             allJobs.push(job);
           }
         }
-        
-        // Deduplicate orgs based on orgid + database
-        for (const org of result.orgs) {
+        for (const org of res.orgs) {
           const key = `${org._databaseName}_${org.orgid}`;
           if (!orgSet.has(key)) {
             orgSet.add(key);
@@ -199,7 +206,7 @@ async function refreshJobsCache() {
       isRefreshing: false
     };
 
-    console.log(`Jobs cache refreshed: ${allJobs.length} total jobs from ${databases.length} databases`);
+    console.log(`Jobs cache refreshed: ${allJobs.length} jobs from ${databases.length} databases`);
     return jobsCache;
   } catch (error) {
     console.error('Error refreshing jobs cache:', error.message);
@@ -208,46 +215,28 @@ async function refreshJobsCache() {
   }
 }
 
-/**
- * Get all external jobs (from cache if valid, otherwise refresh)
- */
+// ---------------------------------------------------------
+// PUBLIC API
+// ---------------------------------------------------------
+
 export async function getAllExternalJobs() {
   const now = Date.now();
-  
-  // Check if cache is valid (less than 5 minutes old)
   if (jobsCache.lastUpdated && (now - jobsCache.lastUpdated) < CACHE_TTL) {
-    console.log('Returning cached jobs data');
-    return {
-      jobs: jobsCache.jobs,
-      orgs: jobsCache.orgs,
-      fromCache: true,
-      lastUpdated: jobsCache.lastUpdated
-    };
+    return { ...jobsCache, fromCache: true };
   }
-
-  // Cache expired or doesn't exist, refresh
   await refreshJobsCache();
-  
-  return {
-    jobs: jobsCache.jobs,
-    orgs: jobsCache.orgs,
-    fromCache: false,
-    lastUpdated: jobsCache.lastUpdated
-  };
+  return { ...jobsCache, fromCache: false };
 }
 
-/**
- * Force refresh the cache (bypasses TTL check)
- */
 export async function forceRefreshJobsCache() {
   return await refreshJobsCache();
 }
 
 /**
- * Get pool for a specific database (used for applications)
+ * Get pool for a specific database (Used for APPLYING)
+ * This KEEPS the connection open (cached) because the user is interacting with it.
  */
 export async function getPoolForDatabase(databaseName) {
-  // First get the database credentials from meta
   const [rows] = await metaPool.execute(`
     SELECT 
       sp.subscriber_database AS databasename,
@@ -263,51 +252,43 @@ export async function getPoolForDatabase(databaseName) {
   }
 
   const { username, password } = rows[0];
-  return getTenantPool(databaseName, username, password);
+  // useCache = true (Default)
+  return getTenantPool(databaseName, username, password, true);
 }
 
-/**
- * Find which database a job belongs to
- */
 export async function findJobDatabase(jobId, orgId) {
   const { jobs } = await getAllExternalJobs();
   const job = jobs.find(j => j.jobid === parseInt(jobId) && j.orgid === parseInt(orgId));
-  
-  if (!job) {
-    return null;
-  }
-  
-  return job._databaseName;
+  return job ? job._databaseName : null;
 }
 
 /**
  * Get applications for a candidate across all databases (basic info)
+ * ✅ OPTIMIZED: Uses transient connections + Batching
  */
 export async function getCandidateApplications(candidateId) {
   try {
     const databases = await getAllSubscriberDatabases();
     const allApplications = [];
-
-    // Fetch applications from all databases
-    const batchSize = 5;
+    
+    // Batch processing (Lower limit for GoDaddy)
+    const batchSize = 3;
+    
     for (let i = 0; i < databases.length; i += batchSize) {
       const batch = databases.slice(i, i + batchSize);
       
       const results = await Promise.all(
         batch.map(async (db) => {
+          // useCache = false: Create temporary connection
+          const pool = getTenantPool(db.databasename, db.username, db.password, false);
+          
           try {
-            const pool = getTenantPool(db.databasename, db.username, db.password);
-            
-            // Check if C_APPLICATIONS table exists
             const [tables] = await pool.query(`
-              SELECT TABLE_NAME 
-              FROM information_schema.TABLES 
+              SELECT TABLE_NAME FROM information_schema.TABLES 
               WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'C_APPLICATIONS'
             `, [db.databasename]);
             
-            if (tables.length === 0) {
-              return [];
-            }
+            if (tables.length === 0) return [];
 
             const [applications] = await pool.query(
               `SELECT jobid, applicationid, status, applieddate FROM C_APPLICATIONS WHERE candidate_id = ?`,
@@ -321,6 +302,9 @@ export async function getCandidateApplications(candidateId) {
           } catch (error) {
             console.error(`Error fetching applications from ${db.databasename}:`, error.message);
             return [];
+          } finally {
+            // CRITICAL: Close the pool immediately after use
+            await pool.end();
           }
         })
       );
@@ -338,49 +322,38 @@ export async function getCandidateApplications(candidateId) {
 }
 
 /**
- * Get applications for a candidate with full details (org name, job name, etc.)
- * Used for the "My Applications" page
+ * Get applications for a candidate with full details (For "My Applications" Page)
+ * ✅ OPTIMIZED: Uses transient connections + Batching
  */
 export async function getCandidateApplicationsWithDetails(candidateId) {
   try {
     const databases = await getAllSubscriberDatabases();
     const allApplications = [];
-
-    // Fetch applications from all databases in batches
-    const batchSize = 5;
+    
+    const batchSize = 3;
+    
     for (let i = 0; i < databases.length; i += batchSize) {
       const batch = databases.slice(i, i + batchSize);
       
       const results = await Promise.all(
         batch.map(async (db) => {
+          // useCache = false: Create temporary connection
+          const pool = getTenantPool(db.databasename, db.username, db.password, false);
+          
           try {
-            const pool = getTenantPool(db.databasename, db.username, db.password);
-            
-            // Check if required tables exist
             const [tables] = await pool.query(`
-              SELECT TABLE_NAME 
-              FROM information_schema.TABLES 
+              SELECT TABLE_NAME FROM information_schema.TABLES 
               WHERE TABLE_SCHEMA = ? AND TABLE_NAME IN ('C_APPLICATIONS', 'C_ORG', 'C_EXTERNAL_JOBS')
             `, [db.databasename]);
             
             const tableNames = tables.map(t => t.TABLE_NAME);
-            if (!tableNames.includes('C_APPLICATIONS')) {
-              return [];
-            }
+            if (!tableNames.includes('C_APPLICATIONS')) return [];
 
-            // Fetch applications with org and job details
             const [applications] = await pool.query(`
               SELECT 
-                a.applicationid,
-                a.orgid,
-                a.jobid,
-                a.applieddate,
-                a.status,
-                a.resumepath,
-                a.candidate_id,
-                a.salary_expected,
-                o.orgname,
-                ej.display_job_name
+                a.applicationid, a.orgid, a.jobid, a.applieddate,
+                a.status, a.resumepath, a.candidate_id, a.salary_expected,
+                o.orgname, ej.display_job_name
               FROM C_APPLICATIONS a
               LEFT JOIN C_ORG o ON a.orgid = o.orgid
               LEFT JOIN C_EXTERNAL_JOBS ej ON a.jobid = ej.jobid
@@ -392,8 +365,11 @@ export async function getCandidateApplicationsWithDetails(candidateId) {
               _databaseName: db.databasename
             }));
           } catch (error) {
-            console.error(`Error fetching applications with details from ${db.databasename}:`, error.message);
+            console.error(`Error fetching details from ${db.databasename}:`, error.message);
             return [];
+          } finally {
+            // CRITICAL: Close the pool immediately after use
+            await pool.end();
           }
         })
       );
@@ -403,7 +379,7 @@ export async function getCandidateApplicationsWithDetails(candidateId) {
       }
     }
 
-    console.log(`Found ${allApplications.length} applications for candidate ${candidateId} across all databases`);
+    console.log(`Found ${allApplications.length} applications for candidate ${candidateId}`);
     return allApplications;
   } catch (error) {
     console.error('Error fetching candidate applications with details:', error.message);
@@ -416,12 +392,12 @@ export { metaPool };
 
 
 // // app/utils/config/jobsdb.js
-// // ✅ HARDCODED FOR AWS RDS
+// // ✅ OPTIMIZED FOR AWS RDS & HIGH TRAFFIC SCANS
 
 // import mysql from 'mysql2/promise';
 
 // // ---------------------------------------------------------
-// // RDS MASTER CONFIG (HARDCODED)
+// // RDS MASTER CONFIG
 // // ---------------------------------------------------------
 // const RDS_CONFIG = {
 //   host: 'database-1.cvscmsgqsmyw.us-east-1.rds.amazonaws.com',
@@ -440,12 +416,12 @@ export { metaPool };
 //   password: RDS_CONFIG.password,
 //   database: 'Com360_Meta',
 //   waitForConnections: true,
-//   connectionLimit: 10,
+//   connectionLimit: 10, // Meta needs higher availability
 //   queueLimit: 0,
 //   connectTimeout: 10000,
 // });
 
-// // Cache for tenant DB pools
+// // Cache for LONG-LIVED tenant DB pools (Only for active specific operations)
 // const tenantPools = new Map();
 
 // // Cache for aggregated jobs data
@@ -453,7 +429,7 @@ export { metaPool };
 //   jobs: [],
 //   orgs: [],
 //   lastUpdated: null,
-//   isRefreshing: false,
+//   isRefreshing: false
 // };
 
 // // Cache refresh interval: 5 minutes
@@ -461,22 +437,28 @@ export { metaPool };
 
 // // Auto refresh
 // setInterval(() => {
-//   refreshJobsCache().catch(err =>
-//     console.error('Automatic jobs cache refresh failed:', err)
-//   );
+//   refreshJobsCache().catch((err) => {
+//     console.error('Automatic jobs cache refresh failed:', err);
+//   });
 // }, CACHE_TTL);
 
 // // ---------------------------------------------------------
 // // GET / CREATE TENANT POOL
 // // ---------------------------------------------------------
-// function getTenantPool(databaseName, username, password) {
-//   // Check if pool already exists
-//   if (tenantPools.has(databaseName)) {
+// /**
+//  * @param {string} databaseName 
+//  * @param {string} username 
+//  * @param {string} password 
+//  * @param {boolean} useCache - If false, creates a temporary pool that MUST be closed manually
+//  */
+// function getTenantPool(databaseName, username, password, useCache = true) {
+//   // 1. If caching is enabled, check if we already have an open pool
+//   if (useCache && tenantPools.has(databaseName)) {
 //     return tenantPools.get(databaseName);
 //   }
 
-//   // Create new pool using RDS Config + Tenant specific DB
-//   // Logic: Uses specific tenant credentials if available, otherwise falls back to admin
+//   // 2. Create new pool
+//   // OPTIMIZATION: Limit connections to 2 per tenant to prevent RDS exhaustion
 //   const pool = mysql.createPool({
 //     host: RDS_CONFIG.host,
 //     port: RDS_CONFIG.port,
@@ -484,12 +466,16 @@ export { metaPool };
 //     password: password || RDS_CONFIG.password,
 //     database: databaseName,
 //     waitForConnections: true,
-//     connectionLimit: 5,
+//     connectionLimit: 2, 
 //     queueLimit: 0,
 //     connectTimeout: 10000,
 //   });
 
-//   tenantPools.set(databaseName, pool);
+//   // 3. Store in cache ONLY if requested (for recurring operations like applying)
+//   if (useCache) {
+//     tenantPools.set(databaseName, pool);
+//   }
+
 //   return pool;
 // }
 
@@ -509,8 +495,6 @@ export { metaPool };
 //       WHERE s.active = 'Y' AND sp.active = 'Y'
 //       GROUP BY sp.subscriber_database
 //     `);
-
-//     console.log(`Found ${rows.length} active subscriber databases`);
 //     return rows;
 //   } catch (error) {
 //     console.error('Error fetching subscriber databases:', error.message);
@@ -524,22 +508,16 @@ export { metaPool };
 // async function fetchJobsFromDatabase(pool, databaseName) {
 //   try {
 //     const [tables] = await pool.query(`
-//       SELECT TABLE_NAME 
-//       FROM information_schema.TABLES 
-//       WHERE TABLE_SCHEMA = ? 
-//         AND TABLE_NAME IN ('C_EXTERNAL_JOBS', 'C_ORG')
+//       SELECT TABLE_NAME FROM information_schema.TABLES 
+//       WHERE TABLE_SCHEMA = ? AND TABLE_NAME IN ('C_EXTERNAL_JOBS', 'C_ORG')
 //     `, [databaseName]);
-
+    
 //     const tableNames = tables.map(t => t.TABLE_NAME);
 //     if (!tableNames.includes('C_EXTERNAL_JOBS') || !tableNames.includes('C_ORG')) {
-//       console.log(`Skipping ${databaseName}, missing tables`);
 //       return { jobs: [], orgs: [] };
 //     }
 
-//     const [orgs] = await pool.query(
-//       'SELECT orgid, orgname FROM C_ORG'
-//     );
-
+//     const [orgs] = await pool.query('SELECT orgid, orgname FROM C_ORG');
 //     const [jobs] = await pool.query(`
 //       SELECT 
 //         ej.jobid, ej.orgid, ej.lastdate_for_application, ej.active,
@@ -566,7 +544,7 @@ export { metaPool };
 // }
 
 // // ---------------------------------------------------------
-// // REFRESH JOB CACHE
+// // REFRESH JOB CACHE (OPTIMIZED)
 // // ---------------------------------------------------------
 // async function refreshJobsCache() {
 //   if (jobsCache.isRefreshing) return jobsCache;
@@ -581,14 +559,20 @@ export { metaPool };
 //     const jobSet = new Set();
 //     const orgSet = new Set();
 
+//     // OPTIMIZATION: Process in batches of 5
 //     const batchSize = 5;
 //     for (let i = 0; i < databases.length; i += batchSize) {
 //       const batch = databases.slice(i, i + batchSize);
 
 //       const results = await Promise.all(
-//         batch.map(db => {
-//           const pool = getTenantPool(db.databasename, db.username, db.password);
-//           return fetchJobsFromDatabase(pool, db.databasename);
+//         batch.map(async (db) => {
+//           // KEY CHANGE: useCache = false. Open, Fetch, Close.
+//           const pool = getTenantPool(db.databasename, db.username, db.password, false);
+//           try {
+//             return await fetchJobsFromDatabase(pool, db.databasename);
+//           } finally {
+//             await pool.end(); // FORCE CLOSE CONNECTION
+//           }
 //         })
 //       );
 
@@ -600,7 +584,6 @@ export { metaPool };
 //             allJobs.push(job);
 //           }
 //         }
-
 //         for (const org of res.orgs) {
 //           const key = `${org._databaseName}_${org.orgid}`;
 //           if (!orgSet.has(key)) {
@@ -615,14 +598,13 @@ export { metaPool };
 //       jobs: allJobs,
 //       orgs: allOrgs,
 //       lastUpdated: Date.now(),
-//       isRefreshing: false,
+//       isRefreshing: false
 //     };
 
-//     console.log(`Jobs cache refreshed (${allJobs.length} jobs)`);
+//     console.log(`Jobs cache refreshed: ${allJobs.length} jobs from ${databases.length} databases`);
 //     return jobsCache;
-
 //   } catch (error) {
-//     console.error('Jobs cache refresh failed:', error.message);
+//     console.error('Error refreshing jobs cache:', error.message);
 //     jobsCache.isRefreshing = false;
 //     return jobsCache;
 //   }
@@ -634,11 +616,9 @@ export { metaPool };
 
 // export async function getAllExternalJobs() {
 //   const now = Date.now();
-
-//   if (jobsCache.lastUpdated && now - jobsCache.lastUpdated < CACHE_TTL) {
+//   if (jobsCache.lastUpdated && (now - jobsCache.lastUpdated) < CACHE_TTL) {
 //     return { ...jobsCache, fromCache: true };
 //   }
-
 //   await refreshJobsCache();
 //   return { ...jobsCache, fromCache: false };
 // }
@@ -647,6 +627,10 @@ export { metaPool };
 //   return await refreshJobsCache();
 // }
 
+// /**
+//  * Get pool for a specific database (Used for APPLYING)
+//  * This KEEPS the connection open (cached) because the user is interacting with it.
+//  */
 // export async function getPoolForDatabase(databaseName) {
 //   const [rows] = await metaPool.execute(`
 //     SELECT 
@@ -654,47 +638,48 @@ export { metaPool };
 //       sp.privileged_user_access AS username,
 //       sp.password
 //     FROM C_SUBSCRIBER_PLAN sp
-//     WHERE sp.subscriber_database = ?
-//       AND sp.active = 'Y'
+//     WHERE sp.subscriber_database = ? AND sp.active = 'Y'
 //     LIMIT 1
 //   `, [databaseName]);
 
-//   if (!rows.length) {
-//     throw new Error(`Database ${databaseName} not found`);
+//   if (rows.length === 0) {
+//     throw new Error(`Database ${databaseName} not found or inactive`);
 //   }
 
-//   return getTenantPool(databaseName, rows[0].username, rows[0].password);
+//   const { username, password } = rows[0];
+//   // useCache = true (Default)
+//   return getTenantPool(databaseName, username, password, true);
 // }
 
 // export async function findJobDatabase(jobId, orgId) {
 //   const { jobs } = await getAllExternalJobs();
-//   const job = jobs.find(
-//     j => j.jobid === Number(jobId) && j.orgid === Number(orgId)
-//   );
+//   const job = jobs.find(j => j.jobid === parseInt(jobId) && j.orgid === parseInt(orgId));
 //   return job ? job._databaseName : null;
 // }
 
 // /**
 //  * Get applications for a candidate across all databases (basic info)
+//  * ✅ OPTIMIZED: Uses transient connections + Batching
 //  */
 // export async function getCandidateApplications(candidateId) {
 //   try {
 //     const databases = await getAllSubscriberDatabases();
 //     const allApplications = [];
+    
+//     // Batch processing to control connection spikes
 //     const batchSize = 5;
-
+    
 //     for (let i = 0; i < databases.length; i += batchSize) {
 //       const batch = databases.slice(i, i + batchSize);
       
 //       const results = await Promise.all(
 //         batch.map(async (db) => {
+//           // useCache = false: Create temporary connection
+//           const pool = getTenantPool(db.databasename, db.username, db.password, false);
+          
 //           try {
-//             const pool = getTenantPool(db.databasename, db.username, db.password);
-            
-//             // Check if C_APPLICATIONS table exists
 //             const [tables] = await pool.query(`
-//               SELECT TABLE_NAME 
-//               FROM information_schema.TABLES 
+//               SELECT TABLE_NAME FROM information_schema.TABLES 
 //               WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'C_APPLICATIONS'
 //             `, [db.databasename]);
             
@@ -712,6 +697,9 @@ export { metaPool };
 //           } catch (error) {
 //             console.error(`Error fetching applications from ${db.databasename}:`, error.message);
 //             return [];
+//           } finally {
+//             // CRITICAL: Close the pool immediately after use
+//             await pool.end();
 //           }
 //         })
 //       );
@@ -729,33 +717,33 @@ export { metaPool };
 // }
 
 // /**
-//  * Get applications for a candidate with full details
+//  * Get applications for a candidate with full details (For "My Applications" Page)
+//  * ✅ OPTIMIZED: Uses transient connections + Batching
 //  */
 // export async function getCandidateApplicationsWithDetails(candidateId) {
 //   try {
 //     const databases = await getAllSubscriberDatabases();
 //     const allApplications = [];
+    
 //     const batchSize = 5;
-
+    
 //     for (let i = 0; i < databases.length; i += batchSize) {
 //       const batch = databases.slice(i, i + batchSize);
       
 //       const results = await Promise.all(
 //         batch.map(async (db) => {
+//           // useCache = false: Create temporary connection
+//           const pool = getTenantPool(db.databasename, db.username, db.password, false);
+          
 //           try {
-//             const pool = getTenantPool(db.databasename, db.username, db.password);
-            
-//             // Check required tables
 //             const [tables] = await pool.query(`
-//               SELECT TABLE_NAME 
-//               FROM information_schema.TABLES 
+//               SELECT TABLE_NAME FROM information_schema.TABLES 
 //               WHERE TABLE_SCHEMA = ? AND TABLE_NAME IN ('C_APPLICATIONS', 'C_ORG', 'C_EXTERNAL_JOBS')
 //             `, [db.databasename]);
             
 //             const tableNames = tables.map(t => t.TABLE_NAME);
 //             if (!tableNames.includes('C_APPLICATIONS')) return [];
 
-//             // Fetch applications with details
 //             const [applications] = await pool.query(`
 //               SELECT 
 //                 a.applicationid, a.orgid, a.jobid, a.applieddate,
@@ -774,6 +762,9 @@ export { metaPool };
 //           } catch (error) {
 //             console.error(`Error fetching details from ${db.databasename}:`, error.message);
 //             return [];
+//           } finally {
+//             // CRITICAL: Close the pool immediately after use
+//             await pool.end();
 //           }
 //         })
 //       );
