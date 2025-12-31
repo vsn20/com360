@@ -54,11 +54,13 @@ const page = async () => {
         const allpermissions = menuresults.length > 0;
         editing = allpermissions ? 1 : 0;
 
-        // 2. Fetch Interview Data (From Tenant DB)
-        // ❌ Removed JOIN C_CANDIDATE to prevent nulls
-        // ✅ Added a.candidate_id to fetch names later
+        // 2. Fetch Interview Data (FROM TENANT DB)
+        // ❌ REMOVED: JOIN C_CANDIDATE (Because it's empty in tenant DB)
+        // ✅ ADDED: a.candidate_id (To fetch names later)
         let rows = [];
-        const baseQuery = `
+        
+        // Base Query without C_CANDIDATE join
+        const selectFields = `
           SELECT i.interview_id, i.application_id, i.interview_completed, i.start_date, i.start_time, i.start_am_pm, i.end_date,
                  a.jobid, a.status, a.applicationid, a.candidate_id, 
                  e.display_job_name 
@@ -69,33 +71,37 @@ const page = async () => {
 
         if (allpermissions) {
           [rows] = await pool.query(
-            `${baseQuery} WHERE i.orgid = ? AND i.confirm = 1`,
+            `${selectFields} WHERE i.orgid = ? AND i.confirm = 1`,
             [orgid]
           );
         } else {
           [rows] = await pool.query(
-            `${baseQuery} 
+            `${selectFields} 
              JOIN C_INTERVIEW_PANELS AS ip ON i.interview_id = ip.interview_id AND i.orgid = ip.orgid 
              WHERE i.orgid = ? AND i.confirm = 1 AND ip.empid = ?`,
             [orgid, empid]
           );
         }
 
-        // 3. Fetch Candidate Names (From Central com360 DB)
+        // 3. Fetch Candidate Names (FROM CENTRAL com360 DB)
         if (rows.length > 0) {
+          // Extract unique candidate IDs
           const candidateIds = [...new Set(rows.map(r => r.candidate_id))];
           
           if (candidateIds.length > 0) {
             try {
-              const com360Pool = await getPoolForDatabase('com360'); // ✅ Connect to Central DB
+              // Connect to the Main Database ('com360')
+              const com360Pool = await getPoolForDatabase('com360'); 
+              
               const [candidates] = await com360Pool.query(
                 `SELECT cid, first_name, last_name, email FROM C_CANDIDATE WHERE cid IN (?)`,
                 [candidateIds]
               );
 
-              // Merge names into interview rows
+              // Merge names into interview rows using STRING comparison
               interviewdetails = rows.map(row => {
-                const candidate = candidates.find(c => c.cid === row.candidate_id);
+                // ✅ FIX: String() ensures we match "4" with 4 correctly
+                const candidate = candidates.find(c => String(c.cid) === String(row.candidate_id));
                 return {
                   ...row,
                   first_name: candidate ? candidate.first_name : 'Unknown',
@@ -105,7 +111,7 @@ const page = async () => {
               });
             } catch (err) {
               console.error('Error fetching candidates from com360:', err.message);
-              interviewdetails = rows;
+              interviewdetails = rows; // Fallback
             }
           } else {
             interviewdetails = rows;

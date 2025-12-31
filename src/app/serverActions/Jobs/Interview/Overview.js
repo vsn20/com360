@@ -42,9 +42,9 @@ const getCurrentUserEmpIdName = async (pool, userId, orgId) => {
   }
 };
 
-// ---------------------------------------------------------
-// 1. FETCH ALL INTERVIEWS (For Table)
-// ---------------------------------------------------------
+// ------------------------------------------------------------------
+// 1. Fetch All Interviews (With Candidates from com360)
+// ------------------------------------------------------------------
 export async function fetchAllInterviewsForEmployee({ orgid, empid, editing }) {
   const cookieStore = cookies();
   const token = cookieStore.get("jwt_token")?.value;
@@ -58,6 +58,7 @@ export async function fetchAllInterviewsForEmployee({ orgid, empid, editing }) {
     const pool = await DBconnection();
     
     // ❌ Removed JOIN C_CANDIDATE
+    // ✅ Added c.candidate_id
     let query = `
       SELECT DISTINCT c.applicationid, b.interview_id, c.candidate_id, e.display_job_name, c.status,
               c.resumepath, c.offerletter_timestamp, e.jobid
@@ -76,18 +77,22 @@ export async function fetchAllInterviewsForEmployee({ orgid, empid, editing }) {
 
     let [rows] = await pool.query(query, params);
 
-    // ✅ FETCH NAMES FROM CENTRAL DB
+    // ✅ FETCH NAMES FROM CENTRAL DB (com360)
     if (rows.length > 0) {
       const candidateIds = [...new Set(rows.map(r => r.candidate_id))];
+      
       if(candidateIds.length > 0) {
+        // Connect to 'com360' database specifically
         const com360Pool = await getPoolForDatabase('com360');
         const [candidates] = await com360Pool.query(
           `SELECT cid, first_name, last_name, email FROM C_CANDIDATE WHERE cid IN (?)`,
           [candidateIds]
         );
         
+        // Merge
         rows = rows.map(row => {
-          const cand = candidates.find(c => c.cid === row.candidate_id);
+          // ✅ String comparison for safety
+          const cand = candidates.find(c => String(c.cid) === String(row.candidate_id));
           return {
             ...row,
             first_name: cand?.first_name || 'Unknown',
@@ -105,9 +110,9 @@ export async function fetchAllInterviewsForEmployee({ orgid, empid, editing }) {
   }
 };
 
-// ---------------------------------------------------------
-// 2. FETCH DETAILS BY ID (For Popup/Editing)
-// ---------------------------------------------------------
+// ------------------------------------------------------------------
+// 2. Fetch Details By ID (With Candidate from com360)
+// ------------------------------------------------------------------
 export async function fetchDetailsById({ orgid, interview_id, acceptingtime, empid }) {
   const cookieStore = cookies();
   const token = cookieStore.get("jwt_token")?.value;
@@ -121,6 +126,7 @@ export async function fetchDetailsById({ orgid, interview_id, acceptingtime, emp
     const pool = await DBconnection();
     
     // ❌ Removed JOIN C_CANDIDATE
+    // ✅ Added c.candidate_id
     let [rows] = await pool.query(
       `SELECT DISTINCT c.applicationid, b.interview_id, c.candidate_id, e.display_job_name, c.status,
               c.resumepath, c.offerletter_timestamp, e.jobid
@@ -138,7 +144,7 @@ export async function fetchDetailsById({ orgid, interview_id, acceptingtime, emp
 
     let interview = rows[0];
 
-    // ✅ FETCH SINGLE NAME FROM CENTRAL DB
+    // ✅ FETCH SINGLE CANDIDATE NAME FROM CENTRAL DB (com360)
     if (interview.candidate_id) {
         const com360Pool = await getPoolForDatabase('com360');
         const [candidates] = await com360Pool.query(
@@ -176,9 +182,9 @@ export async function fetchDetailsById({ orgid, interview_id, acceptingtime, emp
   }
 };
 
-// ---------------------------------------------------------
-// 3. FETCH ROUNDS
-// ---------------------------------------------------------
+// ------------------------------------------------------------------
+// 3. Fetch Rounds (No Changes Needed Here)
+// ------------------------------------------------------------------
 export async function fetchRoundsByInterviewId({ orgid, interview_id, empid, editing }) {
   try {
     const pool = await DBconnection();
@@ -240,9 +246,9 @@ export async function fetchRoundsByInterviewId({ orgid, interview_id, empid, edi
   }
 }
 
-// ---------------------------------------------------------
-// 4. UPDATE INTERVIEW
-// ---------------------------------------------------------
+// ------------------------------------------------------------------
+// 4. Update Interview (No Changes Needed Here)
+// ------------------------------------------------------------------
 export async function update({ orgid, empid, interview_id, status, acceptingtime, rounds }) {
   const cookieStore = cookies();
   const token = cookieStore.get("jwt_token")?.value;
@@ -290,8 +296,7 @@ export async function update({ orgid, empid, interview_id, status, acceptingtime
     }
 
     const employeename = await getCurrentUserEmpIdName(pool, userId, orgid);
-    // const description = `Rounds updated by ${employeename} on ${new Date().toISOString()}`;
-
+    
     return { success: true, message: 'Rounds updated successfully' };
   } catch (error) {
     console.error('Error in update:', error);
