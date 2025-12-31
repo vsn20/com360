@@ -2,8 +2,8 @@ export const dynamic = 'force-dynamic';
 
 import React from 'react';
 import Overview from '@/app/components/Jobs/Interview/Overview';
-import DBconnection from '@/app/utils/config/db';
-import { getPoolForDatabase } from '@/app/utils/config/jobsdb'; // ✅ Import Central DB Connection
+import DBconnection from '@/app/utils/config/db'; // Tenant Connection
+import { metaPool } from '@/app/utils/config/jobsdb'; // ✅ Central Meta Connection
 import { cookies } from 'next/headers';
 
 const decodeJwt = (token) => {
@@ -37,7 +37,6 @@ const page = async () => {
         orgid = decoded.orgid;
         empid = decoded.empid;
 
-        // 1. Check Permissions
         const [features] = await pool.query(
           `SELECT roleid FROM C_EMP_ROLE_ASSIGN WHERE empid = ? AND orgid = ?`,
           [empid, orgid]
@@ -54,9 +53,7 @@ const page = async () => {
         const allpermissions = menuresults.length > 0;
         editing = allpermissions ? 1 : 0;
 
-        // 2. Fetch Interview Data (FROM TENANT DB)
-        // ❌ REMOVED: JOIN C_CANDIDATE (Because it's empty in tenant DB)
-        // ✅ ADDED: a.candidate_id (To fetch names later)
+        // 1. Fetch Interview Data (From Tenant DB)
         let rows = [];
         const baseQuery = `
           SELECT i.interview_id, i.application_id, i.interview_completed, i.start_date, i.start_time, i.start_am_pm, i.end_date,
@@ -68,34 +65,24 @@ const page = async () => {
         `;
 
         if (allpermissions) {
-          [rows] = await pool.query(
-            `${baseQuery} WHERE i.orgid = ? AND i.confirm = 1`,
-            [orgid]
-          );
+          [rows] = await pool.query(`${baseQuery} WHERE i.orgid = ? AND i.confirm = 1`, [orgid]);
         } else {
-          [rows] = await pool.query(
-            `${baseQuery} 
-             JOIN C_INTERVIEW_PANELS AS ip ON i.interview_id = ip.interview_id AND i.orgid = ip.orgid 
-             WHERE i.orgid = ? AND i.confirm = 1 AND ip.empid = ?`,
-            [orgid, empid]
-          );
+          [rows] = await pool.query(`${baseQuery} JOIN C_INTERVIEW_PANELS AS ip ON i.interview_id = ip.interview_id AND i.orgid = ip.orgid WHERE i.orgid = ? AND i.confirm = 1 AND ip.empid = ?`, [orgid, empid]);
         }
 
-        // 3. Fetch Candidate Names (FROM CENTRAL com360 DB)
+        // 2. Fetch Candidate Names (From Central Com360_Meta)
         if (rows.length > 0) {
           const candidateIds = [...new Set(rows.map(r => r.candidate_id))];
           
           if (candidateIds.length > 0) {
             try {
-              const com360Pool = await getPoolForDatabase('com360'); // ✅ Connect to Central DB
-              const [candidates] = await com360Pool.query(
+              // ✅ Use metaPool directly to query Com360_Meta
+              const [candidates] = await metaPool.query(
                 `SELECT cid, first_name, last_name, email FROM C_CANDIDATE WHERE cid IN (?)`,
                 [candidateIds]
               );
 
-              // Merge names into interview rows
               interviewdetails = rows.map(row => {
-                // ✅ String comparison ensures '4' matches 4
                 const candidate = candidates.find(c => String(c.cid) === String(row.candidate_id));
                 return {
                   ...row,
@@ -105,28 +92,17 @@ const page = async () => {
                 };
               });
             } catch (err) {
-              console.error('Error fetching candidates from com360:', err.message);
-              // Fallback to avoid breaking the page
-              interviewdetails = rows.map(row => ({
-                ...row, 
-                first_name: 'Unknown', 
-                last_name: '' 
-              }));
+              console.error('Error fetching candidates from Meta:', err.message);
+              interviewdetails = rows;
             }
           } else {
             interviewdetails = rows;
           }
         }
 
-        // 4. Fetch Config Data
-        [time] = await pool.query(
-          'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 15 AND orgid = ? AND isactive = 1',
-          [orgid]
-        );
-        [acceptingtime] = await pool.query(
-          'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 16 AND orgid = ? AND isactive = 1',
-          [orgid]
-        );
+        // Fetch Config Data
+        [time] = await pool.query('SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 15 AND orgid = ? AND isactive = 1', [orgid]);
+        [acceptingtime] = await pool.query('SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 16 AND orgid = ? AND isactive = 1', [orgid]);
       }
     }
   } catch (error) {
@@ -135,14 +111,7 @@ const page = async () => {
 
   return (
     <div>
-      <Overview
-        orgid={orgid}
-        empid={empid}
-        interviewdetails={interviewdetails}
-        time={time}
-        acceptingtime={acceptingtime}
-        editing={editing}
-      />
+      <Overview orgid={orgid} empid={empid} interviewdetails={interviewdetails} time={time} acceptingtime={acceptingtime} editing={editing} />
     </div>
   );
 };
