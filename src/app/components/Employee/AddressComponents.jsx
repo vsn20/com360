@@ -1,4 +1,5 @@
-import React from 'react';
+'use client';
+import React, { useState } from 'react';
 
 export const WorkAddress = ({
   editing,
@@ -12,13 +13,36 @@ export const WorkAddress = ({
   states,
   canEdit,
   helpers,
-  isSaving
+  isSaving,
+  onCopyHomeAddress // New Prop
 }) => {
   const { getCountryName, getStateName } = helpers;
+  const [isCopying, setIsCopying] = useState(false);
+
+  const handleCopyClick = () => {
+    if (onCopyHomeAddress) {
+      setIsCopying(true);
+      onCopyHomeAddress();
+      setTimeout(() => setIsCopying(false), 500);
+    }
+  };
 
   return (
     <div className="role-details-block96">
-      <h3>Work Address</h3>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', borderBottom: '2px solid #e5e7eb', paddingBottom: '10px' }}>
+        <h3 style={{ borderBottom: 'none', margin: 0, paddingBottom: 0 }}>Work Address</h3>
+        {editing && (
+          <button 
+            type="button" 
+            onClick={handleCopyClick}
+            className="account_copy_button"
+            disabled={isCopying}
+          >
+            {isCopying ? 'Copying...' : 'Copy Home Address'}
+          </button>
+        )}
+      </div>
+
       {editing ? (
         <form onSubmit={(e) => { e.preventDefault(); onSave('workAddress'); }}>
            <div className="form-row">
@@ -140,12 +164,36 @@ export const HomeAddress = ({
   states,
   canEdit,
   helpers,
-  isSaving
+  isSaving,
+  onCopyWorkAddress // New Prop
 }) => {
   const { getCountryName, getStateName } = helpers;
+  const [isCopying, setIsCopying] = useState(false);
+
+  const handleCopyClick = () => {
+    if (onCopyWorkAddress) {
+      setIsCopying(true);
+      onCopyWorkAddress();
+      setTimeout(() => setIsCopying(false), 500);
+    }
+  };
+
   return (
     <div className="role-details-block96">
-      <h3>Home Address</h3>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', borderBottom: '2px solid #e5e7eb', paddingBottom: '10px' }}>
+        <h3 style={{ borderBottom: 'none', margin: 0, paddingBottom: 0 }}>Home Address</h3>
+        {editing && (
+          <button 
+            type="button" 
+            onClick={handleCopyClick}
+            className="account_copy_button"
+            disabled={isCopying}
+          >
+            {isCopying ? 'Copying...' : 'Copy Work Address'}
+          </button>
+        )}
+      </div>
+
       {editing ? (
         <form onSubmit={(e) => { e.preventDefault(); onSave('homeAddress'); }}>
           <div className="form-row">

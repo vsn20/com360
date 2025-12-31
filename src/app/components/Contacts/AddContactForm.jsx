@@ -181,6 +181,20 @@ export default function AddContactForm({
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleCopyHomeAddress = () => {
+    setFormData(prev => ({
+      ...prev,
+      MAILING_ADDR_LINE1: prev.HOME_ADDR_LINE1,
+      MAILING_ADDR_LINE2: prev.HOME_ADDR_LINE2,
+      MAILING_ADDR_LINE3: prev.HOME_ADDR_LINE3,
+      MAILING_CITY: prev.HOME_CITY,
+      MAILING_COUNTRY_ID: prev.HOME_COUNTRY_ID,
+      MAILING_STATE_ID: prev.HOME_STATE_ID,
+      MAILING_CUSTOM_STATE: prev.HOME_CUSTOM_STATE,
+      MAILING_POSTAL_CODE: prev.HOME_POSTAL_CODE,
+    }));
+  };
+
   const contactType = formData.CONTACT_TYPE_CD;
 
   return (
@@ -241,6 +255,18 @@ export default function AddContactForm({
         </div>
 
         <AddressBlock title="Home Address" prefix="HOME" countries={countries} states={states} formData={formData} handleChange={handleChange} />
+        
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '10px', marginTop: '-15px' }}>
+          <button 
+            type="button" 
+            onClick={handleCopyHomeAddress} 
+            className="contact_button" 
+            style={{ fontSize: '13px', padding: '6px 12px' }}
+          >
+            Copy Home Address
+          </button>
+        </div>
+
         <AddressBlock title="Mailing Address" prefix="MAILING" countries={countries} states={states} formData={formData} handleChange={handleChange} />
 
         <div className="contact_form-buttons">

@@ -28,7 +28,7 @@ const Overview = ({
   const [addressdisplay, setaddressdisplay] = useState(false);
   const [activeSubmenuTab, setActiveSubmenuTab] = useState('basic');
   
-  // Initialize State with ourorg defaulting to '0'
+  // Initialize State
   const [formData, setFormData] = useState({
     accntId: '',
     orgid: orgid || '',
@@ -38,14 +38,14 @@ const Overview = ({
     aliasName: '',
     businessAddrLine1: '',
     businessAddrLine2: '',
-    businessAddrLine3: '',
+    businessAddrLine3: '', // Used for Custom State
     businessCity: '',
     businessStateId: '',
     businessCountryId: '185',
     businessPostalCode: '',
     mailingAddrLine1: '',
     mailingAddrLine2: '',
-    mailingAddrLine3: '',
+    mailingAddrLine3: '', // Used for Custom State
     mailingCity: '',
     mailingStateId: '',
     mailingCountryId: '185',
@@ -69,8 +69,9 @@ const Overview = ({
   const [isadd, setisadd] = useState(false);
   const [addFormError, addsetFormError] = useState(null);
   const [addFormSuccess, addsetFormSuccess] = useState(null);
+  const [isCopying, setIsCopying] = useState(false);
   
-  // Initialize Add Form Data with ourorg
+  // Initialize Add Form Data
   const [addformData, setaddFormData] = useState({
     accountName: '',
     acctTypeCd: '',
@@ -78,17 +79,17 @@ const Overview = ({
     email: '',
     businessAddrLine1: '',
     businessAddrLine2: '',
-    businessAddrLine3: '',
+    businessAddrLine3: '', // Used for Custom State
     businessCity: '',
     businessStateId: '',
-    businessCountryId: '',
+    businessCountryId: '185', // Default to USA
     businessPostalCode: '',
     mailingAddrLine1: '',
     mailingAddrLine2: '',
-    mailingAddrLine3: '',
+    mailingAddrLine3: '', // Used for Custom State
     mailingCity: '',
     mailingStateId: '',
-    mailingCountryId: '',
+    mailingCountryId: '185', // Default to USA
     mailingPostalCode: '',
     suborgid: '',
     ourorg: '0'
@@ -103,6 +104,9 @@ const Overview = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [accountTypeFilter, setAccountTypeFilter] = useState('all');
   const [branchTypeFilter, setBranchTypeFilter] = useState('all');
+
+  // Helper to check if country is USA (assuming ID 185 is USA)
+  const isUSA = (id) => String(id) === '185';
 
   useEffect(() => {
     handleBackClick();
@@ -279,14 +283,14 @@ const Overview = ({
           aliasName: account.ALIAS_NAME || '',
           businessAddrLine1: account.BUSINESS_ADDR_LINE1 || '',
           businessAddrLine2: account.BUSINESS_ADDR_LINE2 || '',
-          businessAddrLine3: account.BUSINESS_ADDR_LINE3 || '',
+          businessAddrLine3: account.BUSINESS_ADDR_LINE3 || '', // Reads custom state from here if !USA
           businessCity: account.BUSINESS_CITY || '',
           businessStateId: account.BUSINESS_STATE_ID ? String(account.BUSINESS_STATE_ID) : '',
           businessCountryId: account.BUSINESS_COUNTRY_ID ? String(account.BUSINESS_COUNTRY_ID) : '185',
           businessPostalCode: account.BUSINESS_POSTAL_CODE || '',
           mailingAddrLine1: account.MAILING_ADDR_LINE1 || '',
           mailingAddrLine2: account.MAILING_ADDR_LINE2 || '',
-          mailingAddrLine3: account.MAILING_ADDR_LINE3 || '',
+          mailingAddrLine3: account.MAILING_ADDR_LINE3 || '', // Reads custom state from here if !USA
           mailingCity: account.MAILING_CITY || '',
           mailingStateId: account.MAILING_STATE_ID ? String(account.MAILING_STATE_ID) : '',
           mailingCountryId: account.MAILING_COUNTRY_ID ? String(account.MAILING_COUNTRY_ID) : '185',
@@ -357,6 +361,40 @@ const Overview = ({
     }
   };
 
+  const handleCopyBusinessToMailingAdd = () => {
+    setIsCopying(true);
+    setTimeout(() => {
+      setaddFormData(prev => ({
+        ...prev,
+        mailingAddrLine1: prev.businessAddrLine1,
+        mailingAddrLine2: prev.businessAddrLine2,
+        mailingAddrLine3: prev.businessAddrLine3, // Copies Custom State
+        mailingCity: prev.businessCity,
+        mailingStateId: prev.businessStateId, // Copies State ID (if USA)
+        mailingCountryId: prev.businessCountryId,
+        mailingPostalCode: prev.businessPostalCode,
+      }));
+      setIsCopying(false);
+    }, 500);
+  };
+
+  const handleCopyBusinessToMailingEdit = () => {
+    setIsCopying(true);
+    setTimeout(() => {
+      setFormData(prev => ({
+        ...prev,
+        mailingAddrLine1: prev.businessAddrLine1,
+        mailingAddrLine2: prev.businessAddrLine2,
+        mailingAddrLine3: prev.businessAddrLine3, // Copies Custom State
+        mailingCity: prev.businessCity,
+        mailingStateId: prev.businessStateId, // Copies State ID (if USA)
+        mailingCountryId: prev.businessCountryId,
+        mailingPostalCode: prev.businessPostalCode,
+      }));
+      setIsCopying(false);
+    }, 500);
+  };
+
   const handleSave = async (section) => {
     if (!formData.orgid) { setError('Organization ID missing.'); return; }
     setIsLoading(true);
@@ -377,6 +415,7 @@ const Overview = ({
     } else if (section === 'businessAddress') {
       formDataToSubmit.append('BUSINESS_ADDR_LINE1', formData.businessAddrLine1 || '');
       formDataToSubmit.append('BUSINESS_ADDR_LINE2', formData.businessAddrLine2 || '');
+      // AddrLine3 is now used for custom state
       formDataToSubmit.append('BUSINESS_ADDR_LINE3', formData.businessAddrLine3 || '');
       formDataToSubmit.append('BUSINESS_CITY', formData.businessCity || '');
       formDataToSubmit.append('BUSINESS_STATE_ID', formData.businessStateId || '');
@@ -385,6 +424,7 @@ const Overview = ({
     } else if (section === 'mailingAddress') {
       formDataToSubmit.append('MAILING_ADDR_LINE1', formData.mailingAddrLine1 || '');
       formDataToSubmit.append('MAILING_ADDR_LINE2', formData.mailingAddrLine2 || '');
+      // AddrLine3 is now used for custom state
       formDataToSubmit.append('MAILING_ADDR_LINE3', formData.mailingAddrLine3 || '');
       formDataToSubmit.append('MAILING_CITY', formData.mailingCity || '');
       formDataToSubmit.append('MAILING_STATE_ID', formData.mailingStateId || '');
@@ -419,12 +459,48 @@ const Overview = ({
 
   const handleFormChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+    
+    // Logic to clear state if country changes
+    if (name === 'businessCountryId') {
+      setFormData(prev => ({ 
+        ...prev, 
+        [name]: value,
+        businessStateId: '', // Clear state dropdown
+        businessAddrLine3: '' // Clear custom state
+      }));
+    } else if (name === 'mailingCountryId') {
+      setFormData(prev => ({ 
+        ...prev, 
+        [name]: value,
+        mailingStateId: '', // Clear state dropdown
+        mailingAddrLine3: '' // Clear custom state
+      }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+    }
   };
 
   const addhandleChange = (e) => {
     const { name, value } = e.target;
-    setaddFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Logic to clear state if country changes
+    if (name === 'businessCountryId') {
+      setaddFormData(prev => ({ 
+        ...prev, 
+        [name]: value,
+        businessStateId: '',
+        businessAddrLine3: '' 
+      }));
+    } else if (name === 'mailingCountryId') {
+      setaddFormData(prev => ({ 
+        ...prev, 
+        [name]: value,
+        mailingStateId: '',
+        mailingAddrLine3: ''
+      }));
+    } else {
+      setaddFormData(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const addhandleSubmit = async (e) => {
@@ -446,9 +522,9 @@ const Overview = ({
       setaddFormData({
         accountName: '', acctTypeCd: '', branchType: '', email: '',
         businessAddrLine1: '', businessAddrLine2: '', businessAddrLine3: '',
-        businessCity: '', businessStateId: '', businessCountryId: '', businessPostalCode: '',
+        businessCity: '', businessStateId: '', businessCountryId: '185', businessPostalCode: '',
         mailingAddrLine1: '', mailingAddrLine2: '', mailingAddrLine3: '',
-        mailingCity: '', mailingStateId: '', mailingCountryId: '', mailingPostalCode: '',
+        mailingCity: '', mailingStateId: '', mailingCountryId: '185', mailingPostalCode: '',
         suborgid: '', ourorg: '0'
       });
       setTimeout(() => { addsetFormSuccess(null); router.refresh(); }, 2000);
@@ -458,9 +534,18 @@ const Overview = ({
   const getAccountTypeName = (id) => accountTypes.find(t => String(t.id) === String(id))?.Name || 'No Account Type';
   const getBranchTypeName = (id) => branchTypes.find(t => String(t.id) === String(id))?.Name || 'No Branch Type';
   const getCountryName = (id) => countries.find(c => c.ID === id)?.VALUE || 'No Country';
-  const getStateName = (id) => states.find(s => s.ID === id)?.VALUE || 'No State';
+  
+  // Logic: If USA, lookup ID. If not, return the custom text from AddrLine3
+  const getDisplayState = (countryId, stateId, addrLine3) => {
+    if (isUSA(countryId)) {
+      const stateObj = states.find(s => String(s.ID) === String(stateId));
+      return stateObj ? stateObj.VALUE : '-';
+    }
+    return addrLine3 || '-';
+  };
+  
   const getSubOrgName = (id) => suborgs.find(s => String(s.suborgid) === String(id))?.suborgname || 'No Suborganization';
-
+  
   return (
     <div className="account_overview_container">
       {error && <div className="account_error_message">{error}</div>}
@@ -523,7 +608,9 @@ const Overview = ({
               <div className="account_form_grid">
                 <div className="account_form_group"><label>Address Line 1</label><input type="text" name="businessAddrLine1" value={addformData.businessAddrLine1} onChange={addhandleChange} /></div>
                 <div className="account_form_group"><label>Address Line 2</label><input type="text" name="businessAddrLine2" value={addformData.businessAddrLine2} onChange={addhandleChange} /></div>
-                <div className="account_form_group"><label>Address Line 3</label><input type="text" name="businessAddrLine3" value={addformData.businessAddrLine3} onChange={addhandleChange} /></div>
+                
+                {/* Removed Address Line 3 Input */}
+                
                 <div className="account_form_group"><label>City</label><input type="text" name="businessCity" value={addformData.businessCity} onChange={addhandleChange} /></div>
                 <div className="account_form_group">
                   <label>Country</label>
@@ -534,21 +621,50 @@ const Overview = ({
                 </div>
                 <div className="account_form_group">
                   <label>State</label>
-                  <select name="businessStateId" value={addformData.businessStateId} onChange={addhandleChange}>
+                  <select 
+                    name="businessStateId" 
+                    value={isUSA(addformData.businessCountryId) ? addformData.businessStateId : ''} 
+                    onChange={addhandleChange}
+                    disabled={!isUSA(addformData.businessCountryId)}
+                    className={!isUSA(addformData.businessCountryId) ? 'account_bg_gray_100' : ''}
+                  >
                     <option value="">Select State</option>
                     {states.map(s => <option key={s.ID} value={s.ID}>{s.VALUE}</option>)}
                   </select>
+                </div>
+                <div className="account_form_group">
+                  <label>Custom State Name</label>
+                  <input 
+                    type="text" 
+                    name="businessAddrLine3" // Bind to AddrLine3
+                    value={!isUSA(addformData.businessCountryId) ? addformData.businessAddrLine3 : ''} 
+                    onChange={addhandleChange} 
+                    disabled={isUSA(addformData.businessCountryId)}
+                    className={isUSA(addformData.businessCountryId) ? 'account_bg_gray_100' : ''}
+                  />
                 </div>
                 <div className="account_form_group"><label>Postal Code</label><input type="text" name="businessPostalCode" value={addformData.businessPostalCode} onChange={addhandleChange} /></div>
               </div>
             </div>
 
             <div className="account_details_block">
-              <h3>Mailing Address</h3>
+              <div className="account_block_header">
+                <h3>Mailing Address</h3>
+                <button 
+                  type="button" 
+                  onClick={handleCopyBusinessToMailingAdd} 
+                  className="account_copy_button"
+                  disabled={isCopying}
+                >
+                  {isCopying ? 'Copying...' : 'Copy Business Address'}
+                </button>
+              </div>
               <div className="account_form_grid">
                 <div className="account_form_group"><label>Address Line 1</label><input type="text" name="mailingAddrLine1" value={addformData.mailingAddrLine1} onChange={addhandleChange} /></div>
                 <div className="account_form_group"><label>Address Line 2</label><input type="text" name="mailingAddrLine2" value={addformData.mailingAddrLine2} onChange={addhandleChange} /></div>
-                <div className="account_form_group"><label>Address Line 3</label><input type="text" name="mailingAddrLine3" value={addformData.mailingAddrLine3} onChange={addhandleChange} /></div>
+                
+                 {/* Removed Address Line 3 Input */}
+
                 <div className="account_form_group"><label>City</label><input type="text" name="mailingCity" value={addformData.mailingCity} onChange={addhandleChange} /></div>
                 <div className="account_form_group">
                   <label>Country</label>
@@ -559,10 +675,27 @@ const Overview = ({
                 </div>
                 <div className="account_form_group">
                   <label>State</label>
-                  <select name="mailingStateId" value={addformData.mailingStateId} onChange={addhandleChange}>
+                  <select 
+                    name="mailingStateId" 
+                    value={isUSA(addformData.mailingCountryId) ? addformData.mailingStateId : ''} 
+                    onChange={addhandleChange}
+                    disabled={!isUSA(addformData.mailingCountryId)}
+                    className={!isUSA(addformData.mailingCountryId) ? 'account_bg_gray_100' : ''}
+                  >
                     <option value="">Select State</option>
                     {states.map(s => <option key={s.ID} value={s.ID}>{s.VALUE}</option>)}
                   </select>
+                </div>
+                <div className="account_form_group">
+                  <label>Custom State Name</label>
+                  <input 
+                    type="text" 
+                    name="mailingAddrLine3" // Bind to AddrLine3
+                    value={!isUSA(addformData.mailingCountryId) ? addformData.mailingAddrLine3 : ''} 
+                    onChange={addhandleChange} 
+                    disabled={isUSA(addformData.mailingCountryId)}
+                    className={isUSA(addformData.mailingCountryId) ? 'account_bg_gray_100' : ''}
+                  />
                 </div>
                 <div className="account_form_group"><label>Postal Code</label><input type="text" name="mailingPostalCode" value={addformData.mailingPostalCode} onChange={addhandleChange} /></div>
               </div>
@@ -601,7 +734,7 @@ const Overview = ({
                   <th onClick={() => requestSort('aliasName')}>Account Name</th>
                   <th onClick={() => requestSort('acctTypeCd')}>Account Type</th>
                   <th onClick={() => requestSort('branchType')}>Branch Type</th>
-                  <th>State</th>
+                  {/* <th>State</th> */}
                   <th>Status</th>
                 </tr>
               </thead>
@@ -611,7 +744,7 @@ const Overview = ({
                     <td>{account.ALIAS_NAME}</td>
                     <td>{getAccountTypeName(account.ACCT_TYPE_CD)}</td>
                     <td>{getBranchTypeName(account.BRANCH_TYPE)}</td>
-                    <td>{getStateName(account.MAILING_STATE_ID)}</td>
+                   
                     <td>
                       <span className={`account_status_badge ${account.ACTIVE_FLAG === 1 ? 'account_actives' : 'account_inactive'}`}>
                         {account.ACTIVE_FLAG === 1 ? 'Active' : 'Inactive'}
@@ -690,10 +823,35 @@ const Overview = ({
                     <div className="account_form_grid">
                       <div className="account_form_group"><label>Address Line 1</label><input name="businessAddrLine1" value={formData.businessAddrLine1} onChange={handleFormChange}/></div>
                       <div className="account_form_group"><label>Address Line 2</label><input name="businessAddrLine2" value={formData.businessAddrLine2} onChange={handleFormChange}/></div>
-                      <div className="account_form_group"><label>Address Line 3</label><input name="businessAddrLine3" value={formData.businessAddrLine3} onChange={handleFormChange}/></div>
+                      
+                      {/* Removed Address Line 3 Input */}
+
                       <div className="account_form_group"><label>City</label><input name="businessCity" value={formData.businessCity} onChange={handleFormChange}/></div>
                       <div className="account_form_group"><label>Country</label><select name="businessCountryId" value={formData.businessCountryId} onChange={handleFormChange}><option value="">Select Country</option>{countries.map(c => <option key={c.ID} value={c.ID}>{c.VALUE}</option>)}</select></div>
-                      <div className="account_form_group"><label>State</label><select name="businessStateId" value={formData.businessStateId} onChange={handleFormChange}><option value="">Select State</option>{states.map(s => <option key={s.ID} value={s.ID}>{s.VALUE}</option>)}</select></div>
+                      <div className="account_form_group">
+                        <label>State</label>
+                        <select 
+                          name="businessStateId" 
+                          value={isUSA(formData.businessCountryId) ? formData.businessStateId : ''} 
+                          onChange={handleFormChange} 
+                          disabled={!isUSA(formData.businessCountryId)}
+                          className={!isUSA(formData.businessCountryId) ? 'account_bg_gray_100' : ''}
+                        >
+                          <option value="">Select State</option>
+                          {states.map(s => <option key={s.ID} value={s.ID}>{s.VALUE}</option>)}
+                        </select>
+                      </div>
+                      <div className="account_form_group">
+                        <label>Custom State Name</label>
+                        <input 
+                          type="text" 
+                          name="businessAddrLine3" // Bind to AddrLine3
+                          value={!isUSA(formData.businessCountryId) ? formData.businessAddrLine3 : ''} 
+                          onChange={handleFormChange}
+                          disabled={isUSA(formData.businessCountryId)}
+                          className={isUSA(formData.businessCountryId) ? 'account_bg_gray_100' : ''}
+                        />
+                      </div>
                       <div className="account_form_group"><label>Postal Code</label><input name="businessPostalCode" value={formData.businessPostalCode} onChange={handleFormChange}/></div>
                     </div>
                     <div className="account_form_buttons">
@@ -706,10 +864,14 @@ const Overview = ({
                   <div className="account_view_grid">
                     <div className="account_view_group"><label>Address Line 1</label><p>{accountDetails.BUSINESS_ADDR_LINE1 || '-'}</p></div>
                     <div className="account_view_group"><label>Address Line 2</label><p>{accountDetails.BUSINESS_ADDR_LINE2 || '-'}</p></div>
-                    <div className="account_view_group"><label>Address Line 3</label><p>{accountDetails.BUSINESS_ADDR_LINE3 || '-'}</p></div>
+                    {/* Hiding Address Line 3 from View if strictly used for State, or show if you want, but user said remove it. 
+                        We will show State based on logic below */}
                     <div className="account_view_group"><label>City</label><p>{accountDetails.BUSINESS_CITY || '-'}</p></div>
                     <div className="account_view_group"><label>Country</label><p>{getCountryName(accountDetails.BUSINESS_COUNTRY_ID)}</p></div>
-                    <div className="account_view_group"><label>State</label><p>{getStateName(accountDetails.BUSINESS_STATE_ID)}</p></div>
+                    <div className="account_view_group">
+                      <label>State</label>
+                      <p>{getDisplayState(accountDetails.BUSINESS_COUNTRY_ID, accountDetails.BUSINESS_STATE_ID, accountDetails.BUSINESS_ADDR_LINE3)}</p>
+                    </div>
                     <div className="account_view_group"><label>Postal Code</label><p>{accountDetails.BUSINESS_POSTAL_CODE || '-'}</p></div>
                   </div>
                   {canEditAccounts && <div className="account_form_buttons"><button className="account_edit_button" onClick={() => handleEdit('businessAddress')}>Edit</button></div>}
@@ -718,16 +880,53 @@ const Overview = ({
               </div>
               
               <div className="account_details_block">
-                <h3>Mailing Address</h3>
+                <div className="account_block_header">
+                  <h3>Mailing Address</h3>
+                  {editingMailingAddress && (
+                    <button 
+                      type="button" 
+                      onClick={handleCopyBusinessToMailingEdit} 
+                      className="account_copy_button"
+                      disabled={isCopying}
+                    >
+                      {isCopying ? 'Copying...' : 'Copy Business Address'}
+                    </button>
+                  )}
+                </div>
                 {editingMailingAddress ? (
                    <form onSubmit={(e) => { e.preventDefault(); handleSave('mailingAddress'); }}>
                     <div className="account_form_grid">
                       <div className="account_form_group"><label>Address Line 1</label><input name="mailingAddrLine1" value={formData.mailingAddrLine1} onChange={handleFormChange}/></div>
                       <div className="account_form_group"><label>Address Line 2</label><input name="mailingAddrLine2" value={formData.mailingAddrLine2} onChange={handleFormChange}/></div>
-                      <div className="account_form_group"><label>Address Line 3</label><input name="mailingAddrLine3" value={formData.mailingAddrLine3} onChange={handleFormChange}/></div>
+                      
+                      {/* Removed Address Line 3 Input */}
+
                       <div className="account_form_group"><label>City</label><input name="mailingCity" value={formData.mailingCity} onChange={handleFormChange}/></div>
                       <div className="account_form_group"><label>Country</label><select name="mailingCountryId" value={formData.mailingCountryId} onChange={handleFormChange}><option value="">Select Country</option>{countries.map(c => <option key={c.ID} value={c.ID}>{c.VALUE}</option>)}</select></div>
-                      <div className="account_form_group"><label>State</label><select name="mailingStateId" value={formData.mailingStateId} onChange={handleFormChange}><option value="">Select State</option>{states.map(s => <option key={s.ID} value={s.ID}>{s.VALUE}</option>)}</select></div>
+                      <div className="account_form_group">
+                        <label>State</label>
+                        <select 
+                          name="mailingStateId" 
+                          value={isUSA(formData.mailingCountryId) ? formData.mailingStateId : ''} 
+                          onChange={handleFormChange}
+                          disabled={!isUSA(formData.mailingCountryId)}
+                          className={!isUSA(formData.mailingCountryId) ? 'account_bg_gray_100' : ''}
+                        >
+                          <option value="">Select State</option>
+                          {states.map(s => <option key={s.ID} value={s.ID}>{s.VALUE}</option>)}
+                        </select>
+                      </div>
+                      <div className="account_form_group">
+                        <label>Custom State Name</label>
+                        <input 
+                          type="text" 
+                          name="mailingAddrLine3" // Bind to AddrLine3
+                          value={!isUSA(formData.mailingCountryId) ? formData.mailingAddrLine3 : ''} 
+                          onChange={handleFormChange}
+                          disabled={isUSA(formData.mailingCountryId)}
+                          className={isUSA(formData.mailingCountryId) ? 'account_bg_gray_100' : ''}
+                        />
+                      </div>
                       <div className="account_form_group"><label>Postal Code</label><input name="mailingPostalCode" value={formData.mailingPostalCode} onChange={handleFormChange}/></div>
                     </div>
                     <div className="account_form_buttons">
@@ -740,10 +939,13 @@ const Overview = ({
                   <div className="account_view_grid">
                      <div className="account_view_group"><label>Address Line 1</label><p>{accountDetails.MAILING_ADDR_LINE1 || '-'}</p></div>
                     <div className="account_view_group"><label>Address Line 2</label><p>{accountDetails.MAILING_ADDR_LINE2 || '-'}</p></div>
-                    <div className="account_view_group"><label>Address Line 3</label><p>{accountDetails.MAILING_ADDR_LINE3 || '-'}</p></div>
+                    {/* Hiding Address Line 3 View */}
                     <div className="account_view_group"><label>City</label><p>{accountDetails.MAILING_CITY || '-'}</p></div>
                     <div className="account_view_group"><label>Country</label><p>{getCountryName(accountDetails.MAILING_COUNTRY_ID)}</p></div>
-                    <div className="account_view_group"><label>State</label><p>{getStateName(accountDetails.MAILING_STATE_ID)}</p></div>
+                    <div className="account_view_group">
+                      <label>State</label>
+                      <p>{getDisplayState(accountDetails.MAILING_COUNTRY_ID, accountDetails.MAILING_STATE_ID, accountDetails.MAILING_ADDR_LINE3)}</p>
+                    </div>
                     <div className="account_view_group"><label>Postal Code</label><p>{accountDetails.MAILING_POSTAL_CODE || '-'}</p></div>
                   </div>
                   {canEditAccounts && <div className="account_form_buttons"><button className="account_edit_button" onClick={() => handleEdit('mailingAddress')}>Edit</button></div>}

@@ -60,6 +60,49 @@
   color: black !important;
 }
 
+/* Copy Button Styling */
+.account_copy_button {
+  background-color: transparent;
+  color: #0fd46c;
+  border: 1px solid #0fd46c;
+  padding: 4px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: Arial, sans-serif;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  margin-left: auto; /* Pushes button to right in flex container */
+}
+
+.account_copy_button:hover {
+  background-color: #e8f5e8;
+  color: #0CB25A;
+  border-color: #0CB25A;
+}
+
+.account_copy_button:disabled {
+  border-color: #cccccc;
+  color: #999;
+  cursor: not-allowed;
+  background-color: #f9f9f9;
+}
+
+/* Block Header for Title + Button alignment */
+.account_block_header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid #e5e7eb;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+}
+
+.account_block_header h3 {
+  border-bottom: none !important; /* Remove default border from h3 when inside header wrapper */
+  margin: 0 !important;
+  padding-bottom: 0 !important;
+}
+
 /* Title */
 .account_title {
   font-size: 16px;

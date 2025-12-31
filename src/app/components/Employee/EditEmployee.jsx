@@ -11,11 +11,9 @@ import {
   uploadProfilePhoto,
   deleteProfilePhoto,
   uploadSignature,
-  deleteSignature // ADDED THIS IMPORT
+  deleteSignature 
 } from '@/app/serverActions/Employee/overview';
-// IMPORT FETCH IMMIGRATION DATA
 import { fetchImmigrationData } from '@/app/serverActions/Employee/Immigration'; 
-// IMPORT FETCH EXPERIENCE AND EDUCATION DATA
 import { 
   fetchExperienceByEmpId, 
   fetchEducationByEmpId 
@@ -302,7 +300,6 @@ const EditEmployee = ({
             vendor_id: employee.vendor_id ? String(employee.vendor_id) : '',
           });
         
-        // Set showVendorField based on employment_type (12 = Contract, 13 = 1099)
         const empType = employee.employment_type ? String(employee.employment_type) : '';
         setShowVendorField(empType === '12' || empType === '13');
         
@@ -316,6 +313,7 @@ const EditEmployee = ({
     loadEmployeeDetails();
   }, [selectedEmpId, orgid]);
 
+  // ... (CanEdit, DocumentSelecting functions omitted for brevity, same as previous) ...
   const canEdit = (section) => {
     if (!selectedEmpId) return false;
     const restrictedSections = ['employment', 'leaves'];
@@ -332,7 +330,7 @@ const EditEmployee = ({
     if (permissionLevel === 'all') return true;
     return false;
   };
-
+  
   const documentselecting=(id)=>{
     setselecteddocument(id);
     setpersonaldetails(null);
@@ -620,17 +618,12 @@ const handleDeleteProfilePhoto = async (empId) => {
     setImageToCrop(null);
 };
 
-// --- NEW FUNCTION TO HANDLE SIGNATURE DELETION ---
 const handleDeleteSignature = async () => {
   if (!employeeDetails?.empid) return;
-
-  // If user just selected a file but hasn't saved yet, clear it
   if (signatureFile) {
     setSignatureFile(null);
     return;
   }
-
-  // If there's a signature on the server, delete it
   if (signatureSrc && !signatureSrc.includes('default')) {
     try {
       const result = await deleteSignature(employeeDetails.empid);
@@ -659,21 +652,21 @@ function onImageLoad(e) {
     height: cropWidth,
   });
 }
-
+  // ... (handleDocumentsUpdate, etc. omitted) ...
   const handleDocumentsUpdate = async () => {
-  if (selectedEmpId) {
-    try {
-      const updatedDocuments = await fetchdocumentsbyid(selectedEmpId);
-      setemployeedocuments(updatedDocuments);
-      setError(null);
-    } catch (err) {
-      console.error('Error updating documents:', err);
-      setError('Failed to refresh documents.');
+    if (selectedEmpId) {
+      try {
+        const updatedDocuments = await fetchdocumentsbyid(selectedEmpId);
+        setemployeedocuments(updatedDocuments);
+        setError(null);
+      } catch (err) {
+        console.error('Error updating documents:', err);
+        setError('Failed to refresh documents.');
+      }
     }
-  }
-};
-
-  const handlePafDocumentsUpdate = async () => {
+  };
+  
+    const handlePafDocumentsUpdate = async () => {
     if (selectedEmpId) {
       try {
         const updatedDocuments = await fetchPafDocumentsById(selectedEmpId);
@@ -750,7 +743,8 @@ function onImageLoad(e) {
   };
 
   const handleSave = async (section) => {
-  setIsSaving(true);
+    // ... (Original logic omitted for brevity, keeping it same) ...
+     setIsSaving(true);
   setSavingSection(section);
   const orgid = await ensureOrgId();
   if (!orgid) {
@@ -783,7 +777,6 @@ function onImageLoad(e) {
      if (!formData.hireDate) { setError('Hire Date is required.'); return; }
      if (!formData.status) { setError('Status is required.'); return; }
      
-     // --- ADDED VALIDATION FOR ORGANIZATION ---
      if (!formData.suborgid) { setError('Organization is required.'); return; }
 
      selectedRoles.forEach((roleid) => formDataToSubmit.append('roleids', roleid));
@@ -800,7 +793,7 @@ function onImageLoad(e) {
      formDataToSubmit.append('workCompClass', formData.workCompClass || '');
      formDataToSubmit.append('suborgid', formData.suborgid || '');
      formDataToSubmit.append('employment_type', formData.employment_type || '');
-     // Include vendor_id - if showVendorField is true, use the value, otherwise send empty
+     
      if (showVendorField && formData.vendor_id) {
        formDataToSubmit.append('vendor_id', formData.vendor_id);
      } else {
@@ -857,29 +850,29 @@ function onImageLoad(e) {
       setSelectedRoles(updatedEmployee.roleids || []);
       
      if (section === 'personal') {
-  if (signatureFile) {
-    try {
-      const sigData = new FormData();
-      sigData.append('file', signatureFile);
-      sigData.append('empId', formData.empid);
-      
-      console.log('Uploading signature for empId:', formData.empid);
-      const sigResult = await uploadSignature(sigData);
-      console.log('Signature upload result:', sigResult);
-      
-      if (sigResult.success) {
-        const newTimestamp = new Date().getTime();
-        const newSignatureSrc = `/uploads/signatures/${formData.empid}.jpg?${newTimestamp}`;
-        console.log('Setting new signature source:', newSignatureSrc);
-        setSignatureSrc(newSignatureSrc);
-        setSignatureFile(null);
-      }
-    } catch (sigErr) {
-      console.error('Failed to upload signature:', sigErr);
-    }
-  }
-  setEditingPersonal(false);  // MOVED THIS LINE TO THE END
-} 
+        if (signatureFile) {
+            try {
+            const sigData = new FormData();
+            sigData.append('file', signatureFile);
+            sigData.append('empId', formData.empid);
+            
+            console.log('Uploading signature for empId:', formData.empid);
+            const sigResult = await uploadSignature(sigData);
+            console.log('Signature upload result:', sigResult);
+            
+            if (sigResult.success) {
+                const newTimestamp = new Date().getTime();
+                const newSignatureSrc = `/uploads/signatures/${formData.empid}.jpg?${newTimestamp}`;
+                console.log('Setting new signature source:', newSignatureSrc);
+                setSignatureSrc(newSignatureSrc);
+                setSignatureFile(null);
+            }
+            } catch (sigErr) {
+            console.error('Failed to upload signature:', sigErr);
+            }
+        }
+        setEditingPersonal(false);  
+    } 
       if (section === 'employment') {
         setEditingEmployment(false);
       }
@@ -903,20 +896,17 @@ function onImageLoad(e) {
     setIsSaving(false);
     setSavingSection(null);
   }
-};
+  };
 
 
   const handleFormChange = (e) => {
     const { name, value, type, checked } = e.target;
-    
-    // Handle employment_type change to show/hide vendor field
     if (name === 'employment_type') {
       const selectedTypeId = value;
       if (selectedTypeId === '12' || selectedTypeId === '13') {
         setShowVendorField(true);
       } else {
         setShowVendorField(false);
-        // Clear vendor_id when employment type is not contract/1099
         setFormData(prev => ({
           ...prev,
           employment_type: value,
@@ -925,14 +915,12 @@ function onImageLoad(e) {
         return;
       }
     }
-    
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }));
   };
 
-  // Cancel handlers to reset form data to original values
   const handleCancelPersonal = () => {
     setEditingPersonal(false);
     setFormData(prev => ({
@@ -950,7 +938,6 @@ function onImageLoad(e) {
       linkedinUrl: employeeDetails.LINKEDIN_URL || '',
       employee_number: employeeDetails.employee_number || '',
     }));
-    // Reset signature to original
     setSignatureSrc(`/uploads/signatures/${employeeDetails.empid}.jpg?${new Date().getTime()}`);
     setSignatureFile(null);
   };
@@ -973,7 +960,6 @@ function onImageLoad(e) {
       employment_type: employeeDetails.employment_type || '',
       vendor_id: employeeDetails.vendor_id ? String(employeeDetails.vendor_id) : '',
     }));
-    // Reset showVendorField based on original employment_type
     const empType = employeeDetails.employment_type ? String(employeeDetails.employment_type) : '';
     setShowVendorField(empType === '12' || empType === '13');
     setSelectedRoles(employeeDetails.roleids || []);
@@ -1032,6 +1018,36 @@ function onImageLoad(e) {
     }));
   };
 
+  // --- NEW HANDLERS FOR COPY FUNCTIONALITY ---
+  const handleCopyHomeToWork = () => {
+    setFormData(prev => ({
+      ...prev,
+      workAddrLine1: prev.homeAddrLine1,
+      workAddrLine2: prev.homeAddrLine2,
+      workAddrLine3: prev.homeAddrLine3,
+      workCity: prev.homeCity,
+      workStateId: prev.homeStateId,
+      workStateNameCustom: prev.homeStateNameCustom,
+      workCountryId: prev.homeCountryId,
+      workPostalCode: prev.homePostalCode,
+    }));
+  };
+
+  const handleCopyWorkToHome = () => {
+    setFormData(prev => ({
+      ...prev,
+      homeAddrLine1: prev.workAddrLine1,
+      homeAddrLine2: prev.workAddrLine2,
+      homeAddrLine3: prev.workAddrLine3,
+      homeCity: prev.workCity,
+      homeStateId: prev.workStateId,
+      homeStateNameCustom: prev.workStateNameCustom,
+      homeCountryId: prev.workCountryId,
+      homePostalCode: prev.workPostalCode,
+    }));
+  };
+
+  // ... (getRoleNames, getSuperiorName, etc. omitted) ...
   const handleLeaveChange = (leaveid, value) => {
     setFormLeaves(prev => ({ ...prev, [leaveid]: value }));
   };
@@ -1121,7 +1137,8 @@ function onImageLoad(e) {
 
   return (
     <div className="role-details-container">
-             <div className="roledetails-header"> 
+            {/* ... (Photo modal code omitted for brevity) ... */}
+              <div className="roledetails-header"> 
               </div>
               <div className="profile-photo">
                 <button className="profile-photo-button" onClick={() => setIsPhotoModalOpen(true)}>
@@ -1253,7 +1270,7 @@ function onImageLoad(e) {
                       setSignatureFile(e.target.files[0]);
                     }
                   }}
-                  onDeleteSignature={handleDeleteSignature} // CHANGED: Passed the new handler
+                  onDeleteSignature={handleDeleteSignature} 
                   isSaving={isSaving && savingSection === 'personal'}
                 />
             )}
@@ -1318,6 +1335,7 @@ function onImageLoad(e) {
                  canEdit={canEdit('workAddress')}
                  helpers={helpers}
                  isSaving={isSaving && savingSection === 'workAddress'}
+                 onCopyHomeAddress={handleCopyHomeToWork} // Passing Handler
                />
                <HomeAddress 
                  editing={editingHomeAddress}
@@ -1332,6 +1350,7 @@ function onImageLoad(e) {
                  canEdit={canEdit('homeAddress')}
                  helpers={helpers}
                  isSaving={isSaving && savingSection === 'homeAddress'}
+                 onCopyWorkAddress={handleCopyWorkToHome} // Passing Handler
                />
                <EmergencyContact 
                  editing={editingEmergencyContact}
@@ -1349,7 +1368,8 @@ function onImageLoad(e) {
                />
             </>
             )}
-
+            
+            {/* ... (Other sections omitted for brevity) ... */}
             {experiencedetails && !workdetails && !employementdetails && !personaldetails && !educationdetails && !selecteddocument && !immigrationdetails&&(
               <EmployeeExperience 
                 empid={employeeDetails.empid}
@@ -1381,7 +1401,7 @@ function onImageLoad(e) {
                 documents={pafDocuments}
                 onDocumentsUpdate={handlePafDocumentsUpdate}
                 document_types={paf_document_types}
-                document_purposes={paf_document_statuses} // Map Statuses to Purposes prop
+                document_purposes={paf_document_statuses} 
                 document_subtypes={paf_document_subtypes}
               />
             )}
@@ -1391,7 +1411,7 @@ function onImageLoad(e) {
                 documents={fdnsDocuments}
                 onDocumentsUpdate={handleFdnsDocumentsUpdate}
                 document_types={fdns_document_types}
-                document_purposes={fdns_document_statuses} // Map Statuses to Purposes prop
+                document_purposes={fdns_document_statuses} 
                 document_subtypes={fdns_document_subtypes}
               />
             )}
@@ -1405,7 +1425,6 @@ function onImageLoad(e) {
                 onUpdate={handleImmigrationUpdate}
                 employeeName={`${employeeDetails.EMP_FST_NAME} ${employeeDetails.EMP_LAST_NAME}`}
                 suborgs={suborgs}
-                // 🔹 Passed employeeSuborgId to filter Company Dropdown
                 employeeSuborgId={employeeDetails.suborgid} 
               />
             )}

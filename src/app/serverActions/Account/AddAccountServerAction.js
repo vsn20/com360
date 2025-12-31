@@ -56,162 +56,101 @@ export async function addAccount(formData) {
     const aliasName = formData.get('aliasName') || null;
     const businessAddrLine1 = formData.get('businessAddrLine1') || null;
     const businessAddrLine2 = formData.get('businessAddrLine2') || null;
-    const businessAddrLine3 = formData.get('businessAddrLine3') || null;
     const businessCity = formData.get('businessCity') || null;
-    const businessStateId = formData.get('businessStateId') || null;
     const businessCountryId = formData.get('businessCountryId') || null;
     const businessPostalCode = formData.get('businessPostalCode') || null;
     const mailingAddrLine1 = formData.get('mailingAddrLine1') || null;
     const mailingAddrLine2 = formData.get('mailingAddrLine2') || null;
-    const mailingAddrLine3 = formData.get('mailingAddrLine3') || null;
     const mailingCity = formData.get('mailingCity') || null;
-    const mailingStateId = formData.get('mailingStateId') || null;
     const mailingCountryId = formData.get('mailingCountryId') || null;
     const mailingPostalCode = formData.get('mailingPostalCode') || null;
     const suborgid = formData.get('suborgid') || null;
     const ourorg = formData.get('ourorg') === '1' ? 1 : 0;
-
-    console.log('addAccount FormData:', {
-      orgId, accountName, acctTypeCd, branchType, email, aliasName,
-      businessAddrLine1, businessAddrLine2, businessAddrLine3, businessCity,
-      businessStateId, businessCountryId, businessPostalCode,
-      mailingAddrLine1, mailingAddrLine2, mailingAddrLine3, mailingCity,
-      mailingStateId, mailingCountryId, mailingPostalCode, suborgid, ourorg
-    });
+    
+    // Original values from form
+    let businessStateId = formData.get('businessStateId') || null;
+    let businessAddrLine3 = formData.get('businessAddrLine3') || null; // Custom State text comes here
+    let mailingStateId = formData.get('mailingStateId') || null;
+    let mailingAddrLine3 = formData.get('mailingAddrLine3') || null; // Custom State text comes here
 
     const cookieStore = cookies();
     const token = cookieStore.get('jwt_token')?.value;
 
-    if (!token) {
-      console.log('No token found');
-      return { error: 'No token found. Please log in.' };
-    }
-
+    if (!token) return { error: 'No token found. Please log in.' };
     const decoded = decodeJwt(token);
-    if (!decoded || !decoded.orgid || !decoded.userId) {
-      console.log('Invalid token or orgid/userId not found');
-      return { error: 'Invalid token or orgid/userId not found.' };
-    }
+    if (!decoded || !decoded.orgid || !decoded.userId) return { error: 'Invalid token or orgid/userId not found.' };
 
     const jwtOrgId = decoded.orgid;
-    if (!orgId || String(orgId) !== String(jwtOrgId)) {
-      console.log(`Invalid or mismatched orgid. FormData orgid: ${orgId}, JWT orgid: ${jwtOrgId}`);
-      return { error: 'Organization ID is missing or invalid.' };
-    }
-
-    if (!accountName) {
-      console.log('Account Name is missing');
-      return { error: 'Account Name is required.' };
-    }
-    if (!acctTypeCd) {
-      console.log('Account Type is missing');
-      return { error: 'Account Type is required.' };
-    }
-    if (!branchType) {
-      console.log('Branch Type is missing');
-      return { error: 'Branch Type is required.' };
-    }
-    if (!email) {
-      console.log('Email is missing');
-      return { error: 'Email is required.' };
-    }
+    if (!orgId || String(orgId) !== String(jwtOrgId)) return { error: 'Organization ID is missing or invalid.' };
+    if (!accountName) return { error: 'Account Name is required.' };
+    if (!acctTypeCd) return { error: 'Account Type is required.' };
+    if (!branchType) return { error: 'Branch Type is required.' };
+    if (!email) return { error: 'Email is required.' };
 
     const pool = await DBconnection();
     console.log('MySQL connection pool acquired');
 
-    const [emailCheck] = await pool.execute(
-      'SELECT ACCNT_ID FROM C_ACCOUNT WHERE EMAIL = ? AND ORGID = ?',
-      [email, orgId]
-    );
-    if (emailCheck.length > 0) {
-      console.log('Email already in use');
-      return { error: 'Email is already in use by another account.' };
-    }
+    // Email Check
+    const [emailCheck] = await pool.execute('SELECT ACCNT_ID FROM C_ACCOUNT WHERE EMAIL = ? AND ORGID = ?', [email, orgId]);
+    if (emailCheck.length > 0) return { error: 'Email is already in use by another account.' };
 
+    // Validation Checks
     if (acctTypeCd) {
-      const [typeCheck] = await pool.execute(
-        'SELECT id FROM C_GENERIC_VALUES WHERE g_id = 5 AND id = ? AND orgid = ? AND isactive = 1',
-        [acctTypeCd, orgId]
-      );
-      if (typeCheck.length === 0) {
-        console.log('Invalid account type selected');
-        return { error: 'Selected account type is invalid or inactive.' };
-      }
+      const [typeCheck] = await pool.execute('SELECT id FROM C_GENERIC_VALUES WHERE g_id = 5 AND id = ? AND orgid = ? AND isactive = 1', [acctTypeCd, orgId]);
+      if (typeCheck.length === 0) return { error: 'Selected account type is invalid or inactive.' };
     }
 
     if (branchType) {
-      const [branchCheck] = await pool.execute(
-        'SELECT id FROM C_GENERIC_VALUES WHERE g_id = 6 AND id = ? AND orgid = ? AND isactive = 1',
-        [branchType, orgId]
-      );
-      if (branchCheck.length === 0) {
-        console.log('Invalid branch type selected');
-        return { error: 'Selected branch type is invalid or inactive.' };
-      }
+      const [branchCheck] = await pool.execute('SELECT id FROM C_GENERIC_VALUES WHERE g_id = 6 AND id = ? AND orgid = ? AND isactive = 1', [branchType, orgId]);
+      if (branchCheck.length === 0) return { error: 'Selected branch type is invalid or inactive.' };
     }
 
     if (suborgid) {
-      const [suborgCheck] = await pool.execute(
-        'SELECT suborgid FROM C_SUB_ORG WHERE suborgid = ? AND orgid = ? AND isstatus = 1',
-        [suborgid, orgId]
-      );
-      if (suborgCheck.length === 0) {
-        console.log('Invalid suborganization selected');
-        return { error: 'Selected suborganization is invalid or inactive.' };
-      }
+      const [suborgCheck] = await pool.execute('SELECT suborgid FROM C_SUB_ORG WHERE suborgid = ? AND orgid = ? AND isstatus = 1', [suborgid, orgId]);
+      if (suborgCheck.length === 0) return { error: 'Selected suborganization is invalid or inactive.' };
     }
 
+    // Business Address Logic
     if (businessCountryId) {
-      const [countryCheck] = await pool.execute(
-        'SELECT ID FROM C_COUNTRY WHERE ID = ? AND ACTIVE = 1',
-        [businessCountryId]
-      );
-      if (countryCheck.length === 0) {
-        console.log('Invalid business country selected');
-        return { error: 'Selected business country is invalid or inactive.' };
-      }
+      const [countryCheck] = await pool.execute('SELECT ID FROM C_COUNTRY WHERE ID = ? AND ACTIVE = 1', [businessCountryId]);
+      if (countryCheck.length === 0) return { error: 'Selected business country is invalid or inactive.' };
     }
 
-    if (businessStateId) {
-      const [stateCheck] = await pool.execute(
-        'SELECT ID FROM C_STATE WHERE ID = ? AND ACTIVE = 1',
-        [businessStateId]
-      );
-      if (stateCheck.length === 0) {
-        console.log('Invalid business state selected');
-        return { error: 'Selected business state is invalid or inactive.' };
-      }
+    if (String(businessCountryId) !== '185') {
+       // If NOT USA, set state_id to NULL to avoid Foreign Key error
+       businessStateId = null; 
+       // Custom state text is already in businessAddrLine3
+    } else {
+       // If USA, ensure AddrLine3 is null
+       businessAddrLine3 = null; 
+       // Verify State ID exists
+       if (businessStateId) {
+         const [stateCheck] = await pool.execute('SELECT ID FROM C_STATE WHERE ID = ? AND ACTIVE = 1', [businessStateId]);
+         if (stateCheck.length === 0) return { error: 'Selected business state is invalid or inactive.' };
+       }
     }
 
+    // Mailing Address Logic
     if (mailingCountryId) {
-      const [countryCheck] = await pool.execute(
-        'SELECT ID FROM C_COUNTRY WHERE ID = ? AND ACTIVE = 1',
-        [mailingCountryId]
-      );
-      if (countryCheck.length === 0) {
-        console.log('Invalid mailing country selected');
-        return { error: 'Selected mailing country is invalid or inactive.' };
-      }
+      const [countryCheck] = await pool.execute('SELECT ID FROM C_COUNTRY WHERE ID = ? AND ACTIVE = 1', [mailingCountryId]);
+      if (countryCheck.length === 0) return { error: 'Selected mailing country is invalid or inactive.' };
     }
 
-    if (mailingStateId) {
-      const [stateCheck] = await pool.execute(
-        'SELECT ID FROM C_STATE WHERE ID = ? AND ACTIVE = 1',
-        [mailingStateId]
-      );
-      if (stateCheck.length === 0) {
-        console.log('Invalid mailing state selected');
-        return { error: 'Selected mailing state is invalid or inactive.' };
-      }
+    if (String(mailingCountryId) !== '185') {
+       // If NOT USA, set state_id to NULL
+       mailingStateId = null;
+    } else {
+       // If USA, ensure AddrLine3 is null
+       mailingAddrLine3 = null;
+       // Verify State ID
+       if (mailingStateId) {
+         const [stateCheck] = await pool.execute('SELECT ID FROM C_STATE WHERE ID = ? AND ACTIVE = 1', [mailingStateId]);
+         if (stateCheck.length === 0) return { error: 'Selected mailing state is invalid or inactive.' };
+       }
     }
 
-    const [countrows] = await pool.execute(
-      'SELECT count(*) as count FROM C_ACCOUNT WHERE ORGID = ?',
-      [orgId]
-    );
-
+    const [countrows] = await pool.execute('SELECT count(*) as count FROM C_ACCOUNT WHERE ORGID = ?', [orgId]);
     const counting = countrows[0].count;
-
     const accntId = `${orgId}-${counting + 1}`;
     const createdBy = await getCurrentUserEmpIdName(pool, decoded.userId, orgId);
 

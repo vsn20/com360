@@ -73,7 +73,7 @@ export async function fetchAccountByOrgId() {
     console.log('MySQL connection pool acquired');
 
     const [rows] = await pool.execute(
-      `SELECT ACCNT_ID, ACCT_TYPE_CD, EMAIL, ALIAS_NAME, ourorg FROM C_ACCOUNT WHERE ORGID = ?`,
+      `SELECT ACCNT_ID, ACCT_TYPE_CD, EMAIL, ALIAS_NAME, ourorg, MAILING_COUNTRY_ID, MAILING_STATE_ID, MAILING_ADDR_LINE3 FROM C_ACCOUNT WHERE ORGID = ?`,
       [orgId]
     );
 
@@ -204,37 +204,21 @@ export async function updateAccount(formData) {
       const suborgid = formData.get('suborgid') || null;
       const ourorg = formData.get('ourorg') === '1' ? 1 : 0;
 
-      console.log('Basic details:', {
-        activeFlag, acctTypeCd, email, aliasName, branchType, suborgid, ourorg, lastUpdatedBy
-      });
-
-      if (!acctTypeCd) {
-        console.log('Account Type is missing');
-        return { error: 'Account Type is required.' };
-      }
-      if (!email) {
-        console.log('Email is missing');
-        return { error: 'Email is required.' };
-      }
+      if (!acctTypeCd) return { error: 'Account Type is required.' };
+      if (!email) return { error: 'Email is required.' };
 
       const [emailCheck] = await pool.execute(
         'SELECT ACCNT_ID FROM C_ACCOUNT WHERE EMAIL = ? AND ORGID = ? AND ACCNT_ID != ?',
         [email, orgId, accntId]
       );
-      if (emailCheck.length > 0) {
-        console.log('Email already in use');
-        return { error: 'Email is already in use by another account.' };
-      }
+      if (emailCheck.length > 0) return { error: 'Email is already in use by another account.' };
 
       if (acctTypeCd) {
         const [typeCheck] = await pool.execute(
           'SELECT id FROM C_GENERIC_VALUES WHERE g_id = 5 AND id = ? AND orgid = ? AND isactive = 1',
           [acctTypeCd, orgId]
         );
-        if (typeCheck.length === 0) {
-          console.log('Invalid account type selected');
-          return { error: 'Selected account type is invalid or inactive.' };
-        }
+        if (typeCheck.length === 0) return { error: 'Selected account type is invalid or inactive.' };
       }
 
       if (branchType) {
@@ -242,10 +226,7 @@ export async function updateAccount(formData) {
           'SELECT id FROM C_GENERIC_VALUES WHERE g_id = 6 AND id = ? AND orgid = ? AND isactive = 1',
           [branchType, orgId]
         );
-        if (branchCheck.length === 0) {
-          console.log('Invalid branch type selected');
-          return { error: 'Selected branch type is invalid or inactive.' };
-        }
+        if (branchCheck.length === 0) return { error: 'Selected branch type is invalid or inactive.' };
       }
 
       if (suborgid) {
@@ -253,10 +234,7 @@ export async function updateAccount(formData) {
           'SELECT suborgid FROM C_SUB_ORG WHERE suborgid = ? AND orgid = ? AND isstatus = 1',
           [suborgid, orgId]
         );
-        if (suborgCheck.length === 0) {
-          console.log('Invalid suborganization selected');
-          return { error: 'Selected suborganization is invalid or inactive.' };
-        }
+        if (suborgCheck.length === 0) return { error: 'Selected suborganization is invalid or inactive.' };
       }
 
       const [result] = await pool.query(
@@ -265,48 +243,38 @@ export async function updateAccount(formData) {
              BRANCH_TYPE = ?, suborgid = ?, ourorg = ?, 
              LAST_UPDATED_BY = ?, LAST_UPDATED_DATE = CURRENT_TIMESTAMP
          WHERE ACCNT_ID = ? AND ORGID = ?`,
-        [
-          activeFlag, acctTypeCd, email, aliasName, branchType, suborgid, ourorg,
-          lastUpdatedBy, accntId, orgId
-        ]
+        [activeFlag, acctTypeCd, email, aliasName, branchType, suborgid, ourorg, lastUpdatedBy, accntId, orgId]
       );
-
       affectedRows += result.affectedRows;
-      console.log(`Basic details update result: ${result.affectedRows} rows affected for ACCNT_ID ${accntId}`);
+
     } else if (section === 'businessAddress') {
       const businessAddrLine1 = formData.get('BUSINESS_ADDR_LINE1') || null;
       const businessAddrLine2 = formData.get('BUSINESS_ADDR_LINE2') || null;
-      const businessAddrLine3 = formData.get('BUSINESS_ADDR_LINE3') || null;
       const businessCity = formData.get('BUSINESS_CITY') || null;
-      const businessStateId = formData.get('BUSINESS_STATE_ID') || null;
       const businessCountryId = formData.get('BUSINESS_COUNTRY_ID') || null;
       const businessPostalCode = formData.get('BUSINESS_POSTAL_CODE') || null;
+      
+      let businessStateId = formData.get('BUSINESS_STATE_ID') || null;
+      let businessAddrLine3 = formData.get('BUSINESS_ADDR_LINE3') || null;
 
-      console.log('Business address details:', {
-        businessAddrLine1, businessAddrLine2, businessAddrLine3, businessCity,
-        businessStateId, businessCountryId, businessPostalCode, lastUpdatedBy
-      });
-
-      if (businessCountryId) {
-        const [countryCheck] = await pool.execute(
-          'SELECT ID FROM C_COUNTRY WHERE ID = ? AND ACTIVE = 1',
-          [businessCountryId]
-        );
-        if (countryCheck.length === 0) {
-          console.log('Invalid country selected');
-          return { error: 'Selected country is invalid or inactive.' };
-        }
+      // Logic: If country is NOT USA (185), set state_id to NULL to avoid foreign key error
+      if (String(businessCountryId) !== '185') {
+        businessStateId = null; // FORCE NULL
+        // AddrLine3 already has the custom value from formData
+      } else {
+        // If Country IS USA, set AddrLine3 to null (clean up custom text)
+        businessAddrLine3 = null; 
       }
 
-      if (businessStateId) {
-        const [stateCheck] = await pool.execute(
-          'SELECT ID FROM C_STATE WHERE ID = ? AND ACTIVE = 1',
-          [businessStateId]
-        );
-        if (stateCheck.length === 0) {
-          console.log('Invalid state selected');
-          return { error: 'Selected state is invalid or inactive.' };
-        }
+      if (businessCountryId) {
+        const [countryCheck] = await pool.execute('SELECT ID FROM C_COUNTRY WHERE ID = ? AND ACTIVE = 1', [businessCountryId]);
+        if (countryCheck.length === 0) return { error: 'Selected country is invalid or inactive.' };
+      }
+
+      // ONLY validate state ID if country is USA
+      if (businessStateId && String(businessCountryId) === '185') {
+        const [stateCheck] = await pool.execute('SELECT ID FROM C_STATE WHERE ID = ? AND ACTIVE = 1', [businessStateId]);
+        if (stateCheck.length === 0) return { error: 'Selected state is invalid or inactive.' };
       }
 
       const [result] = await pool.query(
@@ -322,43 +290,34 @@ export async function updateAccount(formData) {
           lastUpdatedBy, accntId, orgId
         ]
       );
-
       affectedRows += result.affectedRows;
-      console.log(`Business address update result: ${result.affectedRows} rows affected for ACCNT_ID ${accntId}`);
+
     } else if (section === 'mailingAddress') {
       const mailingAddrLine1 = formData.get('MAILING_ADDR_LINE1') || null;
       const mailingAddrLine2 = formData.get('MAILING_ADDR_LINE2') || null;
-      const mailingAddrLine3 = formData.get('MAILING_ADDR_LINE3') || null;
       const mailingCity = formData.get('MAILING_CITY') || null;
-      const mailingStateId = formData.get('MAILING_STATE_ID') || null;
       const mailingCountryId = formData.get('MAILING_COUNTRY_ID') || null;
       const mailingPostalCode = formData.get('MAILING_POSTAL_CODE') || null;
 
-      console.log('Mailing address details:', {
-        mailingAddrLine1, mailingAddrLine2, mailingAddrLine3, mailingCity,
-        mailingStateId, mailingCountryId, mailingPostalCode, lastUpdatedBy
-      });
+      let mailingStateId = formData.get('MAILING_STATE_ID') || null;
+      let mailingAddrLine3 = formData.get('MAILING_ADDR_LINE3') || null;
 
-      if (mailingCountryId) {
-        const [countryCheck] = await pool.execute(
-          'SELECT ID FROM C_COUNTRY WHERE ID = ? AND ACTIVE = 1',
-          [mailingCountryId]
-        );
-        if (countryCheck.length === 0) {
-          console.log('Invalid country selected');
-          return { error: 'Selected country is invalid or inactive.' };
-        }
+      // Logic: If country is NOT USA (185), set state_id to NULL
+      if (String(mailingCountryId) !== '185') {
+        mailingStateId = null; // FORCE NULL
+      } else {
+        mailingAddrLine3 = null; // FORCE NULL
       }
 
-      if (mailingStateId) {
-        const [stateCheck] = await pool.execute(
-          'SELECT ID FROM C_STATE WHERE ID = ? AND ACTIVE = 1',
-          [mailingStateId]
-        );
-        if (stateCheck.length === 0) {
-          console.log('Invalid state selected');
-          return { error: 'Selected state is invalid or inactive.' };
-        }
+      if (mailingCountryId) {
+        const [countryCheck] = await pool.execute('SELECT ID FROM C_COUNTRY WHERE ID = ? AND ACTIVE = 1', [mailingCountryId]);
+        if (countryCheck.length === 0) return { error: 'Selected country is invalid or inactive.' };
+      }
+
+      // ONLY validate state ID if country is USA
+      if (mailingStateId && String(mailingCountryId) === '185') {
+        const [stateCheck] = await pool.execute('SELECT ID FROM C_STATE WHERE ID = ? AND ACTIVE = 1', [mailingStateId]);
+        if (stateCheck.length === 0) return { error: 'Selected state is invalid or inactive.' };
       }
 
       const [result] = await pool.query(
@@ -374,20 +333,13 @@ export async function updateAccount(formData) {
           lastUpdatedBy, accntId, orgId
         ]
       );
-
       affectedRows += result.affectedRows;
-      console.log(`Mailing address update result: ${result.affectedRows} rows affected for ACCNT_ID ${accntId}`);
+
     } else {
-      console.log('Invalid section:', section);
       return { error: 'Invalid section specified.' };
     }
 
-    if (affectedRows === 0) {
-      console.log('No rows updated for ACCNT_ID:', accntId);
-      return { error: 'No changes were applied.' };
-    }
-
-    console.log(`Account updated: ACCNT_ID ${accntId}, section ${section}, affectedRows: ${affectedRows}`);
+    if (affectedRows === 0) return { error: 'No changes were applied.' };
     return { success: true };
   } catch (error) {
     console.error('Error updating account:', error.message);

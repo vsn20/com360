@@ -504,6 +504,20 @@ export default function EditContactForm({
     if (section === 'mailing') setEditingMailingAddress(false);
   };
 
+  const handleCopyHomeAddress = () => {
+    setFormData(prev => ({
+      ...prev,
+      MAILING_ADDR_LINE1: prev.HOME_ADDR_LINE1,
+      MAILING_ADDR_LINE2: prev.HOME_ADDR_LINE2,
+      MAILING_ADDR_LINE3: prev.HOME_ADDR_LINE3,
+      MAILING_CITY: prev.HOME_CITY,
+      MAILING_COUNTRY_ID: prev.HOME_COUNTRY_ID,
+      MAILING_STATE_ID: prev.HOME_STATE_ID,
+      MAILING_CUSTOM_STATE: prev.HOME_CUSTOM_STATE,
+      MAILING_POSTAL_CODE: prev.HOME_POSTAL_CODE,
+    }));
+  };
+
   const handleSave = async (section) => {
     if (!formData) return;
     setIsSaving(true);
@@ -773,6 +787,16 @@ export default function EditContactForm({
                 {!editingMailingAddress && (
                   <button className="contact_button" onClick={() => handleEdit('mailing')}>
                     Edit
+                  </button>
+                )}
+                {editingMailingAddress && (
+                   <button 
+                    type="button" 
+                    onClick={handleCopyHomeAddress} 
+                    className="contact_button" 
+                    style={{ fontSize: '13px', padding: '6px 12px', marginLeft: '10px' }}
+                  >
+                    Copy Home Address
                   </button>
                 )}
               </div>
