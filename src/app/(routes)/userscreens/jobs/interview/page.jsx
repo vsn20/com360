@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 import React from 'react';
 import Overview from '@/app/components/Jobs/Interview/Overview';
 import DBconnection from '@/app/utils/config/db';
-import { getPoolForDatabase } from '@/app/utils/config/jobsdb'; // ✅ Import connection to com360
+import { getPoolForDatabase } from '@/app/utils/config/jobsdb'; // ✅ Import Central DB Connection
 import { cookies } from 'next/headers';
 
 const decodeJwt = (token) => {
@@ -54,36 +54,34 @@ const page = async () => {
         const allpermissions = menuresults.length > 0;
         editing = allpermissions ? 1 : 0;
 
-        // 2. Fetch Interview Data (FROM TENANT DB)
-        // ❌ REMOVED: JOIN C_CANDIDATE
-        // ✅ ADDED: a.candidate_id
+        // 2. Fetch Interview Data (From Tenant DB)
+        // ❌ Removed JOIN C_CANDIDATE to prevent nulls
+        // ✅ Added a.candidate_id to fetch names later
         let rows = [];
+        const baseQuery = `
+          SELECT i.interview_id, i.application_id, i.interview_completed, i.start_date, i.start_time, i.start_am_pm, i.end_date,
+                 a.jobid, a.status, a.applicationid, a.candidate_id, 
+                 e.display_job_name 
+          FROM C_INTERVIEW_TABLES AS i 
+          JOIN C_APPLICATIONS AS a ON i.application_id = a.applicationid 
+          JOIN C_EXTERNAL_JOBS AS e ON e.jobid = a.jobid 
+        `;
+
         if (allpermissions) {
           [rows] = await pool.query(
-            `SELECT i.interview_id, i.application_id, i.interview_completed, i.start_date, i.start_time, i.start_am_pm, i.end_date,
-                    a.jobid, a.status, a.applicationid, a.candidate_id, 
-                    e.display_job_name 
-             FROM C_INTERVIEW_TABLES AS i 
-             JOIN C_APPLICATIONS AS a ON i.application_id = a.applicationid 
-             JOIN C_EXTERNAL_JOBS AS e ON e.jobid = a.jobid 
-             WHERE i.orgid = ? AND i.confirm = 1`,
+            `${baseQuery} WHERE i.orgid = ? AND i.confirm = 1`,
             [orgid]
           );
         } else {
           [rows] = await pool.query(
-            `SELECT i.interview_id, i.application_id, i.interview_completed, i.start_date, i.start_time, i.start_am_pm, i.end_date,
-                    a.jobid, a.status, a.applicationid, a.candidate_id, 
-                    e.display_job_name 
-             FROM C_INTERVIEW_TABLES AS i 
-             JOIN C_APPLICATIONS AS a ON i.application_id = a.applicationid 
-             JOIN C_EXTERNAL_JOBS AS e ON e.jobid = a.jobid 
+            `${baseQuery} 
              JOIN C_INTERVIEW_PANELS AS ip ON i.interview_id = ip.interview_id AND i.orgid = ip.orgid 
              WHERE i.orgid = ? AND i.confirm = 1 AND ip.empid = ?`,
             [orgid, empid]
           );
         }
 
-        // 3. Fetch Candidate Names (FROM CENTRAL com360 DB)
+        // 3. Fetch Candidate Names (From Central com360 DB)
         if (rows.length > 0) {
           const candidateIds = [...new Set(rows.map(r => r.candidate_id))];
           
@@ -107,7 +105,7 @@ const page = async () => {
               });
             } catch (err) {
               console.error('Error fetching candidates from com360:', err.message);
-              interviewdetails = rows; // Fallback to rows without names if com360 fails
+              interviewdetails = rows;
             }
           } else {
             interviewdetails = rows;

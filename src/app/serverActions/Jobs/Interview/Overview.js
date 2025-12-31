@@ -1,6 +1,6 @@
 'use server';
 import DBconnection from "@/app/utils/config/db";
-import { getPoolForDatabase } from "@/app/utils/config/jobsdb"; // ✅ Import connection
+import { getPoolForDatabase } from "@/app/utils/config/jobsdb"; // ✅ Import Central DB Connection
 import { cookies } from "next/headers";
 
 const decodeJwt = (token) => {
@@ -33,7 +33,6 @@ const getCurrentUserEmpIdName = async (pool, userId, orgId) => {
       [empid, orgId]
     );
     if (empRows.length === 0) return `${empid}-unknown`;
-    
     const { EMP_FST_NAME, EMP_LAST_NAME } = empRows[0];
     empid = getdisplayprojectid(empid);
     return `${empid}-${EMP_FST_NAME} ${EMP_LAST_NAME}`;
@@ -43,6 +42,9 @@ const getCurrentUserEmpIdName = async (pool, userId, orgId) => {
   }
 };
 
+// ---------------------------------------------------------
+// 1. FETCH ALL INTERVIEWS (For Table)
+// ---------------------------------------------------------
 export async function fetchAllInterviewsForEmployee({ orgid, empid, editing }) {
   const cookieStore = cookies();
   const token = cookieStore.get("jwt_token")?.value;
@@ -54,6 +56,8 @@ export async function fetchAllInterviewsForEmployee({ orgid, empid, editing }) {
 
   try {
     const pool = await DBconnection();
+    
+    // ❌ Removed JOIN C_CANDIDATE
     let query = `
       SELECT DISTINCT c.applicationid, b.interview_id, c.candidate_id, e.display_job_name, c.status,
               c.resumepath, c.offerletter_timestamp, e.jobid
@@ -72,7 +76,7 @@ export async function fetchAllInterviewsForEmployee({ orgid, empid, editing }) {
 
     let [rows] = await pool.query(query, params);
 
-    // ✅ Fetch Candidate Names from com360
+    // ✅ FETCH NAMES FROM CENTRAL DB
     if (rows.length > 0) {
       const candidateIds = [...new Set(rows.map(r => r.candidate_id))];
       if(candidateIds.length > 0) {
@@ -101,6 +105,9 @@ export async function fetchAllInterviewsForEmployee({ orgid, empid, editing }) {
   }
 };
 
+// ---------------------------------------------------------
+// 2. FETCH DETAILS BY ID (For Popup/Editing)
+// ---------------------------------------------------------
 export async function fetchDetailsById({ orgid, interview_id, acceptingtime, empid }) {
   const cookieStore = cookies();
   const token = cookieStore.get("jwt_token")?.value;
@@ -112,8 +119,8 @@ export async function fetchDetailsById({ orgid, interview_id, acceptingtime, emp
 
   try {
     const pool = await DBconnection();
-    // ❌ REMOVED JOIN C_CANDIDATE
-    // ✅ ADDED c.candidate_id
+    
+    // ❌ Removed JOIN C_CANDIDATE
     let [rows] = await pool.query(
       `SELECT DISTINCT c.applicationid, b.interview_id, c.candidate_id, e.display_job_name, c.status,
               c.resumepath, c.offerletter_timestamp, e.jobid
@@ -131,7 +138,7 @@ export async function fetchDetailsById({ orgid, interview_id, acceptingtime, emp
 
     let interview = rows[0];
 
-    // ✅ Fetch Candidate Name from com360
+    // ✅ FETCH SINGLE NAME FROM CENTRAL DB
     if (interview.candidate_id) {
         const com360Pool = await getPoolForDatabase('com360');
         const [candidates] = await com360Pool.query(
@@ -169,6 +176,9 @@ export async function fetchDetailsById({ orgid, interview_id, acceptingtime, emp
   }
 };
 
+// ---------------------------------------------------------
+// 3. FETCH ROUNDS
+// ---------------------------------------------------------
 export async function fetchRoundsByInterviewId({ orgid, interview_id, empid, editing }) {
   try {
     const pool = await DBconnection();
@@ -230,6 +240,9 @@ export async function fetchRoundsByInterviewId({ orgid, interview_id, empid, edi
   }
 }
 
+// ---------------------------------------------------------
+// 4. UPDATE INTERVIEW
+// ---------------------------------------------------------
 export async function update({ orgid, empid, interview_id, status, acceptingtime, rounds }) {
   const cookieStore = cookies();
   const token = cookieStore.get("jwt_token")?.value;
@@ -277,7 +290,7 @@ export async function update({ orgid, empid, interview_id, status, acceptingtime
     }
 
     const employeename = await getCurrentUserEmpIdName(pool, userId, orgid);
-    const description = `Rounds updated by ${employeename} on ${new Date().toISOString()}`;
+    // const description = `Rounds updated by ${employeename} on ${new Date().toISOString()}`;
 
     return { success: true, message: 'Rounds updated successfully' };
   } catch (error) {
