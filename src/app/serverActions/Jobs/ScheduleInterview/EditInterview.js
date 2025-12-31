@@ -1,5 +1,6 @@
 'use server';
 import DBconnection from '@/app/utils/config/db';
+import { metaPool } from '@/app/utils/config/jobsdb'; // ✅ Use metaPool
 import { cookies } from 'next/headers';
 
 const getdisplayprojectid = (prjid) => {
@@ -73,18 +74,49 @@ export async function getEmployees(orgid) {
 export async function fetchInterviewData(orgid, application_id) {
   try {
     const pool = await DBconnection();
+    
+    // 1. Fetch Interview (Tenant DB)
     const [interviewRows] = await pool.query(
-      `SELECT i.start_date, i.start_am_pm, i.end_date, i.end_am_pm, i.start_time, i.end_time, i.meeting_link, i.interview_id, a.status
+      `SELECT i.start_date, i.start_am_pm, i.end_date, i.end_am_pm, i.start_time, i.end_time, i.meeting_link, i.interview_id, a.status, a.candidate_id
        FROM C_INTERVIEW_TABLES i
        JOIN C_APPLICATIONS a ON i.application_id = a.applicationid AND i.orgid = a.orgid
        WHERE i.orgid = ? AND i.application_id = ?`,
       [orgid, application_id]
     );
+
     if (interviewRows.length === 0) {
       return { success: false, error: 'Interview not found.' };
     }
 
-    const interview_id = interviewRows[0].interview_id;
+    const interviewData = interviewRows[0];
+    
+    // 2. Fetch Candidate (Central DB - MetaPool)
+    let first_name = '';
+    let last_name = '';
+    
+    if (interviewData.candidate_id) {
+      try {
+        const [candidateRows] = await metaPool.query(
+          'SELECT first_name, last_name FROM C_CANDIDATE WHERE cid = ?',
+          [interviewData.candidate_id]
+        );
+        if (candidateRows.length > 0) {
+          first_name = candidateRows[0].first_name;
+          last_name = candidateRows[0].last_name;
+        }
+      } catch (err) {
+        console.error("Error fetching candidate from MetaPool:", err);
+      }
+    }
+
+    // Combine data
+    const interview = {
+      ...interviewData,
+      first_name,
+      last_name
+    };
+
+    const interview_id = interview.interview_id;
     const [roundRows] = await pool.query(
       `SELECT Roundid, RoundNo AS name, start_date, start_am_pm, end_date, end_am_pm, start_time, end_time, meeting_link, marks, comments, status
        FROM C_INTERVIEW_ROUNDS
@@ -112,7 +144,7 @@ export async function fetchInterviewData(orgid, application_id) {
 
     return {
       success: true,
-      interview: interviewRows[0],
+      interview: interview,
       rounds,
       employees: employeeRows,
     };
@@ -127,13 +159,11 @@ export async function updateInterview(formData) {
   const token = cookieStore.get('jwt_token')?.value;
 
   if (!token) {
-    console.log('Redirecting: No token found');
     return { error: 'No token found. Please log in.' };
   }
 
   const decoded = decodeJwt(token);
   if (!decoded || !decoded.orgid || !decoded.userId) {
-    console.log('Redirecting: Invalid token or orgid/userId not found');
     return { error: 'Invalid token or orgid/userId not found.' };
   }
   const userId = decoded.userId;
@@ -146,8 +176,6 @@ export async function updateInterview(formData) {
     const empid = formData.get('empid');
     const status = formData.get('applicationStatus');
     const rounds = JSON.parse(formData.get('rounds') || '[]');
-
-    console.log('EmpID:', empid, 'OrgID:', orgid, 'UserID:', userId);
 
     let interview_id;
     let isNewRecord = false;
@@ -215,6 +243,8 @@ export async function updateInterview(formData) {
       if (!start_am_pm || !['AM', 'PM'].includes(start_am_pm)) {
         throw new Error('Start AM/PM must be AM or PM.');
       }
+
+      // ... (Date/Time validation logic same as before) ...
       if (end_date) {
         if (start_date > end_date) {
           throw new Error('Start date must be earlier than or equal to end date.');
