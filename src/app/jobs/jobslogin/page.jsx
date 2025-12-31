@@ -35,6 +35,8 @@ export default function JobsLoginPage() {
                 const { success, error: loginError } = await job_loginaction(logindetails);
 
                 if (success) {
+                    // ✅ Added router.refresh() to update the UI (logo/header) with the new cookie
+                    router.refresh(); 
                     router.push('/jobs');
                 } else {
                     setError(loginError || 'Login failed. Please try again.');
