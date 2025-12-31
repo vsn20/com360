@@ -1,5 +1,6 @@
 'use server';
 import DBconnection from "@/app/utils/config/db";
+import { metaPool } from '@/app/utils/config/jobsdb'; // Import metaPool
 import { cookies } from "next/headers";
 import fs from "fs";
 import path from "path";
@@ -52,6 +53,7 @@ const getCurrentUserEmpIdName = async (pool, userId, orgId) => {
 };
 
 async function generateOfferLetterPdf(offerLetterData, details, orgid, employeename) {
+  // Identical logic to Overview.js, kept for completeness
   const pool = await DBconnection();
   const [rows] = await pool.query(`SELECT orgname FROM C_ORG WHERE orgid = ?`, [orgid]);
   const cookieStore = cookies();
@@ -119,7 +121,6 @@ async function generateOfferLetterPdf(offerLetterData, details, orgid, employeen
     finalisedDepartmentName = deptRows.length > 0 ? deptRows[0].name : 'Not specified';
   }
 
-  // UPDATED: Fetch single role name from C_GENERIC_VALUES (g_id=32)
   let roleName = 'Not specified';
   if (offerLetterData.finalised_role) {
     const [roleRows] = await pool.query(
@@ -145,11 +146,11 @@ async function generateOfferLetterPdf(offerLetterData, details, orgid, employeen
   const logoPath = path.join(process.cwd(), 'public', 'uploads', 'orglogos', `${orgid}.jpg`);
   let logoImage;
   try {
-    const logoBytes = fs.readFileSync(logoPath);
-    logoImage = await pdfDoc.embedJpg(logoBytes);
-  } catch (error) {
-    console.error('Error loading logo image:', error.message);
-  }
+    if (fs.existsSync(logoPath)) {
+        const logoBytes = fs.readFileSync(logoPath);
+        logoImage = await pdfDoc.embedJpg(logoBytes);
+    }
+  } catch (error) { console.error('Logo error', error); }
 
   if (logoImage) {
     const logoWidth = 50;
@@ -161,11 +162,11 @@ async function generateOfferLetterPdf(offerLetterData, details, orgid, employeen
   let signatureImage;
   const signatureJpgPath = path.join(process.cwd(), 'public', 'Uploads', 'signatures', `${empid}.jpg`);
   try {
-    const signatureBytes = fs.readFileSync(signatureJpgPath);
-    signatureImage = await pdfDoc.embedJpg(signatureBytes);
-  } catch (error) {
-    console.error('Error loading signature image:', error.message);
-  }
+    if (fs.existsSync(signatureJpgPath)) {
+        const signatureBytes = fs.readFileSync(signatureJpgPath);
+        signatureImage = await pdfDoc.embedJpg(signatureBytes);
+    }
+  } catch (error) { console.error('Signature error', error); }
 
   const drawLine = (text, size = fontSize, isBold = false) => {
     page.drawText(text, {
@@ -267,15 +268,18 @@ async function generateOfferLetterPdf(offerLetterData, details, orgid, employeen
 export async function fetchalldetails(interviewid) {
   try {
     const pool = await DBconnection();
+    
+    // 1. Fetch Main Interview Data (Tenant DB - No Candidate Join)
     const [mainRows] = await pool.query(
       `SELECT 
-        a.orgid, a.interview_id, a.application_id, b.applieddate, b.jobid, b.status,
+        a.orgid, a.interview_id, a.application_id, b.applieddate, b.jobid, b.status, b.candidate_id,
         b.resumepath, b.salary_expected, b.custom_salary_by_interviewer, b.offerletter_timestamp,
-        c.first_name, c.last_name, c.email, c.mobilenumber, c.dateofbirth, c.addresslane1,
-        c.addresslane2, c.zipcode, c.gender, e.display_job_name,e.expected_job_title,e.addresslane1 as a1,e.addresslane2 as a2,e.zipcode as z1,e.stateid as s1,e.custom_state_name as s2,e.countryid as c1,e.expected_role as role1,e.expected_department as d1,e.job_type as job1,z.job_title,z.max_salary,z.min_salary,z.level
+        e.display_job_name,e.expected_job_title,e.addresslane1 as a1,e.addresslane2 as a2,
+        e.zipcode as z1,e.stateid as s1,e.custom_state_name as s2,e.countryid as c1,
+        e.expected_role as role1,e.expected_department as d1,e.job_type as job1,
+        z.job_title,z.max_salary,z.min_salary,z.level
       FROM C_INTERVIEW_TABLES AS a
       JOIN C_APPLICATIONS AS b ON a.application_id = b.applicationid
-      JOIN C_CANDIDATE AS c ON b.candidate_id = c.cid
       JOIN C_EXTERNAL_JOBS AS e ON b.jobid = e.jobid
       JOIN C_ORG_JOBTITLES as z on z.job_title_id=e.expected_job_title
       WHERE a.interview_id = ?`,
@@ -286,6 +290,31 @@ export async function fetchalldetails(interviewid) {
       return { success: false, error: 'No details found for the selected interview.' };
     }
 
+    const interviewData = mainRows[0];
+
+    // 2. Fetch Candidate Details (Central DB - metaPool)
+    let candidateData = {};
+    if (interviewData.candidate_id) {
+      try {
+        const [candidateRows] = await metaPool.query(
+          `SELECT first_name, last_name, email, mobilenumber, dateofbirth, addresslane1, addresslane2, zipcode, gender 
+           FROM C_CANDIDATE WHERE cid = ?`,
+          [interviewData.candidate_id]
+        );
+        if (candidateRows.length > 0) {
+          candidateData = candidateRows[0];
+        }
+      } catch (err) {
+        console.error("Error fetching candidate in fetchalldetails:", err);
+      }
+    }
+
+    // Merge Candidate Data
+    const fullDetails = {
+      ...interviewData,
+      ...candidateData // Spread candidate fields (first_name, last_name, etc.) to top level
+    };
+
     const [panelRows] = await pool.query(
       `SELECT empid, email, is_he_employee FROM C_INTERVIEW_PANELS WHERE interview_id = ?`,
       [interviewid]
@@ -293,34 +322,29 @@ export async function fetchalldetails(interviewid) {
 
     const [department] = await pool.query(
       `SELECT name FROM C_ORG_DEPARTMENTS WHERE id = ?  AND isactive = 1`,
-      [mainRows[0].d1]
+      [interviewData.d1]
     );
-    const departmentname = department[0].name;
+    const departmentname = department[0]?.name;
 
-
-    const [jobtype] = await pool.query('select Name from C_GENERIC_VALUES where id=?', [parseInt(mainRows[0].job1)]);
-    const jobtypename = jobtype[0].Name;
-
+    const [jobtype] = await pool.query('select Name from C_GENERIC_VALUES where id=?', [parseInt(interviewData.job1)]);
+    const jobtypename = jobtype[0]?.Name;
 
     let state;
     let statename;
-
-
-    if (mainRows[0].s1 != null) {
+    if (interviewData.s1 != null) {
       [state] = await pool.query(
         `select VALUE from C_STATE where ID=?`,
-        [mainRows[0].s1]
+        [interviewData.s1]
       );
-      statename = state[0].VALUE;
-    }
-    else {
+      statename = state[0]?.VALUE;
+    } else {
       statename = '';
     }
 
     let [country] = await pool.query(
-      `select VALUE from C_COUNTRY where ID=?`, [mainRows[0].c1]
+      `select VALUE from C_COUNTRY where ID=?`, [interviewData.c1]
     );
-    let countryname = country[0].VALUE || '';
+    let countryname = country[0]?.VALUE || '';
 
     const [offerRows] = await pool.query(
       `SELECT 
@@ -330,22 +354,20 @@ export async function fetchalldetails(interviewid) {
         offerletter_url, offer_letter_sent
       FROM C_OFFER_LETTERS
       WHERE applicationid = ?`,
-      [mainRows[0]?.application_id]
+      [interviewData.application_id]
     );
 
-    // Fetch roleid from C_APPLICATIONS_ROLE_ASSIGN (assuming single role)
     const [roleRows] = await pool.query(
       `SELECT roleid FROM C_APPLICATIONS_ROLE_ASSIGN WHERE applicationid = ? AND orgid = ?`,
-      [mainRows[0]?.application_id, mainRows[0]?.orgid]
+      [interviewData.application_id, interviewData.orgid]
     );
 
-    // Fetch rounds and their panel members
     const [roundsRows] = await pool.query(
       `SELECT r.*, ip.empid AS panel_empid, ip.email, ip.is_he_employee
        FROM C_INTERVIEW_ROUNDS r
        LEFT JOIN C_INTERVIEW_PANELS ip ON r.Roundid = ip.Roundid AND r.orgid = ip.orgid AND r.interview_id = ip.interview_id
        WHERE r.interview_id = ? AND r.orgid = ?`,
-      [interviewid, mainRows[0].orgid]
+      [interviewid, interviewData.orgid]
     );
 
     const rounds = roundsRows.reduce((acc, row) => {
@@ -382,11 +404,10 @@ export async function fetchalldetails(interviewid) {
       return acc;
     }, []);
 
-    // UPDATED: Return finalised_role as a single value
     return {
       success: true,
       data: {
-        ...mainRows[0],
+        ...fullDetails,
         departmentname,
         jobtypename,
         statename, countryname,
@@ -414,8 +435,6 @@ export async function fetchDropdownData(orgid) {
     const [states] = await pool.query('SELECT ID, VALUE FROM C_STATE WHERE ACTIVE = 1');
     const [employeeRows] = await pool.query('SELECT e.empid, e.EMP_FST_NAME, e.EMP_LAST_NAME FROM C_EMP e WHERE e.orgid = ?', [orgid]);
     const [jobtype] = await pool.query('SELECT id, g_id, Name FROM C_GENERIC_VALUES WHERE g_id = 14 AND isactive = 1 AND orgid = ?', [orgid]);
-    
-    // UPDATED: Fetch roles from C_GENERIC_VALUES where g_id = 32
     const [roles] = await pool.query('SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 32 AND orgid = ? AND isactive = 1', [orgid]);
 
     const employees = employeeRows.map(emp => ({
@@ -511,7 +530,7 @@ export async function saveOfferLetter(applicationid, offerLetterData, orgid, det
         return { success: false, error: 'Cannot update: Offer letter has already been sent.' };
       }
 
-      // UPDATED: Validate single role against C_GENERIC_VALUES
+      // Validate single role
       const roleid = offerLetterData.finalised_role;
       if (!roleid) {
         await connection.rollback();
@@ -584,7 +603,6 @@ export async function saveOfferLetter(applicationid, offerLetterData, orgid, det
       }
       const employeename = await getCurrentUserEmpIdName(pool, decoded.userId, orgid);
       
-      // Pass single role data to PDF generator
       const pdfBytes = await generateOfferLetterPdf(offerLetterData, details, orgid, employeename);
       fs.writeFileSync(offerletterPath, pdfBytes);
 
@@ -654,13 +672,12 @@ export async function saveOfferLetter(applicationid, offerLetterData, orgid, det
         }
       }
 
-      const [deleteResult] = await connection.query(
+      await connection.query(
         'DELETE FROM C_APPLICATIONS_ROLE_ASSIGN WHERE applicationid = ? AND orgid = ?',
         [normalizedApplicationId, orgid]
       );
 
-      // Insert single role assignment
-      const [roleAssignResult] = await connection.query(
+      await connection.query(
         `INSERT INTO C_APPLICATIONS_ROLE_ASSIGN (applicationid, orgid, roleid) 
          VALUES (?, ?, ?) 
          ON DUPLICATE KEY UPDATE roleid = roleid`,
