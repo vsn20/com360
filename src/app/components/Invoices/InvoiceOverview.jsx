@@ -433,12 +433,12 @@ const InvoiceOverview = () => {
       <div className={styles.card}>
         {invoiceType === "payable" && (
           <div className={styles.payableNote}>
-            <strong>Invoice Payable Mode:</strong> Includes contractors (type 12) and 1099 employees (type 13) with external vendors (ourorg = 0). Rates from C_PROJ_EMP.
+            <strong>Invoice Payable Mode:</strong> Includes contractors and 1099 employees with external vendors. Rates from Project Employee Association.
           </div>
         )}
         {invoiceType === "receivable" && (
           <div className={styles.payableNote}>
-            <strong>Invoice Receivable Mode:</strong> Bills external clients. If account is internal (ourorg=1) but client is external (ourorg=0), bills the client. Skips when both are internal. Rates from C_PROJECT.
+            <strong>Invoice Receivable Mode:</strong> Bills external clients. If account is internal but client is external,bills the client. Skips when both are internal. Rates from Project.
           </div>
         )}
         
