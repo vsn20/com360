@@ -35,8 +35,13 @@ export default function JobsLoginPage() {
                 const { success, error: loginError } = await job_loginaction(logindetails);
 
                 if (success) {
-                    // ✅ Added router.refresh() to update the UI (logo/header) with the new cookie
-                    router.refresh(); 
+                    // 1. Dispatch Custom Event to update Navbar instantly
+                    window.dispatchEvent(new Event("auth-change"));
+                    
+                    // 2. Refresh router to ensure server components get the cookie
+                    router.refresh();
+                    
+                    // 3. Navigate
                     router.push('/jobs');
                 } else {
                     setError(loginError || 'Login failed. Please try again.');

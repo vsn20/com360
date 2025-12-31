@@ -7,6 +7,7 @@ import { getUserFromCookie } from '../serverActions/getUserFromCookie';
 import { job_logoutaction } from '../serverActions/job_logoutaction';
 import Link from 'next/link';
 import Image from 'next/image';
+
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
@@ -14,34 +15,55 @@ export default function Navbar() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Define fetch function outside useEffect so it can be reused
+  const fetchUser = async () => {
+    // Only show loading state if we don't have a user yet to prevent flicker
+    if (!user) setIsLoading(true);
+    
+    const userData = await getUserFromCookie();
+    setUser(userData);
+    setIsLoading(false);
+  };
+
   useEffect(() => {
-    async function fetchUser() {
-      setIsLoading(true);
-      const userData = await getUserFromCookie();
-      setUser(userData);
-      setIsLoading(false);
-    }
     fetchUser();
-  }, []); // Re-fetch on route changes to handle cookie updates
+
+    // Event listener for immediate updates from Login page
+    const handleAuthChange = () => {
+      fetchUser();
+    };
+
+    window.addEventListener('auth-change', handleAuthChange);
+
+    return () => {
+      window.removeEventListener('auth-change', handleAuthChange);
+    };
+    
+    // DEPENDENCY ADDED: [pathname] ensures this runs every time you navigate pages
+  }, [pathname]); 
 
   const handleLogout = async () => {
     const result = await job_logoutaction();
     if (result.success) {
       console.log("Logout successful, redirecting to /jobs/jobslogin");
       setUser(null); // Clear user state immediately
+      window.dispatchEvent(new Event('auth-change')); // Notify other components
       router.push("/jobs");
+      router.refresh();
     } else {
       console.error("Logout failed:", result.error);
     }
   };
 
-  if (isLoading) {
-    return <nav id="navid">Loading...</nav>; // Prevent flickering
+  // Optional: You can remove this check if you want the logo to always show
+  // while checking auth status in the background
+  if (isLoading && !user) {
+    return <nav id="navid">Loading...</nav>; 
   }
 
   return (
     <nav id="navid" style={{ position: 'relative' }}>
-     <div style={{ 
+      <div style={{ 
             display: 'flex', 
             alignItems: 'center', 
             marginRight: '1rem' 
@@ -56,11 +78,12 @@ export default function Navbar() {
               unoptimized={true}
             />
           </div>
-         
+          
       <Link href="/" className={pathname === '/' ? 'active' : ''}>Home</Link>
       <Link href="/jobs" className={pathname === '/jobs' ? 'active' : ''}>Jobs</Link>
       <Link href="/jobs/jobapplications" className={pathname === '/jobs/jobapplications' ? 'active' : ''}>Applications</Link>
       <Link href="#"><MdApps className="menu-icon" /></Link>
+      
       {user ? (
         <div
           className="profile-container"
