@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import React from 'react';
 import Overview from '@/app/components/Jobs/Interview/Overview';
 import DBconnection from '@/app/utils/config/db';
+import { getPoolForDatabase } from '@/app/utils/config/jobsdb'; // ✅ Import connection to com360
 import { cookies } from 'next/headers';
 
 const decodeJwt = (token) => {
@@ -23,19 +24,20 @@ const page = async () => {
   let interviewdetails = [];
   let time = [];
   let acceptingtime = [];
-  let interview_completed_details = [];
   let editing = 0;
 
   try {
     const pool = await DBconnection();
     const cookieStore = cookies();
     const token = cookieStore.get('jwt_token')?.value;
+    
     if (token) {
       const decoded = decodeJwt(token);
       if (decoded && decoded.orgid && decoded.empid) {
         orgid = decoded.orgid;
         empid = decoded.empid;
 
+        // 1. Check Permissions
         const [features] = await pool.query(
           `SELECT roleid FROM C_EMP_ROLE_ASSIGN WHERE empid = ? AND orgid = ?`,
           [empid, orgid]
@@ -52,18 +54,67 @@ const page = async () => {
         const allpermissions = menuresults.length > 0;
         editing = allpermissions ? 1 : 0;
 
+        // 2. Fetch Interview Data (FROM TENANT DB)
+        // ❌ REMOVED: JOIN C_CANDIDATE
+        // ✅ ADDED: a.candidate_id
+        let rows = [];
         if (allpermissions) {
-          [interviewdetails] = await pool.query(
-            'SELECT i.interview_id, i.application_id, a.jobid, a.status, a.applicationid, c.first_name, c.last_name, e.display_job_name FROM C_INTERVIEW_TABLES AS i JOIN C_APPLICATIONS AS a ON i.application_id = a.applicationid JOIN C_CANDIDATE AS c ON c.cid = a.candidate_id JOIN C_EXTERNAL_JOBS AS e ON e.jobid = a.jobid WHERE i.orgid = ? AND i.confirm = 1',
+          [rows] = await pool.query(
+            `SELECT i.interview_id, i.application_id, i.interview_completed, i.start_date, i.start_time, i.start_am_pm, i.end_date,
+                    a.jobid, a.status, a.applicationid, a.candidate_id, 
+                    e.display_job_name 
+             FROM C_INTERVIEW_TABLES AS i 
+             JOIN C_APPLICATIONS AS a ON i.application_id = a.applicationid 
+             JOIN C_EXTERNAL_JOBS AS e ON e.jobid = a.jobid 
+             WHERE i.orgid = ? AND i.confirm = 1`,
             [orgid]
           );
         } else {
-          [interviewdetails] = await pool.query(
-            'SELECT i.interview_id, i.application_id, a.jobid, a.status, a.applicationid, c.first_name, c.last_name, e.display_job_name FROM C_INTERVIEW_TABLES AS i JOIN C_APPLICATIONS AS a ON i.application_id = a.applicationid JOIN C_CANDIDATE AS c ON c.cid = a.candidate_id JOIN C_EXTERNAL_JOBS AS e ON e.jobid = a.jobid JOIN C_INTERVIEW_PANELS AS ip ON i.interview_id = ip.interview_id AND i.orgid = ip.orgid WHERE i.orgid = ? AND i.confirm = 1 AND ip.empid = ?',
+          [rows] = await pool.query(
+            `SELECT i.interview_id, i.application_id, i.interview_completed, i.start_date, i.start_time, i.start_am_pm, i.end_date,
+                    a.jobid, a.status, a.applicationid, a.candidate_id, 
+                    e.display_job_name 
+             FROM C_INTERVIEW_TABLES AS i 
+             JOIN C_APPLICATIONS AS a ON i.application_id = a.applicationid 
+             JOIN C_EXTERNAL_JOBS AS e ON e.jobid = a.jobid 
+             JOIN C_INTERVIEW_PANELS AS ip ON i.interview_id = ip.interview_id AND i.orgid = ip.orgid 
+             WHERE i.orgid = ? AND i.confirm = 1 AND ip.empid = ?`,
             [orgid, empid]
           );
         }
 
+        // 3. Fetch Candidate Names (FROM CENTRAL com360 DB)
+        if (rows.length > 0) {
+          const candidateIds = [...new Set(rows.map(r => r.candidate_id))];
+          
+          if (candidateIds.length > 0) {
+            try {
+              const com360Pool = await getPoolForDatabase('com360'); // ✅ Connect to Central DB
+              const [candidates] = await com360Pool.query(
+                `SELECT cid, first_name, last_name, email FROM C_CANDIDATE WHERE cid IN (?)`,
+                [candidateIds]
+              );
+
+              // Merge names into interview rows
+              interviewdetails = rows.map(row => {
+                const candidate = candidates.find(c => c.cid === row.candidate_id);
+                return {
+                  ...row,
+                  first_name: candidate ? candidate.first_name : 'Unknown',
+                  last_name: candidate ? candidate.last_name : '',
+                  email: candidate ? candidate.email : ''
+                };
+              });
+            } catch (err) {
+              console.error('Error fetching candidates from com360:', err.message);
+              interviewdetails = rows; // Fallback to rows without names if com360 fails
+            }
+          } else {
+            interviewdetails = rows;
+          }
+        }
+
+        // 4. Fetch Config Data
         [time] = await pool.query(
           'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 15 AND orgid = ? AND isactive = 1',
           [orgid]
