@@ -7,7 +7,7 @@ export async function POST(request) {
   try {
     // Extract JWT from 'job_jwt_token' cookie using request.cookies
     const token = request.cookies.get('job_jwt_token')?.value;
-    console.log('job_jwt_token:', token ? 'Present' : 'Missing'); // Debug log
+    console.log('job_jwt_token:', token ? 'Present' : 'Missing'); 
 
     if (!token) {
       return Response.json({ error: 'Unauthorized: Missing job_jwt_token' }, { status: 401 });
@@ -15,9 +15,9 @@ export async function POST(request) {
 
     let candidate_id;
     try {
-      const decoded = verify(token, process.env.JWT_SECRET); // Replace with your JWT secret
+      const decoded = verify(token, process.env.JWT_SECRET); 
       candidate_id = decoded.cid;
-      console.log('Decoded candidate_id:', candidate_id); // Debug log
+      console.log('Decoded candidate_id:', candidate_id); 
     } catch (error) {
       console.error('JWT verification error:', error.message);
       return Response.json({ error: 'Unauthorized: Invalid job_jwt_token' }, { status: 401 });
@@ -25,11 +25,11 @@ export async function POST(request) {
 
     // Parse form data
     const formData = await request.formData();
-    const uniqueId = formData.get('jobid'); // This is now uniqueId format: databaseName_jobid
+    const uniqueId = formData.get('jobid'); // uniqueId format: databaseName_jobid
     const resume = formData.get('resume');
     const salary_expected = formData.get('salary_expected');
 
-    console.log('Form data - uniqueId:', uniqueId, 'resume:', resume ? 'Present' : 'Missing', 'salary_expected:', salary_expected); // Debug log
+    console.log('Form data - uniqueId:', uniqueId, 'resume:', resume ? 'Present' : 'Missing', 'salary_expected:', salary_expected);
 
     if (!uniqueId || !resume || !salary_expected) {
       return Response.json({ error: 'Missing jobid, resume, or salary_expected' }, { status: 400 });
@@ -45,44 +45,39 @@ export async function POST(request) {
       return Response.json({ error: 'Invalid job identifier format' }, { status: 400 });
     }
     const databaseName = uniqueId.substring(0, lastUnderscoreIndex);
-    const jobid = parseInt(uniqueId.substring(lastUnderscoreIndex + 1));
+    
+    // ✅ FIX: Removed parseInt() to support IDs like "39-1"
+    const jobid = uniqueId.substring(lastUnderscoreIndex + 1);
 
     console.log('Parsed databaseName:', databaseName, 'jobid:', jobid);
 
     // Find the job in the cache to verify it exists and get orgid
     const { jobs } = await getAllExternalJobs();
-    const job = jobs.find(j => j._databaseName === databaseName && j.jobid === jobid);
+    
+    // ✅ FIX: Compare jobid as Strings
+    const job = jobs.find(j => j._databaseName === databaseName && String(j.jobid) === String(jobid));
     
     if (!job) {
       return Response.json({ error: 'Job not found or inactive' }, { status: 404 });
     }
 
     // ============================================================
-    // START CHANGE: DATE VALIDATION LOGIC
+    // DATE VALIDATION LOGIC
     // ============================================================
-    
-    // Normalize current date to YYYY-MM-DD for comparison
     const today = new Date().toISOString().split('T')[0];
     
-    // Ensure we handle the job date correctly (whether it's a string or Date object)
     let jobLastDate = job.lastdate_for_application;
     if (jobLastDate instanceof Date) {
         jobLastDate = jobLastDate.toISOString().split('T')[0];
     }
     
-    // Check if the application date has passed
-    // Logic: If the last date is strictly less than today, it is expired.
     if (!jobLastDate || jobLastDate < today) {
         console.log(`Application rejected: Job expired. Last Date: ${jobLastDate}, Today: ${today}`);
         return Response.json({ error: 'This job is no longer accepting applications' }, { status: 400 });
     }
-
-    // ============================================================
-    // END CHANGE
     // ============================================================
 
     const { orgid } = job;
-
     console.log(`Job ${jobid} belongs to database: ${databaseName}, orgid: ${orgid}`);
 
     // Get pool for the correct database
@@ -93,7 +88,7 @@ export async function POST(request) {
       `SELECT applicationid FROM C_APPLICATIONS WHERE jobid = ? AND candidate_id = ?`,
       [jobid, candidate_id]
     );
-    console.log('Existing application:', existingApplication); // Debug log
+    console.log('Existing application:', existingApplication);
 
     if (existingApplication.length > 0) {
       return Response.json({ error: 'You have already applied for this job' }, { status: 400 });
@@ -108,13 +103,12 @@ export async function POST(request) {
     );
     const applicationNumber = applicationCount[0].count + 1;
     const applicationid = `${orgid}-${applicationNumber}`;
-    console.log('Generated applicationid:', applicationid); // Debug log
+    console.log('Generated applicationid:', applicationid);
 
-    // Fetch application status from C_GENERIC_NAMES and C_GENERIC_VALUES
+    // Fetch application status
     const [statusGid] = await pool.query(
       `SELECT g_id FROM C_GENERIC_NAMES WHERE Name = 'application_status' AND active = 1`
     );
-    console.log('Status g_id:', statusGid); // Debug log
 
     let applicationStatus = 'applied'; // Default status
     if (statusGid.length > 0) {
@@ -122,36 +116,36 @@ export async function POST(request) {
         `SELECT Name FROM C_GENERIC_VALUES WHERE g_id = ? AND orgid = ? AND isactive = 1 AND cutting = 1`,
         [statusGid[0].g_id, orgid]
       );
-      console.log('Status value:', statusValue); // Debug log
 
       if (statusValue.length > 0) {
         applicationStatus = statusValue[0].Name;
       }
     }
-    console.log('Using application status:', applicationStatus); // Debug log
+    console.log('Using application status:', applicationStatus);
 
     // Ensure the uploads/resumes directory exists
     const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'resumes');
     try {
       await mkdir(uploadDir, { recursive: true });
-      console.log('Upload directory ensured:', uploadDir); // Debug log
     } catch (error) {
       console.error('Error creating upload directory:', error);
       return Response.json({ error: 'Failed to create upload directory' }, { status: 500 });
     }
 
-    // Save the resume file with mm-dd-yyyy date format
+    // Save the resume file
     const formattedDate = new Date().toLocaleDateString('en-US', {
       month: '2-digit',
       day: '2-digit',
       year: 'numeric'
-    }).replace(/\//g, '-'); // Convert to mm-dd-yyyy
+    }).replace(/\//g, '-');
+    
     const resumePath = `/uploads/resumes/${applicationid}_${formattedDate}.pdf`;
     const filePath = path.join(process.cwd(), 'public', resumePath);
     const buffer = Buffer.from(await resume.arrayBuffer());
+    
     try {
       await writeFile(filePath, buffer);
-      console.log('Resume saved to:', filePath); // Debug log
+      console.log('Resume saved to:', filePath);
     } catch (error) {
       console.error('Error saving resume:', error);
       return Response.json({ error: 'Failed to save resume file' }, { status: 500 });

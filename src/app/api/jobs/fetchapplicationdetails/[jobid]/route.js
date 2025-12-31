@@ -13,7 +13,9 @@ export async function GET(request, { params }) {
       return Response.json({ error: 'Invalid job identifier format' }, { status: 400 });
     }
     const databaseName = uniqueId.substring(0, lastUnderscoreIndex);
-    const jobid = parseInt(uniqueId.substring(lastUnderscoreIndex + 1));
+    
+    // ✅ FIX: Removed parseInt() to support IDs like "39-1"
+    const jobid = uniqueId.substring(lastUnderscoreIndex + 1);
 
     console.log('Parsed databaseName:', databaseName, 'jobid:', jobid);
 
@@ -36,7 +38,9 @@ export async function GET(request, { params }) {
 
     // Get job from cache - match by both databaseName and jobid
     const { jobs } = await getAllExternalJobs();
-    const job = jobs.find(j => j._databaseName === databaseName && j.jobid === jobid);
+    
+    // ✅ FIX: Compare jobid as Strings
+    const job = jobs.find(j => j._databaseName === databaseName && String(j.jobid) === String(jobid));
 
     if (!job) {
       console.log('Job not found for databaseName:', databaseName, 'jobid:', jobid);
@@ -45,8 +49,10 @@ export async function GET(request, { params }) {
 
     // Check if candidate has applied for this specific job (by uniqueId)
     const applications = await getCandidateApplications(candidate_id);
+    
+    // ✅ FIX: Compare jobid as Strings
     const hasApplied = applications.some(app => 
-      app._databaseName === databaseName && app.jobid === jobid
+      app._databaseName === databaseName && String(app.jobid) === String(jobid)
     );
 
     // Remove internal database reference before returning, but include uniqueId
