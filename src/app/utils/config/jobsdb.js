@@ -416,7 +416,7 @@ export { metaPool };
 
 
 // // app/utils/config/jobsdb.js
-// // ✅ HARDCODED FOR AWS RDS (NO ENV DEPENDENCY)
+// // ✅ HARDCODED FOR AWS RDS
 
 // import mysql from 'mysql2/promise';
 
@@ -470,10 +470,13 @@ export { metaPool };
 // // GET / CREATE TENANT POOL
 // // ---------------------------------------------------------
 // function getTenantPool(databaseName, username, password) {
+//   // Check if pool already exists
 //   if (tenantPools.has(databaseName)) {
 //     return tenantPools.get(databaseName);
 //   }
 
+//   // Create new pool using RDS Config + Tenant specific DB
+//   // Logic: Uses specific tenant credentials if available, otherwise falls back to admin
 //   const pool = mysql.createPool({
 //     host: RDS_CONFIG.host,
 //     port: RDS_CONFIG.port,
@@ -628,6 +631,7 @@ export { metaPool };
 // // ---------------------------------------------------------
 // // PUBLIC API
 // // ---------------------------------------------------------
+
 // export async function getAllExternalJobs() {
 //   const now = Date.now();
 
@@ -668,6 +672,123 @@ export { metaPool };
 //     j => j.jobid === Number(jobId) && j.orgid === Number(orgId)
 //   );
 //   return job ? job._databaseName : null;
+// }
+
+// /**
+//  * Get applications for a candidate across all databases (basic info)
+//  */
+// export async function getCandidateApplications(candidateId) {
+//   try {
+//     const databases = await getAllSubscriberDatabases();
+//     const allApplications = [];
+//     const batchSize = 5;
+
+//     for (let i = 0; i < databases.length; i += batchSize) {
+//       const batch = databases.slice(i, i + batchSize);
+      
+//       const results = await Promise.all(
+//         batch.map(async (db) => {
+//           try {
+//             const pool = getTenantPool(db.databasename, db.username, db.password);
+            
+//             // Check if C_APPLICATIONS table exists
+//             const [tables] = await pool.query(`
+//               SELECT TABLE_NAME 
+//               FROM information_schema.TABLES 
+//               WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'C_APPLICATIONS'
+//             `, [db.databasename]);
+            
+//             if (tables.length === 0) return [];
+
+//             const [applications] = await pool.query(
+//               `SELECT jobid, applicationid, status, applieddate FROM C_APPLICATIONS WHERE candidate_id = ?`,
+//               [candidateId]
+//             );
+            
+//             return applications.map(app => ({
+//               ...app,
+//               _databaseName: db.databasename
+//             }));
+//           } catch (error) {
+//             console.error(`Error fetching applications from ${db.databasename}:`, error.message);
+//             return [];
+//           }
+//         })
+//       );
+
+//       for (const apps of results) {
+//         allApplications.push(...apps);
+//       }
+//     }
+
+//     return allApplications;
+//   } catch (error) {
+//     console.error('Error fetching candidate applications:', error.message);
+//     return [];
+//   }
+// }
+
+// /**
+//  * Get applications for a candidate with full details
+//  */
+// export async function getCandidateApplicationsWithDetails(candidateId) {
+//   try {
+//     const databases = await getAllSubscriberDatabases();
+//     const allApplications = [];
+//     const batchSize = 5;
+
+//     for (let i = 0; i < databases.length; i += batchSize) {
+//       const batch = databases.slice(i, i + batchSize);
+      
+//       const results = await Promise.all(
+//         batch.map(async (db) => {
+//           try {
+//             const pool = getTenantPool(db.databasename, db.username, db.password);
+            
+//             // Check required tables
+//             const [tables] = await pool.query(`
+//               SELECT TABLE_NAME 
+//               FROM information_schema.TABLES 
+//               WHERE TABLE_SCHEMA = ? AND TABLE_NAME IN ('C_APPLICATIONS', 'C_ORG', 'C_EXTERNAL_JOBS')
+//             `, [db.databasename]);
+            
+//             const tableNames = tables.map(t => t.TABLE_NAME);
+//             if (!tableNames.includes('C_APPLICATIONS')) return [];
+
+//             // Fetch applications with details
+//             const [applications] = await pool.query(`
+//               SELECT 
+//                 a.applicationid, a.orgid, a.jobid, a.applieddate,
+//                 a.status, a.resumepath, a.candidate_id, a.salary_expected,
+//                 o.orgname, ej.display_job_name
+//               FROM C_APPLICATIONS a
+//               LEFT JOIN C_ORG o ON a.orgid = o.orgid
+//               LEFT JOIN C_EXTERNAL_JOBS ej ON a.jobid = ej.jobid
+//               WHERE a.candidate_id = ?
+//             `, [candidateId]);
+            
+//             return applications.map(app => ({
+//               ...app,
+//               _databaseName: db.databasename
+//             }));
+//           } catch (error) {
+//             console.error(`Error fetching details from ${db.databasename}:`, error.message);
+//             return [];
+//           }
+//         })
+//       );
+
+//       for (const apps of results) {
+//         allApplications.push(...apps);
+//       }
+//     }
+
+//     console.log(`Found ${allApplications.length} applications for candidate ${candidateId}`);
+//     return allApplications;
+//   } catch (error) {
+//     console.error('Error fetching candidate applications with details:', error.message);
+//     return [];
+//   }
 // }
 
 // export { metaPool };
