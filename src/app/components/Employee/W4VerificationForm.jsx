@@ -33,6 +33,7 @@ const W4VerificationForm = ({ form, verifierEmpId, orgId, orgName, onBack, onSuc
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [timestamp] = useState(Date.now()); // Used for cache-busting images
 
   const isVerified = form.FORM_STATUS === 'VERIFIED';
   // Allow editing if submitted or if admin
@@ -226,7 +227,11 @@ const W4VerificationForm = ({ form, verifierEmpId, orgId, orgName, onBack, onSuc
             <div className={`${styles.infoItem} ${styles.infoItemFullWidth}`}>
                 <label>Employee Signature:</label>
                 <div className={styles.signatureDisplay}>
-                    <img src={form.EMPLOYEE_SIGNATURE_URL} alt="Employee Signature" style={{ maxWidth: '300px', border: '1px solid #ccc' }}/>
+                    <img 
+                      src={`${form.EMPLOYEE_SIGNATURE_URL}?t=${timestamp}`} 
+                      alt="Employee Signature" 
+                      style={{ maxWidth: '300px', border: '1px solid #ccc', borderRadius: '4px' }}
+                    />
                 </div>
             </div>
         )}

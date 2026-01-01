@@ -31,6 +31,14 @@ const W9Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
   const [currentFormId, setCurrentFormId] = useState(null);
   const [formattedTin, setFormattedTin] = useState('');
   const sigCanvas = useRef(null);
+  const [timestamp] = useState(Date.now()); // Used for cache-busting images
+  
+  // Signature type state (canvas or pdf)
+  const pdfFileInputRef = useRef(null);
+  const [signatureType, setSignatureType] = useState('canvas');
+  const [pdfSignatureFile, setPdfSignatureFile] = useState(null);
+  const [pdfSignaturePreview, setPdfSignaturePreview] = useState(null);
+  const [isExtractingSignature, setIsExtractingSignature] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -128,6 +136,151 @@ const W9Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
 
   const clearSignature = () => sigCanvas.current?.clear();
 
+  // Handle signature type change (canvas or pdf)
+  const handleSignatureTypeChange = (e) => {
+    const newType = e.target.value;
+    setSignatureType(newType);
+    // Clear the other type's data when switching
+    if (newType === 'canvas') {
+      setPdfSignatureFile(null);
+      setPdfSignaturePreview(null);
+      if (pdfFileInputRef.current) {
+        pdfFileInputRef.current.value = '';
+      }
+    } else {
+      if (sigCanvas.current) {
+        sigCanvas.current.clear();
+      }
+    }
+  };
+
+  // Handle PDF file selection and extract signature using client-side rendering
+  const handlePdfFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    console.log('📄 PDF Upload - File selected:', file ? file.name : 'none');
+    
+    if (!file) {
+      setPdfSignatureFile(null);
+      setPdfSignaturePreview(null);
+      return;
+    }
+
+    // Validate file type
+    console.log('📄 PDF Upload - File type:', file.type, 'Size:', file.size, 'bytes');
+    if (file.type !== 'application/pdf') {
+      onError('Please upload a valid PDF file.');
+      e.target.value = '';
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      onError('PDF file size must be less than 5MB.');
+      e.target.value = '';
+      return;
+    }
+
+    onError(null);
+    setPdfSignatureFile(file);
+    setIsExtractingSignature(true);
+
+    try {
+      console.log('📄 PDF Upload - Loading pdfjs-dist library...');
+      // Dynamically import pdfjs-dist for client-side PDF rendering
+      const pdfjsLib = await import('pdfjs-dist');
+      console.log('📄 PDF Upload - pdfjs-dist version:', pdfjsLib.version);
+      
+      // Set worker source - use local file for EC2/production (no external CDN dependency)
+      pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+      console.log('📄 PDF Upload - Worker source set to:', pdfjsLib.GlobalWorkerOptions.workerSrc);
+
+      // Read file as ArrayBuffer for PDF.js
+      console.log('📄 PDF Upload - Reading file as ArrayBuffer...');
+      const arrayBuffer = await file.arrayBuffer();
+      console.log('📄 PDF Upload - ArrayBuffer size:', arrayBuffer.byteLength, 'bytes');
+      
+      // Check if file starts with PDF header
+      const header = new Uint8Array(arrayBuffer.slice(0, 5));
+      const headerStr = String.fromCharCode(...header);
+      console.log('📄 PDF Upload - File header:', headerStr, '(should be %PDF-)');
+      
+      if (headerStr !== '%PDF-') {
+        throw new Error('File does not have valid PDF header. Got: ' + headerStr);
+      }
+      
+      // Load the PDF document
+      console.log('📄 PDF Upload - Loading PDF document...');
+      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+      const pdfDoc = await loadingTask.promise;
+      console.log('📄 PDF Upload - PDF loaded, pages:', pdfDoc.numPages);
+      
+      // Get the first page
+      console.log('📄 PDF Upload - Getting page 1...');
+      const page = await pdfDoc.getPage(1);
+      console.log('📄 PDF Upload - Page 1 loaded');
+      
+      // Set up canvas for rendering
+      const scale = 2; // Higher scale for better quality
+      const viewport = page.getViewport({ scale });
+      console.log('📄 PDF Upload - Viewport:', viewport.width, 'x', viewport.height);
+      
+      // Create an offscreen canvas
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      
+      // Render PDF page to canvas
+      console.log('📄 PDF Upload - Rendering page to canvas...');
+      await page.render({
+        canvasContext: context,
+        viewport: viewport,
+      }).promise;
+      console.log('📄 PDF Upload - Render complete');
+      
+      // Convert canvas to PNG data URL
+      const signatureDataUrl = canvas.toDataURL('image/png');
+      console.log('📄 PDF Upload - PNG data URL length:', signatureDataUrl.length, 'chars');
+      
+      setPdfSignaturePreview(signatureDataUrl);
+      onError(null);
+      console.log('✅ PDF signature extracted successfully via client-side rendering');
+      
+    } catch (err) {
+      console.error('❌ PDF extraction error:', err);
+      console.error('❌ Error name:', err.name);
+      console.error('❌ Error message:', err.message);
+      console.error('❌ Error stack:', err.stack);
+      onError('Failed to process PDF file: ' + (err.message || 'Unknown error'));
+      setPdfSignatureFile(null);
+      setPdfSignaturePreview(null);
+      if (pdfFileInputRef.current) {
+        pdfFileInputRef.current.value = '';
+      }
+    } finally {
+      setIsExtractingSignature(false);
+    }
+  };
+
+  // Clear PDF signature
+  const clearPdfSignature = () => {
+    setPdfSignatureFile(null);
+    setPdfSignaturePreview(null);
+    if (pdfFileInputRef.current) {
+      pdfFileInputRef.current.value = '';
+    }
+  };
+
+  // Get signature data based on type
+  const getSignatureData = () => {
+    if (signatureType === 'canvas') {
+      return sigCanvas.current?.isEmpty() ? null : sigCanvas.current.toDataURL('image/png');
+    } else if (signatureType === 'pdf') {
+      return pdfSignaturePreview;
+    }
+    return null;
+  };
+
   const handleSaveDraft = async () => {
     onError(null);
     onSuccess('');
@@ -141,7 +294,7 @@ const W9Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
             address_city_state_zip: `${formData.city}, ${formData.state} ${formData.zip_code}`,
             orgid,
             emp_id: empid,
-            signature_data: sigCanvas.current?.isEmpty() ? null : sigCanvas.current.toDataURL('image/png'),
+            signature_data: getSignatureData(),
         };
 
         const result = await saveW9Form(payload, currentFormId);
@@ -166,8 +319,15 @@ const W9Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
     setIsSaving(true);
 
     try {
-        if (sigCanvas.current?.isEmpty()) {
-            throw new Error('Signature is required to submit the form.');
+        // Validate signature based on type
+        if (signatureType === 'canvas') {
+            if (sigCanvas.current?.isEmpty()) {
+                throw new Error('Signature is required to submit the form. Please draw your signature.');
+            }
+        } else if (signatureType === 'pdf') {
+            if (!pdfSignaturePreview) {
+                throw new Error('Signature is required to submit the form. Please upload a PDF with your signature.');
+            }
         }
 
         // Combine fields for database
@@ -177,7 +337,7 @@ const W9Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
             address_city_state_zip: `${formData.city}, ${formData.state} ${formData.zip_code}`,
             orgid,
             emp_id: empid,
-            signature_data: sigCanvas.current.toDataURL('image/png'),
+            signature_data: getSignatureData(),
         };
 
         const result = await submitW9Form(payload, currentFormId);
@@ -263,16 +423,114 @@ const W9Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
              existingForm?.SIGNATURE_URL && (
                 <div className={styles.formGroup}>
                   <label>Signature</label>
-                  <div className={styles.signatureDisplay}><img src={existingForm.SIGNATURE_URL} alt="Signature" /></div>
+                  <div className={styles.signatureDisplay}>
+                    <img 
+                      src={`${existingForm.SIGNATURE_URL}?t=${timestamp}`} 
+                      alt="Employee Signature" 
+                      style={{ maxWidth: '300px', border: '1px solid #ccc', borderRadius: '4px' }}
+                    />
+                  </div>
                 </div>
             )
         ) : (
             <div className={styles.formGroup}>
                 <label>Signature*</label>
-                <div className={styles.signatureCanvasWrapper}>
-                    <SignatureCanvas ref={sigCanvas} canvasProps={{ className: styles.signatureCanvas }} />
+                
+                {/* Signature Type Selection */}
+                <div style={{ marginBottom: '15px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+                    <p style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: '500' }}>
+                        Choose signature method:
+                    </p>
+                    <div style={{ display: 'flex', gap: '20px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                            <input
+                                type="radio"
+                                name="signatureType"
+                                value="canvas"
+                                checked={signatureType === 'canvas'}
+                                onChange={handleSignatureTypeChange}
+                                style={{ marginRight: '8px' }}
+                            />
+                            Draw Signature
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                            <input
+                                type="radio"
+                                name="signatureType"
+                                value="pdf"
+                                checked={signatureType === 'pdf'}
+                                onChange={handleSignatureTypeChange}
+                                style={{ marginRight: '8px' }}
+                            />
+                            Upload Signature PDF
+                        </label>
+                    </div>
                 </div>
-                <button type="button" onClick={clearSignature} className={styles.button}>Clear Signature</button>
+
+                {/* Canvas Signature Option */}
+                {signatureType === 'canvas' && (
+                    <>
+                        <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#666' }}>
+                            Please sign below using your mouse or touchscreen.
+                        </p>
+                        <div className={styles.signatureCanvasWrapper}>
+                            <SignatureCanvas ref={sigCanvas} canvasProps={{ width: 600, height: 200, className: styles.signatureCanvas }} />
+                        </div>
+                        <button type="button" onClick={clearSignature} className={styles.button}>Clear Signature</button>
+                    </>
+                )}
+
+                {/* PDF Upload Option */}
+                {signatureType === 'pdf' && (
+                    <>
+                        <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#666' }}>
+                            Upload a PDF file containing your signature. The signature will be extracted automatically.
+                        </p>
+                        <div style={{ marginBottom: '10px' }}>
+                            <input
+                                type="file"
+                                ref={pdfFileInputRef}
+                                accept="application/pdf"
+                                onChange={handlePdfFileChange}
+                                disabled={isExtractingSignature}
+                                style={{ 
+                                    padding: '10px', 
+                                    border: '2px dashed #007bff', 
+                                    borderRadius: '4px', 
+                                    width: '100%', 
+                                    maxWidth: '600px',
+                                    backgroundColor: '#fff',
+                                    cursor: 'pointer'
+                                }}
+                            />
+                        </div>
+                        
+                        {isExtractingSignature && (
+                            <p style={{ color: '#007bff', fontSize: '14px' }}>
+                                Extracting signature from PDF...
+                            </p>
+                        )}
+
+                        {/* PDF Signature Preview */}
+                        {pdfSignaturePreview && !isExtractingSignature && (
+                            <div style={{ marginTop: '10px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+                                <p style={{ margin: '0 0 10px 0', fontSize: '13px', fontWeight: 'bold', color: '#28a745' }}>
+                                    ✓ Signature extracted successfully:
+                                </p>
+                                <img
+                                    src={pdfSignaturePreview}
+                                    alt="Extracted Signature"
+                                    style={{ maxWidth: '300px', maxHeight: '100px', border: '1px solid #ccc', borderRadius: '4px', backgroundColor: '#fff' }}
+                                />
+                                <div style={{ marginTop: '10px' }}>
+                                    <button type="button" onClick={clearPdfSignature} className={styles.button}>
+                                        Remove & Upload Different PDF
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </>
+                )}
             </div>
         )}
       </div>

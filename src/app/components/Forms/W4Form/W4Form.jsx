@@ -44,6 +44,7 @@ const W4Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
   const [currentFormId, setCurrentFormId] = useState(null);
   const [formattedSsn, setFormattedSsn] = useState('');
   const sigCanvas = useRef(null);
+  const [timestamp, setTimestamp] = useState(Date.now()); // Used for cache-busting images
   
   // Signature type state (canvas or pdf)
   const pdfFileInputRef = useRef(null);
@@ -543,8 +544,14 @@ const W4Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
           existingForm?.EMPLOYEE_SIGNATURE_URL && (
             <div className={styles.formGroup}>
               <label>Employee Signature</label>
-              <div className={styles.signatureDisplay}><img src={existingForm.EMPLOYEE_SIGNATURE_URL} alt="Signature" /></div>
-               <p>Date Signed: {formatDate(existingForm.EMPLOYEE_SIGNATURE_DATE)}</p>
+              <div className={styles.signatureDisplay}>
+                <img 
+                  src={`${existingForm.EMPLOYEE_SIGNATURE_URL}?t=${timestamp}`} 
+                  alt="Employee Signature" 
+                  style={{ maxWidth: '300px', border: '1px solid #ccc', borderRadius: '4px' }}
+                />
+              </div>
+              <p>Date Signed: {formatDate(existingForm.EMPLOYEE_SIGNATURE_DATE)}</p>
             </div>
           )
         ) : (

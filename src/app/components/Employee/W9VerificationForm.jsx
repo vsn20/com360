@@ -11,6 +11,7 @@ const W9VerificationForm = ({ form, verifierEmpId, orgId, onBack, onSuccess, isA
   const [error, setError] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const sigCanvas = useRef(null);
+  const [timestamp] = useState(Date.now()); // Used for cache-busting images
 
   const isVerified = form.FORM_STATUS === 'VERIFIED';
   // Allow editing if the form is submitted (pending), or if the user is an admin (even if already verified).
@@ -125,7 +126,11 @@ const W9VerificationForm = ({ form, verifierEmpId, orgId, onBack, onSuccess, isA
             <div className={`${styles.infoItem} ${styles.infoItemFullWidth}`}>
                 <label>Employee Signature:</label>
                 <div className={styles.signatureDisplay}>
-                    <img src={form.SIGNATURE_URL} alt="Employee Signature" style={{ maxWidth: '300px', border: '1px solid #ccc' }}/>
+                    <img 
+                      src={`${form.SIGNATURE_URL}?t=${timestamp}`} 
+                      alt="Employee Signature" 
+                      style={{ maxWidth: '300px', border: '1px solid #ccc', borderRadius: '4px' }}
+                    />
                 </div>
             </div>
         )}
@@ -144,7 +149,11 @@ const W9VerificationForm = ({ form, verifierEmpId, orgId, onBack, onSuccess, isA
                 <div className={`${styles.infoItem} ${styles.infoItemFullWidth}`}>
                     <label>Verifier Signature:</label>
                     <div className={styles.signatureDisplay}>
-                        <img src={form.VERIFIER_SIGNATURE_URL} alt="Verifier Signature" style={{ maxWidth: '300px', border: '1px solid #ccc' }}/>
+                        <img 
+                          src={`${form.VERIFIER_SIGNATURE_URL}?t=${timestamp}`} 
+                          alt="Verifier Signature" 
+                          style={{ maxWidth: '300px', border: '1px solid #ccc', borderRadius: '4px' }}
+                        />
                     </div>
                 </div>
             )}
@@ -158,7 +167,7 @@ const W9VerificationForm = ({ form, verifierEmpId, orgId, onBack, onSuccess, isA
                         Current signature (will be replaced):
                     </p>
                     <img 
-                        src={form.VERIFIER_SIGNATURE_URL}
+                        src={`${form.VERIFIER_SIGNATURE_URL}?t=${timestamp}`}
                         alt="Current Signature" 
                         style={{ maxWidth: '300px', border: '1px solid #ccc', borderRadius: '4px' }}
                     />
