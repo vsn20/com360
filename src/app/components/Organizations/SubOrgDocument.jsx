@@ -35,6 +35,13 @@ const SubOrgDocument = ({ suborgid, documents: initialDocuments, onDocumentsUpda
 
   const MAX_FILE_SIZE_BYTES = 1 * 1024 * 1024; // 1 MB
 
+  // Helper to get document type name from ID
+  const getTypeName = (typeId) => {
+    if (!typeId || !documenttypes) return 'N/A';
+    const type = documenttypes.find(t => String(t.id) === String(typeId));
+    return type ? type.Name : typeId;
+  };
+
   useEffect(() => {
     setAllDocuments(Array.isArray(initialDocuments) ? initialDocuments : []);
   }, [initialDocuments]);
@@ -399,7 +406,7 @@ const SubOrgDocument = ({ suborgid, documents: initialDocuments, onDocumentsUpda
                  </div>
                  <div className={styles.detailsGroup}>
                    <label>Type</label>
-                   <p>{selectedDoc.document_type}</p>
+                   <p>{getTypeName(selectedDoc.document_type)}</p>
                  </div>
                </div>
                <div className={styles.detailsRow}>
@@ -495,7 +502,7 @@ const SubOrgDocument = ({ suborgid, documents: initialDocuments, onDocumentsUpda
                       </span>
                     ) : 'No File'}
                   </td>
-                  <td className={styles.tableCell}>{d.document_type || 'N/A'}</td>
+                  <td className={styles.tableCell}>{getTypeName(d.document_type)}</td>
                   {/* <td className={styles.tableCell}>{d.last_updated_date || 'N/A'}</td> */}
                   <td className={styles.tableCell}>{d.document_purpose || 'N/A'}</td>
                   <td className={styles.tableCell}>

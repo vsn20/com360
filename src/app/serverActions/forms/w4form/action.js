@@ -632,19 +632,22 @@ if (w4Data.EMPLOYEE_SIGNATURE_URL) {
     await fs.access(sigPath);
     const sigBytes = await fs.readFile(sigPath);
     const sigImage = await pdfDoc.embedPng(sigBytes);
-    const { width, height } = sigImage.scale(0.25); // Adjust scale if needed
+    
+    // Use fixed dimensions like I-9 form for consistent signature size
+    const sigWidth = 150;
+    const sigHeight = 35;
 
     // Draw signature
     const sigX = 130; // X coordinate for signature
     const sigY = 95; // Y coordinate for signature
-    firstPage.drawImage(sigImage, { x: sigX, y: sigY, width: width, height: height });
+    firstPage.drawImage(sigImage, { x: sigX, y: sigY, width: sigWidth, height: sigHeight });
     console.log(`✅ Employee signature embedded`);
 
     // Draw date beside signature
     const dateText = formatPdfDate(w4Data.EMPLOYEE_SIGNATURE_DATE) || '';
     firstPage.drawText(dateText, {
-      x: sigX + width + 150, // a little space to the right of signature
-      y: sigY + (height / 2) - 10, // vertically align with middle of signature
+      x: sigX + sigWidth + 100, // a little space to the right of signature
+      y: sigY + (sigHeight / 2) - 5, // vertically align with middle of signature
       size: 10, // font size
       font: helveticaFont,
       color: rgb(0, 0, 0),

@@ -79,12 +79,14 @@ const I9Forms = ({
   const [error, setError] = useState(initialError);
   const [isSaving, setIsSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [employeeSuborgId, setEmployeeSuborgId] = useState(null); // Track employee's sub-org assignment
 
   const router = useRouter();
 
   useEffect(() => {
     loadAllForms();
     loadFormTypes();
+    loadEmployeeInfo(); // Load employee info to get suborgid
   }, [orgid, empid]); // Depend on orgid and empid
 
   useEffect(() => {
@@ -102,6 +104,17 @@ const I9Forms = ({
     } catch (err) {
       console.error('Failed to load form types:', err);
       setError('Failed to load form types.'); // Show error to user
+    }
+  };
+
+  // Load employee info to check sub-org assignment
+  const loadEmployeeInfo = async () => {
+    try {
+      const employee = await fetchEmployeeById(empid);
+      setEmployeeSuborgId(employee?.suborgid || null);
+      console.log('Employee suborgid:', employee?.suborgid);
+    } catch (err) {
+      console.error('Failed to load employee info:', err);
     }
   };
 
@@ -294,6 +307,12 @@ const I9Forms = ({
   const handleFormTypeSelect = async () => {
     if (!selectedFormType) {
       setError('Please select a form type');
+      return;
+    }
+
+    // Check if W9 is selected and employee doesn't have a sub-org assigned
+    if (selectedFormType === 'W9' && !employeeSuborgId) {
+      setError('Cannot create W-9 form: Employee must be assigned to a Sub-Organization first. Please update the employee\'s Employment Details.');
       return;
     }
 

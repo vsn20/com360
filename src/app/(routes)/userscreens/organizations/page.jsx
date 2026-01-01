@@ -65,7 +65,7 @@ const Page = async () => {
       states = stateRows;
 
       const [documenttypesrows]=await pool.query(
-        'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 39 AND isactive = 1 AND (orgid = ? OR orgid = -1)',
+        'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 18 AND isactive = 1 AND (orgid = ? OR orgid = -1)',
       [orgid]
       );
       documenttypes=documenttypesrows;
