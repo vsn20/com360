@@ -49,8 +49,8 @@ export async function middleware(request) {
     return NextResponse.next();
   }
 
-  // Handle expense attachment paths (/expenses/expense_EXP-xxx_timestamp.ext)
-  const isExpensePath = pathname.match(/^\/expenses\/expense_(.+)_(\d+)\.(jpg|jpeg|png|pdf|gif)$/i);
+  // Handle expense attachment paths (/uploads/expenses/expense_EXP-xxx_timestamp.ext)
+  const isExpensePath = pathname.match(/^\/uploads\/expenses\/expense_(.+)_(\d+)\.(jpg|jpeg|png|pdf|gif)$/i);
   if (isExpensePath) {
     const expenseId = isExpensePath[1]; // Extract expense ID from filename
     const token = request.cookies.get('jwt_token')?.value;
@@ -486,7 +486,7 @@ export async function middleware(request) {
 
 export const config = {
   matcher: [
-    // Exclude static assets EXCEPT /signatures/ and /expenses/ which need auth
+    // Exclude static assets EXCEPT /uploads/expenses/ which need auth
     '/((?!api|_next/static|_next/image|favicon.ico|.well-known|pdf\\.worker\\.min\\.mjs).*)',
   ],
 };

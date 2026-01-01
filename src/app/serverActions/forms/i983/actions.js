@@ -77,13 +77,13 @@ async function uploadI983Signature(base64Data, formId, signatureIdentifier) {
         const buffer = Buffer.from(base64Image, 'base64');
         if (buffer.length === 0) throw new Error("Empty signature data received.");
         if (buffer.length > 5 * 1024 * 1024) throw new Error('Signature file too large (max 5MB)');
-        const publicDir = path.join(process.cwd(), 'public', 'signatures');
+        const publicDir = path.join(process.cwd(), 'public', 'uploads', 'forms_signatures');
         await fs.mkdir(publicDir, { recursive: true });
         const filename = `form_i983_${formId}_${signatureIdentifier}.png`;
         const filePath = path.join(publicDir, filename);
         await fs.writeFile(filePath, buffer);
         console.log('✅ I-983 Signature saved:', filename);
-        return { success: true, path: `/signatures/${filename}` };
+        return { success: true, path: `/uploads/forms_signatures/${filename}` };
     } catch (error) {
         console.error(`❌ Error uploading I-983 signature (${signatureIdentifier}):`, error);
         return { success: false, error: error.message };
@@ -95,7 +95,7 @@ async function deleteI983Signatures(formId) {
     try {
         if (!formId) return { success: true, message: "No form ID, skipping delete." };
         console.log(`🗑️ Deleting signatures for I-983 form ID: ${formId}`);
-        const publicDir = path.join(process.cwd(), 'public', 'signatures');
+        const publicDir = path.join(process.cwd(), 'public', 'uploads', 'forms_signatures');
         const prefix = `form_i983_${formId}_`;
         let deletedCount = 0;
         let files;

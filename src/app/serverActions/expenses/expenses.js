@@ -39,8 +39,8 @@ export async function uploadAttachment(file, expenseId, attachmentType = 'receip
     // Get file extension
     const ext = path.extname(file.name) || '.png';
     
-    // Define directory
-    const publicDir = path.join(process.cwd(), 'public', 'expenses');
+    // Define directory - save to /uploads/expenses/ for Nginx access
+    const publicDir = path.join(process.cwd(), 'public', 'uploads', 'expenses');
     await fs.mkdir(publicDir, { recursive: true });
     
     // ✅ Use expense ID + timestamp for unique filename
@@ -63,7 +63,7 @@ export async function uploadAttachment(file, expenseId, attachmentType = 'receip
     
     return { 
       success: true, 
-      path: `/expenses/${filename}`,
+      path: `/uploads/expenses/${filename}`,
       filename: filename
     };
   } catch (error) {
@@ -77,7 +77,7 @@ export async function deleteAttachment(filename) {
   try {
     if (!filename) return { success: true };
     
-    const publicDir = path.join(process.cwd(), 'public', 'expenses');
+    const publicDir = path.join(process.cwd(), 'public', 'uploads', 'expenses');
     const filePath = path.join(publicDir, filename);
     
     try {

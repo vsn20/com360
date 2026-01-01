@@ -55,7 +55,7 @@ async function uploadW4Signature(base64Data, formId) {
     if (buffer.length === 0) throw new Error("Empty signature data received.");
     if (buffer.length > 5 * 1024 * 1024) throw new Error('Signature file too large (max 5MB)');
 
-    const publicDir = path.join(process.cwd(), 'public', 'signatures');
+    const publicDir = path.join(process.cwd(), 'public', 'uploads', 'forms_signatures');
     await fs.mkdir(publicDir, { recursive: true });
 
     // Use specific filename format for W4 employee
@@ -66,7 +66,7 @@ async function uploadW4Signature(base64Data, formId) {
     const hash = generateSignatureHash(base64Image); // Use the base64Image without prefix
 
     console.log(`✅ W4 Employee Signature saved: ${filePath}`);
-    return { success: true, path: `/signatures/${filename}`, hash };
+    return { success: true, path: `/uploads/forms_signatures/${filename}`, hash };
   } catch (error) {
     console.error('❌ Error uploading W-4 employee signature:', error);
     return { success: false, error: error.message };

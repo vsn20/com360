@@ -31,7 +31,7 @@ export async function uploadSignature(base64Data, formId, signatureType = 'emplo
     }
     
     // Define directory
-    const publicDir = path.join(process.cwd(), 'public', 'signatures');
+    const publicDir = path.join(process.cwd(), 'public', 'uploads', 'forms_signatures');
     await fs.mkdir(publicDir, { recursive: true });
     
     // Handle PNG/JPEG data (from canvas or PDF client-side rendering)
@@ -56,7 +56,7 @@ export async function uploadSignature(base64Data, formId, signatureType = 'emplo
     
     return { 
       success: true, 
-      path: `/signatures/${filename}`,
+      path: `/uploads/forms_signatures/${filename}`,
       hash: hash
     };
   } catch (error) {
@@ -70,7 +70,7 @@ export async function deleteSignature(formId, signatureType = null) {
   try {
     if (!formId) return { success: true };
     
-    const publicDir = path.join(process.cwd(), 'public', 'signatures');
+    const publicDir = path.join(process.cwd(), 'public', 'uploads', 'forms_signatures');
     
     // If signatureType specified, delete only that signature
     if (signatureType) {

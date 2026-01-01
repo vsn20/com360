@@ -38,7 +38,7 @@ async function uploadEmployerSignature(base64Data, formId) {
       throw new Error('Signature file too large (max 5MB)');
     }
     
-    const publicDir = path.join(process.cwd(), 'public', 'signatures');
+    const publicDir = path.join(process.cwd(), 'public', 'uploads', 'forms_signatures');
     await fs.mkdir(publicDir, { recursive: true });
     
     const filename = `form_${formId}_employer.png`;
@@ -50,7 +50,7 @@ async function uploadEmployerSignature(base64Data, formId) {
     
     return { 
       success: true, 
-      path: `/signatures/${filename}`,
+      path: `/uploads/forms_signatures/${filename}`,
       hash: hash
     };
   } catch (error) {

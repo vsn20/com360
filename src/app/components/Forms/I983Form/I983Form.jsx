@@ -10,8 +10,14 @@ import {
   generateI983Pdf, // Import the new PDF generation action
 } from '@/app/serverActions/forms/i983/actions';
 import SignatureCanvas from 'react-signature-canvas';
+import * as pdfjs from 'pdfjs-dist';
 // Import new CSS module
 import i983_styles from './I983Form.module.css';
+
+// Initialize PDF.js worker
+if (typeof window !== 'undefined') {
+    pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+}
 
 // Helper function to safely get values for controlled inputs
 const safeValue = (value, defaultValue = '') => value ?? defaultValue;
@@ -138,6 +144,29 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
     const sigCanvasEval1Student = useRef(null);
     const sigCanvasEval2Student = useRef(null);
 
+    // Signature Type States (canvas or pdf) for each signature
+    const [signatureTypeSec2, setSignatureTypeSec2] = useState('canvas');
+    const [signatureTypeEval1, setSignatureTypeEval1] = useState('canvas');
+    const [signatureTypeEval2, setSignatureTypeEval2] = useState('canvas');
+
+    // PDF signature states for each signature
+    const [pdfSignatureFileSec2, setPdfSignatureFileSec2] = useState(null);
+    const [pdfSignaturePreviewSec2, setPdfSignaturePreviewSec2] = useState(null);
+    const [pdfSignatureFileEval1, setPdfSignatureFileEval1] = useState(null);
+    const [pdfSignaturePreviewEval1, setPdfSignaturePreviewEval1] = useState(null);
+    const [pdfSignatureFileEval2, setPdfSignatureFileEval2] = useState(null);
+    const [pdfSignaturePreviewEval2, setPdfSignaturePreviewEval2] = useState(null);
+
+    // PDF extraction loading states
+    const [isExtractingSec2, setIsExtractingSec2] = useState(false);
+    const [isExtractingEval1, setIsExtractingEval1] = useState(false);
+    const [isExtractingEval2, setIsExtractingEval2] = useState(false);
+
+    // PDF file input refs
+    const pdfFileInputSec2 = useRef(null);
+    const pdfFileInputEval1 = useRef(null);
+    const pdfFileInputEval2 = useRef(null);
+
     // --- Data Loading Effect ---
     useEffect(() => {
         const loadData = async () => {
@@ -180,6 +209,135 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
         sigRef.current?.clear();
     };
 
+    // PDF extraction function for signature
+    const extractSignatureFromPdf = async (file) => {
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+            const page = await pdf.getPage(1);
+            const scale = 2;
+            const viewport = page.getViewport({ scale });
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+            await page.render({ canvasContext: context, viewport: viewport }).promise;
+            return canvas.toDataURL('image/png');
+        } catch (error) {
+            console.error('Error extracting signature from PDF:', error);
+            throw new Error('Failed to extract signature from PDF');
+        }
+    };
+
+    // Handle PDF file change for Section 2 Signature
+    const handlePdfFileChangeSec2 = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        if (file.type !== 'application/pdf') {
+            onError('Please upload a PDF file');
+            return;
+        }
+        
+        setIsExtractingSec2(true);
+        setPdfSignatureFileSec2(file);
+        
+        try {
+            const signatureDataUrl = await extractSignatureFromPdf(file);
+            setPdfSignaturePreviewSec2(signatureDataUrl);
+        } catch (error) {
+            onError('Failed to extract signature from PDF. Please try again.');
+            setPdfSignatureFileSec2(null);
+            setPdfSignaturePreviewSec2(null);
+        } finally {
+            setIsExtractingSec2(false);
+        }
+    };
+
+    // Handle PDF file change for Eval 1 Signature
+    const handlePdfFileChangeEval1 = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        if (file.type !== 'application/pdf') {
+            onError('Please upload a PDF file');
+            return;
+        }
+        
+        setIsExtractingEval1(true);
+        setPdfSignatureFileEval1(file);
+        
+        try {
+            const signatureDataUrl = await extractSignatureFromPdf(file);
+            setPdfSignaturePreviewEval1(signatureDataUrl);
+        } catch (error) {
+            onError('Failed to extract signature from PDF. Please try again.');
+            setPdfSignatureFileEval1(null);
+            setPdfSignaturePreviewEval1(null);
+        } finally {
+            setIsExtractingEval1(false);
+        }
+    };
+
+    // Handle PDF file change for Eval 2 Signature
+    const handlePdfFileChangeEval2 = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        if (file.type !== 'application/pdf') {
+            onError('Please upload a PDF file');
+            return;
+        }
+        
+        setIsExtractingEval2(true);
+        setPdfSignatureFileEval2(file);
+        
+        try {
+            const signatureDataUrl = await extractSignatureFromPdf(file);
+            setPdfSignaturePreviewEval2(signatureDataUrl);
+        } catch (error) {
+            onError('Failed to extract signature from PDF. Please try again.');
+            setPdfSignatureFileEval2(null);
+            setPdfSignaturePreviewEval2(null);
+        } finally {
+            setIsExtractingEval2(false);
+        }
+    };
+
+    // Clear PDF signatures
+    const clearPdfSignatureSec2 = () => {
+        setPdfSignatureFileSec2(null);
+        setPdfSignaturePreviewSec2(null);
+        if (pdfFileInputSec2.current) pdfFileInputSec2.current.value = '';
+    };
+
+    const clearPdfSignatureEval1 = () => {
+        setPdfSignatureFileEval1(null);
+        setPdfSignaturePreviewEval1(null);
+        if (pdfFileInputEval1.current) pdfFileInputEval1.current.value = '';
+    };
+
+    const clearPdfSignatureEval2 = () => {
+        setPdfSignatureFileEval2(null);
+        setPdfSignaturePreviewEval2(null);
+        if (pdfFileInputEval2.current) pdfFileInputEval2.current.value = '';
+    };
+
+    // Get signature data based on type
+    const getSignatureData = (type, sigCanvas, pdfPreview) => {
+        if (type === 'canvas') {
+            if (sigCanvas?.current && !sigCanvas.current.isEmpty()) {
+                const data = sigCanvas.current.toDataURL('image/png');
+                sigCanvas.current.clear();
+                return data;
+            }
+            return null;
+        } else if (type === 'pdf' && pdfPreview) {
+            return pdfPreview;
+        }
+        return null;
+    };
+
     // --- Server Action Handlers ---
 
     const handleSave = async (showSuccess = true) => {
@@ -197,19 +355,26 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
                 action: 'save',
             };
 
-            // Conditionally add signatures ONLY if they were drawn
-            if (sigCanvasSec2.current && !sigCanvasSec2.current.isEmpty()) {
-                payload.signature_data_sec2 = sigCanvasSec2.current.toDataURL('image/png');
-                sigCanvasSec2.current.clear(); // Clear after getting data
+            // Get signature data based on selected type (canvas or pdf)
+            const sec2SigData = getSignatureData(signatureTypeSec2, sigCanvasSec2, pdfSignaturePreviewSec2);
+            const eval1SigData = getSignatureData(signatureTypeEval1, sigCanvasEval1Student, pdfSignaturePreviewEval1);
+            const eval2SigData = getSignatureData(signatureTypeEval2, sigCanvasEval2Student, pdfSignaturePreviewEval2);
+
+            // Conditionally add signatures ONLY if they exist
+            if (sec2SigData) {
+                payload.signature_data_sec2 = sec2SigData;
             }
-            if (sigCanvasEval1Student.current && !sigCanvasEval1Student.current.isEmpty()) {
-                payload.signature_data_eval1_student = sigCanvasEval1Student.current.toDataURL('image/png');
-                sigCanvasEval1Student.current.clear();
+            if (eval1SigData) {
+                payload.signature_data_eval1_student = eval1SigData;
             }
-            if (sigCanvasEval2Student.current && !sigCanvasEval2Student.current.isEmpty()) {
-                payload.signature_data_eval2_student = sigCanvasEval2Student.current.toDataURL('image/png');
-                sigCanvasEval2Student.current.clear();
+            if (eval2SigData) {
+                payload.signature_data_eval2_student = eval2SigData;
             }
+
+            // Clear PDF previews after save
+            if (signatureTypeSec2 === 'pdf' && pdfSignaturePreviewSec2) clearPdfSignatureSec2();
+            if (signatureTypeEval1 === 'pdf' && pdfSignaturePreviewEval1) clearPdfSignatureEval1();
+            if (signatureTypeEval2 === 'pdf' && pdfSignaturePreviewEval2) clearPdfSignatureEval2();
 
             console.log("Calling saveOrUpdateI983Form (Save)...");
             const result = await saveOrUpdateI983Form(payload, currentFormId);
@@ -367,8 +532,49 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
                             <img src={existingForm.STUDENT_SIGNATURE_URL} alt="Current Sig" style={{ maxHeight: '60px', border: '1px solid #ccc' }}/>
                         </div>
                     )}
-                    <div className={i983_styles.i983_signatureCanvasWrapper}><SignatureCanvas ref={sigCanvasSec2} canvasProps={{ className: i983_styles.i983_signatureCanvas }} /></div>
-                    <button type="button" onClick={() => clearSignature(sigCanvasSec2)} className={`${i983_styles.i983_button} ${i983_styles.i983_clearButton}`}>Clear Signature</button>
+                    
+                    {/* Signature Type Selection */}
+                    <div style={{ marginBottom: '15px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+                        <p style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: '500' }}>Choose signature method:</p>
+                        <div style={{ display: 'flex', gap: '20px' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                <input type="radio" name="signatureTypeSec2" value="canvas" checked={signatureTypeSec2 === 'canvas'} onChange={(e) => setSignatureTypeSec2(e.target.value)} style={{ marginRight: '8px' }} />
+                                Draw Signature
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                <input type="radio" name="signatureTypeSec2" value="pdf" checked={signatureTypeSec2 === 'pdf'} onChange={(e) => setSignatureTypeSec2(e.target.value)} style={{ marginRight: '8px' }} />
+                                Upload Signature PDF
+                            </label>
+                        </div>
+                    </div>
+
+                    {/* Canvas Signature Option */}
+                    {signatureTypeSec2 === 'canvas' && (
+                        <>
+                            <div className={i983_styles.i983_signatureCanvasWrapper}><SignatureCanvas ref={sigCanvasSec2} canvasProps={{ className: i983_styles.i983_signatureCanvas }} /></div>
+                            <button type="button" onClick={() => clearSignature(sigCanvasSec2)} className={`${i983_styles.i983_button} ${i983_styles.i983_clearButton}`}>Clear Signature</button>
+                        </>
+                    )}
+
+                    {/* PDF Upload Option */}
+                    {signatureTypeSec2 === 'pdf' && (
+                        <>
+                            <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#666' }}>Upload a PDF file containing your signature.</p>
+                            <div style={{ marginBottom: '10px' }}>
+                                <input type="file" ref={pdfFileInputSec2} accept="application/pdf" onChange={handlePdfFileChangeSec2} disabled={isExtractingSec2} style={{ padding: '10px', border: '2px dashed #007bff', borderRadius: '4px', width: '100%', maxWidth: '400px', backgroundColor: '#fff' }} />
+                            </div>
+                            {isExtractingSec2 && <p style={{ color: '#007bff', fontSize: '14px' }}>Extracting signature from PDF...</p>}
+                            {pdfSignaturePreviewSec2 && !isExtractingSec2 && (
+                                <div style={{ marginTop: '10px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+                                    <p style={{ margin: '0 0 10px 0', fontSize: '13px', fontWeight: 'bold', color: '#28a745' }}>✓ Signature extracted successfully:</p>
+                                    <img src={pdfSignaturePreviewSec2} alt="Extracted Signature" style={{ maxWidth: '300px', maxHeight: '100px', border: '1px solid #ccc', borderRadius: '4px', backgroundColor: '#fff' }} />
+                                    <div style={{ marginTop: '10px' }}>
+                                        <button type="button" onClick={clearPdfSignatureSec2} className={`${i983_styles.i983_button} ${i983_styles.i983_clearButton}`}>Remove & Upload Different PDF</button>
+                                    </div>
+                                </div>
+                            )}
+                        </>
+                    )}
                 </div>
             </div>
             {renderPageButtons()}
@@ -535,8 +741,49 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
                     {existingForm?.EVAL1_STUDENT_SIGNATURE_URL && (
                         <div className={i983_styles.i983_signatureDisplay} style={{ marginBottom: '10px' }}><p>Current Signature:</p><img src={existingForm.EVAL1_STUDENT_SIGNATURE_URL} alt="Current Eval 1 Sig" style={{ maxHeight: '60px', border: '1px solid #ccc' }}/></div>
                     )}
-                    <div className={i983_styles.i983_signatureCanvasWrapper}><SignatureCanvas ref={sigCanvasEval1Student} canvasProps={{ className: i983_styles.i983_signatureCanvas }} /></div>
-                    <button type="button" onClick={() => clearSignature(sigCanvasEval1Student)} className={`${i983_styles.i983_button} ${i983_styles.i983_clearButton}`}>Clear</button>
+                    
+                    {/* Signature Type Selection */}
+                    <div style={{ marginBottom: '15px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+                        <p style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: '500' }}>Choose signature method:</p>
+                        <div style={{ display: 'flex', gap: '20px' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                <input type="radio" name="signatureTypeEval1" value="canvas" checked={signatureTypeEval1 === 'canvas'} onChange={(e) => setSignatureTypeEval1(e.target.value)} style={{ marginRight: '8px' }} />
+                                Draw Signature
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                <input type="radio" name="signatureTypeEval1" value="pdf" checked={signatureTypeEval1 === 'pdf'} onChange={(e) => setSignatureTypeEval1(e.target.value)} style={{ marginRight: '8px' }} />
+                                Upload Signature PDF
+                            </label>
+                        </div>
+                    </div>
+
+                    {/* Canvas Signature Option */}
+                    {signatureTypeEval1 === 'canvas' && (
+                        <>
+                            <div className={i983_styles.i983_signatureCanvasWrapper}><SignatureCanvas ref={sigCanvasEval1Student} canvasProps={{ className: i983_styles.i983_signatureCanvas }} /></div>
+                            <button type="button" onClick={() => clearSignature(sigCanvasEval1Student)} className={`${i983_styles.i983_button} ${i983_styles.i983_clearButton}`}>Clear</button>
+                        </>
+                    )}
+
+                    {/* PDF Upload Option */}
+                    {signatureTypeEval1 === 'pdf' && (
+                        <>
+                            <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#666' }}>Upload a PDF file containing your signature.</p>
+                            <div style={{ marginBottom: '10px' }}>
+                                <input type="file" ref={pdfFileInputEval1} accept="application/pdf" onChange={handlePdfFileChangeEval1} disabled={isExtractingEval1} style={{ padding: '10px', border: '2px dashed #007bff', borderRadius: '4px', width: '100%', maxWidth: '400px', backgroundColor: '#fff' }} />
+                            </div>
+                            {isExtractingEval1 && <p style={{ color: '#007bff', fontSize: '14px' }}>Extracting signature from PDF...</p>}
+                            {pdfSignaturePreviewEval1 && !isExtractingEval1 && (
+                                <div style={{ marginTop: '10px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+                                    <p style={{ margin: '0 0 10px 0', fontSize: '13px', fontWeight: 'bold', color: '#28a745' }}>✓ Signature extracted successfully:</p>
+                                    <img src={pdfSignaturePreviewEval1} alt="Extracted Signature" style={{ maxWidth: '300px', maxHeight: '100px', border: '1px solid #ccc', borderRadius: '4px', backgroundColor: '#fff' }} />
+                                    <div style={{ marginTop: '10px' }}>
+                                        <button type="button" onClick={clearPdfSignatureEval1} className={`${i983_styles.i983_button} ${i983_styles.i983_clearButton}`}>Remove & Upload Different PDF</button>
+                                    </div>
+                                </div>
+                            )}
+                        </>
+                    )}
                 </div>
 
                 {/* Employer Signature (Read-Only) */}
@@ -570,8 +817,49 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
                     {existingForm?.EVAL2_STUDENT_SIGNATURE_URL && (
                         <div className={i983_styles.i983_signatureDisplay} style={{ marginBottom: '10px' }}><p>Current Signature:</p><img src={existingForm.EVAL2_STUDENT_SIGNATURE_URL} alt="Current Eval 2 Sig" style={{ maxHeight: '60px', border: '1px solid #ccc' }}/></div>
                     )}
-                    <div className={i983_styles.i983_signatureCanvasWrapper}><SignatureCanvas ref={sigCanvasEval2Student} canvasProps={{ className: i983_styles.i983_signatureCanvas }} /></div>
-                    <button type="button" onClick={() => clearSignature(sigCanvasEval2Student)} className={`${i983_styles.i983_button} ${i983_styles.i983_clearButton}`}>Clear</button>
+                    
+                    {/* Signature Type Selection */}
+                    <div style={{ marginBottom: '15px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+                        <p style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: '500' }}>Choose signature method:</p>
+                        <div style={{ display: 'flex', gap: '20px' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                <input type="radio" name="signatureTypeEval2" value="canvas" checked={signatureTypeEval2 === 'canvas'} onChange={(e) => setSignatureTypeEval2(e.target.value)} style={{ marginRight: '8px' }} />
+                                Draw Signature
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                <input type="radio" name="signatureTypeEval2" value="pdf" checked={signatureTypeEval2 === 'pdf'} onChange={(e) => setSignatureTypeEval2(e.target.value)} style={{ marginRight: '8px' }} />
+                                Upload Signature PDF
+                            </label>
+                        </div>
+                    </div>
+
+                    {/* Canvas Signature Option */}
+                    {signatureTypeEval2 === 'canvas' && (
+                        <>
+                            <div className={i983_styles.i983_signatureCanvasWrapper}><SignatureCanvas ref={sigCanvasEval2Student} canvasProps={{ className: i983_styles.i983_signatureCanvas }} /></div>
+                            <button type="button" onClick={() => clearSignature(sigCanvasEval2Student)} className={`${i983_styles.i983_button} ${i983_styles.i983_clearButton}`}>Clear</button>
+                        </>
+                    )}
+
+                    {/* PDF Upload Option */}
+                    {signatureTypeEval2 === 'pdf' && (
+                        <>
+                            <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#666' }}>Upload a PDF file containing your signature.</p>
+                            <div style={{ marginBottom: '10px' }}>
+                                <input type="file" ref={pdfFileInputEval2} accept="application/pdf" onChange={handlePdfFileChangeEval2} disabled={isExtractingEval2} style={{ padding: '10px', border: '2px dashed #007bff', borderRadius: '4px', width: '100%', maxWidth: '400px', backgroundColor: '#fff' }} />
+                            </div>
+                            {isExtractingEval2 && <p style={{ color: '#007bff', fontSize: '14px' }}>Extracting signature from PDF...</p>}
+                            {pdfSignaturePreviewEval2 && !isExtractingEval2 && (
+                                <div style={{ marginTop: '10px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+                                    <p style={{ margin: '0 0 10px 0', fontSize: '13px', fontWeight: 'bold', color: '#28a745' }}>✓ Signature extracted successfully:</p>
+                                    <img src={pdfSignaturePreviewEval2} alt="Extracted Signature" style={{ maxWidth: '300px', maxHeight: '100px', border: '1px solid #ccc', borderRadius: '4px', backgroundColor: '#fff' }} />
+                                    <div style={{ marginTop: '10px' }}>
+                                        <button type="button" onClick={clearPdfSignatureEval2} className={`${i983_styles.i983_button} ${i983_styles.i983_clearButton}`}>Remove & Upload Different PDF</button>
+                                    </div>
+                                </div>
+                            )}
+                        </>
+                    )}
                 </div>
 
                 {/* Employer Signature (Read-Only) */}

@@ -25,7 +25,7 @@ async function uploadW9VerifierSignature(base64Data, formId) {
     const base64Image = base64Data.replace(/^data:image\/\w+;base64,/, '');
     const buffer = Buffer.from(base64Image, 'base64');
     
-    const publicDir = path.join(process.cwd(), 'public', 'signatures');
+    const publicDir = path.join(process.cwd(), 'public', 'uploads', 'forms_signatures');
     await fs.mkdir(publicDir, { recursive: true });
     
     const filename = `form_w9_${formId}_verifier.png`;
@@ -33,7 +33,7 @@ async function uploadW9VerifierSignature(base64Data, formId) {
     
     await fs.writeFile(filePath, buffer);
     
-    return { success: true, path: `/signatures/${filename}` };
+    return { success: true, path: `/uploads/forms_signatures/${filename}` };
   } catch (error) {
     console.error('Error uploading W-9 verifier signature:', error);
     return { success: false, error: error.message };

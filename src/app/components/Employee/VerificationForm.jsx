@@ -48,6 +48,7 @@ const VerificationForm = ({
   const [error, setError] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const sigCanvas = useRef(null);
+  const [timestamp] = useState(Date.now()); // Used for cache-busting images
   
   // Signature type: 'canvas' or 'pdf'
   const [signatureType, setSignatureType] = useState('canvas');
@@ -449,9 +450,9 @@ const VerificationForm = ({
                 <label>Employee Signature:</label>
                 <div className={styles.signatureDisplay}>
                   <img 
-                    src={form.EMPLOYEE_SIGNATURE_URL} 
+                    src={`${form.EMPLOYEE_SIGNATURE_URL}?t=${timestamp}`} 
                     alt="Employee Signature"
-                    style={{ maxWidth: '300px', border: '1px solid #ccc' }}
+                    style={{ maxWidth: '300px', border: '1px solid #ccc', borderRadius: '4px' }}
                   />
                 </div>
               </div>
@@ -744,9 +745,9 @@ const VerificationForm = ({
                   <label>Employer/Verifier Signature</label>
                   <div className={styles.signatureDisplay}>
                     <img 
-                      src={form.VERIFIER_SIGNATURE_URL} 
+                      src={`${form.VERIFIER_SIGNATURE_URL}?t=${timestamp}`} 
                       alt="Employer Signature"
-                      style={{ maxWidth: '300px', border: '1px solid #ccc' }}
+                      style={{ maxWidth: '300px', border: '1px solid #ccc', borderRadius: '4px' }}
                     />
                   </div>
                 </div>

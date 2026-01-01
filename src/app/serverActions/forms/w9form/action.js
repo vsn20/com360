@@ -27,7 +27,7 @@ async function uploadW9Signature(base64Data, formId) {
     
     if (buffer.length > 5 * 1024 * 1024) throw new Error('Signature file too large (max 5MB)');
     
-    const publicDir = path.join(process.cwd(), 'public', 'signatures');
+    const publicDir = path.join(process.cwd(), 'public', 'uploads', 'forms_signatures');
     await fs.mkdir(publicDir, { recursive: true });
     
     const filename = `form_w9_${formId}_employee.png`;
@@ -36,7 +36,7 @@ async function uploadW9Signature(base64Data, formId) {
     await fs.writeFile(filePath, buffer);
     const hash = generateSignatureHash(base64Image);
     
-    return { success: true, path: `/signatures/${filename}`, hash };
+    return { success: true, path: `/uploads/forms_signatures/${filename}`, hash };
   } catch (error) {
     console.error('Error uploading W-9 signature:', error);
     return { success: false, error: error.message };
