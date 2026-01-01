@@ -27,24 +27,39 @@ export async function POST(request) {
     const isOfferLetterPath = pathname && pathname.match(/^\/uploads\/offerletter\/[^_]+_[^/]+\.pdf$/);
     const isDocumentsPath = pathname && pathname.match(/^\/public\/uploads\/documents\/.*$/); // Unrestricted access to /public/uploads/documents
     const isProfilePhotoPath = pathname && pathname.match(/^\/public\/uploads\/profile_photos\/.*$/); // Unrestricted access to /public/uploads/profile_photos
+    
+    // --- ADDED: Check for Logo Path ---
     const isLogoPath = pathname && pathname.match(/^\/COM360LOGOS\.jpg$/); 
 
-    // --- UPDATED LOGIC: Allow authenticated access without strict ID prefix matching ---
+    // --- UPDATED: Included isLogoPath in the condition ---
     if (isUploadPath || isResumePath || isOfferLetterPath || isDocumentsPath || isProfilePhotoPath || isLogoPath) {
-      
-      // We log the access for security auditing, but we do NOT block based on filename prefix anymore.
-      // This fixes the issue where Application IDs that don't start with the Org ID were being blocked.
+      // Check if the applicationid prefix (from pathname) matches orgid for resume or offer letter paths
       if (isResumePath || isOfferLetterPath) {
-         console.log(`Access granted to document ${pathname} for authenticated empid ${empid} (Org: ${orgid})`);
+        const applicationidMatch = pathname.match(/^\/uploads\/(resumes|offerletter)\/([^_]+)_/);
+        if (applicationidMatch) {
+          // Extract the full Application ID (e.g. "39-1")
+          const fullAppId = applicationidMatch[2];
+          
+          // ✅ FIX: Split by '-' to get the full Org ID prefix (e.g. "39" from "39-1") instead of just the first char
+          const fileOrgPrefix = parseInt(fullAppId.split('-')[0]);
+          
+          if (fileOrgPrefix === parseInt(orgid)) {
+            console.log(`Access granted to ${pathname} for empid ${empid} (${isResumePath ? 'resume' : 'offer letter'} path with matching orgid ${orgid})`);
+            return NextResponse.json({ success: true, accessibleItems: [] });
+          } else {
+            console.log(`Access denied to ${pathname} for empid ${empid} (orgid mismatch: ${fileOrgPrefix} vs ${orgid})`);
+            return NextResponse.json({ error: 'Access denied due to orgid mismatch', accessibleItems: [] }, { status: 403 });
+          }
+        }
       }
       
-      // Allow unrestricted access if it is a document, profile photo, or logo
+      // --- UPDATED: Allow unrestricted access if it is a document, profile photo, OR LOGO ---
       if (isDocumentsPath || isProfilePhotoPath || isLogoPath) {
         console.log(`Unrestricted access granted to ${pathname} for empid ${empid} (static resource path)`);
         return NextResponse.json({ success: true, accessibleItems: [] });
       }
       
-      // Default allow for authenticated employees accessing uploads/resumes/offerletters
+      console.log(`Universal access granted to ${pathname} for empid ${empid} (upload path)`);
       return NextResponse.json({ success: true, accessibleItems: [] });
     }
 
@@ -277,6 +292,9 @@ export async function POST(request) {
         priority: 10003,
       });
     }
+
+    //accessibleItems.sort((a, b) => a.priority - b.priority);
+    // console.log("Accessible items for user:", JSON.stringify(accessibleItems, null, 2));
 
     if (!pathname) {
       return NextResponse.json({ success: true, accessibleItems });

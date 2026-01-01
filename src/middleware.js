@@ -174,12 +174,14 @@ export async function middleware(request) {
       if (verifyResponse.ok && result.success) {
         const decoded = decodeJwt(tokenToUse);
         if (decoded && decoded.orgid) {
-          const appIdFirstChar = parseInt(applicationId.charAt(0));
-          if (appIdFirstChar === parseInt(decoded.orgid)) {
+          // ✅ FIX: Split application ID by '-' to check full Org ID prefix (e.g. 39 from 39-1)
+          const appIdOrgPrefix = parseInt(applicationId.split('-')[0]);
+          
+          if (appIdOrgPrefix === parseInt(decoded.orgid)) {
             console.log(`Access granted to offer letter path ${pathname} for orgid ${decoded.orgid} and applicationId ${applicationId}`);
             return NextResponse.next();
           } else {
-            console.log(`Access denied to ${pathname} for orgid ${decoded.orgid} (orgid mismatch with ${appIdFirstChar})`);
+            console.log(`Access denied to ${pathname} for orgid ${decoded.orgid} (orgid mismatch with ${appIdOrgPrefix})`);
             return new Response(JSON.stringify({ error: 'Unauthorized: orgid mismatch' }), {
               status: 403,
               headers: { 'Content-Type': 'application/json' },
@@ -240,12 +242,14 @@ export async function middleware(request) {
         if (verifyResponse.ok && result.success) {
           const decoded = decodeJwt(tokenToUse);
           if (decoded && decoded.orgid) {
-            const appIdFirstChar = parseInt(applicationId.charAt(0));
-            if (appIdFirstChar === parseInt(decoded.orgid)) {
+            // ✅ FIX: Split application ID by '-' to check full Org ID prefix
+            const appIdOrgPrefix = parseInt(applicationId.split('-')[0]);
+            
+            if (appIdOrgPrefix === parseInt(decoded.orgid)) {
               console.log(`Access granted to resume path ${pathname} for orgid ${decoded.orgid} and applicationId ${applicationId}`);
               return NextResponse.next();
             } else {
-              console.log(`Access denied to ${pathname} for orgid ${decoded.orgid} (orgid mismatch with ${appIdFirstChar})`);
+              console.log(`Access denied to ${pathname} for orgid ${decoded.orgid} (orgid mismatch with ${appIdOrgPrefix})`);
               return new Response(JSON.stringify({ error: 'Unauthorized: orgid mismatch' }), {
                 status: 403,
                 headers: { 'Content-Type': 'application/json' },
