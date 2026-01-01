@@ -447,8 +447,8 @@ const I9Forms = ({
       // Dynamically import pdfjs-dist for client-side PDF rendering
       const pdfjsLib = await import('pdfjs-dist');
       
-      // Set worker source - use CDN for compatibility
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+      // Set worker source - use local file for EC2/production (no external CDN dependency)
+      pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
       // Read file as ArrayBuffer for PDF.js
       const arrayBuffer = await file.arrayBuffer();

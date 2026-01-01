@@ -486,6 +486,7 @@ export async function middleware(request) {
 
 export const config = {
   matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico|.well-known).*)',
+    // Exclude static assets EXCEPT /signatures/ and /expenses/ which need auth
+    '/((?!api|_next/static|_next/image|favicon.ico|.well-known|pdf\\.worker\\.min\\.mjs).*)',
   ],
 };

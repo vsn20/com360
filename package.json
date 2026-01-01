@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -H 0.0.0.0 -p 3000",
+    "prebuild": "cp node_modules/pdfjs-dist/build/pdf.worker.min.mjs public/ || copy node_modules\\pdfjs-dist\\build\\pdf.worker.min.mjs public\\",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
