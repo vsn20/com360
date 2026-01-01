@@ -95,8 +95,8 @@ export default function AddContactForm({
   const [formData, setFormData] = useState({
     ACCOUNT_ID: '',
     SUBORGID: '',
-    CONTACT_TYPE_CD: '',
     EMAIL: '',
+    ALT_EMAIL: '',
     PHONE: '',
     MOBILE: '',
     FAX: '',
@@ -126,11 +126,13 @@ export default function AddContactForm({
         ...prev,
         ACCOUNT_ID: prefilledData.ACCOUNT_ID !== null ? prefilledData.ACCOUNT_ID : prev.ACCOUNT_ID,
         SUBORGID: prefilledData.SUBORGID !== null ? prefilledData.SUBORGID : prev.SUBORGID,
-        CONTACT_TYPE_CD: prefilledData.CONTACT_TYPE_CD !== null ? prefilledData.CONTACT_TYPE_CD : prev.CONTACT_TYPE_CD,
+        // Map all fields from AI
         EMAIL: prefilledData.EMAIL !== null ? prefilledData.EMAIL : prev.EMAIL,
+        ALT_EMAIL: prefilledData.ALT_EMAIL !== null ? prefilledData.ALT_EMAIL : prev.ALT_EMAIL,
         PHONE: prefilledData.PHONE !== null ? prefilledData.PHONE : prev.PHONE,
         MOBILE: prefilledData.MOBILE !== null ? prefilledData.MOBILE : prev.MOBILE,
         FAX: prefilledData.FAX !== null ? prefilledData.FAX : prev.FAX,
+        // Address mappings
         HOME_ADDR_LINE1: prefilledData.HOME_ADDR_LINE1 !== null ? prefilledData.HOME_ADDR_LINE1 : prev.HOME_ADDR_LINE1,
         HOME_ADDR_LINE2: prefilledData.HOME_ADDR_LINE2 !== null ? prefilledData.HOME_ADDR_LINE2 : prev.HOME_ADDR_LINE2,
         HOME_ADDR_LINE3: prefilledData.HOME_ADDR_LINE3 !== null ? prefilledData.HOME_ADDR_LINE3 : prev.HOME_ADDR_LINE3,
@@ -154,7 +156,7 @@ export default function AddContactForm({
   // Auto-fill Suborganization
   useEffect(() => {
     if (formData.ACCOUNT_ID) {
-      const selectedAccount = accounts.find((a) => a.ACCNT_ID == formData.ACCOUNT_ID);
+      const selectedAccount = accounts.find((a) => String(a.ACCNT_ID) === String(formData.ACCOUNT_ID));
       if (selectedAccount && selectedAccount.suborgid) {
         setFormData((prev) => ({ ...prev, SUBORGID: selectedAccount.suborgid }));
         const suborg = suborgs.find((s) => s.suborgid === selectedAccount.suborgid);
@@ -195,8 +197,6 @@ export default function AddContactForm({
     }));
   };
 
-  const contactType = formData.CONTACT_TYPE_CD;
-
   return (
     <div className="contact_add-container">
       <div className="contact_header-section">
@@ -227,30 +227,31 @@ export default function AddContactForm({
               <input type="hidden" name="SUBORGID" value={formData.SUBORGID} />
             </div>
           </div>
+          
+          {/* ✅ ALL FIELDS DISPLAYED */}
           <div className="contact_form-row">
             <div className="contact_form-group">
-              <label>Contact Type*</label>
-              <select name="CONTACT_TYPE_CD" value={formData.CONTACT_TYPE_CD} onChange={handleChange} required>
-                <option value="">Select Contact Type</option>
-                <option value="Email">Email</option>
-                <option value="Phone">Phone</option>
-                <option value="Mobile">Mobile</option>
-                <option value="Fax">Fax</option>
-              </select>
+              <label>Email*</label>
+              <input type="email" name="EMAIL" value={formData.EMAIL} onChange={handleChange} required />
             </div>
-            {/* Dynamic Contact Fields */}
-            {contactType === 'Email' && (
-              <div className="contact_form-group"><label>Email Address*</label><input type="email" name="EMAIL" value={formData.EMAIL} onChange={handleChange} required /></div>
-            )}
-            {contactType === 'Phone' && (
-              <div className="contact_form-group"><label>Phone Number*</label><input type="tel" name="PHONE" value={formData.PHONE} onChange={handleChange} required /></div>
-            )}
-            {contactType === 'Mobile' && (
-              <div className="contact_form-group"><label>Mobile Number*</label><input type="tel" name="MOBILE" value={formData.MOBILE} onChange={handleChange} required /></div>
-            )}
-            {contactType === 'Fax' && (
-              <div className="contact_form-group"><label>Fax Number*</label><input type="tel" name="FAX" value={formData.FAX} onChange={handleChange} required /></div>
-            )}
+            <div className="contact_form-group">
+              <label>Alternate Email</label>
+              <input type="email" name="ALT_EMAIL" value={formData.ALT_EMAIL} onChange={handleChange} />
+            </div>
+          </div>
+          <div className="contact_form-row">
+            <div className="contact_form-group">
+              <label>Phone</label>
+              <input type="tel" name="PHONE" value={formData.PHONE} onChange={handleChange} />
+            </div>
+            <div className="contact_form-group">
+              <label>Mobile</label>
+              <input type="tel" name="MOBILE" value={formData.MOBILE} onChange={handleChange} />
+            </div>
+            <div className="contact_form-group">
+              <label>Fax</label>
+              <input type="tel" name="FAX" value={formData.FAX} onChange={handleChange} />
+            </div>
           </div>
         </div>
 

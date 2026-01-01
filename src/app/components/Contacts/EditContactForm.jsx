@@ -155,15 +155,12 @@ export default function EditContactForm({
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Section Editing States
   const [editingCoreInfo, setEditingCoreInfo] = useState(false);
   const [editingHomeAddress, setEditingHomeAddress] = useState(false);
   const [editingMailingAddress, setEditingMailingAddress] = useState(false);
 
-  // Submenu State
   const [activeTab, setActiveTab] = useState('information');
 
-  // Helper to update suborg name display based on account ID
   const updateSuborgDisplay = (accountId, allAccounts, allSuborgs, setNameCallback) => {
     const accountIdStr = accountId ? String(accountId) : '';
     const selectedAccount = allAccounts.find((a) => String(a.ACCNT_ID) === accountIdStr);
@@ -178,7 +175,6 @@ export default function EditContactForm({
     }
   };
 
-  // Fetch contact details when component mounts or ID changes
   useEffect(() => {
     let isMounted = true;
     if (selectedContactId) {
@@ -239,9 +235,6 @@ export default function EditContactForm({
   // AI Prefilled Data Application
   useEffect(() => {
     if (aiPrefilledData && contactDetails && formData) {
-      console.log('Applying AI prefilled data:', aiPrefilledData);
-      
-      // Determine which sections have data to edit
       let hasCore = false;
       let hasHome = false;
       let hasMailing = false;
@@ -249,8 +242,8 @@ export default function EditContactForm({
       // Check Core Info fields
       if (
         aiPrefilledData.ACCOUNT_ID !== null ||
-        aiPrefilledData.CONTACT_TYPE_CD !== null ||
         aiPrefilledData.EMAIL !== null ||
+        aiPrefilledData.ALT_EMAIL !== null ||
         aiPrefilledData.PHONE !== null ||
         aiPrefilledData.MOBILE !== null ||
         aiPrefilledData.FAX !== null
@@ -286,156 +279,70 @@ export default function EditContactForm({
         hasMailing = true;
       }
 
-      // Auto-activate editing mode and switch tabs
       if (hasCore) {
         setEditingCoreInfo(true);
         setActiveTab('information');
       } else if (hasHome || hasMailing) {
-        // If only address data, switch to address tab
         setActiveTab('address');
         if (hasHome) setEditingHomeAddress(true);
         if (hasMailing) setEditingMailingAddress(true);
       }
 
-      // Apply AI data to form with proper state/custom state handling
       setFormData(prev => {
         if (!prev) return null;
-
         const newForm = { ...prev };
 
-        // === Core Info Fields ===
         if (aiPrefilledData.ACCOUNT_ID !== null) {
           newForm.ACCOUNT_ID = String(aiPrefilledData.ACCOUNT_ID);
-          // Update suborg based on new account
           const newSuborgId = updateSuborgDisplay(aiPrefilledData.ACCOUNT_ID, accounts, suborgs, setSuborgName);
           newForm.SUBORGID = newSuborgId;
         }
         
-        if (aiPrefilledData.SUBORGID !== null) {
-          newForm.SUBORGID = String(aiPrefilledData.SUBORGID);
-        }
-        
-        if (aiPrefilledData.CONTACT_TYPE_CD !== null) {
-          newForm.CONTACT_TYPE_CD = aiPrefilledData.CONTACT_TYPE_CD;
-        }
-        
-        if (aiPrefilledData.EMAIL !== null) {
-          newForm.EMAIL = aiPrefilledData.EMAIL;
-        }
-        
-        if (aiPrefilledData.PHONE !== null) {
-          newForm.PHONE = aiPrefilledData.PHONE;
-        }
-        
-        if (aiPrefilledData.MOBILE !== null) {
-          newForm.MOBILE = aiPrefilledData.MOBILE;
-        }
-        
-        if (aiPrefilledData.FAX !== null) {
-          newForm.FAX = aiPrefilledData.FAX;
-        }
+        if (aiPrefilledData.SUBORGID !== null) newForm.SUBORGID = String(aiPrefilledData.SUBORGID);
+        if (aiPrefilledData.EMAIL !== null) newForm.EMAIL = aiPrefilledData.EMAIL;
+        if (aiPrefilledData.ALT_EMAIL !== null) newForm.ALT_EMAIL = aiPrefilledData.ALT_EMAIL;
+        if (aiPrefilledData.PHONE !== null) newForm.PHONE = aiPrefilledData.PHONE;
+        if (aiPrefilledData.MOBILE !== null) newForm.MOBILE = aiPrefilledData.MOBILE;
+        if (aiPrefilledData.FAX !== null) newForm.FAX = aiPrefilledData.FAX;
 
-        // === Home Address Fields ===
-        if (aiPrefilledData.HOME_ADDR_LINE1 !== null) {
-          newForm.HOME_ADDR_LINE1 = aiPrefilledData.HOME_ADDR_LINE1;
-        }
-        
-        if (aiPrefilledData.HOME_ADDR_LINE2 !== null) {
-          newForm.HOME_ADDR_LINE2 = aiPrefilledData.HOME_ADDR_LINE2;
-        }
-        
-        if (aiPrefilledData.HOME_ADDR_LINE3 !== null) {
-          newForm.HOME_ADDR_LINE3 = aiPrefilledData.HOME_ADDR_LINE3;
-        }
-        
-        if (aiPrefilledData.HOME_CITY !== null) {
-          newForm.HOME_CITY = aiPrefilledData.HOME_CITY;
-        }
-        
-        if (aiPrefilledData.HOME_POSTAL_CODE !== null) {
-          newForm.HOME_POSTAL_CODE = aiPrefilledData.HOME_POSTAL_CODE;
-        }
+        if (aiPrefilledData.HOME_ADDR_LINE1 !== null) newForm.HOME_ADDR_LINE1 = aiPrefilledData.HOME_ADDR_LINE1;
+        if (aiPrefilledData.HOME_ADDR_LINE2 !== null) newForm.HOME_ADDR_LINE2 = aiPrefilledData.HOME_ADDR_LINE2;
+        if (aiPrefilledData.HOME_ADDR_LINE3 !== null) newForm.HOME_ADDR_LINE3 = aiPrefilledData.HOME_ADDR_LINE3;
+        if (aiPrefilledData.HOME_CITY !== null) newForm.HOME_CITY = aiPrefilledData.HOME_CITY;
+        if (aiPrefilledData.HOME_POSTAL_CODE !== null) newForm.HOME_POSTAL_CODE = aiPrefilledData.HOME_POSTAL_CODE;
 
-        // Handle Home Country and State/Custom State
         if (aiPrefilledData.HOME_COUNTRY_ID !== null) {
           const homeCountryId = String(aiPrefilledData.HOME_COUNTRY_ID);
           newForm.HOME_COUNTRY_ID = homeCountryId;
           const isHomeUS = homeCountryId === '185';
-          
           if (isHomeUS) {
-            // US selected - use state dropdown
-            if (aiPrefilledData.HOME_STATE_ID !== null) {
-              newForm.HOME_STATE_ID = String(aiPrefilledData.HOME_STATE_ID);
-            }
-            newForm.HOME_CUSTOM_STATE = ''; // Clear custom state
+            if (aiPrefilledData.HOME_STATE_ID !== null) newForm.HOME_STATE_ID = String(aiPrefilledData.HOME_STATE_ID);
+            newForm.HOME_CUSTOM_STATE = ''; 
           } else {
-            // Non-US - use custom state
-            newForm.HOME_STATE_ID = ''; // Clear state dropdown
-            if (aiPrefilledData.HOME_CUSTOM_STATE !== null) {
-              newForm.HOME_CUSTOM_STATE = aiPrefilledData.HOME_CUSTOM_STATE;
-            }
-          }
-        } else {
-          // Country not changed by AI, but state might be
-          if (aiPrefilledData.HOME_STATE_ID !== null) {
-            newForm.HOME_STATE_ID = String(aiPrefilledData.HOME_STATE_ID);
-          }
-          if (aiPrefilledData.HOME_CUSTOM_STATE !== null) {
-            newForm.HOME_CUSTOM_STATE = aiPrefilledData.HOME_CUSTOM_STATE;
+            newForm.HOME_STATE_ID = ''; 
+            if (aiPrefilledData.HOME_CUSTOM_STATE !== null) newForm.HOME_CUSTOM_STATE = aiPrefilledData.HOME_CUSTOM_STATE;
           }
         }
 
-        // === Mailing Address Fields ===
-        if (aiPrefilledData.MAILING_ADDR_LINE1 !== null) {
-          newForm.MAILING_ADDR_LINE1 = aiPrefilledData.MAILING_ADDR_LINE1;
-        }
-        
-        if (aiPrefilledData.MAILING_ADDR_LINE2 !== null) {
-          newForm.MAILING_ADDR_LINE2 = aiPrefilledData.MAILING_ADDR_LINE2;
-        }
-        
-        if (aiPrefilledData.MAILING_ADDR_LINE3 !== null) {
-          newForm.MAILING_ADDR_LINE3 = aiPrefilledData.MAILING_ADDR_LINE3;
-        }
-        
-        if (aiPrefilledData.MAILING_CITY !== null) {
-          newForm.MAILING_CITY = aiPrefilledData.MAILING_CITY;
-        }
-        
-        if (aiPrefilledData.MAILING_POSTAL_CODE !== null) {
-          newForm.MAILING_POSTAL_CODE = aiPrefilledData.MAILING_POSTAL_CODE;
-        }
+        if (aiPrefilledData.MAILING_ADDR_LINE1 !== null) newForm.MAILING_ADDR_LINE1 = aiPrefilledData.MAILING_ADDR_LINE1;
+        if (aiPrefilledData.MAILING_ADDR_LINE2 !== null) newForm.MAILING_ADDR_LINE2 = aiPrefilledData.MAILING_ADDR_LINE2;
+        if (aiPrefilledData.MAILING_ADDR_LINE3 !== null) newForm.MAILING_ADDR_LINE3 = aiPrefilledData.MAILING_ADDR_LINE3;
+        if (aiPrefilledData.MAILING_CITY !== null) newForm.MAILING_CITY = aiPrefilledData.MAILING_CITY;
+        if (aiPrefilledData.MAILING_POSTAL_CODE !== null) newForm.MAILING_POSTAL_CODE = aiPrefilledData.MAILING_POSTAL_CODE;
 
-        // Handle Mailing Country and State/Custom State
         if (aiPrefilledData.MAILING_COUNTRY_ID !== null) {
           const mailingCountryId = String(aiPrefilledData.MAILING_COUNTRY_ID);
           newForm.MAILING_COUNTRY_ID = mailingCountryId;
           const isMailingUS = mailingCountryId === '185';
-          
           if (isMailingUS) {
-            // US selected - use state dropdown
-            if (aiPrefilledData.MAILING_STATE_ID !== null) {
-              newForm.MAILING_STATE_ID = String(aiPrefilledData.MAILING_STATE_ID);
-            }
-            newForm.MAILING_CUSTOM_STATE = ''; // Clear custom state
+            if (aiPrefilledData.MAILING_STATE_ID !== null) newForm.MAILING_STATE_ID = String(aiPrefilledData.MAILING_STATE_ID);
+            newForm.MAILING_CUSTOM_STATE = '';
           } else {
-            // Non-US - use custom state
-            newForm.MAILING_STATE_ID = ''; // Clear state dropdown
-            if (aiPrefilledData.MAILING_CUSTOM_STATE !== null) {
-              newForm.MAILING_CUSTOM_STATE = aiPrefilledData.MAILING_CUSTOM_STATE;
-            }
-          }
-        } else {
-          // Country not changed by AI, but state might be
-          if (aiPrefilledData.MAILING_STATE_ID !== null) {
-            newForm.MAILING_STATE_ID = String(aiPrefilledData.MAILING_STATE_ID);
-          }
-          if (aiPrefilledData.MAILING_CUSTOM_STATE !== null) {
-            newForm.MAILING_CUSTOM_STATE = aiPrefilledData.MAILING_CUSTOM_STATE;
+            newForm.MAILING_STATE_ID = '';
+            if (aiPrefilledData.MAILING_CUSTOM_STATE !== null) newForm.MAILING_CUSTOM_STATE = aiPrefilledData.MAILING_CUSTOM_STATE;
           }
         }
 
-        console.log('New form data after AI application:', newForm);
         return newForm;
       });
     }
@@ -450,13 +357,11 @@ export default function EditContactForm({
       if (!prev) return null;
       const newFormData = { ...prev, [name]: value };
 
-      // If the account ID changed, update the suborg fields
       if (name === 'ACCOUNT_ID') {
         const newSuborgId = updateSuborgDisplay(value, accounts, suborgs, setSuborgName);
         newFormData.SUBORGID = newSuborgId;
       }
 
-      // If country changes, clear the irrelevant state field
       if (name === 'HOME_COUNTRY_ID') {
         const isNowUS = String(value) === '185';
         newFormData.HOME_STATE_ID = isNowUS ? (prev.HOME_STATE_ID || '') : '';
@@ -471,7 +376,6 @@ export default function EditContactForm({
         newFormData.MAILING_COUNTRY_ID = String(value);
       }
 
-      // Ensure state ID is stored as string if selected
       if (name === 'HOME_STATE_ID' || name === 'MAILING_STATE_ID') {
         newFormData[name] = String(value);
       }
@@ -524,21 +428,10 @@ export default function EditContactForm({
     setError(null);
     setSuccess(null);
 
-    // Basic Validations
+    // Basic Validations for Core section
     if (section === 'core') {
       if (!formData.ACCOUNT_ID) {
         setError('Account is required.');
-        setIsSaving(false);
-        return;
-      }
-      if (!formData.CONTACT_TYPE_CD) {
-        setError('Contact Type is required.');
-        setIsSaving(false);
-        return;
-      }
-      const contactType = formData.CONTACT_TYPE_CD?.toUpperCase();
-      if (!contactType || !(formData[contactType]?.trim())) {
-        setError(`${formData.CONTACT_TYPE_CD || 'Selected Contact Type'} value is required.`);
         setIsSaving(false);
         return;
       }
@@ -591,8 +484,6 @@ export default function EditContactForm({
     }
   };
 
-  // --- Render Logic ---
-
   if (isLoading) {
     return (
       <div className="contact_edit-container">
@@ -624,8 +515,6 @@ export default function EditContactForm({
       </div>
     );
   }
-
-  const contactType = formData.CONTACT_TYPE_CD;
 
   return (
     <div className="contact_edit-container">
@@ -682,29 +571,30 @@ export default function EditContactForm({
                     <input type="hidden" name="SUBORGID" value={formData.SUBORGID || ''} />
                   </div>
                 </div>
+                {/* ✅ ALL FIELDS EDITABLE AT ONCE */}
                 <div className="contact_form-row">
                   <div className="contact_form-group">
-                    <label>Contact Type*</label>
-                    <select name="CONTACT_TYPE_CD" value={formData.CONTACT_TYPE_CD} onChange={handleChange} required>
-                      <option value="">Select Contact Type</option>
-                      <option value="Email">Email</option>
-                      <option value="Phone">Phone</option>
-                      <option value="Mobile">Mobile</option>
-                      <option value="Fax">Fax</option>
-                    </select>
+                    <label>Email Address</label>
+                    <input type="email" name="EMAIL" value={formData.EMAIL || ''} onChange={handleChange} />
                   </div>
-                  {contactType === 'Email' && (
-                    <div className="contact_form-group"><label>Email Address*</label><input type="email" name="EMAIL" value={formData.EMAIL || ''} onChange={handleChange} required /></div>
-                  )}
-                  {contactType === 'Phone' && (
-                    <div className="contact_form-group"><label>Phone Number*</label><input type="tel" name="PHONE" value={formData.PHONE || ''} onChange={handleChange} required /></div>
-                  )}
-                  {contactType === 'Mobile' && (
-                    <div className="contact_form-group"><label>Mobile Number*</label><input type="tel" name="MOBILE" value={formData.MOBILE || ''} onChange={handleChange} required /></div>
-                  )}
-                  {contactType === 'Fax' && (
-                    <div className="contact_form-group"><label>Fax Number*</label><input type="tel" name="FAX" value={formData.FAX || ''} onChange={handleChange} required /></div>
-                  )}
+                  <div className="contact_form-group">
+                    <label>Alt Email</label>
+                    <input type="email" name="ALT_EMAIL" value={formData.ALT_EMAIL || ''} onChange={handleChange} />
+                  </div>
+                </div>
+                <div className="contact_form-row">
+                  <div className="contact_form-group">
+                    <label>Phone</label>
+                    <input type="tel" name="PHONE" value={formData.PHONE || ''} onChange={handleChange} />
+                  </div>
+                  <div className="contact_form-group">
+                    <label>Mobile</label>
+                    <input type="tel" name="MOBILE" value={formData.MOBILE || ''} onChange={handleChange} />
+                  </div>
+                  <div className="contact_form-group">
+                    <label>Fax</label>
+                    <input type="tel" name="FAX" value={formData.FAX || ''} onChange={handleChange} />
+                  </div>
                 </div>
                 <div className="contact_form-buttons">
                   <button type="button" className="contact_save" onClick={() => handleSave('core')} disabled={isSaving}>
@@ -728,20 +618,15 @@ export default function EditContactForm({
                       <p>{suborgs.find(s => s.suborgid === contactDetails?.SUBORGID)?.suborgname || '-'}</p>
                     </div>
                   </div>
+                  {/* ✅ ALL FIELDS VIEWABLE */}
                   <div className="contact_details-row">
-                    <div className="contact_details-group">
-                      <label>Contact Type</label>
-                      <p>{contactDetails?.CONTACT_TYPE_CD || '-'}</p>
-                    </div>
-                    <div className="contact_details-group">
-                      <label>Contact Info</label>
-                      <p>
-                        {contactDetails?.CONTACT_TYPE_CD === 'Email' ? contactDetails.EMAIL :
-                         contactDetails?.CONTACT_TYPE_CD === 'Phone' ? contactDetails.PHONE :
-                         contactDetails?.CONTACT_TYPE_CD === 'Mobile' ? contactDetails.MOBILE :
-                         contactDetails?.CONTACT_TYPE_CD === 'Fax' ? contactDetails.FAX : '-'}
-                      </p>
-                    </div>
+                    <div className="contact_details-group"><label>Email</label><p>{contactDetails.EMAIL || '-'}</p></div>
+                    <div className="contact_details-group"><label>Alt Email</label><p>{contactDetails.ALT_EMAIL || '-'}</p></div>
+                  </div>
+                  <div className="contact_details-row">
+                    <div className="contact_details-group"><label>Phone</label><p>{contactDetails.PHONE || '-'}</p></div>
+                    <div className="contact_details-group"><label>Mobile</label><p>{contactDetails.MOBILE || '-'}</p></div>
+                    <div className="contact_details-group"><label>Fax</label><p>{contactDetails.FAX || '-'}</p></div>
                   </div>
                 </div>
               </>

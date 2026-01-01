@@ -38,14 +38,14 @@ const Overview = ({
     aliasName: '',
     businessAddrLine1: '',
     businessAddrLine2: '',
-    businessAddrLine3: '', // Used for Custom State
+    businessAddrLine3: '', 
     businessCity: '',
     businessStateId: '',
     businessCountryId: '185',
     businessPostalCode: '',
     mailingAddrLine1: '',
     mailingAddrLine2: '',
-    mailingAddrLine3: '', // Used for Custom State
+    mailingAddrLine3: '', 
     mailingCity: '',
     mailingStateId: '',
     mailingCountryId: '185',
@@ -79,17 +79,17 @@ const Overview = ({
     email: '',
     businessAddrLine1: '',
     businessAddrLine2: '',
-    businessAddrLine3: '', // Used for Custom State
+    businessAddrLine3: '', 
     businessCity: '',
     businessStateId: '',
-    businessCountryId: '185', // Default to USA
+    businessCountryId: '185', 
     businessPostalCode: '',
     mailingAddrLine1: '',
     mailingAddrLine2: '',
-    mailingAddrLine3: '', // Used for Custom State
+    mailingAddrLine3: '', 
     mailingCity: '',
     mailingStateId: '',
-    mailingCountryId: '185', // Default to USA
+    mailingCountryId: '185', 
     mailingPostalCode: '',
     suborgid: '',
     ourorg: '0'
@@ -97,10 +97,13 @@ const Overview = ({
 
   const [allAccounts, setAllAccounts] = useState(accounts);
   const [sortConfig, setSortConfig] = useState({ column: 'accntId', direction: 'asc' });
+  
+  // --- PAGINATION STATE ---
   const [currentPage, setCurrentPage] = useState(1);
   const [pageInputValue, setPageInputValue] = useState('1');
   const [accountsPerPage, setAccountsPerPage] = useState(10);
   const [accountsPerPageInput, setAccountsPerPageInput] = useState('10');
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [accountTypeFilter, setAccountTypeFilter] = useState('all');
   const [branchTypeFilter, setBranchTypeFilter] = useState('all');
@@ -125,9 +128,14 @@ const Overview = ({
     setAllAccounts(sortedAccounts);
   }, [sortConfig, accounts]);
 
+  // --- SYNC PAGINATION INPUTS ---
   useEffect(() => {
     setPageInputValue(currentPage.toString());
   }, [currentPage]);
+
+  useEffect(() => {
+    setAccountsPerPageInput(accountsPerPage.toString());
+  }, [accountsPerPage]);
 
   const formatDate = (date) => {
     if (!date) return '';
@@ -227,34 +235,24 @@ const Overview = ({
     if (section === 'mailingAddress') setEditingMailingAddress(true);
   };
 
-  // Pagination Handlers
-  const handleNextPage = () => { if (currentPage < totalPages) setCurrentPage(prev => prev + 1); };
-  const handlePrevPage = () => { if (currentPage > 1) setCurrentPage(prev => prev - 1); };
-  const handlePageInputChange = (e) => setPageInputValue(e.target.value);
-  const handlePageInputKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      const value = parseInt(pageInputValue, 10);
-      if (!isNaN(value) && value >= 1 && value <= totalPages) setCurrentPage(value);
-      else setPageInputValue(currentPage.toString());
-    }
+  // --- FILTERING ---
+  const handleSearchChange = (e) => { 
+    setSearchQuery(e.target.value); 
+    setCurrentPage(1); 
+    setPageInputValue('1');
   };
-  const handleAccountsPerPageInputChange = (e) => setAccountsPerPageInput(e.target.value);
-  const handleAccountsPerPageInputKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      const value = parseInt(e.target.value, 10);
-      if (!isNaN(value) && value >= 1) {
-        setAccountsPerPage(value);
-        setCurrentPage(1);
-        setPageInputValue('1');
-      } else {
-        setAccountsPerPageInput(accountsPerPage.toString());
-      }
-    }
+  
+  const handleAccountTypeFilterChange = (e) => { 
+    setAccountTypeFilter(e.target.value); 
+    setCurrentPage(1); 
+    setPageInputValue('1');
   };
-
-  const handleSearchChange = (e) => { setSearchQuery(e.target.value); setCurrentPage(1); };
-  const handleAccountTypeFilterChange = (e) => { setAccountTypeFilter(e.target.value); setCurrentPage(1); };
-  const handleBranchTypeFilterChange = (e) => { setBranchTypeFilter(e.target.value); setCurrentPage(1); };
+  
+  const handleBranchTypeFilterChange = (e) => { 
+    setBranchTypeFilter(e.target.value); 
+    setCurrentPage(1); 
+    setPageInputValue('1');
+  };
 
   const filteredAccounts = allAccounts.filter((account) => {
     const matchesSearch = account.ALIAS_NAME?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -265,6 +263,51 @@ const Overview = ({
 
   const totalPages = Math.ceil(filteredAccounts.length / accountsPerPage);
   const currentAccounts = filteredAccounts.slice((currentPage - 1) * accountsPerPage, currentPage * accountsPerPage);
+
+  // --- PAGINATION HANDLERS (UPDATED TO MATCH REFERENCE) ---
+  const handleNextPage = () => { 
+    if (currentPage < totalPages) {
+      setCurrentPage(prev => prev + 1);
+      setPageInputValue((currentPage + 1).toString());
+    }
+  };
+  
+  const handlePrevPage = () => { 
+    if (currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
+      setPageInputValue((currentPage - 1).toString());
+    }
+  };
+  
+  const handlePageInputChange = (e) => setPageInputValue(e.target.value);
+  
+  const handlePageInputKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      const value = parseInt(pageInputValue, 10);
+      if (!isNaN(value) && value >= 1 && value <= totalPages) {
+        setCurrentPage(value);
+        setPageInputValue(value.toString());
+      } else {
+        setPageInputValue(currentPage.toString());
+      }
+    }
+  };
+  
+  const handleAccountsPerPageInputChange = (e) => setAccountsPerPageInput(e.target.value);
+  
+  const handleAccountsPerPageInputKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      const value = parseInt(e.target.value, 10);
+      if (!isNaN(value) && value >= 1) {
+        setAccountsPerPage(value);
+        setAccountsPerPageInput(value.toString());
+        setCurrentPage(1);
+        setPageInputValue('1');
+      } else {
+        setAccountsPerPageInput(accountsPerPage.toString());
+      }
+    }
+  };
 
   // Load Details Effect
   useEffect(() => {
@@ -283,14 +326,14 @@ const Overview = ({
           aliasName: account.ALIAS_NAME || '',
           businessAddrLine1: account.BUSINESS_ADDR_LINE1 || '',
           businessAddrLine2: account.BUSINESS_ADDR_LINE2 || '',
-          businessAddrLine3: account.BUSINESS_ADDR_LINE3 || '', // Reads custom state from here if !USA
+          businessAddrLine3: account.BUSINESS_ADDR_LINE3 || '', 
           businessCity: account.BUSINESS_CITY || '',
           businessStateId: account.BUSINESS_STATE_ID ? String(account.BUSINESS_STATE_ID) : '',
           businessCountryId: account.BUSINESS_COUNTRY_ID ? String(account.BUSINESS_COUNTRY_ID) : '185',
           businessPostalCode: account.BUSINESS_POSTAL_CODE || '',
           mailingAddrLine1: account.MAILING_ADDR_LINE1 || '',
           mailingAddrLine2: account.MAILING_ADDR_LINE2 || '',
-          mailingAddrLine3: account.MAILING_ADDR_LINE3 || '', // Reads custom state from here if !USA
+          mailingAddrLine3: account.MAILING_ADDR_LINE3 || '', 
           mailingCity: account.MAILING_CITY || '',
           mailingStateId: account.MAILING_STATE_ID ? String(account.MAILING_STATE_ID) : '',
           mailingCountryId: account.MAILING_COUNTRY_ID ? String(account.MAILING_COUNTRY_ID) : '185',
@@ -368,9 +411,9 @@ const Overview = ({
         ...prev,
         mailingAddrLine1: prev.businessAddrLine1,
         mailingAddrLine2: prev.businessAddrLine2,
-        mailingAddrLine3: prev.businessAddrLine3, // Copies Custom State
+        mailingAddrLine3: prev.businessAddrLine3, 
         mailingCity: prev.businessCity,
-        mailingStateId: prev.businessStateId, // Copies State ID (if USA)
+        mailingStateId: prev.businessStateId, 
         mailingCountryId: prev.businessCountryId,
         mailingPostalCode: prev.businessPostalCode,
       }));
@@ -385,9 +428,9 @@ const Overview = ({
         ...prev,
         mailingAddrLine1: prev.businessAddrLine1,
         mailingAddrLine2: prev.businessAddrLine2,
-        mailingAddrLine3: prev.businessAddrLine3, // Copies Custom State
+        mailingAddrLine3: prev.businessAddrLine3, 
         mailingCity: prev.businessCity,
-        mailingStateId: prev.businessStateId, // Copies State ID (if USA)
+        mailingStateId: prev.businessStateId, 
         mailingCountryId: prev.businessCountryId,
         mailingPostalCode: prev.businessPostalCode,
       }));
@@ -415,7 +458,6 @@ const Overview = ({
     } else if (section === 'businessAddress') {
       formDataToSubmit.append('BUSINESS_ADDR_LINE1', formData.businessAddrLine1 || '');
       formDataToSubmit.append('BUSINESS_ADDR_LINE2', formData.businessAddrLine2 || '');
-      // AddrLine3 is now used for custom state
       formDataToSubmit.append('BUSINESS_ADDR_LINE3', formData.businessAddrLine3 || '');
       formDataToSubmit.append('BUSINESS_CITY', formData.businessCity || '');
       formDataToSubmit.append('BUSINESS_STATE_ID', formData.businessStateId || '');
@@ -424,7 +466,6 @@ const Overview = ({
     } else if (section === 'mailingAddress') {
       formDataToSubmit.append('MAILING_ADDR_LINE1', formData.mailingAddrLine1 || '');
       formDataToSubmit.append('MAILING_ADDR_LINE2', formData.mailingAddrLine2 || '');
-      // AddrLine3 is now used for custom state
       formDataToSubmit.append('MAILING_ADDR_LINE3', formData.mailingAddrLine3 || '');
       formDataToSubmit.append('MAILING_CITY', formData.mailingCity || '');
       formDataToSubmit.append('MAILING_STATE_ID', formData.mailingStateId || '');
@@ -460,20 +501,19 @@ const Overview = ({
   const handleFormChange = (e) => {
     const { name, value, type, checked } = e.target;
     
-    // Logic to clear state if country changes
     if (name === 'businessCountryId') {
       setFormData(prev => ({ 
         ...prev, 
         [name]: value,
-        businessStateId: '', // Clear state dropdown
-        businessAddrLine3: '' // Clear custom state
+        businessStateId: '', 
+        businessAddrLine3: '' 
       }));
     } else if (name === 'mailingCountryId') {
       setFormData(prev => ({ 
         ...prev, 
         [name]: value,
-        mailingStateId: '', // Clear state dropdown
-        mailingAddrLine3: '' // Clear custom state
+        mailingStateId: '', 
+        mailingAddrLine3: '' 
       }));
     } else {
       setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
@@ -483,7 +523,6 @@ const Overview = ({
   const addhandleChange = (e) => {
     const { name, value } = e.target;
     
-    // Logic to clear state if country changes
     if (name === 'businessCountryId') {
       setaddFormData(prev => ({ 
         ...prev, 
@@ -535,7 +574,6 @@ const Overview = ({
   const getBranchTypeName = (id) => branchTypes.find(t => String(t.id) === String(id))?.Name || 'No Branch Type';
   const getCountryName = (id) => countries.find(c => c.ID === id)?.VALUE || 'No Country';
   
-  // Logic: If USA, lookup ID. If not, return the custom text from AddrLine3
   const getDisplayState = (countryId, stateId, addrLine3) => {
     if (isUSA(countryId)) {
       const stateObj = states.find(s => String(s.ID) === String(stateId));
@@ -609,8 +647,6 @@ const Overview = ({
                 <div className="account_form_group"><label>Address Line 1</label><input type="text" name="businessAddrLine1" value={addformData.businessAddrLine1} onChange={addhandleChange} /></div>
                 <div className="account_form_group"><label>Address Line 2</label><input type="text" name="businessAddrLine2" value={addformData.businessAddrLine2} onChange={addhandleChange} /></div>
                 
-                {/* Removed Address Line 3 Input */}
-                
                 <div className="account_form_group"><label>City</label><input type="text" name="businessCity" value={addformData.businessCity} onChange={addhandleChange} /></div>
                 <div className="account_form_group">
                   <label>Country</label>
@@ -636,7 +672,7 @@ const Overview = ({
                   <label>Custom State Name</label>
                   <input 
                     type="text" 
-                    name="businessAddrLine3" // Bind to AddrLine3
+                    name="businessAddrLine3" 
                     value={!isUSA(addformData.businessCountryId) ? addformData.businessAddrLine3 : ''} 
                     onChange={addhandleChange} 
                     disabled={isUSA(addformData.businessCountryId)}
@@ -663,8 +699,6 @@ const Overview = ({
                 <div className="account_form_group"><label>Address Line 1</label><input type="text" name="mailingAddrLine1" value={addformData.mailingAddrLine1} onChange={addhandleChange} /></div>
                 <div className="account_form_group"><label>Address Line 2</label><input type="text" name="mailingAddrLine2" value={addformData.mailingAddrLine2} onChange={addhandleChange} /></div>
                 
-                 {/* Removed Address Line 3 Input */}
-
                 <div className="account_form_group"><label>City</label><input type="text" name="mailingCity" value={addformData.mailingCity} onChange={addhandleChange} /></div>
                 <div className="account_form_group">
                   <label>Country</label>
@@ -690,7 +724,7 @@ const Overview = ({
                   <label>Custom State Name</label>
                   <input 
                     type="text" 
-                    name="mailingAddrLine3" // Bind to AddrLine3
+                    name="mailingAddrLine3"
                     value={!isUSA(addformData.mailingCountryId) ? addformData.mailingAddrLine3 : ''} 
                     onChange={addhandleChange} 
                     disabled={isUSA(addformData.mailingCountryId)}
@@ -734,7 +768,6 @@ const Overview = ({
                   <th onClick={() => requestSort('aliasName')}>Account Name</th>
                   <th onClick={() => requestSort('acctTypeCd')}>Account Type</th>
                   <th onClick={() => requestSort('branchType')}>Branch Type</th>
-                  {/* <th>State</th> */}
                   <th>Status</th>
                 </tr>
               </thead>
@@ -751,17 +784,44 @@ const Overview = ({
                       </span>
                     </td>
                   </tr>
-                )) : <tr><td colSpan="5" style={{textAlign: 'center'}}>No accounts found.</td></tr>}
+                )) : <tr><td colSpan="4" style={{textAlign: 'center'}}>No accounts found.</td></tr>}
               </tbody>
             </table>
           </div>
+          
+          {/* UPDATED PAGINATION CONTROLS TO MATCH REFERENCE */}
           {filteredAccounts.length > accountsPerPage && (
             <div className="account_pagination_container">
               <button className="account_button" onClick={handlePrevPage} disabled={currentPage === 1}>← Previous</button>
-              <span className="account_pagination_text">Page {currentPage} of {totalPages}</span>
+              <span className="account_pagination_text">
+                Page{' '}
+                <input
+                  type="text"
+                  value={pageInputValue}
+                  onChange={handlePageInputChange}
+                  onKeyPress={handlePageInputKeyPress}
+                  className="account_pagination_input"
+                />{' '}
+                of {totalPages}
+              </span>
               <button className="account_button" onClick={handleNextPage} disabled={currentPage === totalPages}>Next →</button>
             </div>
           )}
+
+          {/* ADDED ROWS PER PAGE SECTION TO MATCH REFERENCE */}
+          <div className="account_rows_per_page_container">
+            <label className="account_rows_per_page_label">Rows per Page:</label>
+            <input
+              type="text"
+              value={accountsPerPageInput}
+              onChange={handleAccountsPerPageInputChange}
+              onKeyPress={handleAccountsPerPageInputKeyPress}
+              placeholder="Rows per page"
+              className="account_rows_per_page_input"
+              aria-label="Number of rows per page"
+            />
+          </div>
+
         </div>
       ) : !isadd && accountDetails && (
         <div className="account_details_container">
@@ -824,8 +884,6 @@ const Overview = ({
                       <div className="account_form_group"><label>Address Line 1</label><input name="businessAddrLine1" value={formData.businessAddrLine1} onChange={handleFormChange}/></div>
                       <div className="account_form_group"><label>Address Line 2</label><input name="businessAddrLine2" value={formData.businessAddrLine2} onChange={handleFormChange}/></div>
                       
-                      {/* Removed Address Line 3 Input */}
-
                       <div className="account_form_group"><label>City</label><input name="businessCity" value={formData.businessCity} onChange={handleFormChange}/></div>
                       <div className="account_form_group"><label>Country</label><select name="businessCountryId" value={formData.businessCountryId} onChange={handleFormChange}><option value="">Select Country</option>{countries.map(c => <option key={c.ID} value={c.ID}>{c.VALUE}</option>)}</select></div>
                       <div className="account_form_group">
@@ -845,7 +903,7 @@ const Overview = ({
                         <label>Custom State Name</label>
                         <input 
                           type="text" 
-                          name="businessAddrLine3" // Bind to AddrLine3
+                          name="businessAddrLine3" 
                           value={!isUSA(formData.businessCountryId) ? formData.businessAddrLine3 : ''} 
                           onChange={handleFormChange}
                           disabled={isUSA(formData.businessCountryId)}
@@ -864,8 +922,6 @@ const Overview = ({
                   <div className="account_view_grid">
                     <div className="account_view_group"><label>Address Line 1</label><p>{accountDetails.BUSINESS_ADDR_LINE1 || '-'}</p></div>
                     <div className="account_view_group"><label>Address Line 2</label><p>{accountDetails.BUSINESS_ADDR_LINE2 || '-'}</p></div>
-                    {/* Hiding Address Line 3 from View if strictly used for State, or show if you want, but user said remove it. 
-                        We will show State based on logic below */}
                     <div className="account_view_group"><label>City</label><p>{accountDetails.BUSINESS_CITY || '-'}</p></div>
                     <div className="account_view_group"><label>Country</label><p>{getCountryName(accountDetails.BUSINESS_COUNTRY_ID)}</p></div>
                     <div className="account_view_group">
@@ -899,8 +955,6 @@ const Overview = ({
                       <div className="account_form_group"><label>Address Line 1</label><input name="mailingAddrLine1" value={formData.mailingAddrLine1} onChange={handleFormChange}/></div>
                       <div className="account_form_group"><label>Address Line 2</label><input name="mailingAddrLine2" value={formData.mailingAddrLine2} onChange={handleFormChange}/></div>
                       
-                      {/* Removed Address Line 3 Input */}
-
                       <div className="account_form_group"><label>City</label><input name="mailingCity" value={formData.mailingCity} onChange={handleFormChange}/></div>
                       <div className="account_form_group"><label>Country</label><select name="mailingCountryId" value={formData.mailingCountryId} onChange={handleFormChange}><option value="">Select Country</option>{countries.map(c => <option key={c.ID} value={c.ID}>{c.VALUE}</option>)}</select></div>
                       <div className="account_form_group">
@@ -920,7 +974,7 @@ const Overview = ({
                         <label>Custom State Name</label>
                         <input 
                           type="text" 
-                          name="mailingAddrLine3" // Bind to AddrLine3
+                          name="mailingAddrLine3" 
                           value={!isUSA(formData.mailingCountryId) ? formData.mailingAddrLine3 : ''} 
                           onChange={handleFormChange}
                           disabled={isUSA(formData.mailingCountryId)}
@@ -939,7 +993,6 @@ const Overview = ({
                   <div className="account_view_grid">
                      <div className="account_view_group"><label>Address Line 1</label><p>{accountDetails.MAILING_ADDR_LINE1 || '-'}</p></div>
                     <div className="account_view_group"><label>Address Line 2</label><p>{accountDetails.MAILING_ADDR_LINE2 || '-'}</p></div>
-                    {/* Hiding Address Line 3 View */}
                     <div className="account_view_group"><label>City</label><p>{accountDetails.MAILING_CITY || '-'}</p></div>
                     <div className="account_view_group"><label>Country</label><p>{getCountryName(accountDetails.MAILING_COUNTRY_ID)}</p></div>
                     <div className="account_view_group">
