@@ -419,6 +419,8 @@ const I9Forms = ({
   // Handle PDF file selection and extract signature using client-side rendering
   const handlePdfFileChange = async (e) => {
     const file = e.target.files?.[0];
+    console.log('📄 PDF Upload - File selected:', file ? file.name : 'none');
+    
     if (!file) {
       setPdfSignatureFile(null);
       setPdfSignaturePreview(null);
@@ -426,6 +428,7 @@ const I9Forms = ({
     }
 
     // Validate file type
+    console.log('📄 PDF Upload - File type:', file.type, 'Size:', file.size, 'bytes');
     if (file.type !== 'application/pdf') {
       setError('Please upload a valid PDF file.');
       e.target.value = '';
@@ -444,25 +447,44 @@ const I9Forms = ({
     setIsExtractingSignature(true);
 
     try {
+      console.log('📄 PDF Upload - Loading pdfjs-dist library...');
       // Dynamically import pdfjs-dist for client-side PDF rendering
       const pdfjsLib = await import('pdfjs-dist');
+      console.log('📄 PDF Upload - pdfjs-dist version:', pdfjsLib.version);
       
       // Set worker source - use local file for EC2/production (no external CDN dependency)
       pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+      console.log('📄 PDF Upload - Worker source set to:', pdfjsLib.GlobalWorkerOptions.workerSrc);
 
       // Read file as ArrayBuffer for PDF.js
+      console.log('📄 PDF Upload - Reading file as ArrayBuffer...');
       const arrayBuffer = await file.arrayBuffer();
+      console.log('📄 PDF Upload - ArrayBuffer size:', arrayBuffer.byteLength, 'bytes');
+      
+      // Check if file starts with PDF header
+      const header = new Uint8Array(arrayBuffer.slice(0, 5));
+      const headerStr = String.fromCharCode(...header);
+      console.log('📄 PDF Upload - File header:', headerStr, '(should be %PDF-)');
+      
+      if (headerStr !== '%PDF-') {
+        throw new Error('File does not have valid PDF header. Got: ' + headerStr);
+      }
       
       // Load the PDF document
+      console.log('📄 PDF Upload - Loading PDF document...');
       const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
       const pdfDoc = await loadingTask.promise;
+      console.log('📄 PDF Upload - PDF loaded, pages:', pdfDoc.numPages);
       
       // Get the first page
+      console.log('📄 PDF Upload - Getting page 1...');
       const page = await pdfDoc.getPage(1);
+      console.log('📄 PDF Upload - Page 1 loaded');
       
       // Set up canvas for rendering
       const scale = 2; // Higher scale for better quality
       const viewport = page.getViewport({ scale });
+      console.log('📄 PDF Upload - Viewport:', viewport.width, 'x', viewport.height);
       
       // Create an offscreen canvas
       const canvas = document.createElement('canvas');
@@ -471,20 +493,26 @@ const I9Forms = ({
       canvas.height = viewport.height;
       
       // Render PDF page to canvas
+      console.log('📄 PDF Upload - Rendering page to canvas...');
       await page.render({
         canvasContext: context,
         viewport: viewport,
       }).promise;
+      console.log('📄 PDF Upload - Render complete');
       
       // Convert canvas to PNG data URL
       const signatureDataUrl = canvas.toDataURL('image/png');
+      console.log('📄 PDF Upload - PNG data URL length:', signatureDataUrl.length, 'chars');
       
       setPdfSignaturePreview(signatureDataUrl);
       setError(null);
       console.log('✅ PDF signature extracted successfully via client-side rendering');
       
     } catch (err) {
-      console.error('PDF extraction error:', err);
+      console.error('❌ PDF extraction error:', err);
+      console.error('❌ Error name:', err.name);
+      console.error('❌ Error message:', err.message);
+      console.error('❌ Error stack:', err.stack);
       setError('Failed to process PDF file: ' + (err.message || 'Unknown error'));
       setPdfSignatureFile(null);
       setPdfSignaturePreview(null);

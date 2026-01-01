@@ -25,8 +25,8 @@ export async function POST(request) {
     let isUploadPath = pathname && pathname.match(/^\/Uploads\/[^/]+\/[^/]+\/[^/]+$/);
     const isResumePath = pathname && pathname.match(/^\/uploads\/resumes\/[^_]+_[^/]+\.pdf$/);
     const isOfferLetterPath = pathname && pathname.match(/^\/uploads\/offerletter\/[^_]+_[^/]+\.pdf$/);
-    const isDocumentsPath = pathname && pathname.match(/^\/public\/uploads\/documents\/.*$/); // Unrestricted access to /public/uploads/documents
-    const isProfilePhotoPath = pathname && pathname.match(/^\/public\/uploads\/profile_photos\/.*$/); // Unrestricted access to /public/uploads/profile_photos
+    const isDocumentsPath = pathname && pathname.match(/^\/uploads\/documents\/.*$/); // Unrestricted access to /uploads/documents
+    const isProfilePhotoPath = pathname && pathname.match(/^\/uploads\/profile_photos\/.*$/); // Unrestricted access to /uploads/profile_photos
     
     // --- ADDED: Check for Logo Path ---
     const isLogoPath = pathname && pathname.match(/^\/COM360LOGOS\.jpg$/); 
@@ -199,14 +199,14 @@ export async function POST(request) {
       });
     });
 
-    // Add unrestricted /public/uploads/documents and /public/uploads/profile_photos to accessible items
+    // Add unrestricted /uploads/documents and /uploads/profile_photos to accessible items
     accessibleItems.push({
-      href: '/public/uploads/documents/*',
+      href: '/uploads/documents/*',
       isMenu: false,
       priority: 10006,
     });
     accessibleItems.push({
-      href: '/public/uploads/profile_photos/*',
+      href: '/uploads/profile_photos/*',
       isMenu: false,
       priority: 10007,
     });
@@ -310,8 +310,8 @@ export async function POST(request) {
     const isaddleave = pathname.match(/^\/userscreens\/leaves\/addleave$/);
     const ispendingleaves = pathname.match(/^\/userscreens\/leaves\/pending$/);
     isUploadPath = pathname.match(/^\/Uploads\/[^/]+\/[^/]+\/[^/]+$/);
-    const isDocumentsPathCheck = pathname.match(/^\/public\/uploads\/documents\/.*$/); // Check for documents path
-    const isProfilePhotoPathCheck = pathname.match(/^\/public\/uploads\/profile_photos\/.*$/); // Check for profile photos path
+    const isDocumentsPathCheck = pathname.match(/^\/uploads\/documents\/.*$/); // Check for documents path
+    const isProfilePhotoPathCheck = pathname.match(/^\/uploads\/profile_photos\/.*$/); // Check for profile photos path
 
     if (isEditEmployeePath && accessiblePaths.includes('/userscreens/employee/edit/:empid')) {
       console.log(`Access granted to ${pathname} for empid ${empid} (dynamic employee edit route)`);
@@ -349,11 +349,11 @@ export async function POST(request) {
       console.log(`Access granted to ${pathname} for empid ${empid} (upload path)`);
       return NextResponse.json({ success: true, accessibleItems });
     }
-    if (isDocumentsPathCheck && accessiblePaths.includes('/public/uploads/documents/*')) {
+    if (isDocumentsPathCheck && accessiblePaths.includes('/uploads/documents/*')) {
       console.log(`Unrestricted access granted to ${pathname} for empid ${empid} (documents path)`);
       return NextResponse.json({ success: true, accessibleItems });
     }
-    if (isProfilePhotoPathCheck && accessiblePaths.includes('/public/uploads/profile_photos/*')) {
+    if (isProfilePhotoPathCheck && accessiblePaths.includes('/uploads/profile_photos/*')) {
       console.log(`Unrestricted access granted to ${pathname} for empid ${empid} (profile photos path)`);
       return NextResponse.json({ success: true, accessibleItems });
     }
