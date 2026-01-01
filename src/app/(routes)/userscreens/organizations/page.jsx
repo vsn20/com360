@@ -64,21 +64,13 @@ const Page = async () => {
       );
       states = stateRows;
 
-      // Fetch only W-9 (id=6 with g_id=18 and orgid=-1) + Organization Documents (g_id=39)
       const [documenttypesrows]=await pool.query(
-        `SELECT id, Name, orgid FROM C_GENERIC_VALUES 
-         WHERE isactive = 1 AND (
-           (g_id = 18 AND id = 6 AND orgid = -1) OR 
-           (g_id = 39 AND orgid = ?)
-         )
-         ORDER BY orgid DESC, Name`,
+        `SELECT id, Name FROM C_GENERIC_VALUES 
+         WHERE isactive = 1 AND g_id = 39 AND (orgid = ? OR orgid = -1)
+         ORDER BY Name`,
       [orgid]
       );
-      // Mark W-9 (orgid=-1) as isDefault so it can't be edited
-      documenttypes = documenttypesrows.map(row => ({
-        ...row,
-        isDefault: row.orgid === -1
-      }));
+      documenttypes = documenttypesrows;
     } catch (error) {
       console.error('Error fetching data:', error);
     }
