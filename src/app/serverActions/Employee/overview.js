@@ -999,9 +999,9 @@ export async function fetchdocumentsbyid(empid) {
               COALESCE(gv_subtype.Name, ed.subtype) as subtype_name,
               ed.startdate, ed.enddate, ed.comments 
        FROM C_EMP_DOCUMENTS ed
-       LEFT JOIN C_GENERIC_VALUES gv_type ON ed.document_type = gv_type.id AND gv_type.g_id = 18 AND gv_type.orgid = ed.orgid
-       LEFT JOIN C_GENERIC_VALUES gv_purpose ON ed.document_purpose = gv_purpose.id AND gv_purpose.g_id = 20 AND gv_purpose.orgid = ed.orgid
-       LEFT JOIN C_GENERIC_VALUES gv_subtype ON ed.subtype = gv_subtype.id AND gv_subtype.g_id = 19 AND gv_subtype.orgid = ed.orgid
+       LEFT JOIN C_GENERIC_VALUES gv_type ON ed.document_type = gv_type.id AND gv_type.g_id = 18 AND (gv_type.orgid = ed.orgid OR gv_type.orgid = -1)
+       LEFT JOIN C_GENERIC_VALUES gv_purpose ON ed.document_purpose = gv_purpose.id AND gv_purpose.g_id = 20 AND (gv_purpose.orgid = ed.orgid OR gv_purpose.orgid = -1)
+       LEFT JOIN C_GENERIC_VALUES gv_subtype ON ed.subtype = gv_subtype.id AND gv_subtype.g_id = 19 AND (gv_subtype.orgid = ed.orgid OR gv_subtype.orgid = -1)
        WHERE ed.empid = ? AND ed.orgid = ?`,
       [empid, orgId]
     );
@@ -1389,9 +1389,9 @@ export async function fetchPafDocumentsById(empid) {
               COALESCE(gv_subtype.Name, ed.subtype) as subtype_name,
               ed.startdate, ed.enddate, ed.comments 
        FROM C_EMP_PAF ed
-       LEFT JOIN C_GENERIC_VALUES gv_type ON ed.document_type = gv_type.id AND gv_type.g_id = 18 AND gv_type.orgid = ed.orgid
-       LEFT JOIN C_GENERIC_VALUES gv_purpose ON ed.document_purpose = gv_purpose.id AND gv_purpose.g_id = 20 AND gv_purpose.orgid = ed.orgid
-       LEFT JOIN C_GENERIC_VALUES gv_subtype ON ed.subtype = gv_subtype.id AND gv_subtype.g_id = 19 AND gv_subtype.orgid = ed.orgid
+       LEFT JOIN C_GENERIC_VALUES gv_type ON ed.document_type = gv_type.id AND gv_type.g_id = 18 AND (gv_type.orgid = ed.orgid OR gv_type.orgid = -1)
+       LEFT JOIN C_GENERIC_VALUES gv_purpose ON ed.document_purpose = gv_purpose.id AND gv_purpose.g_id = 20 AND (gv_purpose.orgid = ed.orgid OR gv_purpose.orgid = -1)
+       LEFT JOIN C_GENERIC_VALUES gv_subtype ON ed.subtype = gv_subtype.id AND gv_subtype.g_id = 19 AND (gv_subtype.orgid = ed.orgid OR gv_subtype.orgid = -1)
        WHERE ed.empid = ? AND ed.orgid = ?`,
       [empid, orgId]
     );
@@ -1457,9 +1457,9 @@ export async function fetchFdnsDocumentsById(empid) {
               COALESCE(gv_subtype.Name, ed.subtype) as subtype_name,
               ed.startdate, ed.enddate, ed.comments 
        FROM C_EMP_FDNS ed
-       LEFT JOIN C_GENERIC_VALUES gv_type ON ed.document_type = gv_type.id AND gv_type.g_id = 18 AND gv_type.orgid = ed.orgid
-       LEFT JOIN C_GENERIC_VALUES gv_purpose ON ed.document_purpose = gv_purpose.id AND gv_purpose.g_id = 20 AND gv_purpose.orgid = ed.orgid
-       LEFT JOIN C_GENERIC_VALUES gv_subtype ON ed.subtype = gv_subtype.id AND gv_subtype.g_id = 19 AND gv_subtype.orgid = ed.orgid
+       LEFT JOIN C_GENERIC_VALUES gv_type ON ed.document_type = gv_type.id AND gv_type.g_id = 18 AND (gv_type.orgid = ed.orgid OR gv_type.orgid = -1)
+       LEFT JOIN C_GENERIC_VALUES gv_purpose ON ed.document_purpose = gv_purpose.id AND gv_purpose.g_id = 20 AND (gv_purpose.orgid = ed.orgid OR gv_purpose.orgid = -1)
+       LEFT JOIN C_GENERIC_VALUES gv_subtype ON ed.subtype = gv_subtype.id AND gv_subtype.g_id = 19 AND (gv_subtype.orgid = ed.orgid OR gv_subtype.orgid = -1)
        WHERE ed.empid = ? AND ed.orgid = ?`,
       [empid, orgId]
     );
