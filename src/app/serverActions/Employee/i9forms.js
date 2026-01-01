@@ -30,28 +30,27 @@ export async function uploadSignature(base64Data, formId, signatureType = 'emplo
       throw new Error('Form ID is required for signature upload');
     }
     
-    // Remove data URI prefix
+    // Define directory
+    const publicDir = path.join(process.cwd(), 'public', 'signatures');
+    await fs.mkdir(publicDir, { recursive: true });
+    
+    // Handle PNG/JPEG data (from canvas or PDF client-side rendering)
     const base64Image = base64Data.replace(/^data:image\/\w+;base64,/, '');
     const buffer = Buffer.from(base64Image, 'base64');
+    const filename = `form_${formId}_${signatureType}.png`;
     
     // Validate image size (max 5MB)
     if (buffer.length > 5 * 1024 * 1024) {
       throw new Error('Signature file too large (max 5MB)');
     }
     
-    // Define directory
-    const publicDir = path.join(process.cwd(), 'public', 'signatures');
-    await fs.mkdir(publicDir, { recursive: true });
-    
-    // ✅ Use primary key as filename for easy identification and cleanup
-    const filename = `form_${formId}_${signatureType}.png`;
     const filePath = path.join(publicDir, filename);
     
     // Write file (overwrites automatically if exists)
     await fs.writeFile(filePath, buffer);
     
     // Generate hash for integrity verification
-    const hash = generateSignatureHash(base64Image);
+    const hash = generateSignatureHash(buffer.toString('base64'));
     
     console.log('✅ Signature saved:', filename);
     
@@ -83,7 +82,7 @@ export async function deleteSignature(formId, signatureType = null) {
         await fs.unlink(filePath);
         console.log('✅ Deleted signature:', filename);
       } catch (err) {
-        console.log('ℹ️ Signature file not found:', filename);
+        // File doesn't exist, continue
       }
     } else {
       // Delete all signatures for this form

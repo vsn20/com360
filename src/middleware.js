@@ -104,6 +104,61 @@ export async function middleware(request) {
     }
   }
 
+  // Handle signature paths (/signatures/form_:formId_:type.png or .svg)
+  const isSignaturePath = pathname.match(/^\/signatures\/form_(\d+)_(employee|employer)\.(png|svg)$/);
+  if (isSignaturePath) {
+    const formId = isSignaturePath[1]; // Extract form ID from filename
+    const token = request.cookies.get('jwt_token')?.value;
+
+    console.log('Signature path detected:', pathname);
+    console.log('Extracted form ID from filename:', formId);
+
+    if (!token) {
+      console.log("No jwt_token found for signature path, redirecting to login");
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+
+    try {
+      const decoded = decodeJwt(token);
+      if (!decoded || !decoded.orgid || !decoded.empid) {
+        console.log("Invalid or missing orgid/empid in JWT for signature path, redirecting to login");
+        return NextResponse.redirect(new URL('/login', request.url));
+      }
+
+      // Verify the user has access to this signature by checking form ownership
+      const verifyResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/verify-signature-access`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: `jwt_token=${token}`,
+        },
+        body: JSON.stringify({ 
+          token, 
+          formId,
+          orgid: decoded.orgid,
+          empid: decoded.empid
+        }),
+      });
+
+      const result = await verifyResponse.json();
+      console.log('Verify Signature Access Response:', result);
+
+      if (verifyResponse.ok && result.success) {
+        console.log(`Access granted to signature ${pathname}`);
+        return NextResponse.next();
+      } else {
+        console.log(`Access denied to signature ${pathname}: ${result.error}`);
+        return new Response(JSON.stringify({ error: result.error || 'Unauthorized: Cannot access this signature' }), {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+    } catch (error) {
+      console.error('Error verifying JWT for signature path:', error.message);
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+  }
+
   // Handle org logo paths (/uploads/orglogos/:orgid.jpg)
   const isOrgLogoPath = pathname.match(/^\/uploads\/orglogos\/(\d+)\.jpg$/);
   if (isOrgLogoPath) {

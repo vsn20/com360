@@ -279,6 +279,47 @@
   border: 1px solid #c3e6cb;
 }
 
+/* Signature Type Selector */
+.signatureTypeSelector {
+  margin-bottom: 15px;
+  padding: 10px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+}
+
+.signatureTypeSelector label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: normal;
+}
+
+.signatureTypeSelector input[type="radio"] {
+  margin-right: 8px;
+  cursor: pointer;
+}
+
+/* Signature Display */
+.signatureDisplay {
+  padding: 10px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #e9ecef;
+}
+
+.signatureDisplay img {
+  max-width: 300px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+/* Signature Instruction */
+.signatureInstruction {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 10px;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .formRow {

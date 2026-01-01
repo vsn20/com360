@@ -66,6 +66,11 @@ const I9Forms = ({
     employee_verified_flag: false, // Internal flag for submission state
   });
   const i9SigCanvas = useRef(null); // Specific ref for I-9 signature
+  const pdfFileInputRef = useRef(null); // Ref for PDF file input
+  const [signatureType, setSignatureType] = useState('canvas'); // 'canvas' or 'pdf'
+  const [pdfSignatureFile, setPdfSignatureFile] = useState(null); // PDF file object
+  const [pdfSignaturePreview, setPdfSignaturePreview] = useState(null); // Base64 preview from PDF
+  const [isExtractingSignature, setIsExtractingSignature] = useState(false); // Loading state for PDF extraction
   // --- End I-9 Specific State ---
 
   const [isAdding, setIsAdding] = useState(false);
@@ -236,6 +241,14 @@ const I9Forms = ({
                 employee_verified_flag: selectedI9Form.EMPLOYEE_VERIFIED_FLAG || false, // Should be based on FORM_STATUS really
             });
 
+            // Reset signature input states when loading existing form
+            setSignatureType('canvas');
+            setPdfSignatureFile(null);
+            setPdfSignaturePreview(null);
+            if (pdfFileInputRef.current) {
+                pdfFileInputRef.current.value = '';
+            }
+
             // Prefill I-9 form data if it's missing from form record but available on employee record
             // Ensure prefill doesn't overwrite existing form data
             const employee = await fetchEmployeeById(empid);
@@ -329,6 +342,16 @@ const I9Forms = ({
           employee_signature_url: '',
           employee_verified_flag: false,
         });
+        // Reset signature input states for new form
+        setSignatureType('canvas');
+        setPdfSignatureFile(null);
+        setPdfSignaturePreview(null);
+        if (pdfFileInputRef.current) {
+            pdfFileInputRef.current.value = '';
+        }
+        if (i9SigCanvas.current) {
+            i9SigCanvas.current.clear();
+        }
         // Prefill from employee record
         try {
           const employee = await fetchEmployeeById(empid);
@@ -375,6 +398,113 @@ const I9Forms = ({
     }
   };
 
+  // Handle signature type change (canvas or pdf)
+  const handleSignatureTypeChange = (e) => {
+    const newType = e.target.value;
+    setSignatureType(newType);
+    // Clear the other type's data when switching
+    if (newType === 'canvas') {
+      setPdfSignatureFile(null);
+      setPdfSignaturePreview(null);
+      if (pdfFileInputRef.current) {
+        pdfFileInputRef.current.value = '';
+      }
+    } else {
+      if (i9SigCanvas.current) {
+        i9SigCanvas.current.clear();
+      }
+    }
+  };
+
+  // Handle PDF file selection and extract signature using client-side rendering
+  const handlePdfFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      setPdfSignatureFile(null);
+      setPdfSignaturePreview(null);
+      return;
+    }
+
+    // Validate file type
+    if (file.type !== 'application/pdf') {
+      setError('Please upload a valid PDF file.');
+      e.target.value = '';
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('PDF file size must be less than 5MB.');
+      e.target.value = '';
+      return;
+    }
+
+    setError(null);
+    setPdfSignatureFile(file);
+    setIsExtractingSignature(true);
+
+    try {
+      // Dynamically import pdfjs-dist for client-side PDF rendering
+      const pdfjsLib = await import('pdfjs-dist');
+      
+      // Set worker source - use CDN for compatibility
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+
+      // Read file as ArrayBuffer for PDF.js
+      const arrayBuffer = await file.arrayBuffer();
+      
+      // Load the PDF document
+      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+      const pdfDoc = await loadingTask.promise;
+      
+      // Get the first page
+      const page = await pdfDoc.getPage(1);
+      
+      // Set up canvas for rendering
+      const scale = 2; // Higher scale for better quality
+      const viewport = page.getViewport({ scale });
+      
+      // Create an offscreen canvas
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      
+      // Render PDF page to canvas
+      await page.render({
+        canvasContext: context,
+        viewport: viewport,
+      }).promise;
+      
+      // Convert canvas to PNG data URL
+      const signatureDataUrl = canvas.toDataURL('image/png');
+      
+      setPdfSignaturePreview(signatureDataUrl);
+      setError(null);
+      console.log('✅ PDF signature extracted successfully via client-side rendering');
+      
+    } catch (err) {
+      console.error('PDF extraction error:', err);
+      setError('Failed to process PDF file: ' + (err.message || 'Unknown error'));
+      setPdfSignatureFile(null);
+      setPdfSignaturePreview(null);
+      if (pdfFileInputRef.current) {
+        pdfFileInputRef.current.value = '';
+      }
+    } finally {
+      setIsExtractingSignature(false);
+    }
+  };
+
+  // Clear PDF signature
+  const clearPdfSignature = () => {
+    setPdfSignatureFile(null);
+    setPdfSignaturePreview(null);
+    if (pdfFileInputRef.current) {
+      pdfFileInputRef.current.value = '';
+    }
+  };
+
   const validateI9Form = () => {
     // Basic required field checks for I-9 Section 1
     const requiredFields = [
@@ -402,9 +532,15 @@ const I9Forms = ({
          throw new Error('Country of Issuance is required if Foreign Passport Number is provided.');
      }
 
-    // Check signature
-    if (!i9SigCanvas.current || i9SigCanvas.current.isEmpty()) {
-       throw new Error('Signature is required to submit the I-9 form.');
+    // Check signature based on type
+    if (signatureType === 'canvas') {
+      if (!i9SigCanvas.current || i9SigCanvas.current.isEmpty()) {
+        throw new Error('Signature is required to submit the I-9 form. Please draw your signature.');
+      }
+    } else if (signatureType === 'pdf') {
+      if (!pdfSignaturePreview) {
+        throw new Error('Signature is required to submit the I-9 form. Please upload a PDF with your signature.');
+      }
     }
     return true;
   };
@@ -417,9 +553,15 @@ const I9Forms = ({
     try {
       validateI9Form(); // Perform validation
 
-      const signatureData = (i9SigCanvas.current && !i9SigCanvas.current.isEmpty())
-                            ? i9SigCanvas.current.getCanvas().toDataURL('image/png')
-                            : null;
+      // Get signature data based on selected type
+      let signatureData = null;
+      if (signatureType === 'canvas') {
+        signatureData = (i9SigCanvas.current && !i9SigCanvas.current.isEmpty())
+                        ? i9SigCanvas.current.getCanvas().toDataURL('image/png')
+                        : null;
+      } else if (signatureType === 'pdf') {
+        signatureData = pdfSignaturePreview; // Already in base64 format from PDF extraction
+      }
 
       // Prepare data, ensuring correct types and flags
       const dataToSave = {
@@ -798,44 +940,139 @@ const I9Forms = ({
                 {isEditing ? (
                     <div className={styles.formGroup}>
                         <label>Signature*</label>
-                        <p className={styles.signatureInstruction}>
-                            {i9FormData.employee_signature_url && !isAdding
-                                ? 'Draw a new signature below to replace the existing one.'
-                                : 'Please sign below using your mouse or touchscreen.'}
-                        </p>
-                         {/* Display existing signature if editing */}
-                         {i9FormData.employee_signature_url && !isAdding && (
-                            <div className={styles.signatureDisplay} style={{ marginBottom: '10px'}}>
-                                <p style={{margin: '0 0 5px 0', fontSize: '13px'}}>Current Signature:</p>
+                        
+                        {/* Display existing signature if editing */}
+                        {i9FormData.employee_signature_url && !isAdding && (
+                            <div className={styles.signatureDisplay} style={{ marginBottom: '15px'}}>
+                                <p style={{margin: '0 0 5px 0', fontSize: '13px', fontWeight: 'bold'}}>Current Signature:</p>
                                 <img
-                                    src={`${i9FormData.employee_signature_url}?t=${timestamp}`} // Use timestamp for cache bust
+                                    src={`${i9FormData.employee_signature_url}?t=${timestamp}`}
                                     alt="Employee Signature"
                                     style={{ maxWidth: '300px', border: '1px solid #ccc', borderRadius: '4px' }}
                                 />
                             </div>
                         )}
-                        <div className={styles.signatureCanvasWrapper}>
-                            <SignatureCanvas
-                                ref={i9SigCanvas} // Use specific I-9 ref
-                                canvasProps={{ width: 600, height: 200, className: styles.signatureCanvas }}
-                            />
+
+                        {/* Signature Type Selection */}
+                        <div className={styles.signatureTypeSelector} style={{ marginBottom: '15px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+                            <p style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: '500' }}>
+                                {i9FormData.employee_signature_url && !isAdding
+                                    ? 'Choose how to provide a new signature:'
+                                    : 'Choose signature method:'}
+                            </p>
+                            <div style={{ display: 'flex', gap: '20px' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                    <input
+                                        type="radio"
+                                        name="signatureType"
+                                        value="canvas"
+                                        checked={signatureType === 'canvas'}
+                                        onChange={handleSignatureTypeChange}
+                                        style={{ marginRight: '8px' }}
+                                    />
+                                    Draw Signature
+                                </label>
+                                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                    <input
+                                        type="radio"
+                                        name="signatureType"
+                                        value="pdf"
+                                        checked={signatureType === 'pdf'}
+                                        onChange={handleSignatureTypeChange}
+                                        style={{ marginRight: '8px' }}
+                                    />
+                                    Upload Signature PDF
+                                </label>
+                            </div>
                         </div>
-                        <button type="button" onClick={clearI9Signature} className={`${styles.button} ${styles.clearButton}`}>
-                            Clear Signature
-                        </button>
+
+                        {/* Canvas Signature Option */}
+                        {signatureType === 'canvas' && (
+                            <>
+                                <p className={styles.signatureInstruction}>
+                                    Please sign below using your mouse or touchscreen.
+                                </p>
+                                <div className={styles.signatureCanvasWrapper}>
+                                    <SignatureCanvas
+                                        ref={i9SigCanvas}
+                                        canvasProps={{ width: 600, height: 200, className: styles.signatureCanvas }}
+                                    />
+                                </div>
+                                <button type="button" onClick={clearI9Signature} className={`${styles.button} ${styles.clearButton}`}>
+                                    Clear Signature
+                                </button>
+                            </>
+                        )}
+
+                        {/* PDF Upload Option */}
+                        {signatureType === 'pdf' && (
+                            <>
+                                <p className={styles.signatureInstruction}>
+                                    Upload a PDF file containing your signature. The signature will be extracted automatically.
+                                </p>
+                                <div style={{ marginBottom: '10px' }}>
+                                    <input
+                                        type="file"
+                                        ref={pdfFileInputRef}
+                                        accept="application/pdf"
+                                        onChange={handlePdfFileChange}
+                                        disabled={isExtractingSignature}
+                                        style={{ 
+                                            padding: '10px', 
+                                            border: '2px dashed #007bff', 
+                                            borderRadius: '4px', 
+                                            width: '100%', 
+                                            maxWidth: '600px',
+                                            backgroundColor: '#fff',
+                                            cursor: 'pointer'
+                                        }}
+                                    />
+                                </div>
+                                
+                                {isExtractingSignature && (
+                                    <p style={{ color: '#007bff', fontSize: '14px' }}>
+                                        Extracting signature from PDF...
+                                    </p>
+                                )}
+
+                                {/* PDF Signature Preview */}
+                                {pdfSignaturePreview && !isExtractingSignature && (
+                                    <div style={{ marginTop: '10px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+                                        <p style={{ margin: '0 0 10px 0', fontSize: '13px', fontWeight: 'bold', color: '#28a745' }}>
+                                            ✓ Signature extracted successfully:
+                                        </p>
+                                        <img
+                                            src={pdfSignaturePreview}
+                                            alt="Extracted Signature"
+                                            style={{ maxWidth: '300px', maxHeight: '100px', border: '1px solid #ccc', borderRadius: '4px', backgroundColor: '#fff' }}
+                                        />
+                                        <div style={{ marginTop: '10px' }}>
+                                            <button type="button" onClick={clearPdfSignature} className={`${styles.button} ${styles.clearButton}`}>
+                                                Remove & Upload Different PDF
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
+                        )}
                     </div>
                 ) : (
                     // Read-only signature display
-                    i9FormData.employee_signature_url && (
+                    i9FormData.employee_signature_url ? (
                         <div className={styles.formGroup}>
                             <label>Employee Signature</label>
                             <div className={styles.signatureDisplay}>
                                 <img
-                                    src={`${i9FormData.employee_signature_url}?t=${timestamp}`} // Use timestamp
+                                    src={`${i9FormData.employee_signature_url}?t=${timestamp}`}
                                     alt="Employee Signature"
                                     style={{ maxWidth: '300px', border: '1px solid #ccc', borderRadius: '4px' }}
                                 />
                             </div>
+                        </div>
+                    ) : (
+                        <div className={styles.formGroup}>
+                            <label>Employee Signature</label>
+                            <p style={{ fontStyle: 'italic', color: '#6c757d' }}>No signature on file</p>
                         </div>
                     )
                 )}
