@@ -423,15 +423,15 @@ async function uploadPDFToDocuments(pdfBytes, empId, orgId, formId, userId) {
 
 
         // --- Step 3: Check for existing document in C_SUB_ORG_DOCUMENTS ---
-        // Let's use suborgid, orgid, and document_purpose to identify if it exists
-        // Assuming 'W9-Form' is a suitable purpose identifier
-        const documentPurpose = 5;
+        // Let's use suborgid, orgid, and document_type to identify if W-9 exists
+        const documentPurpose = 'Auto Generated'; // Store purpose as text
+        const documentType = 6; // W-9 type ID from C_GENERIC_VALUES (id=6, g_id=18, Name='W-9')
         const documentName = `W-9 Form (Submitted ${new Date().toLocaleDateString()})`; // Add date for uniqueness if needed
 
         const [existingDocs] = await pool.query(
             `SELECT id FROM C_SUB_ORG_DOCUMENTS
-             WHERE suborgid = ? AND orgid = ? AND document_purpose = ?`,
-            [subOrgId, orgId, documentPurpose]
+             WHERE suborgid = ? AND orgid = ? AND document_type = ?`,
+            [subOrgId, orgId, documentType]
         );
         // --- End Step 3 ---
 
@@ -464,9 +464,9 @@ async function uploadPDFToDocuments(pdfBytes, empId, orgId, formId, userId) {
                     subOrgId,
                     orgId,
                     documentName,
-                    6, // Example document type, adjust as needed
+                    documentType, // 'W-9' as text
                     documentPath,
-                    documentPurpose,
+                    documentPurpose, // 'Auto Generated' as text
                     userId,
                     userId
                 ]

@@ -42,6 +42,13 @@ const SubOrgDocument = ({ suborgid, documents: initialDocuments, onDocumentsUpda
     return type ? type.Name : typeId;
   };
 
+  // Helper to check if document type is locked (W-9 with isDefault=true)
+  const isDocumentLocked = (typeId) => {
+    if (!typeId || !documenttypes) return false;
+    const type = documenttypes.find(t => String(t.id) === String(typeId));
+    return type?.isDefault === true;
+  };
+
   useEffect(() => {
     setAllDocuments(Array.isArray(initialDocuments) ? initialDocuments : []);
   }, [initialDocuments]);
@@ -485,10 +492,12 @@ const SubOrgDocument = ({ suborgid, documents: initialDocuments, onDocumentsUpda
               </tr>
             </thead>
             <tbody>
-              {currentDocuments.map((d) => (
+              {currentDocuments.map((d) => {
+                const isLocked = isDocumentLocked(d.document_type);
+                return (
                 <tr 
                   key={d.id} 
-                  className={styles.tableRow} 
+                  className={`${styles.tableRow} ${isLocked ? styles.lockedRow : ''}`} 
                   onClick={() => handleRowClick(d)}
                 >
                   <td className={styles.tableCell}>{d.document_name || 'N/A'}</td>
@@ -502,14 +511,23 @@ const SubOrgDocument = ({ suborgid, documents: initialDocuments, onDocumentsUpda
                       </span>
                     ) : 'No File'}
                   </td>
-                  <td className={styles.tableCell}>{getTypeName(d.document_type)}</td>
+                  <td className={styles.tableCell}>
+                    {getTypeName(d.document_type)}
+                    {isLocked && <span className={styles.defaultBadge} title="Auto-generated from W-9 form">Auto</span>}
+                  </td>
                   {/* <td className={styles.tableCell}>{d.last_updated_date || 'N/A'}</td> */}
                   <td className={styles.tableCell}>{d.document_purpose || 'N/A'}</td>
                   <td className={styles.tableCell}>
-                     <button className={styles.deleteButton} onClick={(e) => handleDelete(e, d.id)}>Delete</button>
+                     {!isLocked && (
+                       <button className={styles.deleteButton} onClick={(e) => handleDelete(e, d.id)}>Delete</button>
+                     )}
+                     {isLocked && (
+                       <span className={styles.lockedText} title="Cannot delete auto-generated documents">Locked</span>
+                     )}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
