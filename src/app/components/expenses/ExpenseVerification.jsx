@@ -356,7 +356,7 @@ const ExpenseVerification = ({ empid, orgid, error: initialError }) => {
                       <td>${parseFloat(expense.TOTAL || 0).toFixed(2)}</td>
                       <td>
                         {expense.SUBMITTED_DATE
-                          ? formatDate(expense.SUBMITTED_DATE)
+                          ? formatDateForDisplay(expense.SUBMITTED_DATE)
                           : "-"}
                       </td>
                       <td>
