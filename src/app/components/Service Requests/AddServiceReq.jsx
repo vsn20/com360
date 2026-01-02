@@ -246,8 +246,8 @@ const AddServiceReq = ({ orgid, empid, employees, type, subtype, priority, previ
               </select>
             </div>
             <div className="form-group">
-              <label>Assigned To</label>
-              <select name="assignedTo" value={formData.assignedTo} onChange={handleFormChange}>
+              <label>Assigned To*</label>
+              <select name="assignedTo" value={formData.assignedTo} onChange={handleFormChange} required>
                 <option value="">Select Employee</option>
                 {employees.map((emp) => (
                   <option key={emp.empid} value={emp.empid}>
