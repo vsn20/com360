@@ -536,7 +536,7 @@ export default function EditContactForm({
   return (
     <div className="contact_edit-container">
       <div className="contact_header-section">
-        <h1 className="contact_title">Edit Contact</h1>
+        <h1 className="contact_title">{`${formData.FIRST_NAME||'-'} ${formData.LAST_NAME||'-'}`} Contact Details</h1>
         <button className="contact_back-button" onClick={onBackClick}></button>
       </div>
 
