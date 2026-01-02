@@ -873,7 +873,7 @@ const Overview = ({
         serviceRequestDetails && (
           <div className="service-request-details-container">
             <div className="header-section">
-              <div className="title">Edit Service Request</div>
+              <div className="title">{`${formData.serviceName || '-'}`} Service Request Details</div>
               <button className="back-button" onClick={handleBack}></button>
             </div>
 

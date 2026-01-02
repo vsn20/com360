@@ -117,7 +117,7 @@ const ConfirmEdit = ({ alldetails, selectedid, orgid, empid, handleformback }) =
       {isLoading && <div className="loading-message">Loading...</div>}
       {iddetails ? (
         <div className="details-block">
-          <h3>Interview Details (Interview ID: {iddetails.interview_id})</h3>
+          <h3>{`${iddetails.first_name || ''} ${iddetails.last_name || ''}`.trim()} Interview Details</h3>
           <form onSubmit={handleSubmit}>
             <div className="form-row">
               <div className="form-group">

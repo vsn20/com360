@@ -938,7 +938,7 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
         serviceRequestDetails && (
           <div className="service-request-details-container">
             <div className="header-section">
-              <div className="title">Service Request Details</div>
+              <div className="title">{`${formData.createdBy || '-'}`} Service Request Details</div>
               <button className="back-button" onClick={handleBack}></button>
             </div>
 

@@ -721,7 +721,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts,
       {!isadd && !selectedProject ? (
         <div className="project_list">
           <div className="project_header_section">
-            <h1 className="project_title">Existing Projects</h1>
+            <h1 className="project_title">Projects</h1>
             <button onClick={handleaddproject} className="project_submit_button">Add Project</button>
           </div>
           <div className="project_search_filter_container">
@@ -756,7 +756,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts,
                     <td>{getIndustryName(project.Industries)}</td>
                     <td>{project.START_DT ? formatDate(project.START_DT) : '-'}</td>
                   </tr>
-                )) : <tr><td colSpan="5" style={{textAlign: 'center'}}>No projects found.</td></tr>}
+                )) : <tr><td colSpan="4" style={{textAlign: 'center'}}>No projects found.</td></tr>}
               </tbody>
             </table>
           </div>
@@ -771,7 +771,7 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts,
       ) : !isadd && selectedProject && (
         <div className="project_details_container">
           <div className="project_header_section">
-            <h1 className="project_title">Project Details</h1>
+            <h1 className="project_title">{`${formData.prjName || '-'}`} Project Details</h1>
             <button className="project_back_button" onClick={handleBack}></button>
           </div>
 

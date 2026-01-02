@@ -873,7 +873,7 @@ const Overview = ({
       {!isadd && !selectedAccntId ? (
         <div className="account_list">
            <div className="account_header_section">
-            <h1 className="account_title">Existing Accounts</h1>
+            <h1 className="account_title">Accounts</h1>
             <button onClick={handleaddaccount} className="account_save">Add Account</button>
           </div>
           <div className="account_search_filter_container">
@@ -953,7 +953,7 @@ const Overview = ({
       ) : !isadd && accountDetails && (
         <div className="account_details_container">
           <div className="account_header_section">
-            <h1 className="account_title">Account Details</h1>
+            <h1 className="account_title">{`${formData.aliasName || '-'}`} Account Details</h1>
             <button className="account_back_button" onClick={handleBackClick}></button>
           </div>
 

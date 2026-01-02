@@ -252,7 +252,7 @@ const Details = ({ selectid, orgid, empid, handleback }) => {
       {details && (
         <div className="employee-details-container6">
           <div className="header-section6">
-            <h1 className="title">Interview Details</h1>
+            <h1 className="title">{`${details?.first_name || ''} ${details?.last_name || ''}`.trim()} Offer Letter Details</h1>
             <button className="back-button" onClick={handleback}></button>
           </div>
 

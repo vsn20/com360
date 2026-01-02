@@ -185,7 +185,7 @@ const Jobtitle = ({ orgid, empid, jobtitles }) => {
       {!add && selectedjobid ? (
         <div className="jobtitles_employee-details-container">
           <div className="jobtitles_header-section">
-            <h1 className="jobtitles_title">Edit Job Title</h1>
+            <h1 className="jobtitles_title">{`${formData.job_title || '-'}`} Job Title Details</h1>
             <button className="jobtitles_back-button" onClick={handleBackClick}></button>
           </div>
           <EditJobTitle selectedjobid={selectedjobid} orgid={orgid} empid={empid} />
@@ -194,7 +194,7 @@ const Jobtitle = ({ orgid, empid, jobtitles }) => {
         !add && (
           <div className="jobtitles_employee-list">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h1 className="jobtitles_title">Existing Job Titles</h1>
+              <h1 className="jobtitles_title">Job Titles</h1>
               <button onClick={handleAdd} className="jobtitles_button">Add Job Title</button>
             </div>
             <div className="jobtitles_search-filter-container">

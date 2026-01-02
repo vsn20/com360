@@ -35,7 +35,7 @@ const Remainingedit = ({ selected_details, orgid, empid, formback }) => {
 
   return (
     <div className="details-block">
-      <h3>Interview Details (Interview ID: {selected_details.interview_id})</h3>
+      <h3>{`${selected_details.first_name || ''} ${selected_details.last_name || ''}`.trim()} Interview Details</h3>
       <div className="form-row">
         <div className="form-group">
           <label>Application ID</label>

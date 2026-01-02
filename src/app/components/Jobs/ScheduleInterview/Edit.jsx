@@ -696,13 +696,13 @@ const Edit = ({ id, orgid, empid, handleback, time, status }) => {
   const renderViewMode = () => (
     <div>
       <div className="schedule_interview_header-edit-section">
-        <h1 className="schedule_interview_title">Interview Details</h1>
+        <h1 className="schedule_interview_title">{`${interviewDetails.name || '-'}`} Interview Details</h1>
         <button className="schedule_interview_back-button" onClick={handleback}></button>
       </div>
       
       <div className="schedule_interview_interview-edit-details-block">
         <div className="schedule_interview_interview-edit-details-header">
-          <div>Interview Information (Application ID: {getdisplayprojectid(id)})</div>
+          <div>Interview Information</div>
           <button className="schedule_interview_edit-button" onClick={handleEdit}>
             Edit
           </button>
@@ -815,7 +815,7 @@ const Edit = ({ id, orgid, empid, handleback, time, status }) => {
     <div>
       <div className="schedule_interview_header-edit-section">
         <h1 className="schedule_interview_title">
-          {!interviewDetails ? 'Create New Interview' : 'Edit Interview'} 
+          {!interviewDetails ? 'Create New Interview' : `Edit Interview - ${interviewDetails.first_name || ''} ${interviewDetails.last_name || ''}`.trim()} 
           (Application ID: {getdisplayprojectid(id)})
         </h1>
         <button className="schedule_interview_back-button" onClick={handleback}></button>

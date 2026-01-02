@@ -447,7 +447,7 @@ const SubOrgDocument = ({ suborgid, documents: initialDocuments, onDocumentsUpda
   return (
     <div className={styles.container}>
       <div className={styles.headerSection}>
-        <h3 className={styles.title}>Sub-Organization Documents</h3>
+        <h3 className={styles.title}>Organization Documents</h3>
         <button className={styles.button} onClick={handleAddClick}>
           Add Document
         </button>

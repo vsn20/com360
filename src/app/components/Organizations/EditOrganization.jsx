@@ -259,7 +259,7 @@ const EditOrganization = ({ selectedorgid, orgid, empid, countries, states, aiPr
       {orgDetails && (
         <div className="organization_details_block">
           <div className="organization_details_header">
-            <h3 className="organization_details_header_title">Organization Details</h3>
+            <h3 className="organization_details_header_title">{`${form.suborgname || ''} Organization Details`}</h3>
             {!isEditing && (
               <div className="organization_details_buttons">
                 <button className="organization_edit_button" onClick={handleEdit}>

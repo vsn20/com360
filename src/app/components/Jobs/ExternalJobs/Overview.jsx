@@ -207,7 +207,7 @@ const Overview = ({ orgid, empid, expectedjobtitles, expectedepartment, expected
       ) : selectedJob ? (
         <div className="externaljobs_employee-details-container">
           <div className="externaljobs_header-section">
-            <h1 className="externaljobs_title">External Job Details</h1>
+            <h1 className="externaljobs_title">{`${selectedJob.display_job_name || '-'}`} External Job Details</h1>
             <button className="externaljobs_back-button" onClick={handleBack}></button>
           </div>
           <Edit
@@ -224,7 +224,7 @@ const Overview = ({ orgid, empid, expectedjobtitles, expectedepartment, expected
       ) : (
         <div className="externaljobs_employee-list">
           <div className="externaljobs_header-section">
-            <h1 className="externaljobs_title">Existing External Jobs</h1>
+            <h1 className="externaljobs_title">External Jobs</h1>
             <button onClick={handleAdd} className="externaljobs_button">Post External Job</button>
           </div>
           <div className="externaljobs_search-filter-container">

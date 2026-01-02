@@ -851,7 +851,7 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
       {!isadd && !selectedProject ? (
         <div>
           <div className="project_assign_header_section">
-            <h2 className="project_assign_title">Existing Projects</h2>
+            <h2 className="project_assign_title">Projects</h2>
             <button onClick={() => handleaddprojectassignment()} className="project_assign_button">Assign Project</button>
           </div>
 
@@ -997,11 +997,10 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
       ) : !isadd && (
         <div className="project_assign_details_container">
           <div className="project_assign_header_section">
-            <h2 className="project_assign_title">Edit Project Assignment</h2>
+            <h2 className="project_assign_title">{`${formData.prjName || '-'}`} Project Assignment Details</h2>
             <button className="project_assign_back_button" onClick={handleBack}></button>
           </div>
           <div className="project_assign_details_block">
-            <h3>Select Employee*</h3>
             <div className="project_assign_form_row">
               <div className="project_assign_form_group">
                 <label>Assigned Employees:</label>

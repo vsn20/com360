@@ -1474,7 +1474,7 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
       {selectedRole && roleDetails && !isadd && (
         <div className="roles_role-details-container">
           <div className="roles_header-section">
-            <h1 className="roles_title">Edit Role</h1>
+            <h1 className="roles_title">{`${formData.rolename || '-'}`} Role Details</h1>
             <button className="roles_back-button" onClick={handleBackClick}></button>
           </div>
           <div className="roles_role-details-block">
