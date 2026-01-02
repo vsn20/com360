@@ -659,6 +659,7 @@ const Overview = ({
         companySize: '', loyaltyStatus: ''
       });
       setTimeout(() => { addsetFormSuccess(null); router.refresh(); }, 2000);
+      handleBackClick();
     }
   };
 
