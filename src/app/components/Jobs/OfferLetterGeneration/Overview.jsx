@@ -530,7 +530,7 @@ const Overview = ({ empid, orgid, interviewdetails, acceptingtime, offerletterge
       ) : selectid && details ? (
         <div className="employee-details-container1">
           <div className="header-section1">
-            <h1 className="title">Interview Details</h1>
+            <h1 className="title">{`${details?.first_name || ''} ${details?.last_name || ''}`.trim()} Offer Letter Details</h1>
             <button className="back-button" onClick={handleBack}></button>
           </div>
 
