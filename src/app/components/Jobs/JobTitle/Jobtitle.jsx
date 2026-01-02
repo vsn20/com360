@@ -185,7 +185,7 @@ const Jobtitle = ({ orgid, empid, jobtitles }) => {
       {!add && selectedjobid ? (
         <div className="jobtitles_employee-details-container">
           <div className="jobtitles_header-section">
-            <h1 className="jobtitles_title">{`${formData.job_title || '-'}`} Job Title Details</h1>
+            <h1 className="jobtitles_title">{allJobTitles.find(job => job.job_title_id === selectedjobid)?.job_title || ''} Job Title Details</h1>
             <button className="jobtitles_back-button" onClick={handleBackClick}></button>
           </div>
           <EditJobTitle selectedjobid={selectedjobid} orgid={orgid} empid={empid} />
