@@ -832,7 +832,7 @@ const Overview = ({
 
             <div className="account_details_block">
               <div className="account_block_header">
-                <h3>Account Contact</h3>
+                <h3>Additional Details</h3>
               </div>
               <div className="account_form_grid">
                 <div className="account_form_group"><label>Phone</label><input type="text" name="phone" value={addformData.phone} onChange={addhandleChange} /></div>
@@ -960,7 +960,7 @@ const Overview = ({
           <div className="account_submenu_bar">
             <button className={activeSubmenuTab === 'basic' ? 'account_active' : ''} onClick={() => handleSubmenuTabClick('basic')}>Basic Details</button>
             <button className={activeSubmenuTab === 'address' ? 'account_active' : ''} onClick={() => handleSubmenuTabClick('address')}>Address Details</button>
-            <button className={activeSubmenuTab === 'contact' ? 'account_active' : ''} onClick={() => handleSubmenuTabClick('contact')}>Contact Details</button>
+            <button className={activeSubmenuTab === 'contact' ? 'account_active' : ''} onClick={() => handleSubmenuTabClick('contact')}>Additional Details</button>
           </div>
 
           <div className="account_details_content">
@@ -1138,7 +1138,7 @@ const Overview = ({
             
             {contactdisplay && (
               <div className="account_details_block">
-                <h3>Contact Details</h3>
+                <h3>Additional Details</h3>
                 {editingContact && canEditAccounts ? (
                   <form onSubmit={(e) => { e.preventDefault(); handleSave('contact'); }}>
                     <div className="account_form_grid">
