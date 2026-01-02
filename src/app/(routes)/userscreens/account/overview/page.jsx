@@ -69,12 +69,12 @@ export default async function OverviewPage({ searchParams }) {
         );
 
         [companySizes] = await pool.query(
-          'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 41 AND orgid = ? AND isactive = 1 ORDER BY display_order',
+          'SELECT id AS ID, Name AS VALUE FROM C_GENERIC_VALUES WHERE g_id = 41 AND orgid = ? AND isactive = 1 ORDER BY display_order',
           [orgid]
         );
 
         [loyaltyStatuses] = await pool.query(
-          'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 42 AND orgid = ? AND isactive = 1 ORDER BY display_order',
+          'SELECT id AS ID, Name AS VALUE FROM C_GENERIC_VALUES WHERE g_id = 42 AND orgid = ? AND isactive = 1 ORDER BY display_order',
           [orgid]
         );
       }
