@@ -170,6 +170,7 @@ export default function AddContactForm({
   // Auto-fill Suborganization
   useEffect(() => {
     if (formData.ACCOUNT_ID) {
+      // When account is selected, auto-fill with account's suborgid
       const selectedAccount = accounts.find((a) => String(a.ACCNT_ID) === String(formData.ACCOUNT_ID));
       if (selectedAccount && selectedAccount.suborgid) {
         setFormData((prev) => ({ ...prev, SUBORGID: selectedAccount.suborgid }));
@@ -180,14 +181,12 @@ export default function AddContactForm({
         setSuborgName('');
       }
     } else {
-      // If no account selected, default to user's suborganization (editable)
-      if (userSuborgId && !formData.SUBORGID) {
-        setFormData((prev) => ({ ...prev, SUBORGID: userSuborgId }));
-      }
-      const suborg = suborgs.find((s) => s.suborgid === formData.SUBORGID);
+      // When no account is selected, reset to user's default suborganization
+      setFormData((prev) => ({ ...prev, SUBORGID: userSuborgId || '' }));
+      const suborg = suborgs.find((s) => s.suborgid === userSuborgId);
       setSuborgName(suborg ? suborg.suborgname : '');
     }
-  }, [formData.ACCOUNT_ID, formData.SUBORGID, accounts, suborgs, userSuborgId]);
+  }, [formData.ACCOUNT_ID, accounts, suborgs, userSuborgId]);
 
   // Handle successful save
   useEffect(() => {

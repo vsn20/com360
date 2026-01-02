@@ -144,6 +144,7 @@ export default function EditContactForm({
   states,
   orgid,
   contactTypes,
+  userSuborgId,
   onBackClick,
   onSaveSuccess,
   aiPrefilledData,
@@ -162,7 +163,7 @@ export default function EditContactForm({
 
   const [activeTab, setActiveTab] = useState('information');
 
-  const updateSuborgDisplay = (accountId, allAccounts, allSuborgs, setNameCallback) => {
+  const updateSuborgDisplay = (accountId, allAccounts, allSuborgs, setNameCallback, defaultSuborgId = null) => {
     const accountIdStr = accountId ? String(accountId) : '';
     const selectedAccount = allAccounts.find((a) => String(a.ACCNT_ID) === accountIdStr);
 
@@ -170,6 +171,11 @@ export default function EditContactForm({
       const suborg = allSuborgs.find((s) => s.suborgid === selectedAccount.suborgid);
       setNameCallback(suborg ? suborg.suborgname : 'N/A');
       return selectedAccount.suborgid;
+    } else if (defaultSuborgId) {
+      // When no account selected, use default suborg (user's suborg)
+      const suborg = allSuborgs.find((s) => s.suborgid === defaultSuborgId);
+      setNameCallback(suborg ? suborg.suborgname : '');
+      return defaultSuborgId;
     } else {
       setNameCallback('');
       return '';
@@ -359,7 +365,7 @@ export default function EditContactForm({
       const newFormData = { ...prev, [name]: value };
 
       if (name === 'ACCOUNT_ID') {
-        const newSuborgId = updateSuborgDisplay(value, accounts, suborgs, setSuborgName);
+        const newSuborgId = updateSuborgDisplay(value, accounts, suborgs, setSuborgName, userSuborgId);
         newFormData.SUBORGID = newSuborgId;
       }
 
