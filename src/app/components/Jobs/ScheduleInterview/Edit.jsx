@@ -696,7 +696,7 @@ const Edit = ({ id, orgid, empid, handleback, time, status }) => {
   const renderViewMode = () => (
     <div>
       <div className="schedule_interview_header-edit-section">
-        <h1 className="schedule_interview_title">{`${interviewDetails.name || '-'}`} Interview Details</h1>
+        <h1 className="schedule_interview_title">{`${interviewDetails.first_name || ''} ${interviewDetails.last_name || ''}`.trim()} Interview Details</h1>
         <button className="schedule_interview_back-button" onClick={handleback}></button>
       </div>
       

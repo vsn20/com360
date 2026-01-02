@@ -524,7 +524,7 @@ const Overview = ({ orgid, empid, interviewdetails, time, acceptingtime, editing
       {!remaining && !confirm && selected && iddetails && (
         <div className="interview_interview-details-container">
           <div className="interview_header-section">
-            <h1 className="interview_title">Interview Details</h1>
+            <h1 className="interview_title">{`${iddetails.first_name || ''} ${iddetails.last_name || ''}`.trim()} Interview Details</h1>
             <button className="interview_back-button" onClick={handleback}></button>
           </div>
 
