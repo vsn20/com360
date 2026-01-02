@@ -115,6 +115,11 @@ const AddServiceReq = ({ orgid, empid, employees, type, subtype, priority, previ
       setIsLoading(false);
       return;
     }
+    if (!formData.assignedTo) {
+      setError('Assigned To is required.');
+      setIsLoading(false);
+      return;
+    }
 
     const formDataToSend = new FormData();
     formDataToSend.append('orgid', orgid || '');

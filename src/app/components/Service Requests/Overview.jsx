@@ -1020,7 +1020,7 @@ const Overview = ({
                     </div>
                     <div className="details-g">
                       <label>Assigned To</label>
-                      <p>{`${serviceRequestDetails.employees.EMP_FST_NAME} ${serviceRequestDetails.employees.EMP_LAST_NAME}` || '-'}</p>
+                      <p>{serviceRequestDetails.employees ? `${serviceRequestDetails.employees.EMP_FST_NAME} ${serviceRequestDetails.employees.EMP_LAST_NAME}` : '-'}</p>
                     </div>
                   </div>
                   <div className="details-row">
