@@ -997,7 +997,7 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
       ) : !isadd && (
         <div className="project_assign_details_container">
           <div className="project_assign_header_section">
-            <h2 className="project_assign_title">{`${formData.prjName || '-'}`} Project Assignment Details</h2>
+            <h2 className="project_assign_title">{employeeDetails?.EMP_NAME ? `${employeeDetails.EMP_NAME} - ` : ''}{selectedProject?.PRJ_NAME || ''} Project Assignment Details</h2>
             <button className="project_assign_back_button" onClick={handleBack}></button>
           </div>
           <div className="project_assign_details_block">
