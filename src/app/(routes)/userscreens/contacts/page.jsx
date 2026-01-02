@@ -25,6 +25,8 @@ export default async function ContactsPage() {
       countries={initialData.countries}
       states={initialData.states}
       orgid={initialData.orgid}
+      contactTypes={initialData.contactTypes}
+      userSuborgId={initialData.userSuborgId}
     />
   );
 }

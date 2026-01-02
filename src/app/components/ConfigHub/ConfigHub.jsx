@@ -54,7 +54,8 @@ const ConfigHub = () => {
     { id: 'reports', name: 'Reports', dbCategory: 'Reports' },
     { id: 'pafdocuments', name: 'PAF Documents', dbCategory: 'pafdocuments' },
     { id: 'fdnsdocuments', name: 'FDNS Documents', dbCategory: 'fdnsdocuments' },
-    { id: 'orgdocuments', name: 'Organization', dbCategory: 'orgdocuments' }
+    { id: 'orgdocuments', name: 'Organization', dbCategory: 'orgdocuments' },
+    { id: 'contacts', name: 'Contacts', dbCategory: 'contacts' }
   ];
 
   // Jobs submenu items (Hardcoded items)

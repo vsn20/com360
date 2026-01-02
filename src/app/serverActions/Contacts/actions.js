@@ -59,6 +59,7 @@ async function fetchAllContacts(pool, orgid) {
   const [contactsRows] = await pool.execute(
       `SELECT
          c.ROW_ID, c.ORGID, c.ACCOUNT_ID, c.SUBORGID, c.CONTACT_TYPE_CD,
+         c.FIRST_NAME, c.LAST_NAME, c.JOB_TITLE, c.DEPARTMENT, c.IS_PRIMARY,
          c.EMAIL, c.ALT_EMAIL, c.PHONE, c.MOBILE, c.FAX,
          a.ALIAS_NAME as accountName, s.suborgname as suborgName
        FROM C_CONTACTS c
@@ -72,28 +73,56 @@ async function fetchAllContacts(pool, orgid) {
     ...contact,
     accountName: contact.accountName || 'N/A',
     suborgName: contact.suborgName || 'N/A',
+    displayName: `${contact.FIRST_NAME || ''} ${contact.LAST_NAME || ''}`.trim() || 'N/A',
     // Prioritize Email, then Mobile, then Phone for display if needed, or send all
     primaryContact: contact.EMAIL || contact.MOBILE || contact.PHONE || 'N/A'
   }));
 }
 
 export async function getContactsInitialData() {
-  const orgid = await getOrgIdFromToken();
+  const cookieStore = cookies();
+  const token = cookieStore.get('jwt_token')?.value;
+  if (!token) throw new Error('Authentication token is missing.');
+
+  const decoded = decodeJwt(token);
+  if (!decoded || !decoded.orgid) throw new Error('Invalid authentication token.');
+
+  const orgid = decoded.orgid;
+  const userId = decoded.userId;
+  
   let pool;
   try {
     pool = await DBconnection();
 
-    const [contacts, accounts, suborgs, countries, states] = await Promise.all([
+    // Fetch user's suborgid
+    let userSuborgId = null;
+    const [userRows] = await pool.execute(
+      'SELECT empid FROM C_USER WHERE username = ? AND orgid = ?',
+      [userId, orgid]
+    );
+    if (userRows.length > 0) {
+      const empid = userRows[0].empid;
+      const [empRows] = await pool.execute(
+        'SELECT suborgid FROM C_EMP WHERE empid = ? AND orgid = ?',
+        [empid, orgid]
+      );
+      if (empRows.length > 0 && empRows[0].suborgid) {
+        userSuborgId = empRows[0].suborgid;
+      }
+    }
+
+    const [contacts, accounts, suborgs, countries, states, contactTypes] = await Promise.all([
       fetchAllContacts(pool, orgid),
       pool.execute('SELECT ACCNT_ID, ALIAS_NAME, suborgid FROM C_ACCOUNT WHERE ORGID = ? AND ACTIVE_FLAG = 1', [orgid]).then(([rows]) => rows),
       pool.execute('SELECT suborgid, suborgname FROM C_SUB_ORG WHERE orgid = ? AND isstatus = 1', [orgid]).then(([rows]) => rows),
       pool.execute('SELECT ID, VALUE FROM C_COUNTRY WHERE ACTIVE = 1 ORDER BY VALUE ASC', []).then(([rows]) => rows),
-      pool.execute('SELECT ID, VALUE FROM C_STATE WHERE ACTIVE = 1 ORDER BY VALUE ASC', []).then(([rows]) => rows)
+      pool.execute('SELECT ID, VALUE FROM C_STATE WHERE ACTIVE = 1 ORDER BY VALUE ASC', []).then(([rows]) => rows),
+      pool.execute('SELECT id AS ID, Name AS VALUE FROM C_GENERIC_VALUES WHERE g_id = 43 AND orgid = ? AND isactive = 1 ORDER BY display_order', [orgid]).then(([rows]) => rows)
     ]);
 
      const formattedAccounts = accounts.map(acc => ({...acc, ACCNT_ID: String(acc.ACCNT_ID)}));
 
-    return { contacts, accounts: formattedAccounts, suborgs, countries, states, orgid };
+    return { contacts, accounts: formattedAccounts, suborgs, countries, states, orgid, contactTypes, userSuborgId };
   } catch (error) {
     console.error('Error fetching contacts initial data:', error);
     throw new Error(`Failed to load initial contact data: ${error.message}`);
@@ -122,6 +151,7 @@ export async function fetchContactById(rowId) {
     const [rows] = await pool.execute(
       `SELECT
          ROW_ID, ORGID, ACCOUNT_ID, SUBORGID, CONTACT_TYPE_CD,
+         FIRST_NAME, LAST_NAME, JOB_TITLE, DEPARTMENT, IS_PRIMARY,
          EMAIL, PHONE, MOBILE, FAX, ALT_EMAIL,
          HOME_ADDR_LINE1, HOME_ADDR_LINE2, HOME_ADDR_LINE3, HOME_CITY,
          HOME_COUNTRY_ID, HOME_STATE_ID, HOME_POSTAL_CODE, HOME_CUSTOM_STATE,
@@ -144,6 +174,7 @@ export async function fetchContactById(rowId) {
         HOME_STATE_ID: contact.HOME_STATE_ID ? String(contact.HOME_STATE_ID) : null,
         MAILING_COUNTRY_ID: contact.MAILING_COUNTRY_ID ? String(contact.MAILING_COUNTRY_ID) : null,
         MAILING_STATE_ID: contact.MAILING_STATE_ID ? String(contact.MAILING_STATE_ID) : null,
+        IS_PRIMARY: contact.IS_PRIMARY ? 1 : 0,
     };
   } catch (error) {
     console.error('Error fetching contact by ID:', error);
@@ -169,18 +200,19 @@ export async function addContact(prevState, formData) {
       orgid = decoded.orgid;
       userId = decoded.userId;
 
-      const accountId = formData.get('ACCOUNT_ID');
+      const firstName = formData.get('FIRST_NAME')?.trim();
+      const lastName = formData.get('LAST_NAME')?.trim();
+      const accountId = formData.get('ACCOUNT_ID')?.trim() || null;
+      const suborgId = formData.get('SUBORGID')?.trim() || null;
+      const contactTypeCd = formData.get('CONTACT_TYPE_CD')?.trim() || 'Primary';
       
-      // ✅ Removed 'CONTACT_TYPE_CD' validation logic
-      if (!accountId) return { error: 'Account is required.' };
+      // Validation: First Name and Last Name are required
+      if (!firstName) return { error: 'First Name is required.' };
+      if (!lastName) return { error: 'Last Name is required.' };
       
-      // Basic validation: ensure at least one contact method is provided (optional, good practice)
-      const email = formData.get('EMAIL')?.trim();
-      const phone = formData.get('PHONE')?.trim();
-      const mobile = formData.get('MOBILE')?.trim();
-      
-      if (!email && !phone && !mobile) {
-          return { error: 'Please provide at least an Email, Phone, or Mobile number.' };
+      // If no account selected, suborgid is required (should be user's suborg by default)
+      if (!accountId && !suborgId) {
+          return { error: 'Organization is required when no Account is selected.' };
       }
 
       pool = await DBconnection();
@@ -188,7 +220,8 @@ export async function addContact(prevState, formData) {
 
       const columns = [
           'ORGID', 'ACCOUNT_ID', 'SUBORGID', 'CONTACT_TYPE_CD',
-          'EMAIL', 'ALT_EMAIL', 'PHONE', 'MOBILE', 'FAX', // ✅ ALL FIELDS
+          'FIRST_NAME', 'LAST_NAME', 'JOB_TITLE', 'DEPARTMENT', 'IS_PRIMARY',
+          'EMAIL', 'ALT_EMAIL', 'PHONE', 'MOBILE', 'FAX',
           'HOME_ADDR_LINE1', 'HOME_ADDR_LINE2', 'HOME_ADDR_LINE3', 'HOME_CITY',
           'HOME_COUNTRY_ID', 'HOME_STATE_ID', 'HOME_POSTAL_CODE', 'HOME_CUSTOM_STATE',
           'MAILING_ADDR_LINE1', 'MAILING_ADDR_LINE2', 'MAILING_ADDR_LINE3', 'MAILING_CITY',
@@ -202,9 +235,11 @@ export async function addContact(prevState, formData) {
       const isHomeUS = String(homeCountryId) === '185';
       const mailingCountryId = getFormValue('MAILING_COUNTRY_ID');
       const isMailingUS = String(mailingCountryId) === '185';
+      const isPrimary = formData.get('IS_PRIMARY') === '1' ? 1 : 0;
 
       const values = [
-          orgid, accountId, getFormValue('SUBORGID'), 'General', // ✅ Defaulting Type to 'General'
+          orgid, accountId, suborgId, contactTypeCd,
+          firstName, lastName, getFormValue('JOB_TITLE'), getFormValue('DEPARTMENT'), isPrimary,
           getFormValue('EMAIL'), getFormValue('ALT_EMAIL'), getFormValue('PHONE'), getFormValue('MOBILE'), getFormValue('FAX'),
           getFormValue('HOME_ADDR_LINE1'), getFormValue('HOME_ADDR_LINE2'), getFormValue('HOME_ADDR_LINE3'), getFormValue('HOME_CITY'),
           homeCountryId, isHomeUS ? getFormValue('HOME_STATE_ID') : null, getFormValue('HOME_POSTAL_CODE'), !isHomeUS ? getFormValue('HOME_CUSTOM_STATE') : null,
@@ -217,7 +252,7 @@ export async function addContact(prevState, formData) {
       const query = `INSERT INTO C_CONTACTS (${columns.join(', ')}) VALUES (${placeholders})`;
 
       await pool.execute(query, values);
-      console.log(`Contact added successfully for Account ID: ${accountId}`);
+      console.log(`Contact added successfully: ${firstName} ${lastName}`);
       return { success: true };
 
   } catch (error) {
@@ -263,17 +298,30 @@ export async function updateContact(prevState, formData) {
     };
 
     if (section === 'core') {
+      const firstName = getFormValue('FIRST_NAME');
+      const lastName = getFormValue('LAST_NAME');
       const accountId = getFormValue('ACCOUNT_ID');
-      if (!accountId) return { error: 'Account is required.' };
+      const suborgId = getFormValue('SUBORGID');
+      
+      if (!firstName) return { error: 'First Name is required.' };
+      if (!lastName) return { error: 'Last Name is required.' };
+      if (!accountId && !suborgId) return { error: 'Organization is required when no Account is selected.' };
 
-      // ✅ Update ALL contact fields
       setClauses = [
-        'ACCOUNT_ID = ?', 'SUBORGID = ?', 
+        'ACCOUNT_ID = ?', 'SUBORGID = ?', 'CONTACT_TYPE_CD = ?',
+        'FIRST_NAME = ?', 'LAST_NAME = ?', 'JOB_TITLE = ?', 'DEPARTMENT = ?', 'IS_PRIMARY = ?',
         'EMAIL = ?', 'ALT_EMAIL = ?', 'PHONE = ?', 'MOBILE = ?', 'FAX = ?'
       ];
+      const isPrimary = formData.get('IS_PRIMARY') === '1' ? 1 : 0;
       values.push(
         accountId,
-        getFormValue('SUBORGID'),
+        suborgId,
+        getFormValue('CONTACT_TYPE_CD') || 'Primary',
+        firstName,
+        lastName,
+        getFormValue('JOB_TITLE'),
+        getFormValue('DEPARTMENT'),
+        isPrimary,
         getFormValue('EMAIL'),
         getFormValue('ALT_EMAIL'),
         getFormValue('PHONE'),

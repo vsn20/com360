@@ -14,6 +14,8 @@ export default function Overview({
   countries,
   states,
   orgid,
+  contactTypes,
+  userSuborgId,
 }) {
   const [contacts, setContacts] = useState(initialContacts);
   const [isAdding, setIsAdding] = useState(false);
@@ -392,6 +394,8 @@ export default function Overview({
           countries={countries}
           states={states}
           orgid={orgid}
+          contactTypes={contactTypes}
+          userSuborgId={userSuborgId}
           onBackClick={handleBackClick}
           onSaveSuccess={handleSaveSuccess}
           prefilledData={aiPrefilledData}
@@ -415,6 +419,7 @@ export default function Overview({
           countries={countries}
           states={states}
           orgid={orgid}
+          contactTypes={contactTypes}
           onBackClick={handleBackClick}
           onSaveSuccess={handleeditsuccess}
           aiPrefilledData={aiPrefilledData}
@@ -537,6 +542,7 @@ export default function Overview({
             <table className="contact_table">
               <thead>
                 <tr>
+                  <th>Name</th>
                   <th>Account</th>
                   <th>Organization</th>
                   <th>Email</th>
@@ -551,8 +557,9 @@ export default function Overview({
                   >
                     <td>
                       <span className="contact_status-indicator"></span>
-                      {contact.accountName}
+                      {contact.displayName || 'N/A'}
                     </td>
+                    <td>{contact.accountName}</td>
                     <td>{contact.suborgName}</td>
                     <td>{contact.EMAIL || '-'}</td>
                     <td>{contact.PHONE || contact.MOBILE || '-'}</td>

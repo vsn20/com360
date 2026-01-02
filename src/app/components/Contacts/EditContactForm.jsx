@@ -143,6 +143,7 @@ export default function EditContactForm({
   countries,
   states,
   orgid,
+  contactTypes,
   onBackClick,
   onSaveSuccess,
   aiPrefilledData,
@@ -430,8 +431,18 @@ export default function EditContactForm({
 
     // Basic Validations for Core section
     if (section === 'core') {
-      if (!formData.ACCOUNT_ID) {
-        setError('Account is required.');
+      if (!formData.FIRST_NAME) {
+        setError('First Name is required.');
+        setIsSaving(false);
+        return;
+      }
+      if (!formData.LAST_NAME) {
+        setError('Last Name is required.');
+        setIsSaving(false);
+        return;
+      }
+      if (!formData.ACCOUNT_ID && !formData.SUBORGID) {
+        setError('Organization is required when no Account is selected.');
         setIsSaving(false);
         return;
       }
@@ -557,8 +568,18 @@ export default function EditContactForm({
               <>
                 <div className="contact_form-row">
                   <div className="contact_form-group">
-                    <label>Account*</label>
-                    <select name="ACCOUNT_ID" value={formData.ACCOUNT_ID} onChange={handleChange} required>
+                    <label>First Name*</label>
+                    <input type="text" name="FIRST_NAME" value={formData.FIRST_NAME || ''} onChange={handleChange} required />
+                  </div>
+                  <div className="contact_form-group">
+                    <label>Last Name*</label>
+                    <input type="text" name="LAST_NAME" value={formData.LAST_NAME || ''} onChange={handleChange} required />
+                  </div>
+                </div>
+                <div className="contact_form-row">
+                  <div className="contact_form-group">
+                    <label>Account</label>
+                    <select name="ACCOUNT_ID" value={formData.ACCOUNT_ID} onChange={handleChange}>
                       <option value="">Select an Account</option>
                       {accounts.map((acc) => (
                         <option key={String(acc.ACCNT_ID)} value={String(acc.ACCNT_ID)}>{acc.ALIAS_NAME}</option>
@@ -566,12 +587,54 @@ export default function EditContactForm({
                     </select>
                   </div>
                   <div className="contact_form-group">
-                    <label>Organization (Auto-filled)</label>
-                    <input type="text" value={suborgName} readOnly placeholder="Select an account" />
-                    <input type="hidden" name="SUBORGID" value={formData.SUBORGID || ''} />
+                    <label>Organization{formData.ACCOUNT_ID ? ' (Auto-filled)' : '*'}</label>
+                    {formData.ACCOUNT_ID ? (
+                      <>
+                        <input type="text" value={suborgName} readOnly placeholder="Select an account" />
+                        <input type="hidden" name="SUBORGID" value={formData.SUBORGID || ''} />
+                      </>
+                    ) : (
+                      <select name="SUBORGID" value={formData.SUBORGID || ''} onChange={handleChange} required>
+                        <option value="">Select Organization</option>
+                        {suborgs.map((sub) => (
+                          <option key={sub.suborgid} value={sub.suborgid}>{sub.suborgname}</option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                 </div>
-                {/* ✅ ALL FIELDS EDITABLE AT ONCE */}
+                <div className="contact_form-row">
+                  <div className="contact_form-group">
+                    <label>Contact Type</label>
+                    <select name="CONTACT_TYPE_CD" value={formData.CONTACT_TYPE_CD || ''} onChange={handleChange}>
+                      <option value="">Select Contact Type</option>
+                      {contactTypes && contactTypes.map((ct) => (
+                        <option key={ct.ID} value={ct.VALUE}>{ct.VALUE}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="contact_form-group">
+                    <label>Job Title</label>
+                    <input type="text" name="JOB_TITLE" value={formData.JOB_TITLE || ''} onChange={handleChange} />
+                  </div>
+                  <div className="contact_form-group">
+                    <label>Department</label>
+                    <input type="text" name="DEPARTMENT" value={formData.DEPARTMENT || ''} onChange={handleChange} />
+                  </div>
+                </div>
+                <div className="contact_form-row">
+                  <div className="contact_form-group" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <input 
+                      type="checkbox" 
+                      name="IS_PRIMARY_CHECKBOX" 
+                      checked={formData.IS_PRIMARY === 1 || formData.IS_PRIMARY === '1'} 
+                      onChange={(e) => setFormData(prev => ({ ...prev, IS_PRIMARY: e.target.checked ? '1' : '0' }))}
+                      style={{ width: 'auto' }}
+                    />
+                    <label style={{ marginBottom: 0 }}>Is Primary Contact</label>
+                    <input type="hidden" name="IS_PRIMARY" value={formData.IS_PRIMARY === 1 || formData.IS_PRIMARY === '1' ? '1' : '0'} />
+                  </div>
+                </div>
                 <div className="contact_form-row">
                   <div className="contact_form-group">
                     <label>Email Address</label>
@@ -610,6 +673,16 @@ export default function EditContactForm({
                 <div className="contact_view-details">
                   <div className="contact_details-row">
                     <div className="contact_details-group">
+                      <label>First Name</label>
+                      <p>{contactDetails.FIRST_NAME || '-'}</p>
+                    </div>
+                    <div className="contact_details-group">
+                      <label>Last Name</label>
+                      <p>{contactDetails.LAST_NAME || '-'}</p>
+                    </div>
+                  </div>
+                  <div className="contact_details-row">
+                    <div className="contact_details-group">
                       <label>Account</label>
                       <p>{accounts.find(a => String(a.ACCNT_ID) === String(contactDetails?.ACCOUNT_ID))?.ALIAS_NAME || '-'}</p>
                     </div>
@@ -618,7 +691,26 @@ export default function EditContactForm({
                       <p>{suborgs.find(s => s.suborgid === contactDetails?.SUBORGID)?.suborgname || '-'}</p>
                     </div>
                   </div>
-                  {/* ✅ ALL FIELDS VIEWABLE */}
+                  <div className="contact_details-row">
+                    <div className="contact_details-group">
+                      <label>Contact Type</label>
+                      <p>{contactDetails.CONTACT_TYPE_CD || '-'}</p>
+                    </div>
+                    <div className="contact_details-group">
+                      <label>Job Title</label>
+                      <p>{contactDetails.JOB_TITLE || '-'}</p>
+                    </div>
+                    <div className="contact_details-group">
+                      <label>Department</label>
+                      <p>{contactDetails.DEPARTMENT || '-'}</p>
+                    </div>
+                  </div>
+                  <div className="contact_details-row">
+                    <div className="contact_details-group">
+                      <label>Primary Contact</label>
+                      <p>{contactDetails.IS_PRIMARY === 1 || contactDetails.IS_PRIMARY === '1' ? 'Yes' : 'No'}</p>
+                    </div>
+                  </div>
                   <div className="contact_details-row">
                     <div className="contact_details-group"><label>Email</label><p>{contactDetails.EMAIL || '-'}</p></div>
                     <div className="contact_details-group"><label>Alt Email</label><p>{contactDetails.ALT_EMAIL || '-'}</p></div>

@@ -87,14 +87,22 @@ export default function AddContactForm({
   countries,
   states,
   orgid,
+  contactTypes,
+  userSuborgId,
   onBackClick,
   onSaveSuccess,
   prefilledData, // AI prefilled data
 }) {
   const [state, formAction] = useActionState(addContact, {});
   const [formData, setFormData] = useState({
+    FIRST_NAME: '',
+    LAST_NAME: '',
     ACCOUNT_ID: '',
-    SUBORGID: '',
+    SUBORGID: userSuborgId || '',
+    CONTACT_TYPE_CD: '',
+    JOB_TITLE: '',
+    DEPARTMENT: '',
+    IS_PRIMARY: '0',
     EMAIL: '',
     ALT_EMAIL: '',
     PHONE: '',
@@ -124,8 +132,14 @@ export default function AddContactForm({
     if (prefilledData) {
       setFormData(prev => ({
         ...prev,
+        FIRST_NAME: prefilledData.FIRST_NAME !== null ? prefilledData.FIRST_NAME : prev.FIRST_NAME,
+        LAST_NAME: prefilledData.LAST_NAME !== null ? prefilledData.LAST_NAME : prev.LAST_NAME,
         ACCOUNT_ID: prefilledData.ACCOUNT_ID !== null ? prefilledData.ACCOUNT_ID : prev.ACCOUNT_ID,
         SUBORGID: prefilledData.SUBORGID !== null ? prefilledData.SUBORGID : prev.SUBORGID,
+        CONTACT_TYPE_CD: prefilledData.CONTACT_TYPE_CD !== null ? prefilledData.CONTACT_TYPE_CD : prev.CONTACT_TYPE_CD,
+        JOB_TITLE: prefilledData.JOB_TITLE !== null ? prefilledData.JOB_TITLE : prev.JOB_TITLE,
+        DEPARTMENT: prefilledData.DEPARTMENT !== null ? prefilledData.DEPARTMENT : prev.DEPARTMENT,
+        IS_PRIMARY: prefilledData.IS_PRIMARY !== null ? prefilledData.IS_PRIMARY : prev.IS_PRIMARY,
         // Map all fields from AI
         EMAIL: prefilledData.EMAIL !== null ? prefilledData.EMAIL : prev.EMAIL,
         ALT_EMAIL: prefilledData.ALT_EMAIL !== null ? prefilledData.ALT_EMAIL : prev.ALT_EMAIL,
@@ -166,10 +180,14 @@ export default function AddContactForm({
         setSuborgName('');
       }
     } else {
-      setFormData((prev) => ({ ...prev, SUBORGID: '' }));
-      setSuborgName('');
+      // If no account selected, default to user's suborganization (editable)
+      if (userSuborgId && !formData.SUBORGID) {
+        setFormData((prev) => ({ ...prev, SUBORGID: userSuborgId }));
+      }
+      const suborg = suborgs.find((s) => s.suborgid === formData.SUBORGID);
+      setSuborgName(suborg ? suborg.suborgname : '');
     }
-  }, [formData.ACCOUNT_ID, accounts, suborgs]);
+  }, [formData.ACCOUNT_ID, formData.SUBORGID, accounts, suborgs, userSuborgId]);
 
   // Handle successful save
   useEffect(() => {
@@ -213,8 +231,18 @@ export default function AddContactForm({
           <h3>Core Information</h3>
           <div className="contact_form-row">
             <div className="contact_form-group">
-              <label>Account*</label>
-              <select name="ACCOUNT_ID" value={formData.ACCOUNT_ID} onChange={handleChange} required>
+              <label>First Name*</label>
+              <input type="text" name="FIRST_NAME" value={formData.FIRST_NAME} onChange={handleChange} required />
+            </div>
+            <div className="contact_form-group">
+              <label>Last Name*</label>
+              <input type="text" name="LAST_NAME" value={formData.LAST_NAME} onChange={handleChange} required />
+            </div>
+          </div>
+          <div className="contact_form-row">
+            <div className="contact_form-group">
+              <label>Account</label>
+              <select name="ACCOUNT_ID" value={formData.ACCOUNT_ID} onChange={handleChange}>
                 <option value="">Select an Account</option>
                 {accounts.map((acc) => (
                   <option key={acc.ACCNT_ID} value={acc.ACCNT_ID}>{acc.ALIAS_NAME}</option>
@@ -222,17 +250,63 @@ export default function AddContactForm({
               </select>
             </div>
             <div className="contact_form-group">
-              <label>Organization (Auto-filled)</label>
-              <input type="text" value={suborgName} readOnly placeholder="Select an account to populate" />
-              <input type="hidden" name="SUBORGID" value={formData.SUBORGID} />
+              <label>Organization{formData.ACCOUNT_ID ? ' (Auto-filled)' : '*'}</label>
+              {formData.ACCOUNT_ID ? (
+                <>
+                  <input type="text" value={suborgName} readOnly placeholder="Select an account to populate" />
+                  <input type="hidden" name="SUBORGID" value={formData.SUBORGID} />
+                </>
+              ) : (
+                <select name="SUBORGID" value={formData.SUBORGID} onChange={handleChange} required>
+                  <option value="">Select Organization</option>
+                  {suborgs.map((sub) => (
+                    <option key={sub.suborgid} value={sub.suborgid}>{sub.suborgname}</option>
+                  ))}
+                </select>
+                // Disabled version for later use:
+                // <input type="text" value={suborgName} readOnly disabled />
+                // <input type="hidden" name="SUBORGID" value={formData.SUBORGID} />
+              )}
+            </div>
+          </div>
+          <div className="contact_form-row">
+            <div className="contact_form-group">
+              <label>Contact Type</label>
+              <select name="CONTACT_TYPE_CD" value={formData.CONTACT_TYPE_CD} onChange={handleChange}>
+                <option value="">Select Contact Type</option>
+                {contactTypes && contactTypes.map((ct) => (
+                  <option key={ct.ID} value={ct.VALUE}>{ct.VALUE}</option>
+                ))}
+              </select>
+            </div>
+            <div className="contact_form-group">
+              <label>Job Title</label>
+              <input type="text" name="JOB_TITLE" value={formData.JOB_TITLE} onChange={handleChange} />
+            </div>
+            <div className="contact_form-group">
+              <label>Department</label>
+              <input type="text" name="DEPARTMENT" value={formData.DEPARTMENT} onChange={handleChange} />
+            </div>
+          </div>
+          <div className="contact_form-row">
+            <div className="contact_form-group" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <input 
+                type="checkbox" 
+                name="IS_PRIMARY" 
+                checked={formData.IS_PRIMARY === '1'} 
+                onChange={(e) => setFormData(prev => ({ ...prev, IS_PRIMARY: e.target.checked ? '1' : '0' }))}
+                style={{ width: 'auto' }}
+              />
+              <label style={{ marginBottom: 0 }}>Is Primary Contact</label>
+              <input type="hidden" name="IS_PRIMARY" value={formData.IS_PRIMARY} />
             </div>
           </div>
           
-          {/* ✅ ALL FIELDS DISPLAYED */}
+          {/* Contact Details */}
           <div className="contact_form-row">
             <div className="contact_form-group">
-              <label>Email*</label>
-              <input type="email" name="EMAIL" value={formData.EMAIL} onChange={handleChange} required />
+              <label>Email</label>
+              <input type="email" name="EMAIL" value={formData.EMAIL} onChange={handleChange} />
             </div>
             <div className="contact_form-group">
               <label>Alternate Email</label>
