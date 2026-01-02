@@ -9,7 +9,8 @@ import {
 import styles from '../Employee/immigration.module.css'; 
 import EditImmigration from './EditImmigration'; // Import new component
 
-const APPROVED_STATUS_ID = 582; 
+// ✅ STATUS UPDATE: Case Approved is 7
+const APPROVED_STATUS_ID = 7; 
 const MAX_FILE_SIZE_BYTES = 1 * 1024 * 1024; // 1 MB
 
 const Immigration = ({
@@ -89,7 +90,7 @@ const Immigration = ({
 
     return { 
         filteredRecords: filtered, 
-        totalPages: pages, 
+        totalPages: pages || 1, 
         paginatedRecords: paginated 
     };
   }, [records, filterDocType, currentPage, rowsPerPage]);
@@ -144,9 +145,11 @@ const Immigration = ({
       const data = await res.json();
       if(data.success) {
          await refreshData();
+      } else {
+         alert("Sync failed: " + (data.message || "Unknown error"));
       }
     } catch (e) {
-      alert("Sync failed");
+      alert("Sync failed: Network error");
     } finally {
       setSyncingMap(prev => ({ ...prev, [receiptNumber]: false }));
     }
@@ -154,13 +157,14 @@ const Immigration = ({
 
   const handleGlobalSync = async () => {
     setIsGlobalSyncing(true);
+    // Filter: Sync only if NOT APPROVED (ID 7) and has a number
     const recordsToSync = filteredRecords.filter(r => 
         Number(r.immigration_status) !== APPROVED_STATUS_ID && 
         r.document_number
     );
 
     if (recordsToSync.length === 0) {
-        alert("No visible records need syncing.");
+        alert("No visible records need syncing (All Approved or No Receipt #).");
         setIsGlobalSyncing(false);
         return;
     }
@@ -181,7 +185,7 @@ const Immigration = ({
 
     await refreshData();
     setIsGlobalSyncing(false);
-    alert(`Global Sync Completed. Synced ${successCount} records.`);
+    alert(`Global Sync Completed. Processed ${successCount} records.`);
   };
 
   // --- ADD MODAL HANDLERS ---
@@ -411,7 +415,6 @@ const Immigration = ({
                 </div>
                 
                 <form onSubmit={handleSubmit}>
-                    {/* (Same Form Fields as previous, omitted for brevity but logic remains exactly the same) */}
                     {/* ROW 1 */}
                     <div className={styles.employee_immigration_formRow}>
                         <div className={styles.employee_immigration_formGroup}>

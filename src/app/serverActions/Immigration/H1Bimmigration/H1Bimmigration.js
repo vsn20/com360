@@ -17,7 +17,7 @@ const decodeJwt = (token) => {
 };
 
 const getUserContext = async () => {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const token = cookieStore.get('jwt_token')?.value;
   if (!token) throw new Error('Unauthorized');
   const decoded = decodeJwt(token);
@@ -34,7 +34,7 @@ const formatDateToString = (date) => {
   return `${month}/${day}/${d.getFullYear()}`;
 };
 
-// NEW: Format Date to YYYY-MM-DD for HTML date inputs
+// Format Date to YYYY-MM-DD for HTML date inputs
 const formatDateForInput = (date) => {
   if (!date || isNaN(new Date(date))) return '';
   const d = new Date(date);
@@ -96,6 +96,7 @@ export async function fetchH1BRegistrations({ year, suborgid } = {}) {
 
   query += ` ORDER BY created_at DESC`;
 
+  // OPTIMIZED: pool.query automatically handles connection release
   const [rows] = await pool.query(query, params);
 
   // Format dates: YYYY-MM-DD for form inputs, MM/DD/YYYY for display
