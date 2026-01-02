@@ -445,7 +445,7 @@ const Overview = ({ orgid, empid, organizations, countries, states,documenttypes
       {!add && selectedorgid ? (
         <div className="organization_details_container">
           <div className="organization_header_section">
-            <h1 className="organization_title">Organization Details</h1>
+            <h1 className="organization_title">{allOrganizations.find(org => org.suborgid === selectedorgid)?.suborgname || ''} Organization Details</h1>
             <button className="organization_back_button" onClick={handleBackClick}></button>
           </div>
           
