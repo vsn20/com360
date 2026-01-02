@@ -369,3 +369,116 @@ export async function updateServiceRequest(formData) {
     return { success: false, error: error.message || 'Failed to update service request' };
   }
 }
+
+// Fetch activities for a service request (for creator to view resolver's work)
+export async function fetchActivitiesForCreator(srNum, orgid, empid) {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('jwt_token')?.value;
+    if (!token) {
+      console.error('No JWT token found');
+      return { success: false, error: 'No authentication token found', activityRows: [] };
+    }
+
+    const decoded = decodeJwt(token);
+    if (!decoded || decoded.orgid != orgid || decoded.empid != empid) {
+      console.error('Invalid token or unauthorized access');
+      return { success: false, error: 'Invalid or unauthorized authentication token', activityRows: [] };
+    }
+
+    const pool = await DBconnection();
+    
+    const [activityRows] = await pool.query(
+      `SELECT ACT_ID, SR_ID, TYPE, SUB_TYPE, COMMENTS, START_DATE, END_DATE, 
+              CREATED, CREATED_BY, LAST_UPD, LAST_UPD_BY 
+       FROM C_SRV_ACTIVITIES 
+       WHERE SR_ID = ?`,
+      [srNum]
+    );
+
+    // Enrich rows with employee names
+    const enrichedRows = await Promise.all(
+      activityRows.map(async (details) => {
+        try {
+          const [empname] = await pool.query(
+            'SELECT EMP_FST_NAME, EMP_LAST_NAME FROM C_EMP WHERE empid = ?',
+            [details.CREATED_BY]
+          );
+          return {
+            ...details,
+            CREATED_BY_NAME: empname[0]
+              ? `${empname[0].EMP_FST_NAME} ${empname[0].EMP_LAST_NAME}`
+              : 'Unknown',
+          };
+        } catch (error) {
+          console.error(`Error fetching employee name for CREATED_BY ${details.CREATED_BY}:`, error);
+          return {
+            ...details,
+            CREATED_BY_NAME: 'Unknown',
+          };
+        }
+      })
+    );
+
+    return { success: true, activityRows: enrichedRows };
+  } catch (error) {
+    console.error('Error fetching activities for creator:', error);
+    return { success: false, error: error.message || 'Failed to fetch activities', activityRows: [] };
+  }
+}
+
+// Fetch resolver attachments for a service request (for creator to view)
+export async function fetchResolverAttachmentsForCreator(srNum, orgid, empid) {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('jwt_token')?.value;
+    if (!token) {
+      console.error('No JWT token found');
+      return { success: false, error: 'No authentication token found', attachments: [] };
+    }
+
+    const decoded = decodeJwt(token);
+    if (!decoded || decoded.orgid != orgid || decoded.empid != empid) {
+      console.error('Invalid token or unauthorized access');
+      return { success: false, error: 'Invalid or unauthorized authentication token', attachments: [] };
+    }
+
+    const pool = await DBconnection();
+
+    // Get attachments not created by the service request creator (i.e., resolver attachments)
+    const [attachmentRows] = await pool.query(
+      `SELECT SR_ATT_ID, SR_ID, FILE_NAME, FILE_PATH, TYPE_CD, COMMENTS, ATTACHMENT_STATUS, CREATED, CREATED_BY 
+       FROM C_SRV_REQ_ATT 
+       WHERE SR_ID = ? AND CREATED_BY != ?`,
+      [srNum, empid]
+    );
+
+    // Enrich with creator names
+    const enrichedAttachments = await Promise.all(
+      attachmentRows.map(async (att) => {
+        try {
+          const [empname] = await pool.query(
+            'SELECT EMP_FST_NAME, EMP_LAST_NAME FROM C_EMP WHERE empid = ?',
+            [att.CREATED_BY]
+          );
+          return {
+            ...att,
+            CREATED_BY_NAME: empname[0]
+              ? `${empname[0].EMP_FST_NAME} ${empname[0].EMP_LAST_NAME}`
+              : 'Unknown',
+          };
+        } catch (error) {
+          return {
+            ...att,
+            CREATED_BY_NAME: 'Unknown',
+          };
+        }
+      })
+    );
+
+    return { success: true, attachments: enrichedAttachments };
+  } catch (error) {
+    console.error('Error fetching resolver attachments for creator:', error);
+    return { success: false, error: error.message || 'Failed to fetch resolver attachments', attachments: [] };
+  }
+}

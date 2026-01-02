@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import AddServiceReq from './AddServiceReq';
-import { fetchServiceRequestById, getemployeename, updateServiceRequest, getparentsr } from '@/app/serverActions/ServiceRequests/Overview';
+import { fetchServiceRequestById, getemployeename, updateServiceRequest, getparentsr, fetchActivitiesForCreator, fetchResolverAttachmentsForCreator } from '@/app/serverActions/ServiceRequests/Overview';
 import './overview.css';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Requests from './Requests';
@@ -33,6 +33,8 @@ const Overview = ({
   const [allServiceRequests, setAllServiceRequests] = useState(serviceRequests || []);
   const [req, setreq] = useState(false);
   const [parentServiceRequests, setParentServiceRequests] = useState([]);
+  const [activities, setActivities] = useState([]);
+  const [resolverAttachments, setResolverAttachments] = useState([]);
   
   // Pagination and filtering state
   const [sortConfig, setSortConfig] = useState({ column: 'SR_NUM', direction: 'asc' });
@@ -139,6 +141,11 @@ const Overview = ({
           const serviceRequest = await fetchServiceRequestById(selectedSrNum, orgid, empid);
           const employeeRequest = await getemployeename(serviceRequest.ASSIGNED_TO);
           const parentRequests = await getparentsr(selectedSrNum);
+          
+          // Fetch activities and resolver attachments for creator view
+          const activitiesResult = await fetchActivitiesForCreator(selectedSrNum, orgid, empid);
+          const resolverAttachmentsResult = await fetchResolverAttachmentsForCreator(selectedSrNum, orgid, empid);
+          
           setServiceRequestDetails(serviceRequest);
           setFormData({
             serviceName: serviceRequest.SERVICE_NAME || '',
@@ -173,12 +180,16 @@ const Overview = ({
           );
           setNewFiles([]);
           setParentServiceRequests(parentRequests.success ? parentRequests.serviceRequests : []);
+          setActivities(activitiesResult.success ? activitiesResult.activityRows : []);
+          setResolverAttachments(resolverAttachmentsResult.success ? resolverAttachmentsResult.attachments : []);
           setError(null);
         } catch (err) {
           console.error('Error loading service request details:', err);
           setError(err.message || 'Failed to load service request details');
           setServiceRequestDetails(null);
           setParentServiceRequests([]);
+          setActivities([]);
+          setResolverAttachments([]);
         } finally {
           setIsLoading(false);
         }
@@ -210,6 +221,8 @@ const Overview = ({
       setExistingFiles([]);
       setNewFiles([]);
       setParentServiceRequests([]);
+      setActivities([]);
+      setResolverAttachments([]);
     }
   }, [selectedSrNum, orgid, empid]);
 
@@ -1464,6 +1477,96 @@ const Overview = ({
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* Resolver Attachments Section - Read Only for Creator */}
+            <div className="details-block">
+              <div className="section-header">
+                <div>Resolver Attachments</div>
+              </div>
+              <div className="view-details">
+                {resolverAttachments.length > 0 ? (
+                  <div className="details-row">
+                    <div className="details-g">
+                      <div className="table-wrapper">
+                        <table className="attachment-table">
+                          <thead>
+                            <tr>
+                              <th>File Name</th>
+                              <th>Comments</th>
+                              <th>Added By</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {resolverAttachments.map((fileObj, index) => (
+                              <tr key={index}>
+                                <td>
+                                  <a
+                                    href={`/uploads/ServiceRequests/${fileObj.FILE_PATH}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    {fileObj.FILE_NAME}
+                                  </a>
+                                </td>
+                                <td>{fileObj.COMMENTS || '-'}</td>
+                                <td>{fileObj.CREATED_BY_NAME || '-'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <p style={{ color: '#666', fontStyle: 'italic' }}>No resolver attachments yet.</p>
+                )}
+              </div>
+            </div>
+
+            {/* Activities Section - Read Only for Creator */}
+            <div className="details-block">
+              <div className="section-header">
+                <div>Activities</div>
+              </div>
+              <div className="view-details">
+                {activities.length > 0 ? (
+                  <div className="details-row">
+                    <div className="details-g">
+                      <div className="table-wrapper">
+                        <table className="attachment-table">
+                          <thead>
+                            <tr>
+                              <th>Activity ID</th>
+                              <th>Type</th>
+                              <th>Sub-Type</th>
+                              <th>Comments</th>
+                              <th>Start Date</th>
+                              <th>End Date</th>
+                              <th>Created By</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {activities.map((activity) => (
+                              <tr key={activity.ACT_ID}>
+                                <td>{activity.ACT_ID}</td>
+                                <td>{activity.TYPE || '-'}</td>
+                                <td>{activity.SUB_TYPE || '-'}</td>
+                                <td>{activity.COMMENTS || '-'}</td>
+                                <td>{formatDate(activity.START_DATE) || '-'}</td>
+                                <td>{formatDate(activity.END_DATE) || '-'}</td>
+                                <td>{activity.CREATED_BY_NAME || '-'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <p style={{ color: '#666', fontStyle: 'italic' }}>No activities yet.</p>
+                )}
+              </div>
             </div>
           </div>
         )
