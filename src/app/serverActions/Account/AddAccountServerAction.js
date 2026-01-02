@@ -67,6 +67,20 @@ export async function addAccount(formData) {
     const suborgid = formData.get('suborgid') || null;
     const ourorg = formData.get('ourorg') === '1' ? 1 : 0;
     
+    // Contact fields
+    const phone = formData.get('phone') || null;
+    const mobile = formData.get('mobile') || null;
+    const website = formData.get('website') || null;
+    const ein = formData.get('ein') || null;
+    const dunsNumber = formData.get('dunsNumber') || null;
+    const linkedin = formData.get('linkedin') || null;
+    const youtube = formData.get('youtube') || null;
+    const facebook = formData.get('facebook') || null;
+    const twitter = formData.get('twitter') || null;
+    const instagram = formData.get('instagram') || null;
+    const companySize = formData.get('companySize') || null;
+    const loyaltyStatus = formData.get('loyaltyStatus') || null;
+    
     // Original values from form
     let businessStateId = formData.get('businessStateId') || null;
     let businessAddrLine3 = formData.get('businessAddrLine3') || null; // Custom State text comes here
@@ -161,15 +175,19 @@ export async function addAccount(formData) {
         BUSINESS_STATE_ID, BUSINESS_COUNTRY_ID, BUSINESS_POSTAL_CODE,
         MAILING_ADDR_LINE1, MAILING_ADDR_LINE2, MAILING_ADDR_LINE3, MAILING_CITY,
         MAILING_STATE_ID, MAILING_COUNTRY_ID, MAILING_POSTAL_CODE,
-        CREATED_BY, LAST_UPDATED_BY, BRANCH_TYPE, suborgid, ourorg
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        CREATED_BY, LAST_UPDATED_BY, BRANCH_TYPE, suborgid, ourorg,
+        PHONE, MOBILE, WEBSITE, EIN, DUNS_NUMBER, LINKEDIN, YOUTUBE, FACEBOOK, TWITTER, INSTAGRAM,
+        COMPANY_SIZE, LOYALTY_STATUS
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         accntId, orgId, 1, acctTypeCd, email, accountName,
         businessAddrLine1, businessAddrLine2, businessAddrLine3, businessCity,
         businessStateId, businessCountryId, businessPostalCode,
         mailingAddrLine1, mailingAddrLine2, mailingAddrLine3, mailingCity,
         mailingStateId, mailingCountryId, mailingPostalCode,
-        createdBy, createdBy, branchType, suborgid, ourorg
+        createdBy, createdBy, branchType, suborgid, ourorg,
+        phone, mobile, website, ein, dunsNumber, linkedin, youtube, facebook, twitter, instagram,
+        companySize, loyaltyStatus
       ]
     );
 

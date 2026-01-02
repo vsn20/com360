@@ -18,7 +18,9 @@ const Overview = ({
   orgid,
   error: initialError,
   accounts,
-  suborgs
+  suborgs,
+  companySizes,
+  loyaltyStatuses
 }) => {
   const router = useRouter();
   const searchparams = useSearchParams();
@@ -56,7 +58,19 @@ const Overview = ({
     lastUpdatedBy: '',
     lastUpdatedDate: '',
     suborgid: '',
-    ourorg: '0' 
+    ourorg: '0',
+    phone: '',
+    mobile: '',
+    website: '',
+    ein: '',
+    dunsNumber: '',
+    linkedin: '',
+    youtube: '',
+    facebook: '',
+    twitter: '',
+    instagram: '',
+    companySize: '',
+    loyaltyStatus: ''
   });
 
   const [error, setError] = useState(initialError);
@@ -64,6 +78,8 @@ const Overview = ({
   const [editingBasic, setEditingBasic] = useState(false);
   const [editingBusinessAddress, setEditingBusinessAddress] = useState(false);
   const [editingMailingAddress, setEditingMailingAddress] = useState(false);
+  const [editingContact, setEditingContact] = useState(false);
+  const [contactdisplay, setcontactdisplay] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [isadd, setisadd] = useState(false);
@@ -77,6 +93,18 @@ const Overview = ({
     acctTypeCd: '',
     branchType: '',
     email: '',
+    phone: '',
+    mobile: '',
+    website: '',
+    ein: '',
+    dunsNumber: '',
+    linkedin: '',
+    youtube: '',
+    facebook: '',
+    twitter: '',
+    instagram: '',
+    companySize: '',
+    loyaltyStatus: '',
     businessAddrLine1: '',
     businessAddrLine2: '',
     businessAddrLine3: '', 
@@ -180,11 +208,13 @@ const Overview = ({
     setEditingBasic(false);
     setEditingBusinessAddress(false);
     setEditingMailingAddress(false);
+    setEditingContact(false);
     setError(null);
     setisadd(false);
     setActiveSubmenuTab('basic');
     setbasicdetailsdisplay(true);
     setaddressdisplay(false);
+    setcontactdisplay(false);
   };
 
   const handleBackClick = () => {
@@ -193,6 +223,7 @@ const Overview = ({
     setEditingBasic(false);
     setEditingBusinessAddress(false);
     setEditingMailingAddress(false);
+    setEditingContact(false);
     setError(null);
     setisadd(false);
     setSearchQuery('');
@@ -201,6 +232,7 @@ const Overview = ({
     setActiveSubmenuTab('basic');
     setbasicdetailsdisplay(false);
     setaddressdisplay(false);
+    setcontactdisplay(false);
   };
 
   const handleaddaccount = () => {
@@ -208,11 +240,13 @@ const Overview = ({
     setEditingBasic(false);
     setEditingBusinessAddress(false);
     setEditingMailingAddress(false);
+    setEditingContact(false);
     setError(null);
     setisadd(true);
     setActiveSubmenuTab('basic');
     setbasicdetailsdisplay(false);
     setaddressdisplay(false);
+    setcontactdisplay(false);
   };
 
   const handleSubmenuTabClick = (tab) => {
@@ -220,19 +254,27 @@ const Overview = ({
     if (tab === 'basic') {
       setbasicdetailsdisplay(true);
       setaddressdisplay(false);
+      setcontactdisplay(false);
     } else if (tab === 'address') {
       setbasicdetailsdisplay(false);
       setaddressdisplay(true);
+      setcontactdisplay(false);
+    } else if (tab === 'contact') {
+      setbasicdetailsdisplay(false);
+      setaddressdisplay(false);
+      setcontactdisplay(true);
     }
     setEditingBasic(false);
     setEditingBusinessAddress(false);
     setEditingMailingAddress(false);
+    setEditingContact(false);
   };
 
   const handleEdit = (section) => {
     if (section === 'basic') setEditingBasic(true);
     if (section === 'businessAddress') setEditingBusinessAddress(true);
     if (section === 'mailingAddress') setEditingMailingAddress(true);
+    if (section === 'contact') setEditingContact(true);
   };
 
   // --- FILTERING ---
@@ -344,7 +386,19 @@ const Overview = ({
           lastUpdatedBy: account.LAST_UPDATED_BY || '',
           lastUpdatedDate: formatDate(account.LAST_UPDATED_DATE) || '',
           suborgid: account.suborgid || '',
-          ourorg: account.ourorg ? String(account.ourorg) : '0'
+          ourorg: account.ourorg ? String(account.ourorg) : '0',
+          phone: account.PHONE || '',
+          mobile: account.MOBILE || '',
+          website: account.WEBSITE || '',
+          ein: account.EIN || '',
+          dunsNumber: account.DUNS_NUMBER || '',
+          linkedin: account.LINKEDIN || '',
+          youtube: account.YOUTUBE || '',
+          facebook: account.FACEBOOK || '',
+          twitter: account.TWITTER || '',
+          instagram: account.INSTAGRAM || '',
+          companySize: account.COMPANY_SIZE ? String(account.COMPANY_SIZE) : '',
+          loyaltyStatus: account.LOYALTY_STATUS ? String(account.LOYALTY_STATUS) : '',
         });
         setError(null);
       } catch (err) {
@@ -400,6 +454,27 @@ const Overview = ({
         mailingStateId: accountDetails.MAILING_STATE_ID ? String(accountDetails.MAILING_STATE_ID) : '',
         mailingCountryId: accountDetails.MAILING_COUNTRY_ID ? String(accountDetails.MAILING_COUNTRY_ID) : '185',
         mailingPostalCode: accountDetails.MAILING_POSTAL_CODE || '',
+      }));
+    }
+  };
+
+  const handleCancelContact = () => {
+    setEditingContact(false);
+    if (accountDetails) {
+      setFormData(prev => ({
+        ...prev,
+        phone: accountDetails.PHONE || '',
+        mobile: accountDetails.MOBILE || '',
+        website: accountDetails.WEBSITE || '',
+        ein: accountDetails.EIN || '',
+        dunsNumber: accountDetails.DUNS_NUMBER || '',
+        linkedin: accountDetails.LINKEDIN || '',
+        youtube: accountDetails.YOUTUBE || '',
+        facebook: accountDetails.FACEBOOK || '',
+        twitter: accountDetails.TWITTER || '',
+        instagram: accountDetails.INSTAGRAM || '',
+        companySize: accountDetails.COMPANY_SIZE ? String(accountDetails.COMPANY_SIZE) : '',
+        loyaltyStatus: accountDetails.LOYALTY_STATUS ? String(accountDetails.LOYALTY_STATUS) : '',
       }));
     }
   };
@@ -471,6 +546,19 @@ const Overview = ({
       formDataToSubmit.append('MAILING_STATE_ID', formData.mailingStateId || '');
       formDataToSubmit.append('MAILING_COUNTRY_ID', formData.mailingCountryId || '');
       formDataToSubmit.append('MAILING_POSTAL_CODE', formData.mailingPostalCode || '');
+    } else if (section === 'contact') {
+      formDataToSubmit.append('PHONE', formData.phone || '');
+      formDataToSubmit.append('MOBILE', formData.mobile || '');
+      formDataToSubmit.append('WEBSITE', formData.website || '');
+      formDataToSubmit.append('EIN', formData.ein || '');
+      formDataToSubmit.append('DUNS_NUMBER', formData.dunsNumber || '');
+      formDataToSubmit.append('LINKEDIN', formData.linkedin || '');
+      formDataToSubmit.append('YOUTUBE', formData.youtube || '');
+      formDataToSubmit.append('FACEBOOK', formData.facebook || '');
+      formDataToSubmit.append('TWITTER', formData.twitter || '');
+      formDataToSubmit.append('INSTAGRAM', formData.instagram || '');
+      formDataToSubmit.append('COMPANY_SIZE', formData.companySize || '');
+      formDataToSubmit.append('LOYALTY_STATUS', formData.loyaltyStatus || '');
     }
 
     try {
@@ -487,6 +575,7 @@ const Overview = ({
         if (section === 'basic') setEditingBasic(false);
         if (section === 'businessAddress') setEditingBusinessAddress(false);
         if (section === 'mailingAddress') setEditingMailingAddress(false);
+        if (section === 'contact') setEditingContact(false);
         setError(null);
       } else {
         setError(result.error || 'Failed to save.');
@@ -564,7 +653,10 @@ const Overview = ({
         businessCity: '', businessStateId: '', businessCountryId: '185', businessPostalCode: '',
         mailingAddrLine1: '', mailingAddrLine2: '', mailingAddrLine3: '',
         mailingCity: '', mailingStateId: '', mailingCountryId: '185', mailingPostalCode: '',
-        suborgid: '', ourorg: '0'
+        suborgid: '', ourorg: '0',
+        phone: '', mobile: '', website: '', ein: '', dunsNumber: '',
+        linkedin: '', youtube: '', facebook: '', twitter: '', instagram: '',
+        companySize: '', loyaltyStatus: ''
       });
       setTimeout(() => { addsetFormSuccess(null); router.refresh(); }, 2000);
     }
@@ -573,6 +665,8 @@ const Overview = ({
   const getAccountTypeName = (id) => accountTypes.find(t => String(t.id) === String(id))?.Name || 'No Account Type';
   const getBranchTypeName = (id) => branchTypes.find(t => String(t.id) === String(id))?.Name || 'No Branch Type';
   const getCountryName = (id) => countries.find(c => c.ID === id)?.VALUE || 'No Country';
+  const getCompanySizeName = (id) => companySizes.find(cs => String(cs.ID) === String(id))?.VALUE || '-';
+  const getLoyaltyStatusName = (id) => loyaltyStatuses.find(ls => String(ls.ID) === String(id))?.VALUE || '-';
   
   const getDisplayState = (countryId, stateId, addrLine3) => {
     if (isUSA(countryId)) {
@@ -735,6 +829,38 @@ const Overview = ({
               </div>
             </div>
 
+            <div className="account_details_block">
+              <div className="account_block_header">
+                <h3>Account Contact</h3>
+              </div>
+              <div className="account_form_grid">
+                <div className="account_form_group"><label>Phone</label><input type="text" name="phone" value={addformData.phone} onChange={addhandleChange} /></div>
+                <div className="account_form_group"><label>Mobile</label><input type="text" name="mobile" value={addformData.mobile} onChange={addhandleChange} /></div>
+                <div className="account_form_group"><label>Website</label><input type="text" name="website" value={addformData.website} onChange={addhandleChange} placeholder="https://" /></div>
+                <div className="account_form_group"><label>EIN</label><input type="text" name="ein" value={addformData.ein} onChange={addhandleChange} /></div>
+                <div className="account_form_group"><label>DUNS Number</label><input type="text" name="dunsNumber" value={addformData.dunsNumber} onChange={addhandleChange} /></div>
+                <div className="account_form_group"><label>LinkedIn</label><input type="text" name="linkedin" value={addformData.linkedin} onChange={addhandleChange} placeholder="https://linkedin.com/company/..." /></div>
+                <div className="account_form_group"><label>YouTube</label><input type="text" name="youtube" value={addformData.youtube} onChange={addhandleChange} placeholder="https://youtube.com/..." /></div>
+                <div className="account_form_group"><label>Facebook</label><input type="text" name="facebook" value={addformData.facebook} onChange={addhandleChange} placeholder="https://facebook.com/..." /></div>
+                <div className="account_form_group"><label>Twitter</label><input type="text" name="twitter" value={addformData.twitter} onChange={addhandleChange} placeholder="https://twitter.com/..." /></div>
+                <div className="account_form_group"><label>Instagram</label><input type="text" name="instagram" value={addformData.instagram} onChange={addhandleChange} placeholder="https://instagram.com/..." /></div>
+                <div className="account_form_group">
+                  <label>Company Size</label>
+                  <select name="companySize" value={addformData.companySize} onChange={addhandleChange}>
+                    <option value="">Select Company Size</option>
+                    {companySizes.map(cs => <option key={cs.ID} value={cs.ID}>{cs.VALUE}</option>)}
+                  </select>
+                </div>
+                <div className="account_form_group">
+                  <label>Loyalty Status</label>
+                  <select name="loyaltyStatus" value={addformData.loyaltyStatus} onChange={addhandleChange}>
+                    <option value="">Select Loyalty Status</option>
+                    {loyaltyStatuses.map(ls => <option key={ls.ID} value={ls.ID}>{ls.VALUE}</option>)}
+                  </select>
+                </div>
+              </div>
+            </div>
+
             <div className="account_form_buttons">
               <button type="submit" className="account_save" disabled={isAdding}>{isAdding ? 'Adding...' : 'Add Account'}</button>
             </div>
@@ -833,6 +959,7 @@ const Overview = ({
           <div className="account_submenu_bar">
             <button className={activeSubmenuTab === 'basic' ? 'account_active' : ''} onClick={() => handleSubmenuTabClick('basic')}>Basic Details</button>
             <button className={activeSubmenuTab === 'address' ? 'account_active' : ''} onClick={() => handleSubmenuTabClick('address')}>Address Details</button>
+            <button className={activeSubmenuTab === 'contact' ? 'account_active' : ''} onClick={() => handleSubmenuTabClick('contact')}>Contact Details</button>
           </div>
 
           <div className="account_details_content">
@@ -1006,6 +1133,64 @@ const Overview = ({
                 )}
               </div>
               </>
+            )}
+            
+            {contactdisplay && (
+              <div className="account_details_block">
+                <h3>Contact Details</h3>
+                {editingContact && canEditAccounts ? (
+                  <form onSubmit={(e) => { e.preventDefault(); handleSave('contact'); }}>
+                    <div className="account_form_grid">
+                      <div className="account_form_group"><label>Phone</label><input type="text" name="phone" value={formData.phone} onChange={handleFormChange} /></div>
+                      <div className="account_form_group"><label>Mobile</label><input type="text" name="mobile" value={formData.mobile} onChange={handleFormChange} /></div>
+                      <div className="account_form_group"><label>Website</label><input type="text" name="website" value={formData.website} onChange={handleFormChange} placeholder="https://" /></div>
+                      <div className="account_form_group"><label>EIN</label><input type="text" name="ein" value={formData.ein} onChange={handleFormChange} /></div>
+                      <div className="account_form_group"><label>DUNS Number</label><input type="text" name="dunsNumber" value={formData.dunsNumber} onChange={handleFormChange} /></div>
+                      <div className="account_form_group"><label>LinkedIn</label><input type="text" name="linkedin" value={formData.linkedin} onChange={handleFormChange} placeholder="https://linkedin.com/company/..." /></div>
+                      <div className="account_form_group"><label>YouTube</label><input type="text" name="youtube" value={formData.youtube} onChange={handleFormChange} placeholder="https://youtube.com/..." /></div>
+                      <div className="account_form_group"><label>Facebook</label><input type="text" name="facebook" value={formData.facebook} onChange={handleFormChange} placeholder="https://facebook.com/..." /></div>
+                      <div className="account_form_group"><label>Twitter</label><input type="text" name="twitter" value={formData.twitter} onChange={handleFormChange} placeholder="https://twitter.com/..." /></div>
+                      <div className="account_form_group"><label>Instagram</label><input type="text" name="instagram" value={formData.instagram} onChange={handleFormChange} placeholder="https://instagram.com/..." /></div>
+                      <div className="account_form_group">
+                        <label>Company Size</label>
+                        <select name="companySize" value={formData.companySize} onChange={handleFormChange}>
+                          <option value="">Select Company Size</option>
+                          {companySizes.map(cs => <option key={cs.ID} value={cs.ID}>{cs.VALUE}</option>)}
+                        </select>
+                      </div>
+                      <div className="account_form_group">
+                        <label>Loyalty Status</label>
+                        <select name="loyaltyStatus" value={formData.loyaltyStatus} onChange={handleFormChange}>
+                          <option value="">Select Loyalty Status</option>
+                          {loyaltyStatuses.map(ls => <option key={ls.ID} value={ls.ID}>{ls.VALUE}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                    <div className="account_form_buttons">
+                      <button type="submit" className="account_save" disabled={isLoading}>{isLoading ? 'Saving...' : 'Save'}</button>
+                      <button type="button" className="account_cancel" onClick={handleCancelContact} disabled={isLoading}>Cancel</button>
+                    </div>
+                  </form>
+                ) : (
+                  <>
+                  <div className="account_view_grid">
+                    <div className="account_view_group"><label>Phone</label><p>{accountDetails.PHONE || '-'}</p></div>
+                    <div className="account_view_group"><label>Mobile</label><p>{accountDetails.MOBILE || '-'}</p></div>
+                    <div className="account_view_group"><label>Website</label><p>{accountDetails.WEBSITE ? <a href={accountDetails.WEBSITE} target="_blank" rel="noopener noreferrer">{accountDetails.WEBSITE}</a> : '-'}</p></div>
+                    <div className="account_view_group"><label>EIN</label><p>{accountDetails.EIN || '-'}</p></div>
+                    <div className="account_view_group"><label>DUNS Number</label><p>{accountDetails.DUNS_NUMBER || '-'}</p></div>
+                    <div className="account_view_group"><label>LinkedIn</label><p>{accountDetails.LINKEDIN ? <a href={accountDetails.LINKEDIN} target="_blank" rel="noopener noreferrer">{accountDetails.LINKEDIN}</a> : '-'}</p></div>
+                    <div className="account_view_group"><label>YouTube</label><p>{accountDetails.YOUTUBE ? <a href={accountDetails.YOUTUBE} target="_blank" rel="noopener noreferrer">{accountDetails.YOUTUBE}</a> : '-'}</p></div>
+                    <div className="account_view_group"><label>Facebook</label><p>{accountDetails.FACEBOOK ? <a href={accountDetails.FACEBOOK} target="_blank" rel="noopener noreferrer">{accountDetails.FACEBOOK}</a> : '-'}</p></div>
+                    <div className="account_view_group"><label>Twitter</label><p>{accountDetails.TWITTER ? <a href={accountDetails.TWITTER} target="_blank" rel="noopener noreferrer">{accountDetails.TWITTER}</a> : '-'}</p></div>
+                    <div className="account_view_group"><label>Instagram</label><p>{accountDetails.INSTAGRAM ? <a href={accountDetails.INSTAGRAM} target="_blank" rel="noopener noreferrer">{accountDetails.INSTAGRAM}</a> : '-'}</p></div>
+                    <div className="account_view_group"><label>Company Size</label><p>{getCompanySizeName(accountDetails.COMPANY_SIZE)}</p></div>
+                    <div className="account_view_group"><label>Loyalty Status</label><p>{getLoyaltyStatusName(accountDetails.LOYALTY_STATUS)}</p></div>
+                  </div>
+                  {canEditAccounts && <div className="account_form_buttons"><button className="account_edit_button" onClick={() => handleEdit('contact')}>Edit</button></div>}
+                  </>
+                )}
+              </div>
             )}
           </div>
         </div>

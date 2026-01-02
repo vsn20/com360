@@ -123,7 +123,9 @@ export async function fetchAccountById(accntId) {
               BUSINESS_STATE_ID, BUSINESS_COUNTRY_ID, BUSINESS_POSTAL_CODE,
               MAILING_ADDR_LINE1, MAILING_ADDR_LINE2, MAILING_ADDR_LINE3, MAILING_CITY,
               MAILING_STATE_ID, MAILING_COUNTRY_ID, MAILING_POSTAL_CODE,
-              LAST_LOGIN_DATE, CREATED_BY, LAST_UPDATED_BY, BRANCH_TYPE, LAST_UPDATED_DATE, suborgid, ourorg
+              LAST_LOGIN_DATE, CREATED_BY, LAST_UPDATED_BY, BRANCH_TYPE, LAST_UPDATED_DATE, suborgid, ourorg,
+              PHONE, MOBILE, WEBSITE, EIN, DUNS_NUMBER, LINKEDIN, YOUTUBE, FACEBOOK, TWITTER, INSTAGRAM,
+              COMPANY_SIZE, LOYALTY_STATUS
        FROM C_ACCOUNT 
        WHERE ACCNT_ID = ? AND ORGID = ?`,
       [accntId, orgId]
@@ -330,6 +332,36 @@ export async function updateAccount(formData) {
         [
           mailingAddrLine1, mailingAddrLine2, mailingAddrLine3, mailingCity,
           mailingStateId, mailingCountryId, mailingPostalCode,
+          lastUpdatedBy, accntId, orgId
+        ]
+      );
+      affectedRows += result.affectedRows;
+
+    } else if (section === 'contact') {
+      const phone = formData.get('PHONE') || null;
+      const mobile = formData.get('MOBILE') || null;
+      const website = formData.get('WEBSITE') || null;
+      const ein = formData.get('EIN') || null;
+      const dunsNumber = formData.get('DUNS_NUMBER') || null;
+      const linkedin = formData.get('LINKEDIN') || null;
+      const youtube = formData.get('YOUTUBE') || null;
+      const facebook = formData.get('FACEBOOK') || null;
+      const twitter = formData.get('TWITTER') || null;
+      const instagram = formData.get('INSTAGRAM') || null;
+      const companySize = formData.get('COMPANY_SIZE') || null;
+      const loyaltyStatus = formData.get('LOYALTY_STATUS') || null;
+
+      const [result] = await pool.query(
+        `UPDATE C_ACCOUNT 
+         SET PHONE = ?, MOBILE = ?, WEBSITE = ?, EIN = ?, DUNS_NUMBER = ?,
+             LINKEDIN = ?, YOUTUBE = ?, FACEBOOK = ?, TWITTER = ?, INSTAGRAM = ?,
+             COMPANY_SIZE = ?, LOYALTY_STATUS = ?,
+             LAST_UPDATED_BY = ?, LAST_UPDATED_DATE = CURRENT_TIMESTAMP
+         WHERE ACCNT_ID = ? AND ORGID = ?`,
+        [
+          phone, mobile, website, ein, dunsNumber,
+          linkedin, youtube, facebook, twitter, instagram,
+          companySize, loyaltyStatus,
           lastUpdatedBy, accntId, orgId
         ]
       );

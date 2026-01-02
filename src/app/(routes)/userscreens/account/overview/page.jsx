@@ -3,7 +3,6 @@ import Overview from '@/app/components/Account/Overview';
 import { cookies } from 'next/headers';
 import DBconnection from '@/app/utils/config/db';
 
-// Simple function to decode JWT without verification
 const decodeJwt = (token) => {
   try {
     const base64Url = token.split('.')[1];
@@ -26,7 +25,10 @@ export default async function OverviewPage({ searchParams }) {
   let branchTypes = [];
   let countries = [];
   let states = [];
-  let suborgid=[];
+  let suborgid = [];
+  let companySizes = [];
+  let loyaltyStatuses = [];
+  
   try {
     const pool = await DBconnection();
     console.log("1234")
@@ -60,8 +62,19 @@ export default async function OverviewPage({ searchParams }) {
         [states] = await pool.query(
           'SELECT ID, VALUE FROM C_STATE WHERE ACTIVE = 1'
         );
+        
         [suborgid] = await pool.query(
           'SELECT suborgid, suborgname FROM C_SUB_ORG WHERE orgid = ? AND isstatus = 1',
+          [orgid]
+        );
+
+        [companySizes] = await pool.query(
+          'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 41 AND orgid = ? AND isactive = 1 ORDER BY display_order',
+          [orgid]
+        );
+
+        [loyaltyStatuses] = await pool.query(
+          'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 42 AND orgid = ? AND isactive = 1 ORDER BY display_order',
           [orgid]
         );
       }
@@ -80,6 +93,8 @@ export default async function OverviewPage({ searchParams }) {
       error={error}
       accounts={accounts}
       suborgs={suborgid}
+      companySizes={companySizes}
+      loyaltyStatuses={loyaltyStatuses}
     />
   );
 }
