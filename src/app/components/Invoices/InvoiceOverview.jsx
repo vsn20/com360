@@ -9,7 +9,9 @@ import {
   fetchAccountsForReceivable,
   fetchVendorsForPayable,
   sendInvoiceEmails,
-  generateInvoiceExcel // Import new server action
+  generateInvoiceExcel,
+  fetchSentInvoices,
+  resendInvoiceEmail
 } from "@/app/serverActions/Invoices/InvoiceActions";
 import styles from "./Invoice.module.css";
 import { saveAs } from 'file-saver';
@@ -50,6 +52,14 @@ const InvoiceOverview = () => {
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState(null);
   const [hasSearched, setHasSearched] = useState(false);
+  
+  // Saved Invoices State
+  const [savedInvoices, setSavedInvoices] = useState([]);
+  const [savedInvoicesLoading, setSavedInvoicesLoading] = useState(false);
+  const [savedStartDate, setSavedStartDate] = useState("");
+  const [savedEndDate, setSavedEndDate] = useState("");
+  const [savedRecipientEmail, setSavedRecipientEmail] = useState("");
+  const [savedStatus, setSavedStatus] = useState("all");
 
   useEffect(() => {
     const loadFilterData = async () => {
@@ -399,6 +409,53 @@ const InvoiceOverview = () => {
     }
   };
 
+  const handleLoadSavedInvoices = async () => {
+    setSavedInvoicesLoading(true);
+    setError(null);
+    try {
+      const result = await fetchSentInvoices({
+        startDate: savedStartDate || null,
+        endDate: savedEndDate || null,
+        recipientEmail: savedRecipientEmail || null,
+        status: savedStatus
+      });
+
+      if (result.error) {
+        setError(result.error);
+      } else {
+        setSavedInvoices(result.invoices || []);
+        setView("saved");
+      }
+    } catch (err) {
+      setError(err.message || "Error loading saved invoices");
+    } finally {
+      setSavedInvoicesLoading(false);
+    }
+  };
+
+  const handleResendInvoice = async (sentId, originalSentDate) => {
+    if (!window.confirm(`Resend invoice? This was originally sent on ${new Date(originalSentDate).toLocaleDateString()}`)) {
+      return;
+    }
+    
+    setSavedInvoicesLoading(true);
+    setError(null);
+    try {
+      const result = await resendInvoiceEmail(sentId);
+      if (result.error) {
+        setError(result.error);
+      } else {
+        alert(result.message);
+        // Reload the saved invoices
+        await handleLoadSavedInvoices();
+      }
+    } catch (err) {
+      setError(err.message || "Error resending invoice");
+    } finally {
+      setSavedInvoicesLoading(false);
+    }
+  };
+
   const handleInvoiceTypeChange = (type) => {
     setInvoiceType(type);
     setSelectedEmployee("all");
@@ -558,6 +615,9 @@ const InvoiceOverview = () => {
              <button className={styles.btnPrimary} onClick={handleGenerate} disabled={loading}>
                 {loading ? "Processing..." : "Generate Invoices"}
              </button>
+             <button className={styles.btnPrimary} onClick={() => setView("saved")} style={{background: '#3b82f6'}}>
+                💾 Saved Invoices
+             </button>
           </div>
         </div>
 
@@ -592,7 +652,7 @@ const InvoiceOverview = () => {
                   disabled={sendingAllEmails || sendingEmailIdx !== null}
                   style={{background: (sendingAllEmails) ? '#6b7280' : '#10B981'}}
                 >
-                  {sendingAllEmails ? '📧 Sending...' : '📧 Send All Emails'}
+                  {sendingAllEmails ? '📧 Sending...' : '📧 Save all and Send All Emails'}
                 </button>
               )}
             </div>
@@ -675,7 +735,7 @@ const InvoiceOverview = () => {
                        disabled={sendingEmailIdx === idx}
                        style={{ background: sendingEmailIdx === idx ? '#6b7280' : '#10B981' }}
                      >
-                       {sendingEmailIdx === idx ? '📧 Sending...' : '📧 Send Email'}
+                       {sendingEmailIdx === idx ? '📧 Sending...' : '📧 Save and Send Email'}
                      </button>
                    )}
                 </div>
@@ -778,6 +838,160 @@ const InvoiceOverview = () => {
                <div className={styles.grandTotalAmount}>${currentInvoice.totalAmount.toFixed(2)}</div>
             </div>
           </div>
+        </div>
+      )}
+
+      {view === "saved" && (
+        <div className={styles.resultsArea} style={{marginTop: '30px'}}>
+          <div className={styles.resultsHeader}>
+            <h3>Saved Invoices</h3>
+            <button className={styles.btnOutline} onClick={() => setView("list")}>← Back</button>
+          </div>
+
+          <div className={styles.card} style={{marginBottom: '20px'}}>
+            <div className={styles.controlsGrid}>
+              <div className={styles.controlGroup}>
+                <label>Start Date</label>
+                <input 
+                  type="date" 
+                  value={savedStartDate}
+                  onChange={e => setSavedStartDate(e.target.value)}
+                />
+              </div>
+              <div className={styles.controlGroup}>
+                <label>End Date</label>
+                <input 
+                  type="date" 
+                  value={savedEndDate}
+                  onChange={e => setSavedEndDate(e.target.value)}
+                />
+              </div>
+              <div className={styles.controlGroup}>
+                <label>Recipient Email</label>
+                <input 
+                  type="email" 
+                  value={savedRecipientEmail}
+                  onChange={e => setSavedRecipientEmail(e.target.value)}
+                  placeholder="Filter by email"
+                />
+              </div>
+              <div className={styles.controlGroup}>
+                <label>Status</label>
+                <select 
+                  value={savedStatus}
+                  onChange={e => setSavedStatus(e.target.value)}
+                >
+                  <option value="all">All Status</option>
+                  <option value="SENT">Sent</option>
+                  <option value="RESENT">Resent</option>
+                  <option value="FAILED">Failed</option>
+                </select>
+              </div>
+              <div className={styles.actionGroup} style={{gridColumn: '1 / -1'}}>
+                <button 
+                  className={styles.btnPrimary}
+                  onClick={handleLoadSavedInvoices}
+                  disabled={savedInvoicesLoading}
+                >
+                  {savedInvoicesLoading ? 'Loading...' : 'Search'}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {savedInvoices.length === 0 && !savedInvoicesLoading && (
+            <div className={styles.noResults}>
+              <p>No saved invoices found. Use the filters above to search.</p>
+            </div>
+          )}
+
+          {savedInvoices.length > 0 && (
+            <div style={{overflowX: 'auto'}}>
+              <table className={styles.invoiceTable} style={{width: '100%', borderCollapse: 'collapse'}}>
+                <thead>
+                  <tr style={{background: '#f3f4f6', borderBottom: '2px solid #e5e7eb'}}>
+                    <th style={{padding: '12px', textAlign: 'left'}}>Account</th>
+                    <th style={{padding: '12px', textAlign: 'left'}}>Period</th>
+                    <th style={{padding: '12px', textAlign: 'left'}}>Recipients</th>
+                    <th style={{padding: '12px', textAlign: 'left'}}>Amount</th>
+                    <th style={{padding: '12px', textAlign: 'left'}}>Sent Date</th>
+                    <th style={{padding: '12px', textAlign: 'left'}}>Status</th>
+                    <th style={{padding: '12px', textAlign: 'center'}}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {savedInvoices.map((invoice, idx) => (
+                    <tr key={idx} style={{borderBottom: '1px solid #e5e7eb'}}>
+                      <td style={{padding: '12px'}}>{invoice.ACCOUNT_NAME}</td>
+                      <td style={{padding: '12px'}}>{invoice.INVOICE_PERIOD}</td>
+                      <td style={{padding: '12px', fontSize: '12px'}}>
+                        {invoice.recipients ? invoice.recipients.split(',').map((email, i) => (
+                          <div key={i}>{email}</div>
+                        )) : '-'}
+                      </td>
+                      <td style={{padding: '12px', fontWeight: 'bold'}}>${invoice.TOTAL_AMOUNT.toFixed(2)}</td>
+                      <td style={{padding: '12px'}}>
+                        {new Date(invoice.SENT_DATE).toLocaleDateString()}
+                      </td>
+                      <td style={{padding: '12px'}}>
+                        <span style={{
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          background: invoice.STATUS === 'SENT' ? '#dbeafe' : invoice.STATUS === 'RESENT' ? '#fef3c7' : '#fee2e2',
+                          color: invoice.STATUS === 'SENT' ? '#1e40af' : invoice.STATUS === 'RESENT' ? '#b45309' : '#dc2626'
+                        }}>
+                          {invoice.STATUS}
+                        </span>
+                        {invoice.RESENT_FROM && (
+                          <div style={{fontSize: '11px', color: '#f97316', marginTop: '4px'}}>
+                            Original: {new Date(invoice.originalSentDate).toLocaleDateString()}
+                          </div>
+                        )}
+                      </td>
+                      <td style={{padding: '12px', textAlign: 'center'}}>
+                        <a 
+                          href={`/invoices/${invoice.PDF_PATH}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            marginRight: '8px',
+                            padding: '6px 12px',
+                            background: '#3b82f6',
+                            color: 'white',
+                            borderRadius: '4px',
+                            textDecoration: 'none',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                            display: 'inline-block'
+                          }}
+                        >
+                          📎 PDF
+                        </a>
+                        {invoice.STATUS !== 'RESENT' && (
+                          <button
+                            onClick={() => handleResendInvoice(invoice.SENT_ID, invoice.SENT_DATE)}
+                            style={{
+                              padding: '6px 12px',
+                              background: '#10b981',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px'
+                            }}
+                          >
+                            ↩️ Resend
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
     </div>

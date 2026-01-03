@@ -1,0 +1,41 @@
+CREATE TABLE IF NOT EXISTS C_INVOICES_SENT (
+  SENT_ID INT AUTO_INCREMENT PRIMARY KEY,
+  INVOICE_ID VARCHAR(255) NOT NULL COMMENT 'Unique identifier for the invoice',
+  SENT_BY VARCHAR(255) NOT NULL COMMENT 'Employee ID who sent the email',
+  SENT_DATE DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT 'Date/time when email was sent',
+  INVOICE_PERIOD VARCHAR(255) NOT NULL COMMENT 'Invoice period (e.g., 01/01/2025 - 01/31/2025)',
+  ACCOUNT_NAME VARCHAR(255) NOT NULL COMMENT 'Account/Vendor name',
+  ACCOUNT_ID VARCHAR(255) COMMENT 'Account ID or Vendor ID',
+  TOTAL_AMOUNT DECIMAL(12, 2) NOT NULL COMMENT 'Invoice total amount',
+  PDF_PATH VARCHAR(500) NOT NULL COMMENT 'Path to the PDF/Excel file in storage',
+  EMAIL_SUBJECT VARCHAR(500) COMMENT 'Email subject line',
+  STATUS VARCHAR(50) DEFAULT 'SENT' COMMENT 'Email status: SENT, PENDING, FAILED, RESENT',
+  RESENT_FROM INT COMMENT 'SENT_ID of original email if this is a resend',
+  ORG_ID INT NOT NULL COMMENT 'Organization ID',
+  CREATED TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  LAST_UPD TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_invoice_id (INVOICE_ID),
+  INDEX idx_org_id (ORG_ID),
+  INDEX idx_sent_date (SENT_DATE),
+  INDEX idx_account_name (ACCOUNT_NAME)
+);
+
+CREATE TABLE IF NOT EXISTS C_INVOICES_SENT_DETAIL (
+  SENT_DETAIL_ID INT AUTO_INCREMENT PRIMARY KEY,
+  SENT_ID INT NOT NULL COMMENT 'Foreign key to C_INVOICES_SENT',
+  RECIPIENT_EMAIL VARCHAR(255) NOT NULL COMMENT 'Email address of recipient',
+  RECIPIENT_NAME VARCHAR(255) COMMENT 'Name of recipient',
+  DELIVERY_STATUS VARCHAR(50) DEFAULT 'SENT' COMMENT 'SENT, BOUNCED, OPENED, etc.',
+  CREATED TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (SENT_ID) REFERENCES C_INVOICES_SENT(SENT_ID) ON DELETE CASCADE,
+  INDEX idx_sent_id (SENT_ID),
+  INDEX idx_recipient_email (RECIPIENT_EMAIL)
+);
+
+    INSERT INTO C_GENERIC_NAMES (g_id, Name, Description, active,category)
+    VALUES 
+    (44, 'Service Activity Type', 'Activity Type for Service Request Activities', 1,'service'),
+    (45, 'Service Activity Subtype', 'Activity Subtype for Service Request Activities', 1,'service')
+    ON DUPLICATE KEY UPDATE active = 1;
+
+ update C_GENERIC_NAMES SET child_gid=45 where g_id=44;

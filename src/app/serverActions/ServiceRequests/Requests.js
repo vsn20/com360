@@ -441,7 +441,7 @@ export async function fetchResolverAttachments(SR_NUM, orgid, empid) {
     console.log('Connection established for fetchResolverAttachments');
 
     const [requestRows] = await pool.query(
-      `SELECT CREATED_BY 
+      `SELECT ASSIGNED_TO 
        FROM C_SRV_REQ 
        WHERE SR_NUM = ? AND ORG_ID = ?`,
       [SR_NUM, orgid]
@@ -452,12 +452,12 @@ export async function fetchResolverAttachments(SR_NUM, orgid, empid) {
       throw new Error('Service request not found');
     }
 
-    const assignedTo = requestRows[0].CREATED_BY;
+    const assignedTo = requestRows[0].ASSIGNED_TO;
 
     const [attachmentRows] = await pool.query(
       `SELECT SR_ATT_ID, SR_ID, FILE_NAME, FILE_PATH, TYPE_CD, COMMENTS, ATTACHMENT_STATUS 
        FROM C_SRV_REQ_ATT 
-       WHERE SR_ID = ? AND CREATED_BY != ?`,
+       WHERE SR_ID = ? AND CREATED_BY = ?`,
       [SR_NUM, assignedTo]
     );
 

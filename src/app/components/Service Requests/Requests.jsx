@@ -782,7 +782,7 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
       {!selectedSrNum ? (
         <div className="service-requests-list">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <div className="title">Service Requests</div>
+            <div className="title">Action Required - Service Requests.</div>
             <button className="back-button" onClick={onBack} disabled={isLoading}></button>
           </div>
 

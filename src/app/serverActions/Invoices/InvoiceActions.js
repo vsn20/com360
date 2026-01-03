@@ -809,17 +809,18 @@ export async function generateInvoiceExcel(invoice) {
 }
 
 // Send invoice emails with attachments
-export async function sendInvoiceEmails(invoiceData) {
+export async function sendInvoiceEmails(invoiceData, resendFromSentId = null) {
   const cookieStore = await cookies();
   const token = cookieStore.get("jwt_token")?.value;
   if (!token) return { error: "No token found." };
 
   const decoded = decodeJwt(token);
-  if (!decoded || !decoded.orgid) return { error: "Invalid token." };
+  if (!decoded || !decoded.orgid || !decoded.empid) return { error: "Invalid token." };
 
   try {
     const pool = await DBconnection();
     const orgid = decoded.orgid;
+    const empid = decoded.empid;
 
     // Get organization details for email signature
     const [orgRows] = await pool.execute(
@@ -844,6 +845,7 @@ export async function sendInvoiceEmails(invoiceData) {
     for (const invoice of invoiceData) {
       const email = invoice.email;
       const accountName = invoice.accountName;
+      const accountId = invoice.accountId || null;
 
       if (!email) {
         results.skipped.push({ accountName, reason: 'No email address found' });
@@ -876,10 +878,11 @@ export async function sendInvoiceEmails(invoiceData) {
           contentType: isZip ? 'application/zip' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         }];
 
+        const emailSubject = `Invoice from ${orgDetails.suborgname || 'Our Company'} - ${invoice.period}`;
         const mailOptions = {
           from: process.env.GMAIL_USER,
           to: email,
-          subject: `Invoice from ${orgDetails.suborgname || 'Our Company'} - ${invoice.period}`,
+          subject: emailSubject,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
               <h2 style="color: #333;">Invoice</h2>
@@ -907,7 +910,41 @@ export async function sendInvoiceEmails(invoiceData) {
         };
 
         await transporter.sendMail(mailOptions);
-        results.sent.push({ accountName, email });
+        
+        // Generate unique invoice ID
+        const invoiceId = `${accountId || accountName.replace(/\s+/g, '_')}_${invoice.period.replace(/\s+/g, '_')}`;
+        const status = resendFromSentId ? 'RESENT' : 'SENT';
+        
+        // Store email send record in C_INVOICES_SENT
+        const [sendResult] = await pool.execute(
+          `INSERT INTO C_INVOICES_SENT 
+           (INVOICE_ID, SENT_BY, INVOICE_PERIOD, ACCOUNT_NAME, ACCOUNT_ID, TOTAL_AMOUNT, PDF_PATH, EMAIL_SUBJECT, STATUS, RESENT_FROM, ORG_ID)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            invoiceId,
+            empid,
+            invoice.period,
+            accountName,
+            accountId,
+            invoice.totalAmount,
+            invoice.filename,
+            emailSubject,
+            status,
+            resendFromSentId || null,
+            orgid
+          ]
+        );
+        
+        const sentId = sendResult.insertId;
+        
+        // Store recipient in C_INVOICES_SENT_DETAIL
+        await pool.execute(
+          `INSERT INTO C_INVOICES_SENT_DETAIL (SENT_ID, RECIPIENT_EMAIL, RECIPIENT_NAME, DELIVERY_STATUS)
+           VALUES (?, ?, ?, ?)`,
+          [sentId, email, accountName, 'SENT']
+        );
+        
+        results.sent.push({ accountName, email, sentId, invoiceId });
 
       } catch (emailErr) {
         console.error(`Failed to send email to ${email}:`, emailErr.message);
@@ -919,6 +956,237 @@ export async function sendInvoiceEmails(invoiceData) {
 
   } catch (error) {
     console.error("Send invoice emails error:", error);
+    return { error: error.message };
+  }
+}
+
+// Fetch saved/sent invoices with filters
+export async function fetchSentInvoices({ startDate = null, endDate = null, recipientEmail = null, status = 'all' }) {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("jwt_token")?.value;
+  if (!token) return { error: "No token found." };
+
+  const decoded = decodeJwt(token);
+  if (!decoded || !decoded.orgid) return { error: "Invalid token." };
+
+  try {
+    const pool = await DBconnection();
+    const orgid = decoded.orgid;
+
+    let query = `
+      SELECT 
+        s.SENT_ID,
+        s.INVOICE_ID,
+        s.SENT_BY,
+        s.SENT_DATE,
+        s.INVOICE_PERIOD,
+        s.ACCOUNT_NAME,
+        s.ACCOUNT_ID,
+        s.TOTAL_AMOUNT,
+        s.PDF_PATH,
+        s.EMAIL_SUBJECT,
+        s.STATUS,
+        s.RESENT_FROM,
+        GROUP_CONCAT(d.RECIPIENT_EMAIL SEPARATOR ',') as recipients,
+        MAX(d.DELIVERY_STATUS) as delivery_status
+      FROM C_INVOICES_SENT s
+      LEFT JOIN C_INVOICES_SENT_DETAIL d ON s.SENT_ID = d.SENT_ID
+      WHERE s.ORG_ID = ?
+    `;
+    
+    const params = [orgid];
+
+    // Add date range filter
+    if (startDate && endDate) {
+      query += ` AND DATE(s.SENT_DATE) BETWEEN ? AND ?`;
+      params.push(startDate, endDate);
+    }
+
+    // Add recipient email filter
+    if (recipientEmail) {
+      query += ` AND d.RECIPIENT_EMAIL = ?`;
+      params.push(recipientEmail);
+    }
+
+    // Add status filter
+    if (status && status !== 'all') {
+      query += ` AND s.STATUS = ?`;
+      params.push(status);
+    }
+
+    query += ` GROUP BY s.SENT_ID ORDER BY s.SENT_DATE DESC`;
+
+    const [rows] = await pool.execute(query, params);
+
+    // For each resent invoice, fetch original sent record info
+    for (const row of rows) {
+      if (row.RESENT_FROM) {
+        const [originalRows] = await pool.execute(
+          `SELECT SENT_DATE, ACCOUNT_NAME FROM C_INVOICES_SENT WHERE SENT_ID = ?`,
+          [row.RESENT_FROM]
+        );
+        if (originalRows.length > 0) {
+          row.originalSentDate = originalRows[0].SENT_DATE;
+        }
+      }
+    }
+
+    return { success: true, invoices: rows };
+  } catch (error) {
+    console.error("Error fetching sent invoices:", error);
+    return { error: error.message };
+  }
+}
+
+// Resend invoice email
+export async function resendInvoiceEmail(sentId, newRecipients = null) {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("jwt_token")?.value;
+  if (!token) return { error: "No token found." };
+
+  const decoded = decodeJwt(token);
+  if (!decoded || !decoded.orgid || !decoded.empid) return { error: "Invalid token." };
+
+  try {
+    const pool = await DBconnection();
+    const orgid = decoded.orgid;
+    const empid = decoded.empid;
+
+    // Fetch original invoice send record
+    const [originals] = await pool.execute(
+      `SELECT * FROM C_INVOICES_SENT WHERE SENT_ID = ? AND ORG_ID = ?`,
+      [sentId, orgid]
+    );
+
+    if (originals.length === 0) {
+      return { error: "Invoice record not found" };
+    }
+
+    const original = originals[0];
+
+    // Fetch PDF file
+    const filePath = `./public/invoices/${original.PDF_PATH}`;
+    let attachmentBuffer;
+    try {
+      const fileContent = fs.readFileSync(filePath);
+      attachmentBuffer = fileContent;
+    } catch (fileErr) {
+      console.warn(`Could not read file ${filePath}, proceeding without attachment`);
+      attachmentBuffer = null;
+    }
+
+    // Get organization details
+    const [orgRows] = await pool.execute(
+      `SELECT suborgname FROM C_SUB_ORG WHERE orgid = ? LIMIT 1`,
+      [orgid]
+    );
+    const orgName = orgRows[0]?.suborgname || 'Our Company';
+
+    // Setup email transporter
+    const transporter = nodemailer.createTransport({
+      host: process.env.GMAIL_HOST,
+      port: 587,
+      secure: false,
+      auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASS,
+      },
+    });
+
+    // Determine recipients
+    let recipientList = newRecipients || [];
+    if (!newRecipients || newRecipients.length === 0) {
+      // Get recipients from original send
+      const [detailRows] = await pool.execute(
+        `SELECT RECIPIENT_EMAIL, RECIPIENT_NAME FROM C_INVOICES_SENT_DETAIL WHERE SENT_ID = ?`,
+        [sentId]
+      );
+      recipientList = detailRows.map(d => ({ email: d.RECIPIENT_EMAIL, name: d.RECIPIENT_NAME }));
+    }
+
+    const attachments = [];
+    if (attachmentBuffer) {
+      attachments.push({
+        filename: original.PDF_PATH,
+        content: attachmentBuffer,
+        contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
+    }
+
+    // Send email
+    const mailOptions = {
+      from: process.env.GMAIL_USER,
+      to: recipientList.map(r => r.email).join(','),
+      subject: original.EMAIL_SUBJECT,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #333;">Invoice (Resent)</h2>
+          <p style="color: #f97316; font-weight: bold;">This is a resend of the invoice previously sent on ${new Date(original.SENT_DATE).toLocaleDateString()}</p>
+          <p>Dear Customer,</p>
+          <p>Please find attached the invoice for the period <strong>${original.INVOICE_PERIOD}</strong>.</p>
+          <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+            <tr>
+              <td style="padding: 10px; border: 1px solid #ddd; background: #f9f9f9;"><strong>Account:</strong></td>
+              <td style="padding: 10px; border: 1px solid #ddd;">${original.ACCOUNT_NAME}</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px; border: 1px solid #ddd; background: #f9f9f9;"><strong>Period:</strong></td>
+              <td style="padding: 10px; border: 1px solid #ddd;">${original.INVOICE_PERIOD}</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px; border: 1px solid #ddd; background: #f9f9f9;"><strong>Total Amount:</strong></td>
+              <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold; color: #10B981;">$${original.TOTAL_AMOUNT.toFixed(2)}</td>
+            </tr>
+          </table>
+          <p>If you have any questions, please contact us.</p>
+          <p style="margin-top: 30px;">Best regards,<br/>${orgName}</p>
+        </div>
+      `,
+      attachments
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    // Create new C_INVOICES_SENT record for resend
+    const [newSendResult] = await pool.execute(
+      `INSERT INTO C_INVOICES_SENT 
+       (INVOICE_ID, SENT_BY, INVOICE_PERIOD, ACCOUNT_NAME, ACCOUNT_ID, TOTAL_AMOUNT, PDF_PATH, EMAIL_SUBJECT, STATUS, RESENT_FROM, ORG_ID)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        original.INVOICE_ID,
+        empid,
+        original.INVOICE_PERIOD,
+        original.ACCOUNT_NAME,
+        original.ACCOUNT_ID,
+        original.TOTAL_AMOUNT,
+        original.PDF_PATH,
+        original.EMAIL_SUBJECT,
+        'RESENT',
+        sentId,
+        orgid
+      ]
+    );
+
+    const newSentId = newSendResult.insertId;
+
+    // Add recipients to C_INVOICES_SENT_DETAIL
+    for (const recipient of recipientList) {
+      await pool.execute(
+        `INSERT INTO C_INVOICES_SENT_DETAIL (SENT_ID, RECIPIENT_EMAIL, RECIPIENT_NAME, DELIVERY_STATUS)
+         VALUES (?, ?, ?, ?)`,
+        [newSentId, recipient.email, recipient.name, 'SENT']
+      );
+    }
+
+    return { 
+      success: true, 
+      message: 'Invoice resent successfully', 
+      newSentId,
+      originalSentDate: original.SENT_DATE
+    };
+
+  } catch (error) {
+    console.error("Error resending invoice:", error);
     return { error: error.message };
   }
 }
