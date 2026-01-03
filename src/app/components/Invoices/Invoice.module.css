@@ -10,6 +10,7 @@
 .header {
   text-align: center;
   margin-bottom: 30px;
+  position: relative;
 }
 
 .title {
@@ -23,6 +24,29 @@
   color: #666;
   font-size: 1.1rem;
   margin: 0;
+}
+
+/* Saved Invoices Button - Top Right */
+.savedInvoicesBtn {
+  position: absolute;
+  top: 0;
+  right: 20px;
+  padding: 12px 28px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 15px;
+  transition: all 0.2s;
+  box-shadow: 0 3px 10px rgba(59, 130, 246, 0.3);
+}
+
+.savedInvoicesBtn:hover {
+  background: #2563eb;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 14px rgba(59, 130, 246, 0.4);
 }
 
 /* Invoice Type Toggle */
@@ -624,6 +648,147 @@
   color: #0FD46C;
 }
 
+/* Saved Invoices Section */
+.savedInvoicesContainer {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.savedHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.savedTitle {
+  font-size: 28px;
+  color: #1a1a1a;
+  margin: 0;
+  font-weight: 700;
+}
+
+.backBtn {
+  padding: 10px 24px;
+  background: #6b7280;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.backBtn:hover {
+  background: #4b5563;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(107, 114, 128, 0.3);
+}
+
+/* Table Wrapper */
+.tableWrapper {
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  margin-top: 20px;
+}
+
+.invoiceTable {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #fff;
+}
+
+.invoiceTable th {
+  background-color: #f8fafc;
+  padding: 16px 20px;
+  text-align: left;
+  border-bottom: 2px solid #e5e7eb;
+  font-weight: 600;
+  color: #374151;
+  font-size: 14px;
+}
+
+.invoiceTable td {
+  padding: 16px 20px;
+  text-align: left;
+  border-bottom: 1px solid #f3f4f6;
+  color: #374151;
+  vertical-align: middle;
+  font-size: 14px;
+}
+
+.invoiceTable tbody tr {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.invoiceTable tbody tr:hover {
+  background: linear-gradient(135deg, #f8fafc, #f0f9ff);
+  transform: translateX(4px);
+  box-shadow: 4px 0 12px rgba(15, 212, 108, 0.1);
+}
+
+/* Status Badges */
+.statusBadge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.statusSent {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.statusResent {
+  background-color: #fef3c7;
+  color: #b45309;
+}
+
+.statusFailed {
+  background-color: #fee2e2;
+  color: #dc2626;
+}
+
+/* Action Buttons */
+.actionBtn {
+  padding: 6px 12px;
+  background: #3b82f6;
+  color: white;
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 12px;
+  cursor: pointer;
+  display: inline-block;
+  transition: all 0.2s;
+}
+
+.actionBtn:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+}
+
+.actionBtnResend {
+  padding: 6px 12px;
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.actionBtnResend:hover {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
 /* Print Styles */
 @media print {
   .detailOverlay {
@@ -660,6 +825,12 @@
     font-size: 1.8rem;
   }
 
+  .savedInvoicesBtn {
+    position: static;
+    width: 100%;
+    margin-top: 20px;
+  }
+
   .invoiceTypeToggle {
     flex-direction: column;
   }
@@ -689,5 +860,20 @@
 
   .addrBox {
     width: 100%;
+  }
+
+  .savedHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+
+  .invoiceTable {
+    font-size: 12px;
+  }
+
+  .invoiceTable th,
+  .invoiceTable td {
+    padding: 10px;
   }
 }
