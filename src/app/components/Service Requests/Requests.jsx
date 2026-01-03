@@ -798,8 +798,7 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
   const uniqueStatuses = [...new Set(requests.map(req => req.STATUS_CD).filter(Boolean))];
   const uniquePriorities = [...new Set(requests.map(req => req.PRIORITY_CD).filter(Boolean))];
 
-  const isResolved = formData.statusCd === 'Resolved';
-
+const isResolved = serviceRequestDetails?.STATUS_CD === 'Resolved';
   return (
     <div className="service-requests-overview-container">
       {error && <div className="error-message">{error}</div>}
@@ -1063,7 +1062,7 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
                         name="statusCd"
                         value={formData.statusCd}
                         onChange={handleFormChange}
-                        disabled={isResolved}
+                       disabled={serviceRequestDetails?.STATUS_CD === 'Resolved'}
                       >
                         {statusOptions.map((status) => (
                           <option key={status.id} value={status.Name}>
@@ -1136,7 +1135,7 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
                       type="button"
                       className="cancel"
                       onClick={() => setFormData({ ...formData, statusCd: serviceRequestDetails.STATUS_CD || 'Open' })}
-                      disabled={isLoading || isResolved}
+                      disabled={isLoading || serviceRequestDetails?.STATUS_CD === 'Resolved'}
                     >
                       Cancel
                     </button>
