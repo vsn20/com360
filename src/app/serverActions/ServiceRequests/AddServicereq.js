@@ -176,7 +176,7 @@ export async function addServiceRequest(formData) {
       }
 
       if (attachments.length > 0) {
-        const uploadDir = path.join(process.cwd(), 'public', 'Uploads');
+        const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'ServiceRequests');
         await mkdir(uploadDir, { recursive: true });
         for (let i = 0; i < attachments.length; i++) {
           const file = attachments[i];

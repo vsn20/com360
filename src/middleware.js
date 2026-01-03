@@ -104,6 +104,54 @@ export async function middleware(request) {
     }
   }
 
+  // Handle Service Request attachment paths (/uploads/ServiceRequests/*)
+  const isServiceRequestPath = pathname.match(/^\/uploads\/ServiceRequests\/.+$/i);
+  if (isServiceRequestPath) {
+    const token = request.cookies.get('jwt_token')?.value;
+
+    console.log('Service Request attachment path detected:', pathname);
+
+    if (!token) {
+      console.log("No jwt_token found for Service Request attachment path, redirecting to login");
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+
+    try {
+      const decoded = decodeJwt(token);
+      if (!decoded || !decoded.orgid || !decoded.empid) {
+        console.log("Invalid or missing orgid/empid in JWT for Service Request attachment path, redirecting to login");
+        return NextResponse.redirect(new URL('/login', request.url));
+      }
+
+      // Verify via token API - authenticated users from the same org can access
+      const verifyResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/verify-token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: `jwt_token=${token}`,
+        },
+        body: JSON.stringify({ token, pathname }),
+      });
+
+      const result = await verifyResponse.json();
+      console.log('Verify Token Response for Service Request path:', result);
+
+      if (verifyResponse.ok && result.success) {
+        console.log(`Access granted to Service Request attachment ${pathname} for orgid ${decoded.orgid}`);
+        return NextResponse.next();
+      } else {
+        console.log(`Access denied to Service Request attachment ${pathname}: ${result.error}`);
+        return new Response(JSON.stringify({ error: result.error || 'Unauthorized: Cannot access this Service Request attachment' }), {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+    } catch (error) {
+      console.error('Error verifying JWT for Service Request attachment path:', error.message);
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+  }
+
   // Handle signature paths (/signatures/form_:formId_:type.png or .svg)
   const isSignaturePath = pathname.match(/^\/signatures\/form_(\d+)_(employee|employer)\.(png|svg)$/);
   if (isSignaturePath) {

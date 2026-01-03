@@ -27,12 +27,13 @@ export async function POST(request) {
     const isOfferLetterPath = pathname && pathname.match(/^\/uploads\/offerletter\/[^_]+_[^/]+\.pdf$/);
     const isDocumentsPath = pathname && pathname.match(/^\/uploads\/documents\/.*$/); // Unrestricted access to /uploads/documents
     const isProfilePhotoPath = pathname && pathname.match(/^\/uploads\/profile_photos\/.*$/); // Unrestricted access to /uploads/profile_photos
+    const isServiceRequestPath = pathname && pathname.match(/^\/uploads\/ServiceRequests\/.*$/i); // Service Request attachments
     
     // --- ADDED: Check for Logo Path ---
     const isLogoPath = pathname && pathname.match(/^\/COM360LOGOS\.jpg$/); 
 
-    // --- UPDATED: Included isLogoPath in the condition ---
-    if (isUploadPath || isResumePath || isOfferLetterPath || isDocumentsPath || isProfilePhotoPath || isLogoPath) {
+    // --- UPDATED: Included isLogoPath and isServiceRequestPath in the condition ---
+    if (isUploadPath || isResumePath || isOfferLetterPath || isDocumentsPath || isProfilePhotoPath || isLogoPath || isServiceRequestPath) {
       // Check if the applicationid prefix (from pathname) matches orgid for resume or offer letter paths
       if (isResumePath || isOfferLetterPath) {
         const applicationidMatch = pathname.match(/^\/uploads\/(resumes|offerletter)\/([^_]+)_/);
@@ -53,8 +54,8 @@ export async function POST(request) {
         }
       }
       
-      // --- UPDATED: Allow unrestricted access if it is a document, profile photo, OR LOGO ---
-      if (isDocumentsPath || isProfilePhotoPath || isLogoPath) {
+      // --- UPDATED: Allow unrestricted access if it is a document, profile photo, logo, OR Service Request attachment ---
+      if (isDocumentsPath || isProfilePhotoPath || isLogoPath || isServiceRequestPath) {
         console.log(`Unrestricted access granted to ${pathname} for empid ${empid} (static resource path)`);
         return NextResponse.json({ success: true, accessibleItems: [] });
       }
