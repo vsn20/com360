@@ -25,7 +25,6 @@ const InvoiceOverview = () => {
   const [sendingEmailIdx, setSendingEmailIdx] = useState(null); 
   const [sendingAllEmails, setSendingAllEmails] = useState(false); 
   const [emailResult, setEmailResult] = useState(null);
-  const [hasBeenSent, setHasBeenSent] = useState(false);
   
   // Filter Options
   const [employees, setEmployees] = useState([]);
@@ -158,7 +157,6 @@ const InvoiceOverview = () => {
     setError(null);
     setInvoices([]);
     setHasSearched(true);
-    setHasBeenSent(false);
     const progressInt = runProgress();
 
     try {
@@ -351,7 +349,6 @@ const InvoiceOverview = () => {
           failed: result.results.failed,
           skipped: result.results.skipped
         });
-        setHasBeenSent(true);
       }
     } catch (err) {
       setEmailResult({ type: 'error', message: err.message });
@@ -403,7 +400,6 @@ const InvoiceOverview = () => {
           failed: result.results.failed,
           skipped: result.results.skipped
         });
-        setHasBeenSent(true);
       }
     } catch (err) {
       setEmailResult({ type: 'error', message: err.message });
@@ -419,20 +415,21 @@ const InvoiceOverview = () => {
       const result = await fetchSentInvoices({
         startDate: savedStartDate || null,
         endDate: savedEndDate || null,
-        recipientEmail: savedRecipientEmail || null,
+        recipientEmail: null,
         status: savedStatus
       });
 
       if (result.error) {
         setError(result.error);
       } else {
-        // Client-side filtering for email contains
         let filteredInvoices = result.invoices || [];
         
+        // Client-side filtering for email contains
         if (savedRecipientEmail && savedRecipientEmail.trim() !== '') {
-          filteredInvoices = filteredInvoices.filter(invoice => 
-            invoice.recipients && invoice.recipients.toLowerCase().includes(savedRecipientEmail.toLowerCase())
-          );
+          filteredInvoices = filteredInvoices.filter(invoice => {
+            const recipients = invoice.recipients || '';
+            return recipients.toLowerCase().includes(savedRecipientEmail.toLowerCase());
+          });
         }
         
         setSavedInvoices(filteredInvoices);
@@ -497,7 +494,6 @@ const InvoiceOverview = () => {
     setInvoices([]);
     setHasSearched(false);
     setEmailResult(null);
-    setHasBeenSent(false);
     setView("list");
   };
 
@@ -693,7 +689,7 @@ const InvoiceOverview = () => {
                       disabled={sendingAllEmails || sendingEmailIdx !== null}
                       style={{background: (sendingAllEmails) ? '#6b7280' : '#10B981'}}
                     >
-                      {sendingAllEmails ? '📧 Sending...' : hasBeenSent ? '📧 Save & Resend All Emails' : '📧 Save & Send All Emails'}
+                      {sendingAllEmails ? '📧 Sending...' : '📧 Save & Send All Emails'}
                     </button>
                   )}
                 </div>
@@ -776,7 +772,7 @@ const InvoiceOverview = () => {
                           disabled={sendingEmailIdx === idx}
                           style={{ background: sendingEmailIdx === idx ? '#6b7280' : '#10B981', color: 'white', borderColor: sendingEmailIdx === idx ? '#6b7280' : '#10B981' }}
                         >
-                          {sendingEmailIdx === idx ? '📧 Sending...' : hasBeenSent ? '📧 Save & Resend' : '📧 Save & Send'}
+                          {sendingEmailIdx === idx ? '📧 Sending...' : '📧 Save & Send'}
                         </button>
                       )}
                     </div>
@@ -790,7 +786,7 @@ const InvoiceOverview = () => {
             <div className={styles.detailOverlay}>
               <div className={styles.toolbar}>
                 <button onClick={() => setView("list")}>← Back</button>
-                <button onClick={() => handleDownloadSingle(currentInvoice)}>🔥 Download Excel</button>
+                <button onClick={() => handleDownloadSingle(currentInvoice)}>📥 Download Excel</button>
               </div>
 
               <div className={styles.paper}>
