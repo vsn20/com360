@@ -417,6 +417,10 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
           newPerm.individualdata = scope === 'individual' ? 1 : 0;
           newPerm.teamdata = scope === 'team' ? 1 : 0;
           newPerm.alldata = scope === 'all' ? 1 : 0;
+        } else if (menuid === 11 && submenuid === null) {
+          newPerm.individualdata = scope === 'individual' ? 1 : 0;
+          newPerm.teamdata = scope === 'team' ? 1 : 0;
+          newPerm.alldata = scope === 'all' ? 1 : 0;
         } else if (menuid === 15 && submenuid === 20) {
           newPerm.teamdata = scope === 'team' ? 1 : 0;
           newPerm.alldata = scope === 'all' ? 1 : 0;
@@ -573,6 +577,10 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
         if (p.menuid === menuid && p.submenuid === submenuid) {
             const newPerm = { ...p };
             if ((menuid === 9 && submenuid === null) || (menuid === 2 && submenuid === 3) || (menuid === 7 && submenuid === null)|| (menuid === 19 && submenuid === null)) {
+                newPerm.individualdata = scope === 'individual' ? 1 : 0;
+                newPerm.teamdata = scope === 'team' ? 1 : 0;
+                newPerm.alldata = scope === 'all' ? 1 : 0;
+            } else if (menuid === 11 && submenuid === null) {
                 newPerm.individualdata = scope === 'individual' ? 1 : 0;
                 newPerm.teamdata = scope === 'team' ? 1 : 0;
                 newPerm.alldata = scope === 'all' ? 1 : 0;
@@ -995,6 +1003,22 @@ const Overview = ({ currentRole, orgid, noofrows, error }) => {
                             disabled={!isEditing}
                           />
                         </label>
+                      )}
+                      {C_MENU.menuid === 11 && permissionsToUse.some(p => p.menuid === 11 && !p.submenuid) && (
+                        <div style={{ marginLeft: '20px', marginTop: '5px' }}>
+                            <label className="roles_submenu-label">
+                                <span className="roles_submenu-name">Individual Data</span>
+                                <input type="checkbox" className="roles_permission-checkbox" checked={permissionsToUse.find(p => p.menuid === 11 && !p.submenuid)?.individualdata === 1} onChange={() => currentDataScopeHandler(11, null, 'individual')} disabled={!isEditing} />
+                            </label>
+                            <label className="roles_submenu-label">
+                                <span className="roles_submenu-name">Team Data</span>
+                                <input type="checkbox" className="roles_permission-checkbox" checked={permissionsToUse.find(p => p.menuid === 11 && !p.submenuid)?.teamdata === 1} onChange={() => currentDataScopeHandler(11, null, 'team')} disabled={!isEditing} />
+                            </label>
+                            <label className="roles_submenu-label">
+                                <span className="roles_submenu-name">All Data</span>
+                                <input type="checkbox" className="roles_permission-checkbox" checked={permissionsToUse.find(p => p.menuid === 11 && !p.submenuid)?.alldata === 1} onChange={() => currentDataScopeHandler(11, null, 'all')} disabled={!isEditing} />
+                            </label>
+                        </div>
                       )}
                       {C_MENU.menuid === 9 && permissionsToUse.some(p => p.menuid === 9 && !p.submenuid) && (
                         <div style={{ marginLeft: '20px', marginTop: '5px' }}>
