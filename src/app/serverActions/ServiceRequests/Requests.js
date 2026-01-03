@@ -495,7 +495,7 @@ export async function deleteAttachment({ SR_ATT_ID, SR_ID, orgid, empid }) {
     );
     const s=res[0];
     const [result] = await pool.query(
-      `DELETE FROM C_SRV_REQ_ATT WHERE SR_ATT_ID = ? AND SR_ID = ? AND CREATED_BY != ?`,
+      `DELETE FROM C_SRV_REQ_ATT WHERE SR_ATT_ID = ? AND SR_ID = ? AND CREATED_BY= ?`,
       [SR_ATT_ID, SR_ID,s.CREATED_BY]
     );
 
