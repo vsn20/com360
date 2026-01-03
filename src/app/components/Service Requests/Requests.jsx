@@ -413,7 +413,7 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
       });
       if (result && result.success) {
         const updatedActivities = await fetchActivitiesBySrId(selectedSrNum, orgid, empid);
-        setActivities(updatedActivities);
+        setActivities(updatedActivities.activityRows || []);
         setNewActivities((prev) => prev.filter((_, i) => i !== index));
         setError(null);
       } else {
@@ -451,7 +451,7 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
       });
       if (result && result.success) {
         const updatedActivities = await fetchActivitiesBySrId(selectedSrNum, orgid, empid);
-        setActivities(updatedActivities);
+        setActivities(updatedActivities.activityRows || []);
         setEditingActivity(null);
         setError(null);
       } else {

@@ -164,10 +164,12 @@ export async function fetchServiceRequestById(SR_NUM, orgid, empid) {
 
     const serviceRequest = requestRows[0];
     
+    // Fetch creator attachments - attachments added by the person who created the service request
+    // These are identified by ATTACHMENT_STATUS != 'Resolver' (could be 'Creator', 'Active', or NULL)
     const [attachmentRows] = await pool.query(
       `SELECT SR_ATT_ID, SR_ID, FILE_NAME, FILE_PATH, TYPE_CD, COMMENTS, ATTACHMENT_STATUS 
        FROM C_SRV_REQ_ATT 
-       WHERE SR_ID = ? AND CREATED_BY = ?`,
+       WHERE SR_ID = ? AND CREATED_BY = ? AND (ATTACHMENT_STATUS IS NULL OR ATTACHMENT_STATUS != 'Resolver')`,
       [SR_NUM, serviceRequest.CREATED_BY]
     );
 
@@ -359,7 +361,7 @@ export async function addAttachment(attachmentData, file) {
         uniqueFileName,
         attachmentData.TYPE_CD || '',
         attachmentData.COMMENTS || '',
-        'Active',
+        'Resolver',
         attachmentData.empid
       ]
     );
@@ -454,11 +456,12 @@ export async function fetchResolverAttachments(SR_NUM, orgid, empid) {
 
     const assignedTo = requestRows[0].ASSIGNED_TO;
 
+    // Fetch resolver attachments - attachments added with ATTACHMENT_STATUS = 'Resolver'
     const [attachmentRows] = await pool.query(
       `SELECT SR_ATT_ID, SR_ID, FILE_NAME, FILE_PATH, TYPE_CD, COMMENTS, ATTACHMENT_STATUS 
        FROM C_SRV_REQ_ATT 
-       WHERE SR_ID = ? AND CREATED_BY = ?`,
-      [SR_NUM, assignedTo]
+       WHERE SR_ID = ? AND ATTACHMENT_STATUS = 'Resolver'`,
+      [SR_NUM]
     );
 
     return attachmentRows || [];

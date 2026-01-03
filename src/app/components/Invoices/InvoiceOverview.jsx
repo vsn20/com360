@@ -433,6 +433,32 @@ const InvoiceOverview = () => {
     }
   };
 
+  // Handler to switch to saved view and auto-load all invoices
+  const handleShowSavedInvoices = async () => {
+    setView("saved");
+    setSavedInvoicesLoading(true);
+    setError(null);
+    try {
+      // Load all invoices initially (no filters)
+      const result = await fetchSentInvoices({
+        startDate: null,
+        endDate: null,
+        recipientEmail: null,
+        status: 'all'
+      });
+
+      if (result.error) {
+        setError(result.error);
+      } else {
+        setSavedInvoices(result.invoices || []);
+      }
+    } catch (err) {
+      setError(err.message || "Error loading saved invoices");
+    } finally {
+      setSavedInvoicesLoading(false);
+    }
+  };
+
   const handleResendInvoice = async (sentId, originalSentDate) => {
     if (!window.confirm(`Resend invoice? This was originally sent on ${new Date(originalSentDate).toLocaleDateString()}`)) {
       return;
@@ -615,7 +641,7 @@ const InvoiceOverview = () => {
              <button className={styles.btnPrimary} onClick={handleGenerate} disabled={loading}>
                 {loading ? "Processing..." : "Generate Invoices"}
              </button>
-             <button className={styles.btnPrimary} onClick={() => setView("saved")} style={{background: '#3b82f6'}}>
+             <button className={styles.btnPrimary} onClick={handleShowSavedInvoices} style={{background: '#3b82f6'}}>
                 💾 Saved Invoices
              </button>
           </div>
@@ -929,7 +955,7 @@ const InvoiceOverview = () => {
                           <div key={i}>{email}</div>
                         )) : '-'}
                       </td>
-                      <td style={{padding: '12px', fontWeight: 'bold'}}>${invoice.TOTAL_AMOUNT.toFixed(2)}</td>
+                      <td style={{padding: '12px', fontWeight: 'bold'}}>${parseFloat(invoice.TOTAL_AMOUNT || 0).toFixed(2)}</td>
                       <td style={{padding: '12px'}}>
                         {new Date(invoice.SENT_DATE).toLocaleDateString()}
                       </td>
