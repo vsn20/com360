@@ -24,58 +24,54 @@ export async function fetchServiceRequestById(srNum, orgid, empid) {
       'SELECT SR_NUM, ORG_ID, SERVICE_NAME, STATUS_CD, PRIORITY_CD, TYPE_CD, SUB_TYPE_CD, ASSIGNED_TO, DUE_DATE, ESCALATED_FLAG, ESCALATED_TO, ESCALATED_DATE, DESCRIPTION, COMMENTS, CONTACT_ID, ACCOUNT_ID, ASSET_ID, PAR_ROW_ID, CATEGORY_CD, CREATED, CREATED_BY, LAST_UPD, LAST_UPD_BY FROM C_SRV_REQ WHERE SR_NUM = ? AND ORG_ID = ? AND CREATED_BY = ?',
       [srNum, orgid, empid]
     );
-    let accountRows ;
-    let accountname='-';
-   if(rows[0].ACCOUNT_ID!=null){
-     [accountRows] = await pool.execute(
-          'SELECT ACCNT_ID, ALIAS_NAME FROM C_ACCOUNT WHERE ORGID = ? AND ACCNT_ID=? ',
-          [orgid,rows[0].ACCOUNT_ID]
-        );
-         accountname=accountRows[0].ALIAS_NAME
-      }
-
-   
-
-    
-    const s=rows[0];
-    const [employees] = await pool.query(
-          'SELECT  EMP_FST_NAME, EMP_LAST_NAME FROM C_EMP WHERE empid = ?',
-          [s.ASSIGNED_TO]
+    let accountRows;
+    let accountname = '-';
+    if (rows[0].ACCOUNT_ID != null) {
+      [accountRows] = await pool.execute(
+        'SELECT ACCNT_ID, ALIAS_NAME FROM C_ACCOUNT WHERE ORGID = ? AND ACCNT_ID=? ',
+        [orgid, rows[0].ACCOUNT_ID]
       );
+      accountname = accountRows[0].ALIAS_NAME;
+    }
+
+    const s = rows[0];
+    const [employees] = await pool.query(
+      'SELECT  EMP_FST_NAME, EMP_LAST_NAME FROM C_EMP WHERE empid = ?',
+      [s.ASSIGNED_TO]
+    );
 
     if (rows.length === 0) {
       throw new Error('Service request not found or you do not have access');
     }
 
     const [attachments] = await pool.query(
-      'SELECT SR_ATT_ID, SR_ID, TYPE_CD, FILE_NAME, FILE_PATH, COMMENTS, ATTACHMENT_STATUS, CREATED, CREATED_BY, LAST_UPD, LAST_UPD_BY FROM C_SRV_REQ_ATT WHERE SR_ID = ? AND CREATED_BY=?',
-      [srNum,empid]
+      'SELECT SR_ATT_ID, SR_ID, TYPE_CD, FILE_NAME, FILE_PATH, COMMENTS, ATTACHMENT_STATUS, CREATED, CREATED_BY, LAST_UPD, LAST_UPD_BY FROM C_SRV_REQ_ATT WHERE SR_ID = ? AND CREATED_BY=? AND (ATTACHMENT_STATUS IS NULL OR ATTACHMENT_STATUS = ? OR ATTACHMENT_STATUS = ?)',
+      [srNum, empid, 'Creator', 'Active']
     );
     console.log(`Fetched attachments for SR_ID=${srNum} at ${new Date().toISOString()}:`, attachments);
 
-    return { ...rows[0], attachments ,employees:employees[0],accountname:accountname};
+    return { ...rows[0], attachments, employees: employees[0], accountname: accountname };
   } catch (error) {
     console.error('Error fetching service request:', error);
     throw new Error(error.message || 'Failed to fetch service request');
   }
 }
 
-export async function getemployeename(srnum){
+export async function getemployeename(srnum) {
   try {
-      const pool = await DBconnection();
-      const [employees] = await pool.query(
-          'SELECT  EMP_FST_NAME, EMP_LAST_NAME FROM C_EMP WHERE empid = ?',
-          [srnum]
-      );
-      return {employees};
-    
+    const pool = await DBconnection();
+    const [employees] = await pool.query(
+      'SELECT  EMP_FST_NAME, EMP_LAST_NAME FROM C_EMP WHERE empid = ?',
+      [srnum]
+    );
+    return { employees };
   } catch (error) {
-     console.error('Error fetching service request:', error);
+    console.error('Error fetching service request:', error);
   }
 }
 
 const getdisplayprojectid = (prjid) => {
-    return prjid.split('-')[1] || prjid;
+  return prjid.split('-')[1] || prjid;
 };
 
 export async function getparentsr(srnum) {
@@ -102,14 +98,12 @@ export async function getparentsr(srnum) {
       [empid, orgid]
     );
 
-    // Extract numeric part of srnum
     const srNumNumeric = parseInt(getdisplayprojectid(srnum), 10);
     if (isNaN(srNumNumeric)) {
       console.error('Invalid srNum format:', srnum);
       return { success: false, error: 'Invalid service request number format' };
     }
 
-    // Filter service requests where numeric part of SR_NUM is greater than srNumNumeric
     const filteredRequests = serviceRequests.filter((request) => {
       const requestNum = parseInt(getdisplayprojectid(request.SR_NUM), 10);
       return !isNaN(requestNum) && requestNum < srNumNumeric;
@@ -159,7 +153,6 @@ export async function updateServiceRequest(formData) {
   try {
     const pool = await DBconnection();
 
-    // Validate priority, type, and sub-type for 'basic' section
     if (section === 'basic') {
       const priorityCd = formData.get('priorityCd')?.trim();
       const typeCd = formData.get('typeCd')?.trim();
@@ -296,15 +289,13 @@ export async function updateServiceRequest(formData) {
         }
       }
 
-      // Fetch current attachments from the database
       const [currentAttachments] = await pool.query(
-        'SELECT SR_ATT_ID FROM C_SRV_REQ_ATT WHERE SR_ID = ? AND CREATED_BY=?',
-        [srNum,empid]
+        'SELECT SR_ATT_ID FROM C_SRV_REQ_ATT WHERE SR_ID = ? AND CREATED_BY=? AND (ATTACHMENT_STATUS IS NULL OR ATTACHMENT_STATUS = ? OR ATTACHMENT_STATUS = ?)',
+        [srNum, empid, 'Creator', 'Active']
       );
       const currentAttachmentIds = currentAttachments.map((att) => att.SR_ATT_ID);
       const submittedAttachmentIds = existingFiles.map((file) => file.sr_att_id);
 
-      // Delete attachments that are no longer in existingFiles
       const attachmentsToDelete = currentAttachmentIds.filter(
         (id) => !submittedAttachmentIds.includes(id)
       );
@@ -316,21 +307,19 @@ export async function updateServiceRequest(formData) {
         console.log(`Deleted attachments for SR_ID=${srNum}:`, attachmentsToDelete);
       }
 
-      // Update existing attachments
       for (const fileObj of existingFiles) {
         await pool.query(
           'UPDATE C_SRV_REQ_ATT SET COMMENTS = ?, ATTACHMENT_STATUS = ?, TYPE_CD = ?, LAST_UPD_BY = ?, LAST_UPD = NOW() WHERE SR_ATT_ID = ? AND SR_ID = ?',
-          [fileObj.comments || null, fileObj.attachmentStatus || null, fileObj.type || null, empid, fileObj.sr_att_id, srNum]
+          [fileObj.comments || null, fileObj.attachmentStatus || 'Creator', fileObj.type || null, empid, fileObj.sr_att_id, srNum]
         );
       }
 
-      // Add new attachments
       if (attachments.length > 0) {
         const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'ServiceRequests');
         await mkdir(uploadDir, { recursive: true });
         for (let i = 0; i < attachments.length; i++) {
           const file = attachments[i];
-          const timestamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14); // e.g., 20250721114223
+          const timestamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
           const uuid = uuidv4();
           const uniqueFileName = `${path.parse(file.name).name}_${timestamp}_${uuid}${path.extname(file.name)}`;
           const filePath = path.join(uploadDir, uniqueFileName);
@@ -344,7 +333,7 @@ export async function updateServiceRequest(formData) {
               file.name,
               uniqueFileName,
               fileComments[i] || null,
-              fileStatuses[i] || null,
+              fileStatuses[i] || 'Creator',
               empid,
               empid
             ]
@@ -370,7 +359,6 @@ export async function updateServiceRequest(formData) {
   }
 }
 
-// Fetch activities for a service request (for creator to view resolver's work)
 export async function fetchActivitiesForCreator(srNum, orgid, empid) {
   try {
     const cookieStore = await cookies();
@@ -387,7 +375,7 @@ export async function fetchActivitiesForCreator(srNum, orgid, empid) {
     }
 
     const pool = await DBconnection();
-    
+
     const [activityRows] = await pool.query(
       `SELECT ACT_ID, SR_ID, TYPE, SUB_TYPE, COMMENTS, START_DATE, END_DATE, 
               CREATED, CREATED_BY, LAST_UPD, LAST_UPD_BY 
@@ -396,7 +384,6 @@ export async function fetchActivitiesForCreator(srNum, orgid, empid) {
       [srNum]
     );
 
-    // Enrich rows with employee names
     const enrichedRows = await Promise.all(
       activityRows.map(async (details) => {
         try {
@@ -427,7 +414,6 @@ export async function fetchActivitiesForCreator(srNum, orgid, empid) {
   }
 }
 
-// Fetch resolver attachments for a service request (for creator to view)
 export async function fetchResolverAttachmentsForCreator(srNum, orgid, empid) {
   try {
     const cookieStore = await cookies();
@@ -445,15 +431,13 @@ export async function fetchResolverAttachmentsForCreator(srNum, orgid, empid) {
 
     const pool = await DBconnection();
 
-    // Get attachments not created by the service request creator (i.e., resolver attachments)
     const [attachmentRows] = await pool.query(
       `SELECT SR_ATT_ID, SR_ID, FILE_NAME, FILE_PATH, TYPE_CD, COMMENTS, ATTACHMENT_STATUS, CREATED, CREATED_BY 
        FROM C_SRV_REQ_ATT 
-       WHERE SR_ID = ? AND CREATED_BY != ?`,
-      [srNum, empid]
+       WHERE SR_ID = ? AND ATTACHMENT_STATUS = ?`,
+      [srNum, 'Resolver']
     );
 
-    // Enrich with creator names
     const enrichedAttachments = await Promise.all(
       attachmentRows.map(async (att) => {
         try {

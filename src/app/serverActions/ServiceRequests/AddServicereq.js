@@ -58,16 +58,6 @@ export async function addServiceRequest(formData) {
       pool = await DBconnection();
       console.log('MySQL connection pool acquired');
 
-      // Check if service request name already exists
-      // const [existingRequest] = await pool.query(
-      //   'SELECT SR_NUM FROM C_SRV_REQ WHERE SERVICE_NAME = ? AND ORG_ID = ?',
-      //   [formData.get('serviceName'), orgid]
-      // );
-      // if (existingRequest.length > 0) {
-      //   console.log('Error: Service request name already exists');
-      //   return { success: false, error: 'Service request name already exists.' };
-      // }
-
       // Validate priority
       const [validPriority] = await pool.query(
         'SELECT id FROM C_GENERIC_VALUES WHERE g_id = ? AND Name = ? AND orgid = ? AND isactive = 1',
@@ -180,13 +170,12 @@ export async function addServiceRequest(formData) {
         await mkdir(uploadDir, { recursive: true });
         for (let i = 0; i < attachments.length; i++) {
           const file = attachments[i];
-          const timestamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14); // e.g., 20250721113723
+          const timestamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
           const uuid = uuidv4();
           const uniqueFileName = `${path.parse(file.name).name}_${timestamp}_${uuid}${path.extname(file.name)}`;
           const filePath = path.join(uploadDir, uniqueFileName);
           const arrayBuffer = await file.arrayBuffer();
           await writeFile(filePath, Buffer.from(arrayBuffer));
-          // Store file path for response
           attachmentPaths.push(uniqueFileName);
           await pool.query(
             'INSERT INTO C_SRV_REQ_ATT (SR_ID, TYPE_CD, FILE_NAME, FILE_PATH, COMMENTS, ATTACHMENT_STATUS, CREATED_BY, CREATED, LAST_UPD_BY, LAST_UPD) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?, NOW())',
@@ -196,7 +185,7 @@ export async function addServiceRequest(formData) {
               file.name,
               uniqueFileName,
               fileComments[i] || null,
-              fileStatuses[i] || null,
+              'Creator',
               empid,
               empid,
             ]
