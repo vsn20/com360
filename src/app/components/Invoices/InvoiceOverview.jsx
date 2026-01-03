@@ -426,7 +426,16 @@ const InvoiceOverview = () => {
       if (result.error) {
         setError(result.error);
       } else {
-        setSavedInvoices(result.invoices || []);
+        // Client-side filtering for email contains
+        let filteredInvoices = result.invoices || [];
+        
+        if (savedRecipientEmail && savedRecipientEmail.trim() !== '') {
+          filteredInvoices = filteredInvoices.filter(invoice => 
+            invoice.recipients && invoice.recipients.toLowerCase().includes(savedRecipientEmail.toLowerCase())
+          );
+        }
+        
+        setSavedInvoices(filteredInvoices);
       }
     } catch (err) {
       setError(err.message || "Error loading saved invoices");
@@ -956,7 +965,7 @@ const InvoiceOverview = () => {
                           <div key={i}>{email}</div>
                         )) : '-'}
                       </td>
-                      <td style={{fontWeight: 'bold'}}>${parseFloat(invoice.TOTAL_AMOUNT || 0).toFixed(2)}</td>
+                      <td style={{fontWeight: 'bold'}}>${(parseFloat(invoice.TOTAL_AMOUNT) || 0).toFixed(2)}</td>
                       <td>{new Date(invoice.SENT_DATE).toLocaleDateString()}</td>
                       <td>
                         <span className={`${styles.statusBadge} ${
