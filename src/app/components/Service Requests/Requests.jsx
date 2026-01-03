@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { fetchreqbyid, fetchServiceRequestById, updateServiceRequestStatus, fetchActivitiesBySrId, addActivity, addAttachment, updateActivity, fetchResolverAttachments, deleteAttachment } from '@/app/serverActions/ServiceRequests/Requests';
+import { fetchreqbyid, fetchServiceRequestById, updateServiceRequestStatus, fetchActivitiesBySrId, addActivity, addAttachment, updateActivity, fetchResolverAttachments, deleteAttachment, fetchActivityTypeAndSubtype } from '@/app/serverActions/ServiceRequests/Requests';
 import './overview.css';
 import { useRouter } from 'next/navigation';
 
@@ -19,6 +19,8 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
   const [existingFiles, setExistingFiles] = useState([]);
   const [resolverFiles, setResolverFiles] = useState([]);
   const [readOnlyMode, setReadOnlyMode] = useState(false);
+  const [activityType, setActivityType] = useState([]);
+  const [activitySubtype, setActivitySubtype] = useState([]);
   const [formData, setFormData] = useState({
     serviceName: '',
     statusCd: 'Open',
@@ -88,6 +90,29 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
     };
 
     fetchData();
+  }, []);
+
+  // Fetch activity types and subtypes (g_id 44, 45)
+  useEffect(() => {
+    const fetchActivityGenericValues = async () => {
+      try {
+        const response = await fetchActivityTypeAndSubtype();
+        if (response.success) {
+          setActivityType(response.activityType || []);
+          setActivitySubtype(response.activitySubtype || []);
+        } else {
+          console.error('Failed to fetch activity types and subtypes:', response.error);
+          setActivityType([]);
+          setActivitySubtype([]);
+        }
+      } catch (err) {
+        console.error('Error fetching activity types and subtypes:', err);
+        setActivityType([]);
+        setActivitySubtype([]);
+      }
+    };
+
+    fetchActivityGenericValues();
   }, []);
 
   useEffect(() => {
@@ -1420,7 +1445,7 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
                         disabled={isResolved}
                       >
                         <option value="">Select Type</option>
-                        {type.map((t) => (
+                        {activityType.map((t) => (
                           <option key={t.id} value={t.Name}>
                             {t.Name}
                           </option>
@@ -1435,7 +1460,7 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
                         disabled={isResolved}
                       >
                         <option value="">Select Sub-Type</option>
-                        {subtype.map((s) => (
+                        {activitySubtype.map((s) => (
                           <option key={s.id} value={s.Name}>
                             {s.Name}
                           </option>
@@ -1514,7 +1539,7 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
                           disabled={isResolved}
                         >
                           <option value="">Select Type</option>
-                          {type.map((t) => (
+                          {activityType.map((t) => (
                             <option key={t.id} value={t.Name}>
                               {t.Name}
                             </option>
@@ -1529,7 +1554,7 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
                           disabled={isResolved}
                         >
                           <option value="">Select Sub-Type</option>
-                          {subtype.map((s) => (
+                          {activitySubtype.map((s) => (
                             <option key={s.id} value={s.Name}>
                               {s.Name}
                             </option>

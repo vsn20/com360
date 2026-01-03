@@ -507,3 +507,50 @@ export async function deleteAttachment({ SR_ATT_ID, SR_ID, orgid, empid }) {
     return { success: false, error: error.message || 'Failed to delete attachment' };
   }
 }
+
+export async function fetchActivityTypeAndSubtype() {
+  let orgid;
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('jwt_token')?.value;
+    if (!token) {
+      console.error('No JWT token found in cookies');
+      throw new Error('Authentication token is missing');
+    }
+
+    const decoded = decodeJwt(token);
+    if (!decoded || !decoded.orgid) {
+      console.error('Invalid token: Decoded token is null or missing orgid', { decoded });
+      throw new Error('Invalid or missing authentication token');
+    }
+
+    orgid = decoded.orgid;
+
+    const pool = await DBconnection();
+    console.log('Connection established for fetchActivityTypeAndSubtype');
+
+    const [activityType] = await pool.query(
+      'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 44 AND orgid = ? AND isactive = 1',
+      [orgid]
+    );
+
+    const [activitySubtype] = await pool.query(
+      'SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 45 AND orgid = ? AND isactive = 1',
+      [orgid]
+    );
+
+    return {
+      success: true,
+      activityType,
+      activitySubtype,
+    };
+  } catch (error) {
+    console.error('Error fetching activity type and subtype:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to fetch activity type and subtype',
+      activityType: [],
+      activitySubtype: [],
+    };
+  }
+}
