@@ -1239,7 +1239,7 @@ const Requests = ({ orgid, empid, type, subtype, priority, previousServiceReques
                             <tr key={index}>
                               <td>
                                 <a
-                                  href={`/uploads/${fileObj.file_path}`}
+                                  href={`/uploads/ServiceRequests/${fileObj.file_path}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                 >
