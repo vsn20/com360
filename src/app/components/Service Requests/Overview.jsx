@@ -18,10 +18,6 @@ const Overview = ({
   previousServiceRequests,
   accountRows,
   empname,
-  teamdata,
-  individualdata,
-  alldata,
-  directReports,
 }) => {
   const searchparams = useSearchParams();
   const router = useRouter();
@@ -39,12 +35,6 @@ const Overview = ({
   const [parentServiceRequests, setParentServiceRequests] = useState([]);
   const [activities, setActivities] = useState([]);
   const [resolverAttachments, setResolverAttachments] = useState([]);
-  
-  // Data scope state
-  const [teamDataAccess, setTeamDataAccess] = useState(teamdata === 1);
-  const [individualDataAccess, setIndividualDataAccess] = useState(individualdata === 1);
-  const [allDataAccess, setAllDataAccess] = useState(alldata === 1);
-  const [dataScope, setDataScope] = useState('individual'); // 'individual', 'team', 'all'
   
   // Pagination and filtering state
   const [sortConfig, setSortConfig] = useState({ column: 'SR_NUM', direction: 'asc' });
@@ -106,19 +96,6 @@ const Overview = ({
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
     return `${month}/${day}/${d.getFullYear()}`;
-  };
-
-  // Separate function to filter service requests based on data scope
-  const getFilteredServiceRequestsByScope = (requestsToFilter) => {
-    if (dataScope === 'individual' && individualDataAccess) {
-      return requestsToFilter.filter(req => req.CREATED_BY === empid);
-    } else if (dataScope === 'team' && teamDataAccess) {
-      const allowedEmps = [empid, ...(directReports || [])];
-      return requestsToFilter.filter(req => allowedEmps.includes(req.CREATED_BY));
-    } else if (dataScope === 'all' && allDataAccess) {
-      return requestsToFilter;
-    }
-    return requestsToFilter.filter(req => req.CREATED_BY === empid);
   };
 
   // Helper to get Parent SR Name for Display
@@ -640,7 +617,7 @@ const Overview = ({
     }
   };
 
-  const filteredServiceRequests = getFilteredServiceRequestsByScope(allServiceRequests).filter(request => {
+  const filteredServiceRequests = allServiceRequests.filter(request => {
     const matchesSearch = request.SERVICE_NAME?.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           request.SR_NUM?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || request.STATUS_CD === statusFilter;
@@ -758,47 +735,7 @@ const Overview = ({
         <div className="service-requests-list" style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <div className="title">Service Requests</div>
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-              {(teamDataAccess || allDataAccess) && (
-                <div style={{ display: 'flex', gap: '5px', borderRight: '1px solid #ddd', paddingRight: '10px' }}>
-                  {individualDataAccess && (
-                    <button 
-                      className={`button ${dataScope === 'individual' ? 'active' : ''}`}
-                      onClick={() => { setDataScope('individual'); setCurrentPage(1); setPageInputValue('1'); }}
-                      style={{
-                        backgroundColor: dataScope === 'individual' ? '#4CAF50' : '#f0f0f0',
-                        color: dataScope === 'individual' ? 'white' : 'black'
-                      }}
-                    >
-                      Individual
-                    </button>
-                  )}
-                  {teamDataAccess && (
-                    <button 
-                      className={`button ${dataScope === 'team' ? 'active' : ''}`}
-                      onClick={() => { setDataScope('team'); setCurrentPage(1); setPageInputValue('1'); }}
-                      style={{
-                        backgroundColor: dataScope === 'team' ? '#2196F3' : '#f0f0f0',
-                        color: dataScope === 'team' ? 'white' : 'black'
-                      }}
-                    >
-                      Team
-                    </button>
-                  )}
-                  {allDataAccess && (
-                    <button 
-                      className={`button ${dataScope === 'all' ? 'active' : ''}`}
-                      onClick={() => { setDataScope('all'); setCurrentPage(1); setPageInputValue('1'); }}
-                      style={{
-                        backgroundColor: dataScope === 'all' ? '#FF9800' : '#f0f0f0',
-                        color: dataScope === 'all' ? 'white' : 'black'
-                      }}
-                    >
-                      All
-                    </button>
-                  )}
-                </div>
-              )}
+            <div style={{ display: 'flex', gap: '10px' }}>
               <button className="button" onClick={handlerequest}>
                 Requests
               </button>

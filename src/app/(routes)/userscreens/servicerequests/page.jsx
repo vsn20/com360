@@ -27,10 +27,6 @@ export default async function ServiceRequestsPage() {
   let accountRows=[];
   let employeename=[];
   let empname;
-  let teamdata = 0;
-  let individualdata = 0;
-  let alldata = 0;
-  let directReports = [];
 
   try {
     const pool = await DBconnection();
@@ -75,26 +71,6 @@ export default async function ServiceRequestsPage() {
         );
         empname=`${employeename[0].EMP_FST_NAME} ${employeename[0].EMP_LAST_NAME}`;
 
-        // Fetch permissions for Service Requests (menuid=11)
-        const [permissions] = await pool.query(
-          'SELECT alldata, teamdata, individualdata FROM C_ROLE_MENU_PERMISSIONS WHERE menuid = 11 AND roleid IN (SELECT roleid FROM C_EMP_ROLE_ASSIGN WHERE empid = ?)',
-          [empid]
-        );
-        if (permissions && permissions.length > 0) {
-          alldata = permissions[0].alldata || 0;
-          teamdata = permissions[0].teamdata || 0;
-          individualdata = permissions[0].individualdata || 0;
-        }
-
-        // Fetch direct reports if team data access is available
-        if (teamdata === 1 || alldata === 1) {
-          const [reports] = await pool.query(
-            'SELECT empid FROM C_EMP WHERE REPORTING_MGR = ? AND orgid = ?',
-            [empid, orgid]
-          );
-          directReports = reports.map(r => r.empid);
-        }
-
       } else {
         throw new Error('Invalid token: orgid or empid missing');
       }
@@ -118,10 +94,6 @@ export default async function ServiceRequestsPage() {
       previousServiceRequests={serviceRequests} // Used for parRowId dropdown
       accountRows={accountRows}
       empname={empname}
-      teamdata={teamdata}
-      individualdata={individualdata}
-      alldata={alldata}
-      directReports={directReports}
       />
   );
 }
