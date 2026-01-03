@@ -1330,7 +1330,7 @@ const Overview = ({
                                 <tr key={`existing-${index}`}>
                                   <td>
                                     <a
-                                      href={`/uploads/${fileObj.file_path}`}
+                                      href={`/uploads/ServiceRequests/${fileObj.file_path}`}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                     >
@@ -1459,7 +1459,7 @@ const Overview = ({
                                 <tr key={index}>
                                   <td>
                                     <a
-                                      href={`/uploads/${fileObj.file_path}`}
+                                      href={`/uploads/ServiceRequests/${fileObj.file_path}`}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                     >
