@@ -978,7 +978,7 @@ const InvoiceOverview = () => {
                       </td>
                       <td style={{padding: '12px', textAlign: 'center'}}>
                         <a 
-                          href={`/invoices/${invoice.PDF_PATH}`}
+                          href={`/uploads/Invoices/${invoice.PDF_PATH}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           style={{

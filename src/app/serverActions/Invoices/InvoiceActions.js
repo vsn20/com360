@@ -911,11 +911,24 @@ export async function sendInvoiceEmails(invoiceData, resendFromSentId = null) {
 
         await transporter.sendMail(mailOptions);
         
+        // Save the invoice file to public/uploads/Invoices
+        const invoicesDir = path.join(process.cwd(), 'public', 'uploads', 'Invoices');
+        if (!fs.existsSync(invoicesDir)) {
+          fs.mkdirSync(invoicesDir, { recursive: true });
+        }
+        
+        // Generate unique filename with timestamp to avoid conflicts
+        const timestamp = Date.now();
+        const savedFilename = `${orgid}_${timestamp}_${invoice.filename}`;
+        const savedFilePath = path.join(invoicesDir, savedFilename);
+        fs.writeFileSync(savedFilePath, attachmentBuffer);
+        console.log(`Invoice saved to: ${savedFilePath}`);
+        
         // Generate unique invoice ID
         const invoiceId = `${accountId || accountName.replace(/\s+/g, '_')}_${invoice.period.replace(/\s+/g, '_')}`;
         const status = resendFromSentId ? 'RESENT' : 'SENT';
         
-        // Store email send record in C_INVOICES_SENT
+        // Store email send record in C_INVOICES_SENT (store the saved filename)
         const [sendResult] = await pool.execute(
           `INSERT INTO C_INVOICES_SENT 
            (INVOICE_ID, SENT_BY, INVOICE_PERIOD, ACCOUNT_NAME, ACCOUNT_ID, TOTAL_AMOUNT, PDF_PATH, EMAIL_SUBJECT, STATUS, RESENT_FROM, ORG_ID)
@@ -927,7 +940,7 @@ export async function sendInvoiceEmails(invoiceData, resendFromSentId = null) {
             accountName,
             accountId,
             invoice.totalAmount,
-            invoice.filename,
+            savedFilename,
             emailSubject,
             status,
             resendFromSentId || null,
@@ -1064,8 +1077,8 @@ export async function resendInvoiceEmail(sentId, newRecipients = null) {
 
     const original = originals[0];
 
-    // Fetch PDF file
-    const filePath = `./public/invoices/${original.PDF_PATH}`;
+    // Fetch PDF file from uploads/Invoices
+    const filePath = path.join(process.cwd(), 'public', 'uploads', 'Invoices', original.PDF_PATH);
     let attachmentBuffer;
     try {
       const fileContent = fs.readFileSync(filePath);

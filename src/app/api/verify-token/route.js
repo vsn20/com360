@@ -28,12 +28,13 @@ export async function POST(request) {
     const isDocumentsPath = pathname && pathname.match(/^\/uploads\/documents\/.*$/); // Unrestricted access to /uploads/documents
     const isProfilePhotoPath = pathname && pathname.match(/^\/uploads\/profile_photos\/.*$/); // Unrestricted access to /uploads/profile_photos
     const isServiceRequestPath = pathname && pathname.match(/^\/uploads\/ServiceRequests\/.*$/i); // Service Request attachments
+    const isInvoicePath = pathname && pathname.match(/^\/uploads\/Invoices\/(\d+)_.*$/i); // Invoice attachments (orgid prefix, all digits)
     
     // --- ADDED: Check for Logo Path ---
     const isLogoPath = pathname && pathname.match(/^\/COM360LOGOS\.jpg$/); 
 
-    // --- UPDATED: Included isLogoPath and isServiceRequestPath in the condition ---
-    if (isUploadPath || isResumePath || isOfferLetterPath || isDocumentsPath || isProfilePhotoPath || isLogoPath || isServiceRequestPath) {
+    // --- UPDATED: Included isLogoPath, isServiceRequestPath, and isInvoicePath in the condition ---
+    if (isUploadPath || isResumePath || isOfferLetterPath || isDocumentsPath || isProfilePhotoPath || isLogoPath || isServiceRequestPath || isInvoicePath) {
       // Check if the applicationid prefix (from pathname) matches orgid for resume or offer letter paths
       if (isResumePath || isOfferLetterPath) {
         const applicationidMatch = pathname.match(/^\/uploads\/(resumes|offerletter)\/([^_]+)_/);
@@ -50,6 +51,22 @@ export async function POST(request) {
           } else {
             console.log(`Access denied to ${pathname} for empid ${empid} (orgid mismatch: ${fileOrgPrefix} vs ${orgid})`);
             return NextResponse.json({ error: 'Access denied due to orgid mismatch', accessibleItems: [] }, { status: 403 });
+          }
+        }
+      }
+
+      // Check Invoice paths - verify orgid from filename matches user's orgid
+      if (isInvoicePath) {
+        // Extract full orgid (all digits before first underscore)
+        const invoiceMatch = pathname.match(/^\/uploads\/Invoices\/(\d+)_.*$/i);
+        if (invoiceMatch) {
+          const fileOrgId = parseInt(invoiceMatch[1]);
+          if (fileOrgId === parseInt(orgid)) {
+            console.log(`Access granted to ${pathname} for empid ${empid} (invoice with matching orgid ${orgid})`);
+            return NextResponse.json({ success: true, accessibleItems: [] });
+          } else {
+            console.log(`Access denied to ${pathname} for empid ${empid} (invoice orgid mismatch: ${fileOrgId} vs ${orgid})`);
+            return NextResponse.json({ error: 'Access denied: Cannot access invoice from another organization', accessibleItems: [] }, { status: 403 });
           }
         }
       }

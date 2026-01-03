@@ -152,6 +152,45 @@ export async function middleware(request) {
     }
   }
 
+  // Handle Invoice attachment paths (/uploads/Invoices/*)
+  // Invoice filenames are prefixed with orgid: {orgid}_{timestamp}_{filename}
+  const isInvoicePath = pathname.match(/^\/uploads\/Invoices\/(\d+)_.+$/i);
+  if (isInvoicePath) {
+    const fileOrgId = isInvoicePath[1]; // Extract orgid from filename
+    const token = request.cookies.get('jwt_token')?.value;
+
+    console.log('Invoice attachment path detected:', pathname);
+    console.log('Extracted orgid from filename:', fileOrgId);
+
+    if (!token) {
+      console.log("No jwt_token found for Invoice attachment path, redirecting to login");
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+
+    try {
+      const decoded = decodeJwt(token);
+      if (!decoded || !decoded.orgid || !decoded.empid) {
+        console.log("Invalid or missing orgid/empid in JWT for Invoice attachment path, redirecting to login");
+        return NextResponse.redirect(new URL('/login', request.url));
+      }
+
+      // Check if user's orgid matches the file's orgid
+      if (parseInt(fileOrgId) === parseInt(decoded.orgid)) {
+        console.log(`Access granted to Invoice attachment ${pathname} for orgid ${decoded.orgid}`);
+        return NextResponse.next();
+      } else {
+        console.log(`Access denied to Invoice attachment ${pathname}: orgid mismatch (file: ${fileOrgId}, user: ${decoded.orgid})`);
+        return new Response(JSON.stringify({ error: 'Unauthorized: Cannot access invoice from another organization' }), {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+    } catch (error) {
+      console.error('Error verifying JWT for Invoice attachment path:', error.message);
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+  }
+
   // Handle signature paths (/signatures/form_:formId_:type.png or .svg)
   const isSignaturePath = pathname.match(/^\/signatures\/form_(\d+)_(employee|employer)\.(png|svg)$/);
   if (isSignaturePath) {
