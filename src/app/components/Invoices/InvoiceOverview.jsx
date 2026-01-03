@@ -988,12 +988,13 @@ const InvoiceOverview = () => {
                             🔎 PDF
                           </a>
                           {invoice.STATUS !== 'RESENT' && (
-                            <button
-                              onClick={() => handleResendInvoice(invoice.SENT_ID, invoice.SENT_DATE)}
-                              className={styles.actionBtnResend}
-                            >
-                              ↩️ Resend
-                            </button>
+                            // <button
+                            //   onClick={() => handleResendInvoice(invoice.SENT_ID, invoice.SENT_DATE)}
+                            //   className={styles.actionBtnResend}
+                            // >
+                            //   ↩️ Resend
+                            // </button>
+                            <></>
                           )}
                         </div>
                       </td>
