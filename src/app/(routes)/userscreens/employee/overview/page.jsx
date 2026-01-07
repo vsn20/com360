@@ -204,18 +204,25 @@ export default async function OverviewPage({ searchParams }) {
     // ------------------------------------------------------------------
     // OPTIMIZATION: Fetch all registered C_USER emails in one query
     // ------------------------------------------------------------------
-    const [cUserRows] = await pool.query(
-      'SELECT email FROM C_USER WHERE orgid = ?',
-      [orgid]
-    );
-    const registeredEmails = new Set(cUserRows.map(u => u.email.toLowerCase()));
+   const [cUserRows] = await pool.query(
+  'SELECT empid FROM C_USER WHERE orgid = ?',
+  [orgid]
+  );
 
-    employees = employeeRows.map(emp => ({
-      ...emp,
-      roleids: emp.roleids ? emp.roleids.split(',').map(id => id.trim()) : [],
-      formattedHireDate: formatDateForDisplay(emp.HIRE),
-      isRegistered: emp.email && registeredEmails.has(emp.email.toLowerCase())
-    }));
+   const registeredEmpIds = new Set(
+    cUserRows.map(u => String(u.empid))
+  );
+
+
+  employees = employeeRows.map(emp => ({
+  ...emp,
+  roleids: emp.roleids
+    ? emp.roleids.split(',').map(id => id.trim())
+    : [],
+  formattedHireDate: formatDateForDisplay(emp.HIRE),
+  isRegistered: registeredEmpIds.has(String(emp.empid))
+  }));
+
     
     [departments] = await pool.query('SELECT id, name FROM C_ORG_DEPARTMENTS WHERE orgid = ? AND isactive = 1', [orgid]);
     [payFrequencies] = await pool.query('SELECT id, Name FROM C_GENERIC_VALUES WHERE g_id = 4 AND orgid = ? AND isactive = 1', [orgid]);
