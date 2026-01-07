@@ -170,11 +170,14 @@ const EmploymentDetails = ({
               <label>Work Compensation Class</label>
               <select name="workCompClass" value={formData.workCompClass} onChange={handleFormChange}>
                 <option value="">Select Work Compensation Class</option>
-                {workerCompClasses.map((compClass) => (
-                  <option key={compClass.class_code} value={compClass.class_code}>
-                    {`${compClass.class_code} - ${compClass.phraseology}`}
-                  </option>
-                ))}
+               {workerCompClasses.map((compClass, index) => (
+  <option 
+    key={`${compClass.class_code}-${compClass.phraseology.substring(0, 20)}-${index}`} 
+    value={compClass.class_code}
+  >
+    {`${compClass.class_code} - ${compClass.phraseology}`}
+  </option>
+))}
               </select>
             </div>
             <div className="form-group">

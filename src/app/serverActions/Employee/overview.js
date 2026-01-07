@@ -81,8 +81,9 @@ async function syncEmployeeToMeta(empid, orgid, tenantPool, currentUsername, old
     const targetEmp = empRows[0];
     console.log(`✅ Employee Found: ${targetEmp.EMP_FST_NAME} (${targetEmp.email})`);
     
-    let isActive = 'Y';
-    console.log(`✅ Status Resolved: ${isActive}`);
+    // 🟢 CHANGED: Check database STATUS (Case Insensitive) to determine 'Y' or 'N'
+    let isActive = (targetEmp.STATUS && targetEmp.STATUS.toUpperCase() === 'ACTIVE') ? 'Y' : 'N';
+    console.log(`✅ Status Resolved: ${isActive} (Based on STATUS: ${targetEmp.STATUS})`);
 
     if (oldEmail) {
       console.log(`🚀 STEP 4: Updating Meta C_EMP using old email: ${oldEmail}`);
@@ -102,7 +103,7 @@ async function syncEmployeeToMeta(empid, orgid, tenantPool, currentUsername, old
           metaOrgId,   
           plan_number, 
           targetEmp.email,
-          isActive,
+          isActive, // Using the dynamic active status
           oldEmail 
         ]
       );
@@ -121,7 +122,7 @@ async function syncEmployeeToMeta(empid, orgid, tenantPool, currentUsername, old
             metaOrgId,   
             plan_number, 
             targetEmp.email,
-            isActive,
+            isActive, // Using the dynamic active status
             targetEmp.email
           ]
         );
@@ -152,7 +153,7 @@ async function syncEmployeeToMeta(empid, orgid, tenantPool, currentUsername, old
           metaOrgId,   
           plan_number, 
           targetEmp.email,
-          isActive,
+          isActive, // Using the dynamic active status
           targetEmp.email
         ]
       );
@@ -269,7 +270,6 @@ export async function updateEmployee(prevState, formData) {
 
       let formattedEmployeeNumber = null;
       if (employee_number) {
-        // 🟢 UPDATED: Allow alphanumeric, removed padding and strict numeric check
         if (employee_number.length > 20) {
              return { error: 'Employee number is too long (max 20 characters).' };
         }

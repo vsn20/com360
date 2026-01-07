@@ -16,55 +16,35 @@ const decodeJwt = (token) => {
   }
 };
 
-// 🔹 HELPER: Sync Employee to Meta Database
+// 🔹 HELPER: Single Sync (Used for Single Add Employee)
 async function syncEmployeeToMeta(empid, orgid, tenantPool, currentUsername) {
   let metaConnection;
   try {
-    console.log(`\n--- 🚀 STARTING META SYNC ---`);
-    console.log(`Target EmpID: ${empid}, OrgID: ${orgid}`);
-    console.log(`Executed By: ${currentUsername}`);
-
+    console.log(`\n--- 🚀 STARTING META SYNC (SINGLE) ---`);
     const metaPool = MetaDBconnection(); 
     metaConnection = await metaPool.getConnection();
-    console.log(`✅ STEP 1: Connected to Meta DB`);
 
-    console.log(`🔍 STEP 2: Looking up admin '${currentUsername}' in Meta DB...`);
-    
     const [currentUserRows] = await metaConnection.query(
       `SELECT plan_number, org_id FROM C_EMP WHERE username = ? OR email = ?`,
       [currentUsername, currentUsername]
     );
 
-    console.log(`📄 STEP 2 Result: Found ${currentUserRows.length} rows`);
-
-    if (currentUserRows.length === 0) {
-      console.error(`❌ FAILURE: Admin user '${currentUsername}' not found in Meta DB.`);
-      return; 
-    }
+    if (currentUserRows.length === 0) return;
 
     const { plan_number, org_id: metaOrgId } = currentUserRows[0];
-    console.log(`✅ Admin Details Found -> OrgID: ${metaOrgId}, Plan: ${plan_number}`);
 
-    console.log(`🔍 STEP 3: Fetching new employee data from Tenant DB...`);
-    
     const [empRows] = await tenantPool.query(
       `SELECT EMP_FST_NAME, EMP_MID_NAME, EMP_LAST_NAME, email, STATUS
        FROM C_EMP WHERE empid = ? AND orgid = ?`,
       [empid, orgid]
     );
 
-    if (empRows.length === 0) {
-      console.error('❌ FAILURE: Target employee not found in Tenant DB.');
-      return;
-    }
+    if (empRows.length === 0) return;
 
     const targetEmp = empRows[0];
-    console.log(`✅ Employee Found: ${targetEmp.EMP_FST_NAME} (${targetEmp.email})`);
     
-    let isActive = 'Y';
-    console.log(`✅ Status Resolved: ${isActive}`);
-
-    console.log(`🚀 STEP 4: Attempting INSERT into Meta C_EMP...`);
+    // 🟢 Status Logic: Case Insensitive Check
+    let isActive = (targetEmp.STATUS && targetEmp.STATUS.toUpperCase() === 'ACTIVE') ? 'Y' : 'N';
 
     await metaConnection.query(
       `INSERT INTO C_EMP 
@@ -83,20 +63,84 @@ async function syncEmployeeToMeta(empid, orgid, tenantPool, currentUsername) {
         metaOrgId,   
         plan_number, 
         targetEmp.email,
-        'Y',
+        isActive, 
         targetEmp.email
       ]
     );
 
-    console.log(`✅ SUCCESS: Meta Sync Completed for ${targetEmp.email}`);
-    console.log(`--- 🏁 END META SYNC ---\n`);
+    console.log(`✅ Meta Sync Completed for ${targetEmp.email}`);
 
   } catch (error) {
     console.error('❌ CRITICAL ERROR in Meta Sync:', error);
-    if (error.sqlMessage) console.error('SQL Error:', error.sqlMessage);
   } finally {
     if (metaConnection) metaConnection.release();
   }
+}
+
+// 🟢 NEW HELPER: Batch Sync (Used for Import Employees)
+// This connects ONCE and inserts ALL data at the end to reduce traffic.
+async function syncBatchEmployeesToMeta(employeesList, orgid, currentUsername) {
+    if (!employeesList || employeesList.length === 0) return;
+
+    let metaConnection;
+    try {
+        console.log(`\n--- 🚀 STARTING BATCH META SYNC ---`);
+        console.log(`Syncing ${employeesList.length} employees for OrgID: ${orgid}`);
+
+        const metaPool = MetaDBconnection();
+        metaConnection = await metaPool.getConnection();
+        
+        // 1. Get Admin Details (Once)
+        const [currentUserRows] = await metaConnection.query(
+            `SELECT plan_number, org_id FROM C_EMP WHERE username = ? OR email = ?`,
+            [currentUsername, currentUsername]
+        );
+
+        if (currentUserRows.length === 0) {
+            console.error(`❌ FAILURE: Admin user '${currentUsername}' not found in Meta DB.`);
+            return;
+        }
+
+        const { plan_number, org_id: metaOrgId } = currentUserRows[0];
+
+        // 2. Prepare Bulk Values
+        const values = employeesList.map(emp => {
+            // Case-insensitive status check
+            const isActive = (emp.status && emp.status.toUpperCase() === 'ACTIVE') ? 'Y' : 'N';
+            
+            return [
+                emp.firstName,
+                emp.middleName || null, 
+                metaOrgId,
+                plan_number,
+                emp.email,
+                isActive,
+                emp.email // username
+            ];
+        });
+
+        // 3. Execute Bulk Insert/Update Query
+        const query = `
+            INSERT INTO C_EMP 
+                (emp_first_name, emp_middle_name, org_id, plan_number, email, active, username)
+            VALUES ?
+            ON DUPLICATE KEY UPDATE 
+                emp_first_name = VALUES(emp_first_name),
+                emp_middle_name = VALUES(emp_middle_name),
+                org_id = VALUES(org_id),
+                plan_number = VALUES(plan_number),
+                active = VALUES(active),
+                username = VALUES(username)
+        `;
+
+        await metaConnection.query(query, [values]);
+        console.log(`✅ SUCCESS: Batch Sync Completed for ${values.length} employees.`);
+
+    } catch (error) {
+        console.error('❌ CRITICAL ERROR in Batch Meta Sync:', error);
+    } finally {
+        if (metaConnection) metaConnection.release();
+    }
 }
 
 export async function addemployee(formData) {
@@ -151,7 +195,6 @@ export async function addemployee(formData) {
   const suborgid = formData.get('suborgid') || null;
   const employment_type = formData.get('employment_type') || null;
   const vendor_id = formData.get('vendor_id') || null;
-  // 🟢 NEW: Extract employee number
   const employee_number = formData.get('employee_number')?.trim() || null;
 
   const cookieStore = await cookies();
@@ -164,7 +207,6 @@ export async function addemployee(formData) {
   const orgid = decoded.orgid;
   const currentUsername = decoded.username;
 
-  // Validation
   if (!empFstName.trim()) return { error: 'First name is required.' };
   if (!empLastName.trim()) return { error: 'Last name is required.' };
   if (!email.trim()) return { error: 'Email is required.' };
@@ -183,7 +225,6 @@ export async function addemployee(formData) {
   try {
     const pool = await DBconnection();
 
-    // Check if email already exists
     const [existingEmail] = await pool.query(
       'SELECT empid FROM C_EMP WHERE email = ? AND orgid = ?',
       [email, orgid]
@@ -192,7 +233,6 @@ export async function addemployee(formData) {
       return { error: 'Email already exists.' };
     }
 
-    // 🟢 NEW: Check if employee_number exists
     if (employee_number) {
         const [existingEmpNum] = await pool.query(
             'SELECT empid FROM C_EMP WHERE employee_number = ? AND orgid = ?',
@@ -262,7 +302,6 @@ export async function addemployee(formData) {
 
     const finalVendorId = (employment_type === '12' || employment_type === '13') ? vendor_id : null;
 
-    // 🟢 UPDATED: Added employee_number to columns and values
     const insertColumns = [
       'empid', 'orgid', 'EMP_FST_NAME', 'EMP_MID_NAME', 'EMP_LAST_NAME', 'EMP_PREF_NAME', 'email',
       'GENDER', 'MOBILE_NUMBER', 'DOB', 'HIRE', 'LAST_WORK_DATE',
@@ -309,7 +348,6 @@ export async function addemployee(formData) {
          ON DUPLICATE KEY UPDATE roleid = roleid`,
         [empid, orgid, roleid]
       );
-      console.log(`Assigned role ${roleid} to employee ${empid}`);
     }
 
     const leaves = {};
@@ -337,7 +375,6 @@ export async function addemployee(formData) {
 
     if (leaveAssignmentPromises.length > 0) {
       await Promise.all(leaveAssignmentPromises);
-      console.log('All leave assignments completed successfully');
     }
 
     await syncEmployeeToMeta(empid, orgid, pool, currentUsername);
@@ -375,6 +412,9 @@ export async function importEmployeesBatch(employeesData) {
   let addedCount = 0;
   let skippedEmails = [];
   let errors = [];
+  
+  // 🟢 Array to collect data for a SINGLE batch sync call
+  let batchSyncData = [];
 
   try {
     const [countResult] = await pool.query('SELECT COUNT(*) AS count FROM C_EMP WHERE orgid = ?', [orgid]);
@@ -435,12 +475,20 @@ export async function importEmployeesBatch(employeesData) {
         }
       }
 
-       try {
-       } catch (syncErr) {
-         console.error("Meta sync failed for imported user", email, syncErr);
-       }
+      // 🟢 Add to batch sync array instead of syncing here
+      batchSyncData.push({
+        firstName,
+        middleName: null, 
+        email,
+        status 
+      });
 
       addedCount++;
+    }
+
+    // 🟢 Perform Batch Sync at the end
+    if (batchSyncData.length > 0) {
+        await syncBatchEmployeesToMeta(batchSyncData, orgid, currentUsername);
     }
 
     return { 
