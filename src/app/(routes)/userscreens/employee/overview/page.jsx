@@ -208,13 +208,13 @@ export default async function OverviewPage({ searchParams }) {
       'SELECT email FROM C_USER WHERE orgid = ?',
       [orgid]
     );
-    const registeredEmails = new Set(cUserRows.map(u => u.email));
+    const registeredEmails = new Set(cUserRows.map(u => u.email.toLowerCase()));
 
     employees = employeeRows.map(emp => ({
       ...emp,
       roleids: emp.roleids ? emp.roleids.split(',').map(id => id.trim()) : [],
       formattedHireDate: formatDateForDisplay(emp.HIRE),
-      isRegistered: emp.email && registeredEmails.has(emp.email)
+      isRegistered: emp.email && registeredEmails.has(emp.email.toLowerCase())
     }));
     
     [departments] = await pool.query('SELECT id, name FROM C_ORG_DEPARTMENTS WHERE orgid = ? AND isactive = 1', [orgid]);
