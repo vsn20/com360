@@ -95,6 +95,33 @@ export async function fetchRequests() {
   }
 }
 
+// --- 1.1 FETCH EXISTING ORGANIZATIONS ---
+export async function fetchExistingOrganizations() {
+  const metaPool = MetaDBconnection();
+  try {
+    const [rows] = await metaPool.query(`
+      SELECT 
+        o.org_id,
+        o.org_name,
+        COALESCE(p.plan_name, 'N/A') as plan_name,
+        COUNT(e.emp_id) as total_employees,
+        SUM(CASE WHEN e.active = 'Y' THEN 1 ELSE 0 END) as active_employees,
+        SUM(CASE WHEN e.active = 'N' THEN 1 ELSE 0 END) as inactive_employees
+      FROM C_ORG o
+      LEFT JOIN C_SUBSCRIBER s ON o.org_id = s.org_id
+      LEFT JOIN C_SUBSCRIBER_PLAN sp ON s.subscriber_id = sp.subscriber_id AND sp.active = 'Y'
+      LEFT JOIN C_PLAN p ON sp.plan_id = p.plan_id
+      LEFT JOIN C_EMP e ON o.org_id = e.org_id
+      GROUP BY o.org_id, o.org_name, p.plan_name
+      ORDER BY o.org_name ASC
+    `);
+    return rows;
+  } catch (error) {
+    console.error("Fetch Existing Orgs Error:", error);
+    return [];
+  }
+}
+
 
 // --- 2. REJECT REQUEST ---
 export async function rejectRequest(requestId) {
