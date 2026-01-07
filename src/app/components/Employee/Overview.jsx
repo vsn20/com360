@@ -166,42 +166,140 @@ const Overview = ({
 
     try {
         const rows = await readXlsxFile(importFile);
-        const dataRows = rows.slice(1); 
         
-        if (dataRows.length === 0) {
+        if (rows.length === 0) {
             setImportStatusMsg({ type: 'error', text: 'File appears to be empty.' });
             setImportLoading(false);
             return;
         }
 
-        const formattedEmployees = [];
+        // ✅ STEP 1: VALIDATE HEADERS (MUST BE IN ORDER)
+        const headerRow = rows[0];
+        const expectedHeaders = ['First Name', 'Last Name', 'Email', 'Roles', 'Hire Date', 'Status'];
         
+        // Check if we have enough columns
+        if (headerRow.length < expectedHeaders.length) {
+            setImportStatusMsg({ 
+                type: 'error', 
+                text: `Invalid file format. Expected ${expectedHeaders.length} columns but found ${headerRow.length}.` 
+            });
+            setImportLoading(false);
+            return;
+        }
+
+        // Check if headers match exactly (case-insensitive, trimmed)
+        const headersMatch = expectedHeaders.every((expected, index) => {
+            const actual = headerRow[index] ? headerRow[index].toString().trim().toLowerCase() : '';
+            return actual === expected.toLowerCase();
+        });
+
+        if (!headersMatch) {
+            const actualHeaders = headerRow
+                .slice(0, expectedHeaders.length)
+                .map(h => h ? h.toString().trim() : '(empty)')
+                .join(', ');
+            setImportStatusMsg({ 
+                type: 'error', 
+                text: `Headers are not in the correct order. Expected: ${expectedHeaders.join(', ')}. Found: ${actualHeaders}` 
+            });
+            setImportLoading(false);
+            return;
+        }
+
+        const dataRows = rows.slice(1); // Skip header row
+        
+        if (dataRows.length === 0) {
+            setImportStatusMsg({ type: 'error', text: 'File contains no data rows.' });
+            setImportLoading(false);
+            return;
+        }
+
+        const formattedEmployees = [];
+        const skippedRows = [];
+        
+        // ✅ STEP 2: PROCESS EACH DATA ROW WITH VALIDATION
         for (let i = 0; i < dataRows.length; i++) {
             const row = dataRows[i];
-            const firstName = row[0];
-            const lastName = row[1];
-            const email = row[2];
+            const rowNumber = i + 2; // +2 because row 1 is header, and arrays are 0-indexed
+            
+            // Extract values from columns (matching header order)
+            const firstName = row[0] ? row[0].toString().trim() : '';
+            const lastName = row[1] ? row[1].toString().trim() : '';
+            const email = row[2] ? row[2].toString().trim() : '';
             const rolesStr = row[3]; 
             const hireDateRaw = row[4];
             const statusRaw = row[5];
 
-            if (!email || !firstName) continue;
-
-            const roleIds = [];
-            if (rolesStr && roles && Array.isArray(roles)) {
-                const roleNames = rolesStr.toString().split(',').map(r => r.trim().toLowerCase());
-                roles.forEach(dbRole => {
-                    if (dbRole.rolename && roleNames.includes(dbRole.rolename.toLowerCase())) {
-                        roleIds.push(dbRole.roleid);
-                    }
+            // ✅ VALIDATION 1: Check required fields
+            if (!email || !firstName || !lastName) {
+                skippedRows.push({ 
+                    row: rowNumber, 
+                    reason: 'Missing required fields (First Name, Last Name, or Email)' 
                 });
+                continue;
             }
 
-            let finalStatus = 'Active'; 
+            // ✅ VALIDATION 2: Validate and match roles with database
+            const roleIds = [];
+            let hasInvalidRole = false;
+            const processedRoleNames = new Set(); // Track unique role names to avoid duplicates
+            
+            if (rolesStr && roles && Array.isArray(roles)) {
+                const roleNames = rolesStr.toString().split(',').map(r => r.trim().toLowerCase());
+                
+                for (const roleName of roleNames) {
+                    if (!roleName) continue; // Skip empty role names
+                    
+                    // Skip if this role name was already processed (e.g., "HR, HR" -> only process once)
+                    if (processedRoleNames.has(roleName)) {
+                        continue;
+                    }
+                    
+                    // Find matching role in database (case-insensitive)
+                    const matchedRole = roles.find(dbRole => 
+                        dbRole.rolename && dbRole.rolename.toLowerCase() === roleName
+                    );
+                    
+                    if (matchedRole) {
+                        // Add role ID only if not already added (extra safety)
+                        if (!roleIds.includes(matchedRole.roleid)) {
+                            roleIds.push(matchedRole.roleid);
+                        }
+                        processedRoleNames.add(roleName); // Mark this role name as processed
+                    } else {
+                        // Role doesn't exist in database - mark as invalid
+                        hasInvalidRole = true;
+                        skippedRows.push({ 
+                            row: rowNumber, 
+                            reason: `Invalid role "${roleName}" does not exist in the system` 
+                        });
+                        break; // Stop processing this row
+                    }
+                }
+            }
+
+            // Skip this row if it has any invalid roles
+            if (hasInvalidRole) {
+                continue;
+            }
+
+            // Skip if no valid roles were found
+            if (roleIds.length === 0) {
+                skippedRows.push({ 
+                    row: rowNumber, 
+                    reason: 'No valid roles provided' 
+                });
+                continue;
+            }
+
+            // ✅ VALIDATION 3: Match status with database
+            let finalStatus = 'Active'; // Default status
             if (statusRaw && statuses && Array.isArray(statuses)) {
                 const inputStatusLower = statusRaw.toString().trim().toLowerCase();
                 const matchedStatus = statuses.find(s => {
-                    if (typeof s === 'string') return s.toLowerCase() === inputStatusLower;
+                    if (typeof s === 'string') {
+                        return s.toLowerCase() === inputStatusLower;
+                    }
                     if (s && typeof s === 'object') {
                         const name = s.Name || s.name || s.status || '';
                         return name.toLowerCase() === inputStatusLower;
@@ -210,13 +308,18 @@ const Overview = ({
                 });
 
                 if (matchedStatus) {
-                    if (typeof matchedStatus === 'string') finalStatus = matchedStatus;
-                    else if (typeof matchedStatus === 'object') finalStatus = matchedStatus.Name || matchedStatus.name || 'Active';
+                    if (typeof matchedStatus === 'string') {
+                        finalStatus = matchedStatus;
+                    } else if (typeof matchedStatus === 'object') {
+                        finalStatus = matchedStatus.Name || matchedStatus.name || 'Active';
+                    }
                 }
             }
 
+            // ✅ VALIDATION 4: Parse and format hire date
             const formattedHireDate = parseDateString(hireDateRaw);
 
+            // Add validated employee to batch
             formattedEmployees.push({
                 firstName,
                 lastName,
@@ -227,16 +330,49 @@ const Overview = ({
             });
         }
 
+        // ✅ STEP 3: Check if any valid employees remain after validation
+        if (formattedEmployees.length === 0) {
+            let errorMsg = 'No valid employees to import.';
+            if (skippedRows.length > 0) {
+                errorMsg += ` All ${skippedRows.length} rows were skipped due to validation errors.`;
+            }
+            setImportStatusMsg({ 
+                type: 'error', 
+                text: errorMsg
+            });
+            setImportLoading(false);
+            return;
+        }
+
+        // ✅ STEP 4: Send validated data to server
         const result = await importEmployeesBatch(formattedEmployees);
 
         if (result.error) {
             setImportStatusMsg({ type: 'error', text: result.error });
         } else {
-            let msg = `Successfully added ${result.addedCount} employees.`;
-            if (result.skippedCount > 0) msg += ` Skipped ${result.skippedCount} duplicates.`;
-            if (result.skippedEmails && result.skippedEmails.length > 0) msg += ` (Skipped: ${result.skippedEmails.join(', ')})`;
+            // Build success message
+            let msg = `Successfully added ${result.addedCount} employee${result.addedCount !== 1 ? 's' : ''}.`;
+            
+            if (result.skippedCount > 0) {
+                msg += ` ${result.skippedCount} duplicate email${result.skippedCount !== 1 ? 's' : ''} skipped.`;
+            }
+            
+            if (skippedRows.length > 0) {
+                msg += ` ${skippedRows.length} row${skippedRows.length !== 1 ? 's' : ''} skipped due to validation errors.`;
+            }
+            
+            // Log detailed skip reasons to console for debugging
+            if (skippedRows.length > 0) {
+                console.log('=== SKIPPED ROWS DETAILS ===');
+                skippedRows.forEach(skip => {
+                    console.log(`Row ${skip.row}: ${skip.reason}`);
+                });
+                console.log('===========================');
+            }
+            
             setImportStatusMsg({ type: 'success', text: msg });
             
+            // Refresh page after successful import
             if (result.addedCount > 0) {
                 setTimeout(() => {
                     handleCloseImportModal();
@@ -247,12 +383,14 @@ const Overview = ({
 
     } catch (err) {
         console.error("Import parsing error:", err);
-        setImportStatusMsg({ type: 'error', text: 'Failed to parse file. Ensure it is a valid Excel (.xlsx) file.' });
+        setImportStatusMsg({ 
+            type: 'error', 
+            text: 'Failed to parse file. Ensure it is a valid Excel (.xlsx) file with the correct format.' 
+        });
     } finally {
         setImportLoading(false);
     }
-  };
-
+};
   const sortEmployees = (a, b, column, direction) => {
     let aValue, bValue;
     switch (column) {
