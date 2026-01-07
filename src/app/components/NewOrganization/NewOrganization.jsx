@@ -9,6 +9,9 @@ const NewOrganization = ({ initialRequests = [], initialOrganizations = [] }) =>
   const [processingId, setProcessingId] = useState(null); 
   const [message, setMessage] = useState({ type: '', text: '' });
   
+  // State for Organization Details View (replaces Modal)
+  const [selectedOrg, setSelectedOrg] = useState(null);
+
   // State to toggle views
   const [showRequests, setShowRequests] = useState(false);
   
@@ -277,165 +280,15 @@ const NewOrganization = ({ initialRequests = [], initialOrganizations = [] }) =>
     setReqCurrentPage(1);
     setOrgPageInputValue('1');
     setReqPageInputValue('1');
+    setSelectedOrg(null); // Reset detail view on tab switch
   }, [showRequests]);
 
-  return (
-    <div className={styles.neworg_container}>
-      
-      {!showRequests ? (
-        // --- VIEW 1: EXISTING ORGANIZATIONS (Main Page) ---
-        <div>
-            <div className={styles.neworg_header_section}>
-                <h1 className={styles.neworg_title}>Companies</h1>
-                <div className={styles.neworg_header_buttons}>
-                    {/* <button 
-                        onClick={refreshOrganizations} 
-                        className={styles.neworg_button}
-                        style={{backgroundColor: '#6c757d', color: 'white'}}>
-                        Refresh
-                    </button> */}
-                    <button 
-                        onClick={() => setShowRequests(true)} 
-                        className={styles.neworg_button}>
-                        New Company Requests
-                    </button>
-                </div>
-            </div>
-
-            {/* Search and Filter */}
-            <div className={styles.neworg_search_filter_container}>
-              <input
-                type="text"
-                placeholder="Search by Organization Name"
-                value={orgSearchQuery}
-                onChange={(e) => {
-                  setOrgSearchQuery(e.target.value);
-                  setOrgCurrentPage(1);
-                  setOrgPageInputValue('1');
-                }}
-                className={styles.neworg_search_input}
-              />
-              <select
-                value={orgPlanFilter}
-                onChange={(e) => {
-                  setOrgPlanFilter(e.target.value);
-                  setOrgCurrentPage(1);
-                  setOrgPageInputValue('1');
-                }}
-                className={styles.neworg_filter_select}
-              >
-                <option value="all">All Plans</option>
-                {uniquePlans.map((plan) => (
-                  <option key={plan} value={plan}>{plan}</option>
-                ))}
-              </select>
-            </div>
-
-            {filteredOrganizations.length === 0 ? (
-                <div className={styles.neworg_empty_state}>
-                    <p>No organizations found matching your search.</p>
-                </div>
-            ) : (
-                <>
-                  <div className={styles.neworg_table_wrapper}>
-                      <table className={styles.neworg_table}>
-                          <thead>
-                              <tr>
-                                  <th 
-                                    className={`${styles.neworg_th} ${styles.neworg_sortable} ${orgSortConfig.column === 'org_name' ? styles[`neworg_sort_${orgSortConfig.direction}`] : ''}`}
-                                    onClick={() => requestOrgSort('org_name')}>
-                                    Organization Name
-                                  </th>
-                                  <th 
-                                    className={`${styles.neworg_th} ${styles.neworg_sortable} ${orgSortConfig.column === 'plan_name' ? styles[`neworg_sort_${orgSortConfig.direction}`] : ''}`}
-                                    onClick={() => requestOrgSort('plan_name')}>
-                                    Plan Name
-                                  </th>
-                                  <th 
-                                    className={`${styles.neworg_th} ${styles.neworg_sortable} ${orgSortConfig.column === 'active_employees' ? styles[`neworg_sort_${orgSortConfig.direction}`] : ''}`}
-                                    onClick={() => requestOrgSort('active_employees')}>
-                                    Active Employees
-                                  </th>
-                                  <th 
-                                    className={`${styles.neworg_th} ${styles.neworg_sortable} ${orgSortConfig.column === 'inactive_employees' ? styles[`neworg_sort_${orgSortConfig.direction}`] : ''}`}
-                                    onClick={() => requestOrgSort('inactive_employees')}>
-                                    Inactive Employees
-                                  </th>
-                                  <th 
-                                    className={`${styles.neworg_th} ${styles.neworg_sortable} ${orgSortConfig.column === 'total_employees' ? styles[`neworg_sort_${orgSortConfig.direction}`] : ''}`}
-                                    onClick={() => requestOrgSort('total_employees')}>
-                                    Total Employees
-                                  </th>
-                              </tr>
-                          </thead>
-                          <tbody>
-                              {currentOrganizations.map((org) => (
-                                  <tr key={org.org_id} className={styles.neworg_row}>
-                                      <td className={styles.neworg_td}>
-                                          <span className={styles.neworg_role_indicator}></span>
-                                          <span style={{fontWeight: '600'}}>{org.org_name}</span>
-                                      </td>
-                                      <td className={styles.neworg_td}>
-                                          <span className={styles.neworg_plan_badge}>
-                                              {org.plan_name}
-                                          </span>
-                                      </td>
-                                      <td className={styles.neworg_td} style={{color: '#166534', fontWeight: 'bold'}}>{org.active_employees}</td>
-                                      <td className={styles.neworg_td} style={{color: '#991b1b'}}>{org.inactive_employees}</td>
-                                      <td className={styles.neworg_td}>{org.total_employees}</td>
-                                  </tr>
-                              ))}
-                          </tbody>
-                      </table>
-                  </div>
-
-                  {/* Pagination */}
-                  {filteredOrganizations.length > orgPerPage && (
-                    <div className={styles.neworg_pagination_container}>
-                      <button 
-                        className={styles.neworg_button} 
-                        onClick={handleOrgPrevPage} 
-                        disabled={orgCurrentPage === 1}>
-                        ← Previous
-                      </button>
-                      <span className={styles.neworg_pagination_text}>
-                        Page 
-                        <input 
-                          type="text" 
-                          value={orgPageInputValue} 
-                          onChange={(e) => setOrgPageInputValue(e.target.value)} 
-                          onKeyPress={handleOrgPageInputKeyPress} 
-                          className={styles.neworg_pagination_input}
-                        /> of {orgTotalPages}
-                      </span>
-                      <button 
-                        className={styles.neworg_button} 
-                        onClick={handleOrgNextPage} 
-                        disabled={orgCurrentPage === orgTotalPages}>
-                        Next →
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Rows per page */}
-                  <div className={styles.neworg_rows_per_page_container}>
-                    <label className={styles.neworg_rows_per_page_label}>Rows per Page:</label>
-                    <input 
-                      type="text" 
-                      value={orgPerPageInput} 
-                      onChange={(e) => setOrgPerPageInput(e.target.value)} 
-                      onKeyPress={handleOrgPerPageKeyPress} 
-                      className={styles.neworg_rows_per_page_input}
-                      aria-label="Number of rows per page"
-                    />
-                  </div>
-                </>
-            )}
-        </div>
-      ) : (
-        // --- VIEW 2: ORGANIZATION REQUESTS ---
-        <div>
-            <div className={styles.neworg_requests_header_container}>
+  // Handle Logic to render the correct view
+  if (showRequests) {
+      // --- VIEW: NEW REQUESTS ---
+      return (
+        <div className={styles.neworg_container}>
+             <div className={styles.neworg_requests_header_container}>
                 <h1 className={styles.neworg_title}>Organization Requests</h1>
                 <button 
                     onClick={() => setShowRequests(false)} 
@@ -622,7 +475,275 @@ const NewOrganization = ({ initialRequests = [], initialOrganizations = [] }) =>
                 </>
             )}
         </div>
-      )}
+      );
+  }
+
+  // --- VIEW: ORGANIZATION DETAILS (Full Page) ---
+  if (selectedOrg) {
+    return (
+        <div className={styles.neworg_container}>
+             <div className={styles.neworg_header_with_back}>
+                <div className={styles.neworg_back_and_title}>
+                    <button 
+                        onClick={() => setSelectedOrg(null)} 
+                        className={styles.neworg_back_button}>
+                    </button>
+                    <h1 className={styles.neworg_title} style={{padding:0}}>Organization Details</h1>
+                </div>
+            </div>
+
+            <div className={styles.neworg_details_container}>
+                <div className={styles.neworg_details_block}>
+                    <h3>General Information</h3>
+                    <div className={styles.neworg_details_row}>
+                        <div className={styles.neworg_details_group}>
+                            <label>Organization Name</label>
+                            <input 
+                                type="text" 
+                                value={selectedOrg.org_name || ''} 
+                                disabled 
+                                className={styles.neworg_search_input}
+                                style={{width: '100%', backgroundColor: '#f9f9f9'}}
+                            />
+                        </div>
+                        <div className={styles.neworg_details_group}>
+                            <label>Plan Name</label>
+                            <input 
+                                type="text" 
+                                value={selectedOrg.plan_name || ''} 
+                                disabled 
+                                className={styles.neworg_search_input}
+                                style={{width: '100%', backgroundColor: '#f9f9f9'}}
+                            />
+                        </div>
+                         <div className={styles.neworg_details_group}>
+                            <label>Organization ID</label>
+                            <input 
+                                type="text" 
+                                value={selectedOrg.org_id || ''} 
+                                disabled 
+                                className={styles.neworg_search_input}
+                                style={{width: '100%', backgroundColor: '#f9f9f9'}}
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                <div className={styles.neworg_details_block}>
+                    <h3>Administrator Details</h3>
+                    <div className={styles.neworg_details_row}>
+                        <div className={styles.neworg_details_group}>
+                            <label>Admin Name</label>
+                            <input 
+                                type="text" 
+                                value={selectedOrg.admin_name || ''} 
+                                disabled 
+                                className={styles.neworg_search_input}
+                                style={{width: '100%', backgroundColor: '#f9f9f9'}}
+                            />
+                        </div>
+                        <div className={styles.neworg_details_group}>
+                            <label>Admin Email</label>
+                            <input 
+                                type="text" 
+                                value={selectedOrg.admin_email || ''} 
+                                disabled 
+                                className={styles.neworg_search_input}
+                                style={{width: '100%', backgroundColor: '#f9f9f9'}}
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                <div className={styles.neworg_details_block}>
+                    <h3>Employee Statistics</h3>
+                    <div className={styles.neworg_details_row}>
+                        <div className={styles.neworg_details_group}>
+                            <label>Active Employees</label>
+                            <input 
+                                type="text" 
+                                value={selectedOrg.active_employees || '0'} 
+                                disabled 
+                                className={styles.neworg_search_input}
+                                style={{width: '100%', backgroundColor: '#f9f9f9', color: '#166534', fontWeight: 'bold'}}
+                            />
+                        </div>
+                        <div className={styles.neworg_details_group}>
+                            <label>Inactive Employees</label>
+                             <input 
+                                type="text" 
+                                value={selectedOrg.inactive_employees || '0'} 
+                                disabled 
+                                className={styles.neworg_search_input}
+                                style={{width: '100%', backgroundColor: '#f9f9f9', color: '#991b1b'}}
+                            />
+                        </div>
+                        <div className={styles.neworg_details_group}>
+                            <label>Total Employees</label>
+                             <input 
+                                type="text" 
+                                value={selectedOrg.total_employees || '0'} 
+                                disabled 
+                                className={styles.neworg_search_input}
+                                style={{width: '100%', backgroundColor: '#f9f9f9'}}
+                            />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+  }
+
+  // --- VIEW: EXISTING ORGANIZATIONS LIST (Main Page) ---
+  return (
+    <div className={styles.neworg_container}>
+        <div className={styles.neworg_header_section}>
+            <h1 className={styles.neworg_title}>Companies</h1>
+            <div className={styles.neworg_header_buttons}>
+                <button 
+                    onClick={() => setShowRequests(true)} 
+                    className={styles.neworg_button}>
+                    New Company Requests
+                </button>
+            </div>
+        </div>
+
+        {/* Search and Filter */}
+        <div className={styles.neworg_search_filter_container}>
+            <input
+            type="text"
+            placeholder="Search by Organization Name"
+            value={orgSearchQuery}
+            onChange={(e) => {
+                setOrgSearchQuery(e.target.value);
+                setOrgCurrentPage(1);
+                setOrgPageInputValue('1');
+            }}
+            className={styles.neworg_search_input}
+            />
+            <select
+            value={orgPlanFilter}
+            onChange={(e) => {
+                setOrgPlanFilter(e.target.value);
+                setOrgCurrentPage(1);
+                setOrgPageInputValue('1');
+            }}
+            className={styles.neworg_filter_select}
+            >
+            <option value="all">All Plans</option>
+            {uniquePlans.map((plan) => (
+                <option key={plan} value={plan}>{plan}</option>
+            ))}
+            </select>
+        </div>
+
+        {filteredOrganizations.length === 0 ? (
+            <div className={styles.neworg_empty_state}>
+                <p>No organizations found matching your search.</p>
+            </div>
+        ) : (
+            <>
+                <div className={styles.neworg_table_wrapper}>
+                    <table className={styles.neworg_table}>
+                        <thead>
+                            <tr>
+                                <th 
+                                className={`${styles.neworg_th} ${styles.neworg_sortable} ${orgSortConfig.column === 'org_name' ? styles[`neworg_sort_${orgSortConfig.direction}`] : ''}`}
+                                onClick={() => requestOrgSort('org_name')}>
+                                Organization Name
+                                </th>
+                                <th 
+                                className={`${styles.neworg_th} ${styles.neworg_sortable} ${orgSortConfig.column === 'plan_name' ? styles[`neworg_sort_${orgSortConfig.direction}`] : ''}`}
+                                onClick={() => requestOrgSort('plan_name')}>
+                                Plan Name
+                                </th>
+                                <th 
+                                className={`${styles.neworg_th} ${styles.neworg_sortable} ${orgSortConfig.column === 'plan_name' ? styles[`neworg_sort_${orgSortConfig.direction}`] : ''}`}
+                                onClick={() => requestOrgSort('plan_name')}>
+                                Admin Name
+                                </th>
+                                <th 
+                                className={`${styles.neworg_th} ${styles.neworg_sortable} ${orgSortConfig.column === 'plan_name' ? styles[`neworg_sort_${orgSortConfig.direction}`] : ''}`}
+                                onClick={() => requestOrgSort('plan_name')}>
+                                Admin Email
+                                </th>
+                                <th 
+                                className={`${styles.neworg_th} ${styles.neworg_sortable} ${orgSortConfig.column === 'active_employees' ? styles[`neworg_sort_${orgSortConfig.direction}`] : ''}`}
+                                onClick={() => requestOrgSort('active_employees')}>
+                                Active Employees
+                                </th>
+                                {/* REMOVED INACTIVE AND TOTAL EMPLOYEES COLUMNS HERE */}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {currentOrganizations.map((org) => (
+                                <tr 
+                                    key={org.org_id} 
+                                    className={styles.neworg_row}
+                                    onClick={() => setSelectedOrg(org)} 
+                                >
+                                    <td className={styles.neworg_td}>
+                                        <span className={styles.neworg_role_indicator}></span>
+                                        <span style={{fontWeight: '600'}}>{org.org_name}</span>
+                                    </td>
+                                    <td className={styles.neworg_td}>
+                                        <span className={styles.neworg_plan_badge}>
+                                            {org.plan_name}
+                                        </span>
+                                    </td>
+                                    <td className={styles.neworg_td}>{org.admin_name}</td>
+                                    <td className={styles.neworg_td}>{org.admin_email}</td>
+                                    <td className={styles.neworg_td} style={{color: '#166534', fontWeight: 'bold'}}>{org.active_employees}</td>
+                                    {/* REMOVED INACTIVE AND TOTAL EMPLOYEES DATA CELLS HERE */}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* Pagination */}
+                {filteredOrganizations.length > orgPerPage && (
+                <div className={styles.neworg_pagination_container}>
+                    <button 
+                    className={styles.neworg_button} 
+                    onClick={handleOrgPrevPage} 
+                    disabled={orgCurrentPage === 1}>
+                    ← Previous
+                    </button>
+                    <span className={styles.neworg_pagination_text}>
+                    Page 
+                    <input 
+                        type="text" 
+                        value={orgPageInputValue} 
+                        onChange={(e) => setOrgPageInputValue(e.target.value)} 
+                        onKeyPress={handleOrgPageInputKeyPress} 
+                        className={styles.neworg_pagination_input}
+                    /> of {orgTotalPages}
+                    </span>
+                    <button 
+                    className={styles.neworg_button} 
+                    onClick={handleOrgNextPage} 
+                    disabled={orgCurrentPage === orgTotalPages}>
+                    Next →
+                    </button>
+                </div>
+                )}
+
+                {/* Rows per page */}
+                <div className={styles.neworg_rows_per_page_container}>
+                <label className={styles.neworg_rows_per_page_label}>Rows per Page:</label>
+                <input 
+                    type="text" 
+                    value={orgPerPageInput} 
+                    onChange={(e) => setOrgPerPageInput(e.target.value)} 
+                    onKeyPress={handleOrgPerPageKeyPress} 
+                    className={styles.neworg_rows_per_page_input}
+                    aria-label="Number of rows per page"
+                />
+                </div>
+            </>
+        )}
     </div>
   )
 }

@@ -17,18 +17,15 @@ const formatDate = (date) => {
 async function sendNotificationEmail(toEmail, status, companyName) {
   if (!toEmail) return;
 
-  // 1. UPDATED: Using the configuration from your working reference code
   const transporter = nodemailer.createTransport({
     host: process.env.GMAIL_HOST,
     port: 587,
-    secure: false, // true for 465, false for other ports
+    secure: false, 
     auth: {
-      user: process.env.GMAIL_USER,      // Changed from EMAIL_USER
-      pass: process.env.GMAIL_APP_PASS,  // Changed from EMAIL_PASS
+      user: process.env.GMAIL_USER,      
+      pass: process.env.GMAIL_APP_PASS,  
     },
   });
-
-  
 
   let subject = "";
   let htmlContent = "";
@@ -58,7 +55,7 @@ async function sendNotificationEmail(toEmail, status, companyName) {
 
   try {
     await transporter.sendMail({
-      from: process.env.GMAIL_USER, // Updated to match auth user
+      from: process.env.GMAIL_USER, 
       to: toEmail,
       subject: subject,
       html: htmlContent,
@@ -104,6 +101,8 @@ export async function fetchExistingOrganizations() {
         o.org_id,
         o.org_name,
         COALESCE(p.plan_name, 'N/A') as plan_name,
+        TRIM(CONCAT(COALESCE(s.admin_first_name, ''), ' ', COALESCE(s.admin_last_name, ''))) as admin_name,
+        (SELECT email FROM C_EMP WHERE org_id = o.org_id ORDER BY created_at ASC LIMIT 1) as admin_email,
         COUNT(e.emp_id) as total_employees,
         SUM(CASE WHEN e.active = 'Y' THEN 1 ELSE 0 END) as active_employees,
         SUM(CASE WHEN e.active = 'N' THEN 1 ELSE 0 END) as inactive_employees
@@ -112,7 +111,7 @@ export async function fetchExistingOrganizations() {
       LEFT JOIN C_SUBSCRIBER_PLAN sp ON s.subscriber_id = sp.subscriber_id AND sp.active = 'Y'
       LEFT JOIN C_PLAN p ON sp.plan_id = p.plan_id
       LEFT JOIN C_EMP e ON o.org_id = e.org_id
-      GROUP BY o.org_id, o.org_name, p.plan_name
+      GROUP BY o.org_id, o.org_name, p.plan_name, s.admin_first_name, s.admin_last_name
       ORDER BY o.org_name ASC
     `);
     return rows;
