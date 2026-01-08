@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { updateLead, fetchLeadById } from '@/app/serverActions/Leads/overview';
-import { addLead, fetchAccountsByOrgId } from '@/app/serverActions/Leads/AddLeadAction';
+import { updateLead, fetchLeadById } from '@/app/serverActions/leads/overview';
+import { addLead, fetchAccountsByOrgId } from '@/app/serverActions/leads/AddLeadAction';
 import './leadoverview.css'; 
 import { useActionState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
