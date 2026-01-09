@@ -1,7 +1,6 @@
 'use server';
 
 import { cookies } from 'next/headers';
-import { redirect } from 'next/navigation';
 import DBconnection from '../utils/config/db';
 
 // Simple function to decode JWT without verification
@@ -50,7 +49,7 @@ export async function getMenusWithPriorities() {
       priorityMap.set(key, row.priority);
     });
 
-    // Fetch menu structure (similar to your menu API)
+    // Fetch menu structure
     const [menuRows] = await pool.execute(
       `SELECT DISTINCT
         m.id AS menuid,
@@ -143,8 +142,7 @@ export async function savePriorities(prioritiesData) {
     const adminRoleId = adminRoleRows[0].roleid;
 
     const [roleAssignmentRows] = await pool.execute(
-      `SELECT * 
-       FROM C_EMP_ROLE_ASSIGN 
+      `SELECT * FROM C_EMP_ROLE_ASSIGN 
        WHERE empid = ? AND roleid = ? AND orgid = ?`,
       [empId, adminRoleId, orgId]
     );
@@ -153,11 +151,12 @@ export async function savePriorities(prioritiesData) {
       throw new Error('You do not have permission to save feature priorities');
     }
 
-    // Start transaction
-    await pool.execute('START TRANSACTION');
+    // --- CHANGED: Use query() instead of execute() for START TRANSACTION ---
+    await pool.query('START TRANSACTION');
 
     try {
       // CRITICAL: Delete ALL existing priorities for this specific orgid ONLY
+      // execute() is fine here because we are using parameters (?)
       const [deleteResult] = await pool.execute(
         'DELETE FROM C_ORG_MENU_PRIORITY WHERE orgid = ?',
         [orgId]
@@ -177,26 +176,24 @@ export async function savePriorities(prioritiesData) {
             'INSERT INTO C_ORG_MENU_PRIORITY (orgid, menuid, submenuid, priority) VALUES (?, ?, ?, ?)',
             [orgId, item.menuid, item.submenuid, item.priority]
           );
-          console.log(`Inserted submenu priority: orgid=${orgId}, menuid=${item.menuid}, submenuid=${item.submenuid}, priority=${item.priority}`);
         } else {
           // Standalone menu priority - insert with menuid and NULL submenuid
           await pool.execute(
             'INSERT INTO C_ORG_MENU_PRIORITY (orgid, menuid, submenuid, priority) VALUES (?, ?, NULL, ?)',
             [orgId, item.menuid, item.priority]
           );
-          console.log(`Inserted menu priority: orgid=${orgId}, menuid=${item.menuid}, submenuid=NULL, priority=${item.priority}`);
         }
       }
 
-      // Commit transaction
-      await pool.execute('COMMIT');
+      // --- CHANGED: Use query() instead of execute() for COMMIT ---
+      await pool.query('COMMIT');
       console.log(`Successfully saved ${prioritiesData.length} priority records for orgId: ${orgId}`);
       
       return { success: true, message: 'Priorities saved successfully' };
 
     } catch (error) {
-      // Rollback transaction on any error
-      await pool.execute('ROLLBACK');
+      // --- CHANGED: Use query() instead of execute() for ROLLBACK ---
+      await pool.query('ROLLBACK');
       console.error('Transaction rolled back due to error:', error);
       throw error;
     }
@@ -232,7 +229,6 @@ export async function getAllFeatures() {
     }
 
     const pool = await DBconnection();
-    console.log('MySQL connection pool acquired');
 
     // Find the admin role for the organization
     const [adminRoleRows] = await pool.execute(
@@ -251,8 +247,7 @@ export async function getAllFeatures() {
 
     // Check if the employee is assigned the admin role in C_EMP_ROLE_ASSIGN
     const [roleAssignmentRows] = await pool.execute(
-      `SELECT * 
-       FROM C_EMP_ROLE_ASSIGN 
+      `SELECT * FROM C_EMP_ROLE_ASSIGN 
        WHERE empid = ? AND roleid = ? AND orgid = ?`,
       [empId, adminRoleId, orgId]
     );
@@ -285,7 +280,6 @@ export async function getAllFeatures() {
       return { ...C_MENU, C_SUBMENU: [] };
     }));
 
-    console.log('Fetched admin role features:', features);
     return { success: true, features };
   } catch (error) {
     console.error('Error fetching features:', error);
