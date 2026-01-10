@@ -185,10 +185,12 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
         sigRef.current?.clear();
     };
 
-    // Unified PDF extraction function using the working method from W9Form
+    // --- UPDATED PDF EXTRACTION LOGIC ---
     const extractSignatureFromPdf = async (file) => {
         if (!file) return null;
         
+        console.log('📄 PDF Upload - File selected:', file.name);
+
         // 1. Validate file
         if (file.type !== 'application/pdf') {
             throw new Error('Please upload a valid PDF file.');
@@ -198,7 +200,8 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
         }
 
         try {
-            // FIX: Use explicit min.mjs path to avoid "Object.defineProperty" Webpack error
+            console.log('📄 PDF Upload - Loading pdfjs-dist library...');
+            // FIX: Import specific build file to avoid Object.defineProperty error
             const pdfjsModule = await import('pdfjs-dist/build/pdf.min.mjs');
             const pdfjsLib = pdfjsModule.default || pdfjsModule;
 
@@ -206,6 +209,7 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
             if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
                 pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
             }
+            console.log('📄 PDF Upload - Worker source set to:', pdfjsLib.GlobalWorkerOptions.workerSrc);
 
             // 3. Read ArrayBuffer
             const arrayBuffer = await file.arrayBuffer();
@@ -238,6 +242,7 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
                 viewport: viewport,
             }).promise;
             
+            console.log('✅ PDF signature extracted successfully');
             return canvas.toDataURL('image/png');
         } catch (error) {
             console.error('Error extracting signature from PDF:', error);
@@ -322,7 +327,7 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
         }
     };
 
-    // Clear PDF signatures
+    // Clear PDF signatures - Important for allowing re-upload
     const clearPdfSignatureSec2 = () => {
         setPdfSignatureFileSec2(null);
         setPdfSignaturePreviewSec2(null);
@@ -379,9 +384,11 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
             if (eval1SigData) payload.signature_data_eval1_student = eval1SigData;
             if (eval2SigData) payload.signature_data_eval2_student = eval2SigData;
 
-            if (signatureTypeSec2 === 'pdf' && pdfSignaturePreviewSec2) clearPdfSignatureSec2();
-            if (signatureTypeEval1 === 'pdf' && pdfSignaturePreviewEval1) clearPdfSignatureEval1();
-            if (signatureTypeEval2 === 'pdf' && pdfSignaturePreviewEval2) clearPdfSignatureEval2();
+            // Clear PDF previews after successful data preparation if needed, 
+            // but for user experience we often keep them until confirmed save.
+            // Here we clear them to reset the form state visually on successful save/refresh.
+            // However, since we reload data, we rely on the backend response.
+            // If we are strictly sending data, we don't need to clear the inputs yet unless successful.
 
             const result = await saveOrUpdateI983Form(payload, currentFormId);
 
@@ -389,6 +396,11 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
                 if (showSuccess) onSuccess('Form saved successfully!');
                 newFormId = result.id;
                 
+                // Reset inputs only on success
+                if (signatureTypeSec2 === 'pdf' && pdfSignaturePreviewSec2) clearPdfSignatureSec2();
+                if (signatureTypeEval1 === 'pdf' && pdfSignaturePreviewEval1) clearPdfSignatureEval1();
+                if (signatureTypeEval2 === 'pdf' && pdfSignaturePreviewEval2) clearPdfSignatureEval2();
+
                 const updatedForm = await getI983FormDetails(result.id);
                 setExistingForm(updatedForm);
                 setCurrentFormId(updatedForm.ID);
@@ -866,6 +878,7 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
                         {isGenerating ? 'Generating...' : 'Generate PDF'}
                     </button>
                     <button className={`${i983_styles.i983_button} ${i983_styles.i983_buttonBack}`} onClick={onBack} disabled={isSaving || isGenerating} style={{ marginLeft: '10px' }}>
+                        Back to List
                     </button>
                 </div>
             </div>

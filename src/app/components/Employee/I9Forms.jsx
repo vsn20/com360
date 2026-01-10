@@ -4,23 +4,23 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { fetchEmployeeById } from '@/app/serverActions/Employee/overview';
 import {
-  addForm as addI9Form, // Renamed for clarity
-  fetchFormsByEmpId as fetchI9FormsByEmpId, // Renamed for clarity
-  updateForm as updateI9Form, // Renamed for clarity
-  getFormTypes, // This will need updating on the server
-  canEditForm as canEditI9Form, // Renamed for clarity
-  deleteForm as deleteI9Form, // Renamed for clarity
-} from '@/app/serverActions/Employee/i9forms'; // Core I-9 actions
-import { getI9FormDetails } from '@/app/serverActions/forms/verification/actions'; // I-9 details fetcher
+  addForm as addI9Form,
+  fetchFormsByEmpId as fetchI9FormsByEmpId,
+  updateForm as updateI9Form,
+  getFormTypes,
+  canEditForm as canEditI9Form,
+  deleteForm as deleteI9Form,
+} from '@/app/serverActions/Employee/i9forms';
+import { getI9FormDetails } from '@/app/serverActions/forms/verification/actions';
 import * as w9Actions from '@/app/serverActions/forms/w9form/action';
 import * as w4Actions from '@/app/serverActions/forms/w4form/action';
-import * as i983Actions from '@/app/serverActions/forms/i983/actions'; // Import I-983 actions
+import * as i983Actions from '@/app/serverActions/forms/i983/actions';
 import styles from './I9Forms.module.css';
 import { useRouter } from 'next/navigation';
 import SignatureCanvas from 'react-signature-canvas';
 import W9Form from '../Forms/W9Form/W9Form';
 import W4Form from '../Forms/W4Form/W4Form';
-import I983Form from '../Forms/I983Form/I983Form'; // Import I-983 component
+import I983Form from '../Forms/I983Form/I983Form';
 
 const I9Forms = ({
   roles,
@@ -29,18 +29,18 @@ const I9Forms = ({
   error: initialError,
   countries,
   states,
-  timestamp, // Used for cache-busting images
+  timestamp,
 }) => {
   const [forms, setForms] = useState([]);
   const [selectedFormId, setSelectedFormId] = useState(null);
   const [showFormTypeModal, setShowFormTypeModal] = useState(false);
   const [formTypes, setFormTypes] = useState([]);
   const [selectedFormType, setSelectedFormType] = useState('');
-  // Added 'i983form' to possible views
-  const [activeView, setActiveView] = useState('list'); // 'list', 'i9form', 'w9form', 'w4form', 'i983form'
+  const [activeView, setActiveView] = useState('list');
+  
   // --- I-9 Specific State ---
   const [i9FormData, setI9FormData] = useState({
-    form_type: '', // Should be 'I9' when active
+    form_type: '',
     employee_last_name: '',
     employee_first_name: '',
     employee_middle_initial: '',
@@ -55,180 +55,148 @@ const I9Forms = ({
     employee_email: '',
     employee_phone: '',
     citizenship_status: '1',
-    alien_number: '', // Only used for status 3? Check form logic
-    work_authorization_expiry: '', // Only used for status 4
-    uscis_a_number: '', // Used for status 3 & 4
-    i94_admission_number: '', // Only used for status 4
-    foreign_passport_number: '', // Only used for status 4
-    country_of_issuance: '', // Only used for status 4
+    alien_number: '',
+    work_authorization_expiry: '',
+    uscis_a_number: '',
+    i94_admission_number: '',
+    foreign_passport_number: '',
+    country_of_issuance: '',
     employee_signature_date: new Date().toISOString().split('T')[0],
     employee_signature_url: '',
-    employee_verified_flag: false, // Internal flag for submission state
+    employee_verified_flag: false,
   });
-  const i9SigCanvas = useRef(null); // Specific ref for I-9 signature
-  const pdfFileInputRef = useRef(null); // Ref for PDF file input
-  const [signatureType, setSignatureType] = useState('canvas'); // 'canvas' or 'pdf'
-  const [pdfSignatureFile, setPdfSignatureFile] = useState(null); // PDF file object
-  const [pdfSignaturePreview, setPdfSignaturePreview] = useState(null); // Base64 preview from PDF
-  const [isExtractingSignature, setIsExtractingSignature] = useState(false); // Loading state for PDF extraction
+  const i9SigCanvas = useRef(null);
+  const pdfFileInputRef = useRef(null);
+  const [signatureType, setSignatureType] = useState('canvas');
+  const [pdfSignatureFile, setPdfSignatureFile] = useState(null);
+  const [pdfSignaturePreview, setPdfSignaturePreview] = useState(null);
+  const [isExtractingSignature, setIsExtractingSignature] = useState(false);
   // --- End I-9 Specific State ---
 
   const [isAdding, setIsAdding] = useState(false);
-  // General editing flag, I983 component will manage field-level disabling
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState(initialError);
   const [isSaving, setIsSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
-  const [employeeSuborgId, setEmployeeSuborgId] = useState(null); // Track employee's sub-org assignment
+  const [employeeSuborgId, setEmployeeSuborgId] = useState(null);
 
   const router = useRouter();
 
   useEffect(() => {
     loadAllForms();
     loadFormTypes();
-    loadEmployeeInfo(); // Load employee info to get suborgid
-  }, [orgid, empid]); // Depend on orgid and empid
+    loadEmployeeInfo();
+  }, [orgid, empid]);
 
   useEffect(() => {
     if (successMessage) {
-      const timer = setTimeout(() => setSuccessMessage(''), 5000); // Auto-clear success message
+      const timer = setTimeout(() => setSuccessMessage(''), 5000);
       return () => clearTimeout(timer);
     }
   }, [successMessage]);
 
   const loadFormTypes = async () => {
     try {
-      // Assuming getFormTypes is updated on the server to include I-983
       const types = await getFormTypes();
       setFormTypes(types);
     } catch (err) {
       console.error('Failed to load form types:', err);
-      setError('Failed to load form types.'); // Show error to user
+      setError('Failed to load form types.');
     }
   };
 
-  // Load employee info to check sub-org assignment
   const loadEmployeeInfo = async () => {
     try {
       const employee = await fetchEmployeeById(empid);
       setEmployeeSuborgId(employee?.suborgid || null);
-      console.log('Employee suborgid:', employee?.suborgid);
     } catch (err) {
       console.error('Failed to load employee info:', err);
     }
   };
 
   const loadAllForms = async () => {
-    setError(null); // Clear previous errors
-    setIsSaving(true); // Indicate loading
+    setError(null);
+    setIsSaving(true);
     try {
       const [i9FormsData, w9FormsData, w4FormsData, i983FormsData] = await Promise.all([
-          fetchI9FormsByEmpId(empid, orgid), // Fetch I-9 forms
+          fetchI9FormsByEmpId(empid, orgid),
           w9Actions.fetchW9FormsByEmpId(empid, orgid),
           w4Actions.fetchW4FormsByEmpId(empid, orgid),
-          i983Actions.fetchI983FormsByEmpId(empid, orgid), // Fetch I-983 forms
+          i983Actions.fetchI983FormsByEmpId(empid, orgid),
       ]);
 
       const combinedForms = [
-          ...i9FormsData.map(f => ({ ...f, FORM_TYPE: 'I9', SORT_DATE: f.EMPLOYEE_SIGNATURE_DATE || f.CREATED_AT })), // Ensure type and sort date
+          ...i9FormsData.map(f => ({ ...f, FORM_TYPE: 'I9', SORT_DATE: f.EMPLOYEE_SIGNATURE_DATE || f.CREATED_AT })),
           ...w9FormsData.map(w9Form => ({
-              ID: `W9-${w9Form.ID}`, // Prefix ID
+              ID: `W9-${w9Form.ID}`,
               FORM_TYPE: 'W9',
-              // Use consistent date field for sorting, preferring submitted, then signature, then created
               SORT_DATE: w9Form.SUBMITTED_AT || w9Form.SIGNATURE_DATE || w9Form.CREATED_AT,
               FORM_STATUS: w9Form.FORM_STATUS,
           })),
           ...w4FormsData.map(w4Form => ({
-              ID: `W4-${w4Form.ID}`, // Prefix ID
+              ID: `W4-${w4Form.ID}`,
               FORM_TYPE: 'W4',
               SORT_DATE: w4Form.SUBMITTED_AT || w4Form.EMPLOYEE_SIGNATURE_DATE || w4Form.CREATED_AT,
               FORM_STATUS: w4Form.FORM_STATUS,
           })),
-           ...i983FormsData.map(i983Form => ({ // Add I-983 forms
-              ID: `I983-${i983Form.ID}`, // Prefix ID
+           ...i983FormsData.map(i983Form => ({
+              ID: `I983-${i983Form.ID}`,
               FORM_TYPE: 'I983',
-              // Use UPDATED_AT or CREATED_AT for sorting I-983
               SORT_DATE: i983Form.UPDATED_AT || i983Form.CREATED_AT,
               FORM_STATUS: i983Form.FORM_STATUS,
           })),
       ];
 
-      // Sort by the derived SORT_DATE field, most recent first
       combinedForms.sort((a, b) => new Date(b.SORT_DATE || 0) - new Date(a.SORT_DATE || 0));
-
       setForms(combinedForms);
     } catch (err) {
       setError('Failed to load forms.');
       console.error(err);
     } finally {
-        setIsSaving(false); // Done loading
+        setIsSaving(false);
     }
   };
 
-
   const handleRowClick = async (form) => {
-    if (isSaving) return; // Prevent clicks while loading
-    setError(null); // Clear previous error first
+    if (isSaving) return;
+    setError(null);
     setSuccessMessage('');
-    setIsAdding(false); // Reset adding flag
-    setSelectedFormId(form.ID); // Store prefixed ID
-
-    console.log("handleRowClick triggered for:", form); // Add log
+    setIsAdding(false);
+    setSelectedFormId(form.ID);
 
     try {
-        // Extract numeric ID for server actions that need it
         const numericIdMatch = String(form.ID).match(/-(\d+)$/);
-        // Fallback for I-9 which doesn't have a prefix in its DB ID
         const numericId = numericIdMatch ? parseInt(numericIdMatch[1]) : parseInt(String(form.ID));
         if (isNaN(numericId)) throw new Error("Invalid Form ID.");
 
-        console.log(`Extracted numeric ID: ${numericId} for type: ${form.FORM_TYPE}`); // Add log
-
         if (form.FORM_TYPE === 'W9') {
-            console.log("Handling W9 click...");
             const editCheck = await w9Actions.canEditW9Form(numericId);
             if (!editCheck.canEdit) setError(editCheck.reason);
             setActiveView('w9form');
-            setIsEditing(false); // W9Form handles its own edit state
+            setIsEditing(false);
         }
         else if (form.FORM_TYPE === 'W4') {
-             console.log("Handling W4 click...");
             const editCheck = await w4Actions.canEditW4Form(numericId);
             if (!editCheck.canEdit) setError(editCheck.reason);
             setActiveView('w4form');
-            setIsEditing(false); // W4Form handles its own edit state
+            setIsEditing(false);
         }
         else if (form.FORM_TYPE === 'I983') {
-             console.log("Handling I983 click...");
-            // Per request, no edit check needed, just load the form
-            const fetchedForm = await i983Actions.getI983FormDetails(numericId);
-            console.log("Fetched I983 details:", fetchedForm);
+            await i983Actions.getI983FormDetails(numericId);
             setActiveView('i983form');
-            // Editing is always allowed
             setIsEditing(true); 
-            console.log("Set activeView to i983form, isEditing: true");
         }
         else if (form.FORM_TYPE === 'I9') {
-             console.log("Handling I9 click...");
-            // Handle I-9 form click (Existing logic)
-            const editCheck = await canEditI9Form(numericId); // Use numeric ID for check
+            const editCheck = await canEditI9Form(numericId);
             if (!editCheck.canEdit) {
-                 console.log("I9 cannot be edited:", editCheck.reason);
                 setError(editCheck.reason);
-                // Even if not editable by server rules, allow viewing
-            } else {
-                 console.log("I9 can be edited.");
-            }
-
+            } 
             setActiveView('i9form');
-            setIsEditing(editCheck.canEdit); // Set editing based on server check
+            setIsEditing(editCheck.canEdit);
 
-            const selectedI9Form = await getI9FormDetails(numericId); // Use numeric ID
-            console.log("Fetched I9 details:", selectedI9Form);
-
-            // Map fetched I-9 data to state
+            const selectedI9Form = await getI9FormDetails(numericId);
             setI9FormData({
-                form_type: 'I9', // Explicitly set form type
+                form_type: 'I9',
                 employee_last_name: selectedI9Form.EMPLOYEE_LAST_NAME || '',
                 employee_first_name: selectedI9Form.EMPLOYEE_FIRST_NAME || '',
                 employee_middle_initial: selectedI9Form.EMPLOYEE_MIDDLE_INITIAL || '',
@@ -243,7 +211,7 @@ const I9Forms = ({
                 employee_email: selectedI9Form.EMPLOYEE_EMAIL || '',
                 employee_phone: selectedI9Form.EMPLOYEE_PHONE || '',
                 citizenship_status: selectedI9Form.CITIZENSHIP_STATUS?.toString() || '1',
-                alien_number: selectedI9Form.ALIEN_NUMBER || '', // Needs review based on form logic
+                alien_number: selectedI9Form.ALIEN_NUMBER || '',
                 work_authorization_expiry: selectedI9Form.WORK_AUTHORIZATION_EXPIRY ? new Date(selectedI9Form.WORK_AUTHORIZATION_EXPIRY).toISOString().split('T')[0] : '',
                 uscis_a_number: selectedI9Form.USCIS_A_NUMBER || '',
                 i94_admission_number: selectedI9Form.I94_ADMISSION_NUMBER || '',
@@ -251,10 +219,9 @@ const I9Forms = ({
                 country_of_issuance: selectedI9Form.COUNTRY_OF_ISSUANCE || '',
                 employee_signature_date: selectedI9Form.EMPLOYEE_SIGNATURE_DATE ? new Date(selectedI9Form.EMPLOYEE_SIGNATURE_DATE).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
                 employee_signature_url: selectedI9Form.EMPLOYEE_SIGNATURE_URL || '',
-                employee_verified_flag: selectedI9Form.EMPLOYEE_VERIFIED_FLAG || false, // Should be based on FORM_STATUS really
+                employee_verified_flag: selectedI9Form.EMPLOYEE_VERIFIED_FLAG || false,
             });
 
-            // Reset signature input states when loading existing form
             setSignatureType('canvas');
             setPdfSignatureFile(null);
             setPdfSignaturePreview(null);
@@ -262,8 +229,6 @@ const I9Forms = ({
                 pdfFileInputRef.current.value = '';
             }
 
-            // Prefill I-9 form data if it's missing from form record but available on employee record
-            // Ensure prefill doesn't overwrite existing form data
             const employee = await fetchEmployeeById(empid);
             setI9FormData(prev => ({
                 ...prev,
@@ -280,26 +245,22 @@ const I9Forms = ({
                 employee_email: prev.employee_email || employee.email || '',
                 employee_phone: prev.employee_phone || employee.PHONE_NUMBER || employee.MOBILE_NUMBER || '',
             }));
-            console.log("I9 Data loaded and potentially prefilled.");
         }
         else {
-             console.warn("Unknown form type clicked:", form.FORM_TYPE);
             setError(`Cannot open form type: ${form.FORM_TYPE}`);
         }
 
     } catch (err) {
       setError('Failed to load form details: ' + err.message);
       console.error(err);
-      // Reset view if loading fails
       setActiveView('list');
       setSelectedFormId(null);
     }
   };
 
-
   const handleAddForm = () => {
     setShowFormTypeModal(true);
-    setSelectedFormType('I9'); // Default selection
+    setSelectedFormType('I9');
     setError(null);
     setSuccessMessage('');
   };
@@ -310,7 +271,6 @@ const I9Forms = ({
       return;
     }
 
-    // Check if W9 is selected and employee doesn't have a sub-org assigned
     if (selectedFormType === 'W9' && !employeeSuborgId) {
       setError('Cannot create W-9 form: Employee must be assigned to a Sub-Organization first. Please update the employee\'s Employment Details.');
       return;
@@ -319,9 +279,9 @@ const I9Forms = ({
     setShowFormTypeModal(false);
     setError(null);
     setSuccessMessage('');
-    setIsEditing(true); // Always editable when adding
-    setIsAdding(true); // Set adding flag
-    setSelectedFormId(null); // Clear selected ID
+    setIsEditing(true);
+    setIsAdding(true);
+    setSelectedFormId(null);
 
     if (selectedFormType === 'W9') {
         setActiveView('w9form');
@@ -334,9 +294,8 @@ const I9Forms = ({
     }
     else if (selectedFormType === 'I9') {
         setActiveView('i9form');
-        // Reset I-9 specific state for a new form
         setI9FormData({
-          form_type: 'I9', // Set type
+          form_type: 'I9',
           employee_last_name: '',
           employee_first_name: '',
           employee_middle_initial: '',
@@ -361,7 +320,6 @@ const I9Forms = ({
           employee_signature_url: '',
           employee_verified_flag: false,
         });
-        // Reset signature input states for new form
         setSignatureType('canvas');
         setPdfSignatureFile(null);
         setPdfSignaturePreview(null);
@@ -371,12 +329,10 @@ const I9Forms = ({
         if (i9SigCanvas.current) {
             i9SigCanvas.current.clear();
         }
-        // Prefill from employee record
         try {
           const employee = await fetchEmployeeById(empid);
-           // Apply prefill to the freshly reset state
            setI9FormData(prev => ({
-                ...prev, // Keep the reset defaults (like sig date)
+                ...prev,
                 employee_last_name: employee.EMP_LAST_NAME || '',
                 employee_first_name: employee.EMP_FST_NAME || '',
                 employee_middle_initial: employee.EMP_MID_NAME || '',
@@ -396,13 +352,12 @@ const I9Forms = ({
         }
     } else {
         setError('Selected form type is not implemented yet.');
-         setActiveView('list'); // Go back to list if type is unknown
+         setActiveView('list');
          setIsAdding(false);
          setIsEditing(false);
     }
   };
 
-  // --- I-9 Specific Handlers ---
   const handleI9FormChange = (e) => {
     const { name, value, type, checked } = e.target;
     setI9FormData(prev => ({
@@ -417,11 +372,9 @@ const I9Forms = ({
     }
   };
 
-  // Handle signature type change (canvas or pdf)
   const handleSignatureTypeChange = (e) => {
     const newType = e.target.value;
     setSignatureType(newType);
-    // Clear the other type's data when switching
     if (newType === 'canvas') {
       setPdfSignatureFile(null);
       setPdfSignaturePreview(null);
@@ -435,10 +388,9 @@ const I9Forms = ({
     }
   };
 
-  // Handle PDF file selection and extract signature using client-side rendering
+  // --- UPDATED PDF EXTRACTION LOGIC ---
   const handlePdfFileChange = async (e) => {
     const file = e.target.files?.[0];
-    console.log('📄 PDF Upload - File selected:', file ? file.name : 'none');
     
     if (!file) {
       setPdfSignatureFile(null);
@@ -446,15 +398,12 @@ const I9Forms = ({
       return;
     }
 
-    // Validate file type
-    console.log('📄 PDF Upload - File type:', file.type, 'Size:', file.size, 'bytes');
     if (file.type !== 'application/pdf') {
       setError('Please upload a valid PDF file.');
       e.target.value = '';
       return;
     }
 
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       setError('PDF file size must be less than 5MB.');
       e.target.value = '';
@@ -467,71 +416,46 @@ const I9Forms = ({
 
     try {
       console.log('📄 PDF Upload - Loading pdfjs-dist library...');
-      // Dynamically import pdfjs-dist for client-side PDF rendering
-      const pdfjsLib = await import('pdfjs-dist');
-      console.log('📄 PDF Upload - pdfjs-dist version:', pdfjsLib.version);
-      
-      // Set worker source - use local file for EC2/production (no external CDN dependency)
-      pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
-      console.log('📄 PDF Upload - Worker source set to:', pdfjsLib.GlobalWorkerOptions.workerSrc);
+      // FIXED: Import specific build file to avoid Object.defineProperty error
+      const pdfjsModule = await import('pdfjs-dist/build/pdf.min.mjs');
+      const pdfjsLib = pdfjsModule.default || pdfjsModule;
 
-      // Read file as ArrayBuffer for PDF.js
-      console.log('📄 PDF Upload - Reading file as ArrayBuffer...');
+      if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+      }
+
       const arrayBuffer = await file.arrayBuffer();
-      console.log('📄 PDF Upload - ArrayBuffer size:', arrayBuffer.byteLength, 'bytes');
       
-      // Check if file starts with PDF header
       const header = new Uint8Array(arrayBuffer.slice(0, 5));
       const headerStr = String.fromCharCode(...header);
-      console.log('📄 PDF Upload - File header:', headerStr, '(should be %PDF-)');
       
       if (headerStr !== '%PDF-') {
-        throw new Error('File does not have valid PDF header. Got: ' + headerStr);
+        throw new Error('File does not have valid PDF header.');
       }
       
-      // Load the PDF document
-      console.log('📄 PDF Upload - Loading PDF document...');
       const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
       const pdfDoc = await loadingTask.promise;
-      console.log('📄 PDF Upload - PDF loaded, pages:', pdfDoc.numPages);
-      
-      // Get the first page
-      console.log('📄 PDF Upload - Getting page 1...');
       const page = await pdfDoc.getPage(1);
-      console.log('📄 PDF Upload - Page 1 loaded');
       
-      // Set up canvas for rendering
-      const scale = 2; // Higher scale for better quality
+      const scale = 2;
       const viewport = page.getViewport({ scale });
-      console.log('📄 PDF Upload - Viewport:', viewport.width, 'x', viewport.height);
       
-      // Create an offscreen canvas
       const canvas = document.createElement('canvas');
       const context = canvas.getContext('2d');
       canvas.width = viewport.width;
       canvas.height = viewport.height;
       
-      // Render PDF page to canvas
-      console.log('📄 PDF Upload - Rendering page to canvas...');
       await page.render({
         canvasContext: context,
         viewport: viewport,
       }).promise;
-      console.log('📄 PDF Upload - Render complete');
       
-      // Convert canvas to PNG data URL
       const signatureDataUrl = canvas.toDataURL('image/png');
-      console.log('📄 PDF Upload - PNG data URL length:', signatureDataUrl.length, 'chars');
-      
       setPdfSignaturePreview(signatureDataUrl);
       setError(null);
-      console.log('✅ PDF signature extracted successfully via client-side rendering');
       
     } catch (err) {
       console.error('❌ PDF extraction error:', err);
-      console.error('❌ Error name:', err.name);
-      console.error('❌ Error message:', err.message);
-      console.error('❌ Error stack:', err.stack);
       setError('Failed to process PDF file: ' + (err.message || 'Unknown error'));
       setPdfSignatureFile(null);
       setPdfSignaturePreview(null);
@@ -542,8 +466,8 @@ const I9Forms = ({
       setIsExtractingSignature(false);
     }
   };
+  // ------------------------------------
 
-  // Clear PDF signature
   const clearPdfSignature = () => {
     setPdfSignatureFile(null);
     setPdfSignaturePreview(null);
@@ -553,7 +477,6 @@ const I9Forms = ({
   };
 
   const validateI9Form = () => {
-    // Basic required field checks for I-9 Section 1
     const requiredFields = [
       'employee_last_name', 'employee_first_name', 'employee_street_address',
       'employee_city', 'employee_state', 'employee_zip_code', 'employee_dob'
@@ -564,12 +487,11 @@ const I9Forms = ({
         throw new Error(`${fieldName.charAt(0).toUpperCase() + fieldName.slice(1)} is required`);
       }
     }
-    // Citizenship status specific checks
     const status = i9FormData.citizenship_status;
-     if (status === '3' && !i9FormData.uscis_a_number) { // LPR requires A-Number or USCIS#
+     if (status === '3' && !i9FormData.uscis_a_number) {
         throw new Error('USCIS#/A-Number is required for Lawful Permanent Residents.');
      }
-     if (status === '4' && !i9FormData.work_authorization_expiry) { // Alien Auth. requires expiry
+     if (status === '4' && !i9FormData.work_authorization_expiry) {
         throw new Error('Work Authorization Expiry Date is required for Aliens Authorized to Work.');
      }
      if (status === '4' && !i9FormData.uscis_a_number && !i9FormData.i94_admission_number && !i9FormData.foreign_passport_number) {
@@ -579,7 +501,6 @@ const I9Forms = ({
          throw new Error('Country of Issuance is required if Foreign Passport Number is provided.');
      }
 
-    // Check signature based on type
     if (signatureType === 'canvas') {
       if (!i9SigCanvas.current || i9SigCanvas.current.isEmpty()) {
         throw new Error('Signature is required to submit the I-9 form. Please draw your signature.');
@@ -598,37 +519,31 @@ const I9Forms = ({
     setIsSaving(true);
 
     try {
-      validateI9Form(); // Perform validation
+      validateI9Form();
 
-      // Get signature data based on selected type
       let signatureData = null;
       if (signatureType === 'canvas') {
         signatureData = (i9SigCanvas.current && !i9SigCanvas.current.isEmpty())
                         ? i9SigCanvas.current.getCanvas().toDataURL('image/png')
                         : null;
       } else if (signatureType === 'pdf') {
-        signatureData = pdfSignaturePreview; // Already in base64 format from PDF extraction
+        signatureData = pdfSignaturePreview;
       }
 
-      // Prepare data, ensuring correct types and flags
       const dataToSave = {
         ...i9FormData,
         signature_data: signatureData,
-        employee_verified_flag: true, // Set flag to true on submit
-        // Convert citizenship status back to number if needed by backend
+        employee_verified_flag: true,
         citizenship_status: parseInt(i9FormData.citizenship_status, 10),
       };
 
       let result;
-      // Extract numeric ID if updating
       const numericId = isAdding ? null : parseInt(String(selectedFormId).replace('I9-',''));
 
       if (isAdding) {
-        console.log("Adding new I-9 form...");
-        result = await addI9Form({ ...dataToSave, orgid, emp_id: empid, verifier_id: null }); // Pass orgid, empid
+        result = await addI9Form({ ...dataToSave, orgid, emp_id: empid, verifier_id: null });
       } else if (isEditing && numericId) {
-        console.log(`Updating I-9 form ID: ${numericId}...`);
-        result = await updateI9Form(numericId, dataToSave); // Pass numeric ID
+        result = await updateI9Form(numericId, dataToSave);
       } else {
           throw new Error("Cannot determine whether to add or update I-9 form.");
       }
@@ -637,11 +552,10 @@ const I9Forms = ({
       }
 
       setSuccessMessage('I-9 Form submitted successfully!');
-      await loadAllForms(); // Refresh the list
+      await loadAllForms();
 
-      // Delay before going back to list to show success message
       setTimeout(() => {
-        handleBack(); // Use the general back handler
+        handleBack();
       }, 2000);
 
     } catch (err) {
@@ -652,14 +566,10 @@ const I9Forms = ({
     }
   };
 
-  // --- End I-9 Specific Handlers ---
-
  const handleDelete = async (form, e) => {
-    e.stopPropagation(); // Prevent row click when clicking delete
-    // ** MODIFIED Confirmation Message **
+    e.stopPropagation();
     const confirmMessage = 'Are you sure you want to delete this form? This action cannot be undone.';
     
-    // TODO: Replace window.confirm with a proper modal component
     if (!window.confirm(confirmMessage)) return;
 
     setError(null);
@@ -667,19 +577,18 @@ const I9Forms = ({
 
     try {
         let result;
-        // Extract numeric ID
          const numericIdMatch = String(form.ID).match(/-(\d+)$/);
-         const numericId = numericIdMatch ? parseInt(numericIdMatch[1]) : parseInt(String(form.ID)); // Fallback for I-9
+         const numericId = numericIdMatch ? parseInt(numericIdMatch[1]) : parseInt(String(form.ID));
          if (isNaN(numericId)) throw new Error("Invalid Form ID for deletion.");
 
         if (form.FORM_TYPE === 'I9') {
-            result = await deleteI9Form(numericId); // Use I-9 delete action
+            result = await deleteI9Form(numericId);
         } else if (form.FORM_TYPE === 'W9') {
             result = await w9Actions.deleteW9Form(numericId);
         } else if (form.FORM_TYPE === 'W4') {
             result = await w4Actions.deleteW4Form(numericId);
         } else if (form.FORM_TYPE === 'I983') {
-             result = await i983Actions.deleteI983Form(numericId); // Use I-983 delete action
+             result = await i983Actions.deleteI983Form(numericId);
         } else {
              throw new Error(`Deletion not implemented for form type: ${form.FORM_TYPE}`);
         }
@@ -688,17 +597,14 @@ const I9Forms = ({
             throw new Error(result.error || 'Failed to delete form');
         }
         setSuccessMessage('Form deleted successfully');
-        await loadAllForms(); // Refresh list
+        await loadAllForms();
     } catch (err) {
       setError('Failed to delete form: ' + err.message);
       console.error("Delete Error:", err);
     }
   };
 
-  // src/app/components/Employee/I9Forms.jsx
-
   const getStatus = (form) => {
-    // Define status maps for each form type
      const statusMapI9 = {
         'DRAFT': 'Draft (I-9)',
         'EMPLOYEE_SUBMITTED': 'Pending Verification (I-9)',
@@ -707,26 +613,23 @@ const I9Forms = ({
      };
      const statusMapW9W4 = {
         'DRAFT': 'Draft',
-        'SUBMITTED': 'Submitted', // W-4 needs verification, W-9 is complete
-        'VERIFIED': 'Verified (W-4)', // Only W-4 uses this
+        'SUBMITTED': 'Submitted',
+        'VERIFIED': 'Verified (W-4)',
         'REJECTED': 'Rejected'
      };
 
-    // --- UPDATED I-983 Status Map ---
      const statusMapI983 = {
          'DRAFT': 'Draft (I-983)',
          'GENERATED': 'Generated (I-983)',
-         // Removed all step-by-step statuses
      };
-    // --- END OF UPDATE ---
 
     if (form.FORM_TYPE === 'I9') return statusMapI9[form.FORM_STATUS] || form.FORM_STATUS;
     if (form.FORM_TYPE === 'W4') return statusMapW9W4[form.FORM_STATUS] || form.FORM_STATUS;
-     if (form.FORM_TYPE === 'I983') return statusMapI983[form.FORM_STATUS] || form.FORM_STATUS; // This line uses the map
+    if (form.FORM_TYPE === 'I983') return statusMapI983[form.FORM_STATUS] || form.FORM_STATUS;
     if (form.FORM_TYPE === 'W9') {
       return form.FORM_STATUS === 'SUBMITTED' ? 'Completed (W-9)' : (statusMapW9W4[form.FORM_STATUS] || form.FORM_STATUS);
     }
-    return form.FORM_STATUS; // Fallback
+    return form.FORM_STATUS;
   };
 
   const formatDate = (dateStr) => {
@@ -739,18 +642,17 @@ const I9Forms = ({
   };
 
   const getStatusColor = (form) => {
-    // Define colors - adjust as needed
     const colors = {
-      draft: '#6c757d', // Grey
-      pending: '#0d6efd', // Blue (needs external action)
-      submitted: '#007bff', // Lighter Blue (e.g., I-9 submitted by emp)
-      verified: '#28a745', // Green (I-9, W-4 final)
-      rejected: '#dc3545', // Red
-      completed: '#198754' // Darker Green (W-9, I-983 final)
+      draft: '#6c757d',
+      pending: '#0d6efd',
+      submitted: '#007bff',
+      verified: '#28a745',
+      rejected: '#dc3545',
+      completed: '#198754'
     };
 
     const status = form.FORM_STATUS;
-    let color = colors.draft; // Default
+    let color = colors.draft;
 
     switch(form.FORM_TYPE) {
         case 'I9':
@@ -759,24 +661,20 @@ const I9Forms = ({
             else if (status === 'REJECTED') color = colors.rejected;
             break;
         case 'W4':
-             if (status === 'SUBMITTED') color = colors.pending; // Pending verification
+             if (status === 'SUBMITTED') color = colors.pending;
              else if (status === 'VERIFIED') color = colors.verified;
              else if (status === 'REJECTED') color = colors.rejected;
             break;
         case 'W9':
-            // Submitted W-9 is considered completed
             if (status === 'SUBMITTED') color = colors.completed;
             break;
         case 'I983':
-             // ** UPDATED: Simplified I-983 Color Logic **
-             if (status === 'GENERATED') color = colors.verified; // Use 'verified' green for generated
+             if (status === 'GENERATED') color = colors.verified;
              else if (status === 'DRAFT') color = colors.draft;
-             // Any other status (if it exists) defaults to draft
             break;
     }
     return color;
   };
-
 
   const getFormTypeLabel = (type) => {
     const formType = formTypes.find(ft => ft.value === type);
@@ -790,10 +688,9 @@ const I9Forms = ({
     setActiveView('list');
     setError(null);
     setSuccessMessage('');
-    loadAllForms(); // Refresh list on back
+    loadAllForms();
   };
 
-  // Render correct form based on activeView
   const renderActiveForm = () => {
     switch (activeView) {
       case 'w9form':
@@ -806,7 +703,7 @@ const I9Forms = ({
               isAdding={isAdding}
               selectedFormId={selectedFormId}
               onError={setError}
-              onSuccess={(msg) => { setSuccessMessage(msg); loadAllForms(); }} // Ensure list refresh on success
+              onSuccess={(msg) => { setSuccessMessage(msg); loadAllForms(); }}
           />
         );
       case 'w4form':
@@ -819,25 +716,24 @@ const I9Forms = ({
               isAdding={isAdding}
               selectedFormId={selectedFormId}
               onError={setError}
-              onSuccess={(msg) => { setSuccessMessage(msg); loadAllForms(); }} // Ensure list refresh on success
+              onSuccess={(msg) => { setSuccessMessage(msg); loadAllForms(); }}
           />
         );
-      case 'i983form': // Add case for I-983
+      case 'i983form':
         return (
           <I983Form
               empid={empid}
               orgid={orgid}
               onBack={handleBack}
-              states={states} // Pass states if needed for I-983 addresses
-              countries={countries} // Pass countries if needed
+              states={states}
+              countries={countries}
               isAdding={isAdding}
               selectedFormId={selectedFormId}
               onError={setError}
-              onSuccess={(msg) => { setSuccessMessage(msg); loadAllForms(); }} // Ensure list refresh on success
+              onSuccess={(msg) => { setSuccessMessage(msg); loadAllForms(); }}
           />
         );
       case 'i9form':
-        // I-9 Form View (Existing JSX)
         return (
           <div className={styles.formDetails}>
             <div className={styles.headerSection}>
@@ -845,7 +741,6 @@ const I9Forms = ({
                 {isAdding ? `Add ${getFormTypeLabel('I9')}` : `${isEditing ? 'Edit' : 'View'} ${getFormTypeLabel('I9')}`}
               </h2>
               <div style={{ display: 'flex', gap: '10px' }}>
-                 {/* Remove the redundant "Edit" button logic here, rely on handleRowClick */}
                 <button className={`${styles.button} ${styles.buttonBack}`} onClick={handleBack}>
                   Back to List
                 </button>
@@ -855,7 +750,6 @@ const I9Forms = ({
             <form onSubmit={(e) => { e.preventDefault(); handleI9Save(); }}>
               <div className={styles.formSection}>
                 <h3>Section 1: Employee Information and Attestation</h3>
-                {/* I-9 Form fields... */}
                 <div className={styles.formRow}>
                   <div className={styles.formGroup}>
                     <label>Last Name*</label>
@@ -895,7 +789,6 @@ const I9Forms = ({
                         <label>State*</label>
                         <select name="employee_state" value={i9FormData.employee_state ?? ''} onChange={handleI9FormChange} required disabled={!isEditing}>
                              <option value="">Select State</option>
-                             {/* Ensure states is an array */}
                              {Array.isArray(states) && states.map((state) => (
                                 <option key={state.ID} value={state.VALUE}>{state.VALUE}</option>
                              ))}
@@ -937,7 +830,6 @@ const I9Forms = ({
                   </select>
                 </div>
 
-                {/* Conditional fields based on status */}
                 {i9FormData.citizenship_status === '3' && (
                     <div className={styles.formGroup}>
                         <label>USCIS A-Number or Alien Registration Number*</label>
@@ -968,7 +860,6 @@ const I9Forms = ({
                                 <label>Country of Issuance</label>
                                  <select name="country_of_issuance" value={i9FormData.country_of_issuance ?? ''} onChange={handleI9FormChange} disabled={!isEditing}>
                                      <option value="">Select Country</option>
-                                     {/* Ensure countries is an array */}
                                      {Array.isArray(countries) && countries.map(country => (
                                          <option key={country.ID} value={country.VALUE}>{country.VALUE}</option>
                                      ))}
@@ -978,7 +869,6 @@ const I9Forms = ({
                     </>
                 )}
 
-                {/* Signature Section */}
                  <div className={styles.formGroup}>
                     <label>Signature Date</label>
                     <input type="date" name="employee_signature_date" value={i9FormData.employee_signature_date ?? ''} onChange={handleI9FormChange} required disabled={!isEditing} />
@@ -988,7 +878,6 @@ const I9Forms = ({
                     <div className={styles.formGroup}>
                         <label>Signature*</label>
                         
-                        {/* Display existing signature if editing */}
                         {i9FormData.employee_signature_url && !isAdding && (
                             <div className={styles.signatureDisplay} style={{ marginBottom: '15px'}}>
                                 <p style={{margin: '0 0 5px 0', fontSize: '13px', fontWeight: 'bold'}}>Current Signature:</p>
@@ -1000,7 +889,6 @@ const I9Forms = ({
                             </div>
                         )}
 
-                        {/* Signature Type Selection */}
                         <div className={styles.signatureTypeSelector} style={{ marginBottom: '15px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
                             <p style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: '500' }}>
                                 {i9FormData.employee_signature_url && !isAdding
@@ -1033,7 +921,6 @@ const I9Forms = ({
                             </div>
                         </div>
 
-                        {/* Canvas Signature Option */}
                         {signatureType === 'canvas' && (
                             <>
                                 <p className={styles.signatureInstruction}>
@@ -1051,7 +938,6 @@ const I9Forms = ({
                             </>
                         )}
 
-                        {/* PDF Upload Option */}
                         {signatureType === 'pdf' && (
                             <>
                                 <p className={styles.signatureInstruction}>
@@ -1082,7 +968,6 @@ const I9Forms = ({
                                     </p>
                                 )}
 
-                                {/* PDF Signature Preview */}
                                 {pdfSignaturePreview && !isExtractingSignature && (
                                     <div style={{ marginTop: '10px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
                                         <p style={{ margin: '0 0 10px 0', fontSize: '13px', fontWeight: 'bold', color: '#28a745' }}>
@@ -1104,7 +989,6 @@ const I9Forms = ({
                         )}
                     </div>
                 ) : (
-                    // Read-only signature display
                     i9FormData.employee_signature_url ? (
                         <div className={styles.formGroup}>
                             <label>Employee Signature</label>
@@ -1139,7 +1023,7 @@ const I9Forms = ({
           </div>
         );
       default:
-        return null; // Should not happen if activeView is managed correctly
+        return null;
     }
   };
 
@@ -1149,7 +1033,6 @@ const I9Forms = ({
       {error && <div className={styles.errorMessage}><strong>Error:</strong> {error}</div>}
       {successMessage && <div className={styles.successMessage}><strong>Success:</strong> {successMessage}</div>}
 
-      {/* Form Type Selection Modal */}
       {showFormTypeModal && (
         <div className={styles.modalOverlay}>
           <div className={styles.modalContent}>
@@ -1173,9 +1056,7 @@ const I9Forms = ({
         </div>
       )}
 
-      {/* Main Content Area */}
       {activeView === 'list' ? (
-        // List View
         <div className={styles.formsList}>
           <div className={styles.headerSection}>
             <h2 className={styles.title}>Employee Forms</h2>
@@ -1203,16 +1084,12 @@ const I9Forms = ({
                   </tr>
                 ) : (
                   forms.map((form) => {
-                    // ** MODIFIED: isDeletable **
                     const isDeletable = form.FORM_STATUS === 'DRAFT' || (form.FORM_TYPE === 'I983' && form.FORM_STATUS === 'GENERATED');
                     
-                    // Determine if the form is in a final, non-editable state *for the employee*
                     const isFinalStateForEmployee = (
                         (form.FORM_TYPE === 'I9' && (form.FORM_STATUS === 'EMPLOYER_VERIFIED' || form.FORM_STATUS === 'EMPLOYEE_SUBMITTED')) ||
                         (form.FORM_TYPE === 'W4' && (form.FORM_STATUS === 'VERIFIED' || form.FORM_STATUS === 'SUBMITTED')) ||
                         (form.FORM_TYPE === 'W9' && form.FORM_STATUS === 'SUBMITTED') ||
-                        // ** MODIFIED: I-983 is never in a final state for the employee, even 'GENERATED' is editable
-                        // (form.FORM_TYPE === 'I983' && form.FORM_STATUS === 'FORM_COMPLETED') || 
                         form.FORM_STATUS === 'REJECTED'
                     );
 
@@ -1222,7 +1099,6 @@ const I9Forms = ({
                         onClick={() => handleRowClick(form)}
                         style={{
                           cursor: 'pointer',
-                           // ** MODIFIED: Dimming logic adjusted **
                           opacity: (isFinalStateForEmployee && form.FORM_TYPE !== 'I983') ? 0.7 : 1
                         }}
                       >
@@ -1233,17 +1109,16 @@ const I9Forms = ({
                           <span style={{
                             padding: '4px 12px',
                             borderRadius: '12px',
-                            backgroundColor: getStatusColor(form) + '20', // Add alpha
+                            backgroundColor: getStatusColor(form) + '20',
                             color: getStatusColor(form),
                             fontSize: '12px',
                             fontWeight: 'bold',
-                            whiteSpace: 'nowrap' // Prevent wrapping
+                            whiteSpace: 'nowrap'
                           }}>
                             {getStatus(form)}
                           </span>
                         </td>
-                        <td onClick={(e) => e.stopPropagation()}> {/* Prevent row click on action button */}
-                          {/* ** MODIFIED: Use isDeletable flag ** */}
+                        <td onClick={(e) => e.stopPropagation()}>
                           {isDeletable && (
                             <button
                               className={`${styles.button} ${styles.buttonCancel}`}
@@ -1253,11 +1128,9 @@ const I9Forms = ({
                               Delete
                             </button>
                           )}
-                           {/* ** MODIFIED: Show "View/Edit" for all non-final forms ** */}
                            {!isFinalStateForEmployee && !isDeletable && (
                                 <span style={{fontSize: '12px', color: '#666'}}>View/Edit</span>
                            )}
-                           {/* ** MODIFIED: I-983 is always View/Edit, never View Only ** */}
                             {isFinalStateForEmployee && form.FORM_TYPE !== 'I983' && (
                                 <span style={{fontSize: '12px', color: '#666'}}>View Only</span>
                             )}
@@ -1271,7 +1144,6 @@ const I9Forms = ({
           </div>
         </div>
       ) : (
-        // Render the currently active form component
         renderActiveForm()
       )}
     </div>

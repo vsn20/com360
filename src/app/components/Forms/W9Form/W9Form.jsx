@@ -186,12 +186,16 @@ const W9Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
 
     try {
       console.log('📄 PDF Upload - Loading pdfjs-dist library...');
-      // Dynamically import pdfjs-dist for client-side PDF rendering
-      const pdfjsLib = await import('pdfjs-dist');
+      // FIXED: Import specific build file to avoid Object.defineProperty error
+      const pdfjsModule = await import('pdfjs-dist/build/pdf.min.mjs');
+      const pdfjsLib = pdfjsModule.default || pdfjsModule;
+
       console.log('📄 PDF Upload - pdfjs-dist version:', pdfjsLib.version);
       
       // Set worker source - use local file for EC2/production (no external CDN dependency)
-      pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+      if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+      }
       console.log('📄 PDF Upload - Worker source set to:', pdfjsLib.GlobalWorkerOptions.workerSrc);
 
       // Read file as ArrayBuffer for PDF.js
