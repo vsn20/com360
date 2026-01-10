@@ -7,17 +7,10 @@ import { fetchEmployeeById } from '@/app/serverActions/Employee/overview';
 import {
   getI983FormDetails,
   saveOrUpdateI983Form,
-  generateI983Pdf, // Import the new PDF generation action
+  generateI983Pdf,
 } from '@/app/serverActions/forms/i983/actions';
 import SignatureCanvas from 'react-signature-canvas';
-import * as pdfjs from 'pdfjs-dist';
-// Import new CSS module
 import i983_styles from './I983Form.module.css';
-
-// Initialize PDF.js worker
-if (typeof window !== 'undefined') {
-    pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
-}
 
 // Helper function to safely get values for controlled inputs
 const safeValue = (value, defaultValue = '') => value ?? defaultValue;
@@ -48,12 +41,10 @@ const formatDateDisplay = (dateStr) => {
     } catch (e) { return 'Invalid Date'; }
 };
 
-// Helper function to map fetched data to the formData state
 const mapFetchedToState = (fetchedForm = {}, employee = {}) => {
     const studentName = `${employee.EMP_FST_NAME || ''} ${employee.EMP_LAST_NAME || ''}`.trim();
     
     return {
-        // Section 1
         STUDENT_NAME: safeValue(fetchedForm.STUDENT_NAME, studentName),
         STUDENT_EMAIL: safeValue(fetchedForm.STUDENT_EMAIL, employee.email || ''),
         SCHOOL_RECOMMENDING: safeValue(fetchedForm.SCHOOL_RECOMMENDING),
@@ -68,10 +59,8 @@ const mapFetchedToState = (fetchedForm = {}, employee = {}) => {
         QUALIFYING_DEGREE_DATE: formatDateForInput(fetchedForm.QUALIFYING_DEGREE_DATE),
         BASED_ON_PRIOR_DEGREE: !!fetchedForm.BASED_ON_PRIOR_DEGREE,
         EMPLOYMENT_AUTH_NUMBER: safeValue(fetchedForm.EMPLOYMENT_AUTH_NUMBER),
-        // Section 2
         STUDENT_PRINTED_NAME: safeValue(fetchedForm.STUDENT_PRINTED_NAME, studentName),
         STUDENT_SIGNATURE_DATE: formatDateForInput(fetchedForm.STUDENT_SIGNATURE_DATE) || new Date().toISOString().split('T')[0],
-        // Section 3
         EMPLOYER_NAME: safeValue(fetchedForm.EMPLOYER_NAME),
         EMPLOYER_WEBSITE: safeValue(fetchedForm.EMPLOYER_WEBSITE),
         EMPLOYER_EIN: safeValue(fetchedForm.EMPLOYER_EIN),
@@ -90,11 +79,9 @@ const mapFetchedToState = (fetchedForm = {}, employee = {}) => {
         OTHER_COMPENSATION_2: safeValue(fetchedForm.OTHER_COMPENSATION_2),
         OTHER_COMPENSATION_3: safeValue(fetchedForm.OTHER_COMPENSATION_3),
         OTHER_COMPENSATION_4: safeValue(fetchedForm.OTHER_COMPENSATION_4),
-        // Section 4
         EMPLOYER_OFFICIAL_PRINTED_NAME_TITLE: safeValue(fetchedForm.EMPLOYER_OFFICIAL_PRINTED_NAME_TITLE),
         EMPLOYER_PRINTED_NAME_ORG: safeValue(fetchedForm.EMPLOYER_PRINTED_NAME_ORG),
         EMPLOYER_OFFICIAL_SIGNATURE_DATE: formatDateForInput(fetchedForm.EMPLOYER_OFFICIAL_SIGNATURE_DATE),
-        // Section 5
         SEC5_STUDENT_NAME: safeValue(fetchedForm.SEC5_STUDENT_NAME, studentName),
         SEC5_EMPLOYER_NAME: safeValue(fetchedForm.SEC5_EMPLOYER_NAME, fetchedForm.EMPLOYER_NAME),
         SEC5_SITE_NAME: safeValue(fetchedForm.SEC5_SITE_NAME),
@@ -108,16 +95,13 @@ const mapFetchedToState = (fetchedForm = {}, employee = {}) => {
         SEC5_EMPLOYER_OVERSIGHT: safeValue(fetchedForm.SEC5_EMPLOYER_OVERSIGHT),
         SEC5_MEASURES_ASSESSMENTS: safeValue(fetchedForm.SEC5_MEASURES_ASSESSMENTS),
         SEC5_ADDITIONAL_REMARKS: safeValue(fetchedForm.SEC5_ADDITIONAL_REMARKS),
-        // Section 6
         EMPLOYER_OFFICIAL_SEC6_PRINTED_NAME_TITLE: safeValue(fetchedForm.EMPLOYER_OFFICIAL_SEC6_PRINTED_NAME_TITLE),
         EMPLOYER_OFFICIAL_SEC6_SIGNATURE_DATE: formatDateForInput(fetchedForm.EMPLOYER_OFFICIAL_SEC6_SIGNATURE_DATE),
-        // Eval 1
         EVAL1_FROM_DATE: formatDateForInput(fetchedForm.EVAL1_FROM_DATE),
         EVAL1_TO_DATE: formatDateForInput(fetchedForm.EVAL1_TO_DATE),
         EVAL1_STUDENT_EVALUATION: safeValue(fetchedForm.EVAL1_STUDENT_EVALUATION),
         EVAL1_STUDENT_SIGNATURE_DATE: formatDateForInput(fetchedForm.EVAL1_STUDENT_SIGNATURE_DATE) || new Date().toISOString().split('T')[0],
         EVAL1_EMPLOYER_SIGNATURE_DATE: formatDateForInput(fetchedForm.EVAL1_EMPLOYER_SIGNATURE_DATE),
-        // Eval 2
         EVAL2_FROM_DATE: formatDateForInput(fetchedForm.EVAL2_FROM_DATE),
         EVAL2_TO_DATE: formatDateForInput(fetchedForm.EVAL2_TO_DATE),
         EVAL2_STUDENT_EVALUATION: safeValue(fetchedForm.EVAL2_STUDENT_EVALUATION),
@@ -126,30 +110,28 @@ const mapFetchedToState = (fetchedForm = {}, employee = {}) => {
     };
 };
 
-
 const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedFormId, onError, onSuccess }) => {
     
-    // Full form data state
     const [formData, setFormData] = useState(mapFetchedToState());
-    
-    // Store the last fetched data to display read-only info (like signature images)
     const [existingForm, setExistingForm] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
-    const [isGenerating, setIsGenerating] = useState(false); // New state for generate
+    const [isGenerating, setIsGenerating] = useState(false);
     const [currentFormId, setCurrentFormId] = useState(null);
-    const [currentPage, setCurrentPage] = useState(1); // Page 1-5
+    const [currentPage, setCurrentPage] = useState(1);
 
-    // Signature Canvases for STUDENT
+    // Refs
     const sigCanvasSec2 = useRef(null);
     const sigCanvasEval1Student = useRef(null);
     const sigCanvasEval2Student = useRef(null);
+    const pdfFileInputSec2 = useRef(null);
+    const pdfFileInputEval1 = useRef(null);
+    const pdfFileInputEval2 = useRef(null);
 
-    // Signature Type States (canvas or pdf) for each signature
+    // States
     const [signatureTypeSec2, setSignatureTypeSec2] = useState('canvas');
     const [signatureTypeEval1, setSignatureTypeEval1] = useState('canvas');
     const [signatureTypeEval2, setSignatureTypeEval2] = useState('canvas');
 
-    // PDF signature states for each signature
     const [pdfSignatureFileSec2, setPdfSignatureFileSec2] = useState(null);
     const [pdfSignaturePreviewSec2, setPdfSignaturePreviewSec2] = useState(null);
     const [pdfSignatureFileEval1, setPdfSignatureFileEval1] = useState(null);
@@ -157,15 +139,9 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
     const [pdfSignatureFileEval2, setPdfSignatureFileEval2] = useState(null);
     const [pdfSignaturePreviewEval2, setPdfSignaturePreviewEval2] = useState(null);
 
-    // PDF extraction loading states
     const [isExtractingSec2, setIsExtractingSec2] = useState(false);
     const [isExtractingEval1, setIsExtractingEval1] = useState(false);
     const [isExtractingEval2, setIsExtractingEval2] = useState(false);
-
-    // PDF file input refs
-    const pdfFileInputSec2 = useRef(null);
-    const pdfFileInputEval1 = useRef(null);
-    const pdfFileInputEval2 = useRef(null);
 
     // --- Data Loading Effect ---
     useEffect(() => {
@@ -178,13 +154,13 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
                 if (isAdding) {
                     setExistingForm(null);
                     setCurrentFormId(null);
-                    setFormData(mapFetchedToState({}, employee)); // Prefill new form
+                    setFormData(mapFetchedToState({}, employee));
                 } else if (selectedFormId) {
                     const formId = String(selectedFormId).replace('I983-', '');
                     const fetchedForm = await getI983FormDetails(formId);
                     setExistingForm(fetchedForm);
                     setCurrentFormId(fetchedForm.ID);
-                    setFormData(mapFetchedToState(fetchedForm, employee)); // Load existing data
+                    setFormData(mapFetchedToState(fetchedForm, employee));
                 }
             } catch (err) {
                 onError('Failed to load I-983 form data: ' + err.message);
@@ -209,96 +185,138 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
         sigRef.current?.clear();
     };
 
-    // PDF extraction function for signature
+    // Unified PDF extraction function using the working method from W9Form
     const extractSignatureFromPdf = async (file) => {
+        if (!file) return null;
+        
+        // 1. Validate file
+        if (file.type !== 'application/pdf') {
+            throw new Error('Please upload a valid PDF file.');
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            throw new Error('PDF file size must be less than 5MB.');
+        }
+
         try {
+            // FIX: Use explicit min.mjs path to avoid "Object.defineProperty" Webpack error
+            const pdfjsModule = await import('pdfjs-dist/build/pdf.min.mjs');
+            const pdfjsLib = pdfjsModule.default || pdfjsModule;
+
+            // Set worker source
+            if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
+                pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+            }
+
+            // 3. Read ArrayBuffer
             const arrayBuffer = await file.arrayBuffer();
-            const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
-            const page = await pdf.getPage(1);
-            const scale = 2;
+            
+            // 4. Validate Header
+            const header = new Uint8Array(arrayBuffer.slice(0, 5));
+            const headerStr = String.fromCharCode(...header);
+            if (headerStr !== '%PDF-') {
+                throw new Error('File does not have valid PDF header.');
+            }
+
+            // 5. Load Document
+            const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+            const pdfDoc = await loadingTask.promise;
+            
+            // 6. Get First Page
+            const page = await pdfDoc.getPage(1);
+            
+            // 7. Setup Canvas
+            const scale = 2; // Higher resolution
             const viewport = page.getViewport({ scale });
             const canvas = document.createElement('canvas');
             const context = canvas.getContext('2d');
-            canvas.height = viewport.height;
             canvas.width = viewport.width;
-            await page.render({ canvasContext: context, viewport: viewport }).promise;
+            canvas.height = viewport.height;
+            
+            // 8. Render
+            await page.render({
+                canvasContext: context,
+                viewport: viewport,
+            }).promise;
+            
             return canvas.toDataURL('image/png');
         } catch (error) {
             console.error('Error extracting signature from PDF:', error);
-            throw new Error('Failed to extract signature from PDF');
+            throw new Error(error.message || 'Failed to extract signature from PDF');
         }
     };
 
-    // Handle PDF file change for Section 2 Signature
+    // --- File Change Handlers ---
+    
     const handlePdfFileChangeSec2 = async (e) => {
         const file = e.target.files[0];
-        if (!file) return;
-        
-        if (file.type !== 'application/pdf') {
-            onError('Please upload a PDF file');
-            return;
+        if (!file) {
+             setPdfSignatureFileSec2(null);
+             setPdfSignaturePreviewSec2(null);
+             return;
         }
         
         setIsExtractingSec2(true);
         setPdfSignatureFileSec2(file);
+        onError(null);
         
         try {
             const signatureDataUrl = await extractSignatureFromPdf(file);
             setPdfSignaturePreviewSec2(signatureDataUrl);
         } catch (error) {
-            onError('Failed to extract signature from PDF. Please try again.');
+            onError(error.message);
             setPdfSignatureFileSec2(null);
             setPdfSignaturePreviewSec2(null);
+            if (pdfFileInputSec2.current) pdfFileInputSec2.current.value = '';
         } finally {
             setIsExtractingSec2(false);
         }
     };
 
-    // Handle PDF file change for Eval 1 Signature
     const handlePdfFileChangeEval1 = async (e) => {
         const file = e.target.files[0];
-        if (!file) return;
-        
-        if (file.type !== 'application/pdf') {
-            onError('Please upload a PDF file');
-            return;
+        if (!file) {
+             setPdfSignatureFileEval1(null);
+             setPdfSignaturePreviewEval1(null);
+             return;
         }
         
         setIsExtractingEval1(true);
         setPdfSignatureFileEval1(file);
+        onError(null);
         
         try {
             const signatureDataUrl = await extractSignatureFromPdf(file);
             setPdfSignaturePreviewEval1(signatureDataUrl);
         } catch (error) {
-            onError('Failed to extract signature from PDF. Please try again.');
+            onError(error.message);
             setPdfSignatureFileEval1(null);
             setPdfSignaturePreviewEval1(null);
+            if (pdfFileInputEval1.current) pdfFileInputEval1.current.value = '';
         } finally {
             setIsExtractingEval1(false);
         }
     };
 
-    // Handle PDF file change for Eval 2 Signature
     const handlePdfFileChangeEval2 = async (e) => {
         const file = e.target.files[0];
-        if (!file) return;
-        
-        if (file.type !== 'application/pdf') {
-            onError('Please upload a PDF file');
-            return;
+        if (!file) {
+             setPdfSignatureFileEval2(null);
+             setPdfSignaturePreviewEval2(null);
+             return;
         }
         
         setIsExtractingEval2(true);
         setPdfSignatureFileEval2(file);
+        onError(null);
         
         try {
             const signatureDataUrl = await extractSignatureFromPdf(file);
             setPdfSignaturePreviewEval2(signatureDataUrl);
         } catch (error) {
-            onError('Failed to extract signature from PDF. Please try again.');
+            onError(error.message);
             setPdfSignatureFileEval2(null);
             setPdfSignaturePreviewEval2(null);
+            if (pdfFileInputEval2.current) pdfFileInputEval2.current.value = '';
         } finally {
             setIsExtractingEval2(false);
         }
@@ -338,12 +356,10 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
         return null;
     };
 
-    // --- Server Action Handlers ---
-
     const handleSave = async (showSuccess = true) => {
         onError(null);
         if (showSuccess) onSuccess('');
-        setIsSaving(true); // Use isSaving
+        setIsSaving(true);
         let success = false;
         let newFormId = currentFormId;
 
@@ -355,39 +371,27 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
                 action: 'save',
             };
 
-            // Get signature data based on selected type (canvas or pdf)
             const sec2SigData = getSignatureData(signatureTypeSec2, sigCanvasSec2, pdfSignaturePreviewSec2);
             const eval1SigData = getSignatureData(signatureTypeEval1, sigCanvasEval1Student, pdfSignaturePreviewEval1);
             const eval2SigData = getSignatureData(signatureTypeEval2, sigCanvasEval2Student, pdfSignaturePreviewEval2);
 
-            // Conditionally add signatures ONLY if they exist
-            if (sec2SigData) {
-                payload.signature_data_sec2 = sec2SigData;
-            }
-            if (eval1SigData) {
-                payload.signature_data_eval1_student = eval1SigData;
-            }
-            if (eval2SigData) {
-                payload.signature_data_eval2_student = eval2SigData;
-            }
+            if (sec2SigData) payload.signature_data_sec2 = sec2SigData;
+            if (eval1SigData) payload.signature_data_eval1_student = eval1SigData;
+            if (eval2SigData) payload.signature_data_eval2_student = eval2SigData;
 
-            // Clear PDF previews after save
             if (signatureTypeSec2 === 'pdf' && pdfSignaturePreviewSec2) clearPdfSignatureSec2();
             if (signatureTypeEval1 === 'pdf' && pdfSignaturePreviewEval1) clearPdfSignatureEval1();
             if (signatureTypeEval2 === 'pdf' && pdfSignaturePreviewEval2) clearPdfSignatureEval2();
 
-            console.log("Calling saveOrUpdateI983Form (Save)...");
             const result = await saveOrUpdateI983Form(payload, currentFormId);
 
             if (result.success) {
                 if (showSuccess) onSuccess('Form saved successfully!');
                 newFormId = result.id;
                 
-                // Re-fetch data to update 'existingForm' with new sig URLs
                 const updatedForm = await getI983FormDetails(result.id);
                 setExistingForm(updatedForm);
                 setCurrentFormId(updatedForm.ID);
-                // Re-set formData to match the fetched data
                 setFormData(mapFetchedToState(updatedForm));
                 success = true;
             } else {
@@ -397,49 +401,39 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
             onError(err.message || 'Failed to save I-983 form.');
             console.error('Error during save:', err);
         } finally {
-            setIsSaving(false); // Use isSaving
-            return { success, formId: newFormId }; // Return success state and ID
+            setIsSaving(false);
+            return { success, formId: newFormId };
         }
     };
 
     const handleGenerate = async () => {
         onError(null);
         onSuccess('');
-        
-        // 1. Save any pending changes first
-        setIsGenerating(true); // Use isGenerating
-        const { success: saveSuccess, formId: savedFormId } = await handleSave(false); // Save without success message
+        setIsGenerating(true);
+        const { success: saveSuccess, formId: savedFormId } = await handleSave(false);
         
         if (!saveSuccess || !savedFormId) {
             onError("Failed to save changes. Cannot generate PDF.");
-            setIsGenerating(false); // Use isGenerating
+            setIsGenerating(false);
             return;
         }
         
-        // 2. If save was successful, generate PDF
-        console.log(`Generating PDF for Form ID: ${savedFormId}`);
         try {
-            // FIX: Call onError(null) here to clear any save-related (but non-blocking) errors
             onError(null);
             const result = await generateI983Pdf(savedFormId);
             if (result.success) {
                 onSuccess("PDF Generated successfully! Returning to list...");
-                // Go back to list after generation
-                setTimeout(() => {
-                    onBack();
-                }, 1500); // Delay to show success message
+                setTimeout(() => { onBack(); }, 1500);
             } else {
                 throw new Error(result.error);
             }
         } catch (err) {
              onError(err.message || 'Failed to generate PDF.');
              console.error('Error during generate:', err);
-             setIsGenerating(false); // Use isGenerating
+             setIsGenerating(false);
         }
-        // Don't set to false here, let the redirect happen
     };
 
-    // --- Render Read-Only Signature ---
     const renderReadOnlySignature = (label, sigUrl, date, name) => {
         if (!sigUrl) {
             return (
@@ -463,24 +457,21 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
         );
     };
 
-    // --- Render Page Buttons ---
     const renderPageButtons = () => (
         <div className={i983_styles.i983_formButtons}>
             <button 
                 type="button" 
                 className={`${i983_styles.i983_button} ${i983_styles.i983_buttonSave}`} 
                 onClick={() => handleSave(true)} 
-                disabled={isSaving || isGenerating} // Disable if saving OR generating
+                disabled={isSaving || isGenerating}
             >
                 {isSaving ? 'Saving...' : 'Save Changes'}
             </button>
         </div>
     );
 
-    // --- Page Render Functions ---
     const renderPage1 = () => (
         <>
-            {/* --- Section 1: Student Information --- */}
             <div className={i983_styles.i983_formSection}>
                 <h3>Section 1: Student Information</h3>
                 <div className={i983_styles.i983_formRow}>
@@ -517,7 +508,6 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
                 </div>
             </div>
 
-            {/* --- Section 2: Student Certification --- */}
             <div className={i983_styles.i983_formSection}>
                 <h3>Section 2: Student Certification</h3>
                 <div className={i983_styles.i983_formRow}>
@@ -533,7 +523,6 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
                         </div>
                     )}
                     
-                    {/* Signature Type Selection */}
                     <div style={{ marginBottom: '15px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
                         <p style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: '500' }}>Choose signature method:</p>
                         <div style={{ display: 'flex', gap: '20px' }}>
@@ -548,7 +537,6 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
                         </div>
                     </div>
 
-                    {/* Canvas Signature Option */}
                     {signatureTypeSec2 === 'canvas' && (
                         <>
                             <div className={i983_styles.i983_signatureCanvasWrapper}><SignatureCanvas ref={sigCanvasSec2} canvasProps={{ className: i983_styles.i983_signatureCanvas }} /></div>
@@ -556,7 +544,6 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
                         </>
                     )}
 
-                    {/* PDF Upload Option */}
                     {signatureTypeSec2 === 'pdf' && (
                         <>
                             <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#666' }}>Upload a PDF file containing your signature.</p>
@@ -583,7 +570,6 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
 
     const renderPage2 = () => (
         <>
-            {/* --- Section 3: Employer Information --- */}
             <div className={i983_styles.i983_formSection}>
                 <h3>Section 3: Employer Information</h3>
                 <div className={i983_styles.i983_formRow}>
@@ -619,7 +605,6 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
                 </div>
             </div>
 
-            {/* --- Section 4: Employer Certification --- */}
             <div className={i983_styles.i983_formSection}>
                 <h3>Section 4: Employer Certification</h3>
                 <div className={i983_styles.i983_formRow}>
@@ -642,7 +627,6 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
     
     const renderPage3 = () => (
         <>
-            {/* --- Section 5: Training Plan --- */}
             <div className={i983_styles.i983_formSection}>
                 <h3>Section 5: Training Plan</h3>
                 <div className={i983_styles.i983_formRow}>
@@ -690,7 +674,6 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
 
     const renderPage4 = () => (
         <>
-            {/* --- Section 5 (cont.): Additional Remarks --- */}
             <div className={i983_styles.i983_formSection}>
                 <h3>Section 5: Additional Remarks</h3>
                 <div className={i983_styles.i983_formGroup}>
@@ -699,7 +682,6 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
                 </div>
             </div>
 
-            {/* --- Section 6: Employer Official Certification --- */}
             <div className={i983_styles.i983_formSection}>
                 <h3>Section 6: Employer Official Certification</h3>
                 <div className={i983_styles.i983_formRow}>
@@ -719,7 +701,6 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
 
     const renderPage5 = () => (
         <>
-            {/* --- Evaluation 1 --- */}
             <div className={i983_styles.i983_formSection}>
                 <h3>Evaluation on Student Progress</h3>
                 <div className={i983_styles.i983_formRow}>
@@ -731,7 +712,6 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
                     <textarea name="EVAL1_STUDENT_EVALUATION" value={safeValue(formData.EVAL1_STUDENT_EVALUATION)} onChange={handleChange} disabled={isSaving || isGenerating} rows={6} />
                 </div>
                 
-                {/* Student Signature */}
                 <div className={i983_styles.i983_formRow}>
                     <div className={i983_styles.i983_formGroup}><label>Printed Name (Student)</label><input value={safeValue(formData.STUDENT_PRINTED_NAME)} disabled={true} /></div>
                     <div className={i983_styles.i983_formGroup}><label>Date (Student)</label><input type="date" name="EVAL1_STUDENT_SIGNATURE_DATE" value={safeValue(formData.EVAL1_STUDENT_SIGNATURE_DATE)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
@@ -742,7 +722,6 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
                         <div className={i983_styles.i983_signatureDisplay} style={{ marginBottom: '10px' }}><p>Current Signature:</p><img src={existingForm.EVAL1_STUDENT_SIGNATURE_URL} alt="Current Eval 1 Sig" style={{ maxHeight: '60px', border: '1px solid #ccc' }}/></div>
                     )}
                     
-                    {/* Signature Type Selection */}
                     <div style={{ marginBottom: '15px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
                         <p style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: '500' }}>Choose signature method:</p>
                         <div style={{ display: 'flex', gap: '20px' }}>
@@ -757,7 +736,6 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
                         </div>
                     </div>
 
-                    {/* Canvas Signature Option */}
                     {signatureTypeEval1 === 'canvas' && (
                         <>
                             <div className={i983_styles.i983_signatureCanvasWrapper}><SignatureCanvas ref={sigCanvasEval1Student} canvasProps={{ className: i983_styles.i983_signatureCanvas }} /></div>
@@ -765,7 +743,6 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
                         </>
                     )}
 
-                    {/* PDF Upload Option */}
                     {signatureTypeEval1 === 'pdf' && (
                         <>
                             <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#666' }}>Upload a PDF file containing your signature.</p>
@@ -786,16 +763,14 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
                     )}
                 </div>
 
-                {/* Employer Signature (Read-Only) */}
                 {renderReadOnlySignature(
                     "Employer Signature (Eval 1) (Read-Only)",
                     existingForm?.EVAL1_EMPLOYER_SIGNATURE_URL,
                     existingForm?.EVAL1_EMPLOYER_SIGNATURE_DATE,
-                    existingForm?.EMPLOYER_OFFICIAL_PRINTED_NAME_TITLE // Assuming same official
+                    existingForm?.EMPLOYER_OFFICIAL_PRINTED_NAME_TITLE
                 )}
             </div>
 
-            {/* --- Evaluation 2 --- */}
             <div className={i983_styles.i983_formSection}>
                 <h3>Final Evaluation on Student Progress</h3>
                 <div className={i983_styles.i983_formRow}>
@@ -807,7 +782,6 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
                     <textarea name="EVAL2_STUDENT_EVALUATION" value={safeValue(formData.EVAL2_STUDENT_EVALUATION)} onChange={handleChange} disabled={isSaving || isGenerating} rows={6} />
                 </div>
                 
-                {/* Student Signature */}
                 <div className={i983_styles.i983_formRow}>
                     <div className={i983_styles.i983_formGroup}><label>Printed Name (Student)</label><input value={safeValue(formData.STUDENT_PRINTED_NAME)} disabled={true} /></div>
                     <div className={i983_styles.i983_formGroup}><label>Date (Student)</label><input type="date" name="EVAL2_STUDENT_SIGNATURE_DATE" value={safeValue(formData.EVAL2_STUDENT_SIGNATURE_DATE)} onChange={handleChange} disabled={isSaving || isGenerating} /></div>
@@ -818,7 +792,6 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
                         <div className={i983_styles.i983_signatureDisplay} style={{ marginBottom: '10px' }}><p>Current Signature:</p><img src={existingForm.EVAL2_STUDENT_SIGNATURE_URL} alt="Current Eval 2 Sig" style={{ maxHeight: '60px', border: '1px solid #ccc' }}/></div>
                     )}
                     
-                    {/* Signature Type Selection */}
                     <div style={{ marginBottom: '15px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
                         <p style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: '500' }}>Choose signature method:</p>
                         <div style={{ display: 'flex', gap: '20px' }}>
@@ -833,7 +806,6 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
                         </div>
                     </div>
 
-                    {/* Canvas Signature Option */}
                     {signatureTypeEval2 === 'canvas' && (
                         <>
                             <div className={i983_styles.i983_signatureCanvasWrapper}><SignatureCanvas ref={sigCanvasEval2Student} canvasProps={{ className: i983_styles.i983_signatureCanvas }} /></div>
@@ -841,7 +813,6 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
                         </>
                     )}
 
-                    {/* PDF Upload Option */}
                     {signatureTypeEval2 === 'pdf' && (
                         <>
                             <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#666' }}>Upload a PDF file containing your signature.</p>
@@ -862,12 +833,11 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
                     )}
                 </div>
 
-                {/* Employer Signature (Read-Only) */}
                 {renderReadOnlySignature(
                     "Employer Signature (Eval 2) (Read-Only)",
                     existingForm?.EVAL2_EMPLOYER_SIGNATURE_URL,
                     existingForm?.EVAL2_EMPLOYER_SIGNATURE_DATE,
-                    existingForm?.EMPLOYER_OFFICIAL_PRINTED_NAME_TITLE // Assuming same official
+                    existingForm?.EMPLOYER_OFFICIAL_PRINTED_NAME_TITLE
                 )}
             </div>
             {renderPageButtons()}
@@ -882,31 +852,24 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
 
     return (
         <div className={i983_styles.i983_formContainer}>
-            {/* REMOVED: Error and Success messages are now shown by the parent component (I9Forms.jsx)
-              The parent `I9Forms` component renders {error} and {successMessage}
-            */}
-
             <div className={i983_styles.i983_headerSection}>
                 <h2 className={i983_styles.i983_title}>
                     I-983 Form ({status})
                 </h2>
                 <div>
-                    {/* MOVED: Generate PDF button is here */}
                     <button
                         className={`${i983_styles.i983_button} ${i983_styles.i983_buttonGenerate}`}
                         onClick={handleGenerate}
-                        disabled={isSaving || isGenerating} // Disable if saving or generating
+                        disabled={isSaving || isGenerating}
                         style={{ marginLeft: '10px' }}
                     >
                         {isGenerating ? 'Generating...' : 'Generate PDF'}
                     </button>
                     <button className={`${i983_styles.i983_button} ${i983_styles.i983_buttonBack}`} onClick={onBack} disabled={isSaving || isGenerating} style={{ marginLeft: '10px' }}>
-                        {/* Back button now has no text, only icon via CSS */}
                     </button>
                 </div>
             </div>
             
-            {/* Pagination Controls */}
             <div className={i983_styles.i983_submenu_bar}>
                 <button onClick={() => setCurrentPage(1)} className={`${currentPage === 1 ? i983_styles.i983_submenu_button_active : i983_styles.i983_submenu_button}`} disabled={isSaving || isGenerating}>Page 1 (Sec 1-2)</button>
                 <button onClick={() => setCurrentPage(2)} className={`${currentPage === 2 ? i983_styles.i983_submenu_button_active : i983_styles.i983_submenu_button}`} disabled={isSaving || isGenerating}>Page 2 (Sec 3-4)</button>
@@ -915,7 +878,6 @@ const I983Form = ({ empid, orgid, onBack, states, countries, isAdding, selectedF
                 <button onClick={() => setCurrentPage(5)} className={`${currentPage === 5 ? i983_styles.i983_submenu_button_active : i983_styles.i983_submenu_button}`} disabled={isSaving || isGenerating}>Page 5 (Evals)</button>
             </div>
 
-            {/* Page Content */}
             <div className={i983_styles.i983_pageContent}>
                 {currentPage === 1 && renderPage1()}
                 {currentPage === 2 && renderPage2()}
