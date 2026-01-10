@@ -165,7 +165,6 @@ const VerificationForm = ({
   // Handle PDF file selection and extract signature using client-side rendering
   const handlePdfFileChange = async (e) => {
     const file = e.target.files?.[0];
-    console.log('📄 PDF Upload (Verification) - File selected:', file ? file.name : 'none');
     
     if (!file) {
       setPdfSignatureFile(null);
@@ -174,7 +173,6 @@ const VerificationForm = ({
     }
 
     // Validate file type
-    console.log('📄 PDF Upload (Verification) - File type:', file.type, 'Size:', file.size, 'bytes');
     if (file.type !== 'application/pdf') {
       setError('Please upload a valid PDF file.');
       e.target.value = '';
@@ -193,43 +191,36 @@ const VerificationForm = ({
     setIsExtractingSignature(true);
 
     try {
-      console.log('📄 PDF Upload (Verification) - Loading pdfjs-dist library...');
-      const pdfjsLib = await import('pdfjs-dist');
-      console.log('📄 PDF Upload (Verification) - pdfjs-dist version:', pdfjsLib.version);
+      // FIX: Use explicit min.mjs path to avoid "Object.defineProperty" Webpack error
+      const pdfjsModule = await import('pdfjs-dist/build/pdf.min.mjs');
+      const pdfjsLib = pdfjsModule.default || pdfjsModule;
       
-      // Set worker source - use local file for EC2/production
-      pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
-      console.log('📄 PDF Upload (Verification) - Worker source set to:', pdfjsLib.GlobalWorkerOptions.workerSrc);
+      // Set worker source
+      if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
+          pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+      }
 
       // Read file as ArrayBuffer
-      console.log('📄 PDF Upload (Verification) - Reading file as ArrayBuffer...');
       const arrayBuffer = await file.arrayBuffer();
-      console.log('📄 PDF Upload (Verification) - ArrayBuffer size:', arrayBuffer.byteLength, 'bytes');
       
       // Check if file starts with PDF header
       const header = new Uint8Array(arrayBuffer.slice(0, 5));
       const headerStr = String.fromCharCode(...header);
-      console.log('📄 PDF Upload (Verification) - File header:', headerStr, '(should be %PDF-)');
       
       if (headerStr !== '%PDF-') {
-        throw new Error('File does not have valid PDF header. Got: ' + headerStr);
+        throw new Error('File does not have valid PDF header.');
       }
       
       // Load the PDF document
-      console.log('📄 PDF Upload (Verification) - Loading PDF document...');
       const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
       const pdfDoc = await loadingTask.promise;
-      console.log('📄 PDF Upload (Verification) - PDF loaded, pages:', pdfDoc.numPages);
       
       // Get the first page
-      console.log('📄 PDF Upload (Verification) - Getting page 1...');
       const page = await pdfDoc.getPage(1);
-      console.log('📄 PDF Upload (Verification) - Page 1 loaded');
       
       // Set up canvas for rendering
       const scale = 2;
       const viewport = page.getViewport({ scale });
-      console.log('📄 PDF Upload (Verification) - Viewport:', viewport.width, 'x', viewport.height);
       
       // Create an offscreen canvas
       const canvas = document.createElement('canvas');
@@ -238,26 +229,19 @@ const VerificationForm = ({
       canvas.height = viewport.height;
       
       // Render PDF page to canvas
-      console.log('📄 PDF Upload (Verification) - Rendering page to canvas...');
       await page.render({
         canvasContext: context,
         viewport: viewport,
       }).promise;
-      console.log('📄 PDF Upload (Verification) - Render complete');
       
       // Convert canvas to PNG data URL
       const signatureDataUrl = canvas.toDataURL('image/png');
-      console.log('📄 PDF Upload (Verification) - PNG data URL length:', signatureDataUrl.length, 'chars');
       
       setPdfSignaturePreview(signatureDataUrl);
       setError(null);
-      console.log('✅ PDF signature (Verification) extracted successfully via client-side rendering');
       
     } catch (err) {
-      console.error('❌ PDF extraction error (Verification):', err);
-      console.error('❌ Error name:', err.name);
-      console.error('❌ Error message:', err.message);
-      console.error('❌ Error stack:', err.stack);
+      console.error('PDF extraction error:', err);
       setError('Failed to process PDF file: ' + (err.message || 'Unknown error'));
       setPdfSignatureFile(null);
       setPdfSignaturePreview(null);

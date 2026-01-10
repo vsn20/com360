@@ -58,9 +58,6 @@ const W4Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
     const loadData = async () => {
       onError(null);
       try {
-        // Log the states array immediately when the effect runs
-        console.log('W4 Pre-fill Debug - Received states:', states); // <-- ADDED THIS LINE
-
         const employee = await fetchEmployeeById(empid);
 
         if (isAdding) {
@@ -69,23 +66,11 @@ const W4Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
           setCurrentFormId(null);
           const ssn = employee.SSN ? formatSsn(employee.SSN) : '';
 
-          // --- Debug logging ---
-          // Check if states is an array before trying to use .find()
           const foundStateValue = Array.isArray(states)
             ? states.find(s => String(s.ID) === String(employee.HOME_STATE_ID))?.VALUE
-            : undefined; // If states is not an array, foundStateValue is undefined
+            : undefined;
 
           const stateToSet = foundStateValue || employee.HOME_STATE_NAME_CUSTOM || '';
-
-          console.log('W4 Pre-fill Debug - Calculation:', { // <-- KEPT THIS LOG TOO
-            isStatesArray: Array.isArray(states), // Check if it's an array
-            statesLength: Array.isArray(states) ? states.length : 'Not an array', // Log length
-            homeStateId: employee.HOME_STATE_ID,
-            foundStateValue: foundStateValue,
-            customStateName: employee.HOME_STATE_NAME_CUSTOM,
-            stateToSet: stateToSet
-          });
-          // --- End logging ---
 
           setFormData({
             first_name: employee.EMP_FST_NAME || '',
@@ -93,7 +78,7 @@ const W4Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
             ssn: employee.SSN || '',
             address_street: `${employee.HOME_ADDR_LINE1 || ''}${employee.HOME_ADDR_LINE2 ? ' ' + employee.HOME_ADDR_LINE2 : ''}`.trim(),
             city: employee.HOME_CITY || '',
-            state: stateToSet, // Use the variable logged
+            state: stateToSet, 
             zip_code: employee.HOME_POSTAL_CODE || '',
             filing_status: 'SINGLE',
             multiple_jobs_checked: false,
@@ -119,10 +104,6 @@ const W4Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
             ? w4Form.ADDRESS_CITY_STATE_ZIP.match(/(.*),\s*(\w{2})\s*(\d{5})?$/)
             : null;
           const stateFromAddress = addressParts ? addressParts[2] : '';
-           console.log('W4 Edit Debug:', { // Keep edit debug log
-              addressCityStateZip: w4Form.ADDRESS_CITY_STATE_ZIP,
-              parsedState: stateFromAddress
-          });
 
           const qualifying_children_count = (w4Form.QUALIFYING_CHILDREN_AMOUNT || 0) / 2000;
           const other_dependents_count = (w4Form.OTHER_DEPENDENTS_AMOUNT || 0) / 500;
@@ -155,7 +136,6 @@ const W4Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
       }
     };
     loadData();
-    // Ensure states is included in dependency array if it might change
   }, [empid, orgid, isAdding, selectedFormId, states, onError]);
 
   // --- Total Credits Calculation Effect ---
@@ -169,13 +149,10 @@ const W4Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
 
-    // Handle numeric fields, ensuring non-negative values and allowing empty input to represent 0
     if (
       ['qualifying_children_count', 'other_dependents_count', 'other_credits_amount', 'other_income', 'deductions', 'extra_withholding'].includes(name)
     ) {
-      // Allow empty string for temporary input, treat as 0 for state update if needed, but allow float for amounts
-      const numValue = value === '' ? '' : parseFloat(value); // Keep as potentially empty string or float
-      // Store the raw (potentially empty) string or parsed number, prevent negative numbers
+      const numValue = value === '' ? '' : parseFloat(value);
       setFormData((prev) => ({ ...prev, [name]: (typeof numValue === 'number' && numValue < 0) ? 0 : numValue }));
     } else {
       setFormData((prev) => ({
@@ -245,8 +222,13 @@ const W4Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
     setIsExtractingSignature(true);
 
     try {
-      const pdfjsLib = await import('pdfjs-dist');
-      pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+      // FIX: Use explicit min.mjs path to avoid "Object.defineProperty" Webpack error
+      const pdfjsModule = await import('pdfjs-dist/build/pdf.min.mjs');
+      const pdfjsLib = pdfjsModule.default || pdfjsModule;
+
+      if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
+          pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+      }
 
       const arrayBuffer = await file.arrayBuffer();
       const header = new Uint8Array(arrayBuffer.slice(0, 5));
@@ -299,7 +281,6 @@ const W4Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
     }
   };
 
-  // Helper to ensure numeric fields are numbers (or 0 if empty/NaN) before sending to server
   const sanitizeNumericFields = (data) => {
       const numericFields = ['qualifying_children_count', 'other_dependents_count', 'other_credits_amount', 'other_income', 'deductions', 'extra_withholding'];
       const sanitizedData = { ...data };
@@ -310,12 +291,9 @@ const W4Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
       return sanitizedData;
   };
 
-
   const getPayload = () => {
-     // Sanitize numeric fields before creating the payload
     const sanitizedFormData = sanitizeNumericFields(formData);
 
-    // Get signature data based on selected type
     let signatureData = null;
     if (signatureType === 'canvas') {
       signatureData = sigCanvas.current?.isEmpty() ? null : sigCanvas.current.toDataURL('image/png');
@@ -324,9 +302,9 @@ const W4Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
     }
 
     return {
-      ...sanitizedFormData, // Use sanitized data
+      ...sanitizedFormData,
       address_city_state_zip: `${sanitizedFormData.city}, ${sanitizedFormData.state} ${sanitizedFormData.zip_code}`.trim(),
-      total_credits: totalCredits, // totalCredits is already calculated based on potentially empty/non-numeric inputs
+      total_credits: totalCredits,
       orgid,
       emp_id: empid,
       signature_data: signatureData,
@@ -362,7 +340,6 @@ const W4Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
     setIsSaving(true);
 
     try {
-      // Validate signature based on selected type
       if (signatureType === 'canvas') {
         if (sigCanvas.current?.isEmpty()) {
           throw new Error('Signature is required to submit the form.');
@@ -373,7 +350,7 @@ const W4Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
         }
       }
 
-      const payload = getPayload(); // Gets sanitized data with signature
+      const payload = getPayload();
 
       const result = await submitW4Form(payload, currentFormId);
       if (result.success) {
@@ -391,16 +368,13 @@ const W4Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
 
   const isSubmitted = existingForm?.FORM_STATUS === 'SUBMITTED' || existingForm?.FORM_STATUS === 'VERIFIED';
 
-  // Helper to display numeric values, showing empty if 0 or NaN/undefined
   const displayNumericValue = (value) => {
       const num = parseFloat(value);
-      // Display '' if value is literally '', null, undefined, NaN, or 0
       if (value === '' || value == null || isNaN(num) || num === 0) {
           return '';
       }
-      return value; // Otherwise, return the original value (which might be a string like '123.4')
+      return value;
   };
-
 
   return (
     <div className={styles.w9FormContainer}> {/* Reusing W9 styles */}
@@ -447,7 +421,6 @@ const W4Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
             <label>State*</label>
             <select name="state" value={formData.state ?? ''} onChange={handleChange} required disabled={isSubmitted}>
               <option value="">Select State</option>
-              {/* Ensure states is an array before mapping */}
               {Array.isArray(states) && states.map((state) => (
                 <option key={state.ID} value={state.VALUE}>{state.VALUE}</option>
               ))}
@@ -479,7 +452,7 @@ const W4Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
             <input
               type="checkbox"
               name="multiple_jobs_checked"
-              checked={!!formData.multiple_jobs_checked} // Use !! to ensure boolean
+              checked={!!formData.multiple_jobs_checked} 
               onChange={handleChange}
               disabled={isSubmitted}
               className={styles.formCheckbox}
