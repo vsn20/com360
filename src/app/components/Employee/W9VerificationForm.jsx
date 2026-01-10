@@ -58,9 +58,17 @@ const W9VerificationForm = ({ form, verifierEmpId, orgId, onBack, onSuccess, isA
     setError(null);
     setPdfSignatureFile(file);
     setIsExtractingSignature(true);
+    
     try {
-      const pdfjsLib = await import('pdfjs-dist');
-      pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+      // FIX: Use explicit min.mjs path to avoid "Object.defineProperty" Webpack error
+      const pdfjsModule = await import('pdfjs-dist/build/pdf.min.mjs');
+      const pdfjsLib = pdfjsModule.default || pdfjsModule;
+      
+      // Set worker source
+      if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
+          pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+      }
+
       const arrayBuffer = await file.arrayBuffer();
       const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
       const pdfDoc = await loadingTask.promise;
@@ -124,8 +132,7 @@ const W9VerificationForm = ({ form, verifierEmpId, orgId, onBack, onSuccess, isA
     try {
       const signatureData = getSignatureData();
       
-      // ✅ FIX: Pass the original numeric form.ID, not the prefixed one
-      // The `form` object from `getW9FormDetails` has the non-prefixed ID
+      // Pass the original numeric form.ID
       const result = await verifyW9Form({
         formId: form.ID, 
         verifierId: verifierEmpId,
