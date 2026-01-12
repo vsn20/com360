@@ -227,8 +227,8 @@ export async function completeSubscription(formData) {
     );
 
     await metaConnection.query(
-      `INSERT INTO C_EMP (emp_first_name, emp_middle_name, org_id, username, plan_number, email, active) 
-       VALUES (?, ?, ?, ?, 1, ?, 'Y')`,
+      `INSERT INTO C_EMP (emp_first_name, emp_middle_name, org_id, username, plan_number, email, active,isadmin) 
+       VALUES (?, ?, ?, ?, 1, ?, 'Y', 1)`,
       [firstName, lastName, metaOrgId, username, email]
     );
 

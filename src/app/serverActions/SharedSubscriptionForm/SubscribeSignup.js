@@ -297,8 +297,8 @@ export async function approveSubscription(reqData) {
     );
 
     await metaConnection.query(
-      `INSERT INTO C_EMP (emp_first_name, emp_middle_name, org_id, username, plan_number, email, active) 
-       VALUES (?, ?, ?, ?, ?, ?, 'Y')`,
+      `INSERT INTO C_EMP (emp_first_name, emp_middle_name, org_id, username, plan_number, email, active,isadmin) 
+       VALUES (?, ?, ?, ?, ?, ?, 'Y', 1)`,
       [first_name, last_name, metaOrgId, username, plan_id, email]
     );
 

@@ -110,7 +110,7 @@ export async function fetchExistingOrganizations() {
       LEFT JOIN C_SUBSCRIBER s ON o.org_id = s.org_id
       LEFT JOIN C_SUBSCRIBER_PLAN sp ON s.subscriber_id = sp.subscriber_id AND sp.active = 'Y'
       LEFT JOIN C_PLAN p ON sp.plan_id = p.plan_id
-      LEFT JOIN C_EMP e ON o.org_id = e.org_id
+      LEFT JOIN C_EMP e ON o.org_id = e.org_id AND e.isadmin=1
       GROUP BY o.org_id, o.org_name, p.plan_name, s.admin_first_name, s.admin_last_name
       ORDER BY o.org_name ASC
     `);
