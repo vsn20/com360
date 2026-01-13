@@ -348,7 +348,7 @@ export default function LeadAssignmentOverview({ orgId, billTypes: propBillTypes
                     <>
                       <div className="lead_view_group"><label>Emp Pay Rate</label><p>${parseFloat(assignmentDetails.EMP_PAY_RATE || 0).toFixed(2)}</p></div>
                       <div className="lead_view_group"><label>Created Project</label>
-                        <p><a href={`/projects/${assignmentDetails.CREATED_PRJ_ID}`} className="lead_link">View Project ({assignmentDetails.CREATED_PRJ_ID})</a></p>
+                        <p><a href={`/userscreens/project/overview/${assignmentDetails.CREATED_PRJ_ID}`} className="lead_link">View Project ({assignmentDetails.CREATED_PRJ_ID})</a></p>
                       </div>
                     </>
                   )}
