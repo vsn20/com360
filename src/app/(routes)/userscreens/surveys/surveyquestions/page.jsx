@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import React from 'react';
 import SurveyQuestions from '@/app/components/Surveys/SurveyQuestions/SurveyQuestions'; // Make sure this path matches your folder structure
 import { getSurveys } from '@/app/serverActions/Surveys/surveyActions';

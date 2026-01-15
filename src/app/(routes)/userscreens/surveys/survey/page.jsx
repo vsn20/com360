@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import React from 'react';
 import Surveys from '@/app/components/Surveys/Surveys/Surveys';
 import { getAssignedSurveys } from '@/app/serverActions/Surveys/Survey/Assignedsurvey';
