@@ -383,13 +383,11 @@ export async function deleteForm(formId) {
   }
 }
 
-// Get available form types
+// Get available form types (W-9 REMOVED)
 export async function getFormTypes() {
   return [
     { value: 'I9', label: 'I-9 Employment Eligibility Verification' },
     { value: 'W4', label: 'W-4 Employee Withholding Certificate' },
-    { value: 'W9', label: 'W-9 Request for Taxpayer Identification' },
     { value: 'I983', label: 'I-983 Training Plan for STEM OPT Students' },
   ];
 }
-

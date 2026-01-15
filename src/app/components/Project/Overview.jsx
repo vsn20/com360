@@ -9,7 +9,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 
 const addform_intialstate = { error: null, success: false };
 
-const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts, industries }) => {
+const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts, industries, projectIdFromUrl }) => {
   const searchparams = useSearchParams();
   const router = useRouter();
   const [selectedProject, setSelectedProject] = useState(null);
@@ -64,6 +64,20 @@ const Overview = ({ orgId, projects, billTypes, otBillTypes, payTerms, accounts,
   useEffect(() => {
     setPageInputValue(currentPage.toString());
   }, [currentPage]);
+
+  // ✅ NEW: Handle project ID from URL
+  useEffect(() => {
+    if (projectIdFromUrl && projects.length > 0 && !selectedProject && !isadd) {
+      const project = projects.find(p => p.PRJ_ID === projectIdFromUrl);
+      if (project) {
+        console.log('Auto-opening project from URL:', projectIdFromUrl);
+        handleRowClick(project);
+      } else {
+        console.warn('Project not found in list:', projectIdFromUrl);
+        setError(`Project ${projectIdFromUrl} not found`);
+      }
+    }
+  }, [projectIdFromUrl, projects, selectedProject, isadd]);
 
   const sortProjects = (a, b, column, direction) => {
     let aValue, bValue;

@@ -479,10 +479,12 @@ const Overview = ({ orgid, empid, organizations, countries, states,documenttypes
             <div style={{ display: activeTab === 'documents' ? 'block' : 'none' }}>
               {isLoadingDocs ? <p>Loading documents...</p> :
               <SubOrgDocument 
-                  suborgid={selectedorgid} 
+                  suborgid={selectedorgid}
+                  orgid={orgid}
                   documents={subOrgDocs}
                   onDocumentsUpdate={fetchDocuments}
                   documenttypes={documenttypes}
+                  states={states}
               />
               }
             </div>

@@ -48,11 +48,11 @@ export async function middleware(request) {
   }
 
   // -----------------------------------------------------------------------------
-  // 1. Handle Lead Assignment Resumes (/files/leads_assignment/resumes/{orgId}_{rowId}/...)
+  // 1. Handle Lead Assignment Resumes
   // -----------------------------------------------------------------------------
   const isLeadResumePath = pathname.match(/^\/files\/leads_assignment\/resumes\/(\d+)_.+$/);
   if (isLeadResumePath) {
-    const fileOrgId = isLeadResumePath[1]; // Extract Org ID from folder name
+    const fileOrgId = isLeadResumePath[1]; 
     const token = request.cookies.get('jwt_token')?.value;
 
     console.log('Lead Assignment Resume path detected:', pathname);
@@ -68,9 +68,8 @@ export async function middleware(request) {
         return NextResponse.redirect(new URL('/login', request.url));
       }
 
-      // Security Check: Ensure the user's Org ID matches the file's Org ID
       if (parseInt(decoded.orgid) === parseInt(fileOrgId)) {
-        return NextResponse.next(); // Access Granted
+        return NextResponse.next(); 
       } else {
         console.log(`Unauthorized: Org mismatch for Lead Resume. User: ${decoded.orgid}, File: ${fileOrgId}`);
         return new Response(JSON.stringify({ error: 'Unauthorized: Cannot access files from another organization' }), {
@@ -285,7 +284,6 @@ export async function middleware(request) {
         }
         return NextResponse.redirect(new URL('/login', request.url));
       } else if (jobToken || headerToken) {
-        // Job Token logic...
         const tokenToUse = jobToken || headerToken;
         const verifyResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/jobs/verify-resume-access`, {
           method: 'POST',
@@ -324,7 +322,36 @@ export async function middleware(request) {
   }
 
   // -----------------------------------------------------------------------------
-  // 10. General Page Authentication Fallback
+  // 10. Handle Project Detail Paths (/userscreens/projects/[projectId])
+  // -----------------------------------------------------------------------------
+  // UPDATED: Changed regex from /projects/ to /userscreens/projects/
+  const isProjectDetailPath = pathname.match(/^\/userscreens\/project\/overview\/[^\/]+$/);
+  if (isProjectDetailPath) {
+    const token = request.cookies.get('jwt_token')?.value;
+    if (!token) {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+    
+    try {
+      const verifyResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/verify-token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: `jwt_token=${token}` },
+        // Maps the dynamic project path to the generic permission key
+        body: JSON.stringify({ token, pathname: '/userscreens/project/overview' }),
+      });
+      
+      const result = await verifyResponse.json();
+      if (verifyResponse.ok && result.success) {
+        return NextResponse.next();
+      }
+      return NextResponse.redirect(new URL('/login', request.url));
+    } catch (error) {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+  }
+
+  // -----------------------------------------------------------------------------
+  // 11. General Page Authentication Fallback
   // -----------------------------------------------------------------------------
   const token = request.cookies.get('jwt_token')?.value;
 
@@ -389,7 +416,6 @@ export async function middleware(request) {
 
 export const config = {
   matcher: [
-    // This matcher captures everything including /files/..., hence the need to handle it above
     '/((?!api|_next/static|_next/image|favicon.ico|.well-known|pdf\\.worker\\.min\\.mjs).*)',
   ],
 };

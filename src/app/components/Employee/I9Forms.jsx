@@ -12,13 +12,11 @@ import {
   deleteForm as deleteI9Form,
 } from '@/app/serverActions/Employee/i9forms';
 import { getI9FormDetails } from '@/app/serverActions/forms/verification/actions';
-import * as w9Actions from '@/app/serverActions/forms/w9form/action';
 import * as w4Actions from '@/app/serverActions/forms/w4form/action';
 import * as i983Actions from '@/app/serverActions/forms/i983/actions';
 import styles from './I9Forms.module.css';
 import { useRouter } from 'next/navigation';
 import SignatureCanvas from 'react-signature-canvas';
-import W9Form from '../Forms/W9Form/W9Form';
 import W4Form from '../Forms/W4Form/W4Form';
 import I983Form from '../Forms/I983Form/I983Form';
 
@@ -118,21 +116,14 @@ const I9Forms = ({
     setError(null);
     setIsSaving(true);
     try {
-      const [i9FormsData, w9FormsData, w4FormsData, i983FormsData] = await Promise.all([
+      const [i9FormsData, w4FormsData, i983FormsData] = await Promise.all([
           fetchI9FormsByEmpId(empid, orgid),
-          w9Actions.fetchW9FormsByEmpId(empid, orgid),
           w4Actions.fetchW4FormsByEmpId(empid, orgid),
           i983Actions.fetchI983FormsByEmpId(empid, orgid),
       ]);
 
       const combinedForms = [
           ...i9FormsData.map(f => ({ ...f, FORM_TYPE: 'I9', SORT_DATE: f.EMPLOYEE_SIGNATURE_DATE || f.CREATED_AT })),
-          ...w9FormsData.map(w9Form => ({
-              ID: `W9-${w9Form.ID}`,
-              FORM_TYPE: 'W9',
-              SORT_DATE: w9Form.SUBMITTED_AT || w9Form.SIGNATURE_DATE || w9Form.CREATED_AT,
-              FORM_STATUS: w9Form.FORM_STATUS,
-          })),
           ...w4FormsData.map(w4Form => ({
               ID: `W4-${w4Form.ID}`,
               FORM_TYPE: 'W4',
@@ -169,13 +160,7 @@ const I9Forms = ({
         const numericId = numericIdMatch ? parseInt(numericIdMatch[1]) : parseInt(String(form.ID));
         if (isNaN(numericId)) throw new Error("Invalid Form ID.");
 
-        if (form.FORM_TYPE === 'W9') {
-            const editCheck = await w9Actions.canEditW9Form(numericId);
-            if (!editCheck.canEdit) setError(editCheck.reason);
-            setActiveView('w9form');
-            setIsEditing(false);
-        }
-        else if (form.FORM_TYPE === 'W4') {
+        if (form.FORM_TYPE === 'W4') {
             const editCheck = await w4Actions.canEditW4Form(numericId);
             if (!editCheck.canEdit) setError(editCheck.reason);
             setActiveView('w4form');
@@ -271,11 +256,6 @@ const I9Forms = ({
       return;
     }
 
-    if (selectedFormType === 'W9' && !employeeSuborgId) {
-      setError('Cannot create W-9 form: Employee must be assigned to a Sub-Organization first. Please update the employee\'s Employment Details.');
-      return;
-    }
-
     setShowFormTypeModal(false);
     setError(null);
     setSuccessMessage('');
@@ -283,10 +263,7 @@ const I9Forms = ({
     setIsAdding(true);
     setSelectedFormId(null);
 
-    if (selectedFormType === 'W9') {
-        setActiveView('w9form');
-    }
-    else if (selectedFormType === 'W4') {
+    if (selectedFormType === 'W4') {
         setActiveView('w4form');
     }
     else if (selectedFormType === 'I983') {
@@ -583,8 +560,6 @@ const I9Forms = ({
 
         if (form.FORM_TYPE === 'I9') {
             result = await deleteI9Form(numericId);
-        } else if (form.FORM_TYPE === 'W9') {
-            result = await w9Actions.deleteW9Form(numericId);
         } else if (form.FORM_TYPE === 'W4') {
             result = await w4Actions.deleteW4Form(numericId);
         } else if (form.FORM_TYPE === 'I983') {
@@ -611,7 +586,7 @@ const I9Forms = ({
         'EMPLOYER_VERIFIED': 'Verified (I-9)',
         'REJECTED': 'Rejected (I-9)'
      };
-     const statusMapW9W4 = {
+     const statusMapW4 = {
         'DRAFT': 'Draft',
         'SUBMITTED': 'Submitted',
         'VERIFIED': 'Verified (W-4)',
@@ -624,11 +599,8 @@ const I9Forms = ({
      };
 
     if (form.FORM_TYPE === 'I9') return statusMapI9[form.FORM_STATUS] || form.FORM_STATUS;
-    if (form.FORM_TYPE === 'W4') return statusMapW9W4[form.FORM_STATUS] || form.FORM_STATUS;
+    if (form.FORM_TYPE === 'W4') return statusMapW4[form.FORM_STATUS] || form.FORM_STATUS;
     if (form.FORM_TYPE === 'I983') return statusMapI983[form.FORM_STATUS] || form.FORM_STATUS;
-    if (form.FORM_TYPE === 'W9') {
-      return form.FORM_STATUS === 'SUBMITTED' ? 'Completed (W-9)' : (statusMapW9W4[form.FORM_STATUS] || form.FORM_STATUS);
-    }
     return form.FORM_STATUS;
   };
 
@@ -665,9 +637,6 @@ const I9Forms = ({
              else if (status === 'VERIFIED') color = colors.verified;
              else if (status === 'REJECTED') color = colors.rejected;
             break;
-        case 'W9':
-            if (status === 'SUBMITTED') color = colors.completed;
-            break;
         case 'I983':
              if (status === 'GENERATED') color = colors.verified;
              else if (status === 'DRAFT') color = colors.draft;
@@ -693,19 +662,6 @@ const I9Forms = ({
 
   const renderActiveForm = () => {
     switch (activeView) {
-      case 'w9form':
-        return (
-          <W9Form
-              empid={empid}
-              orgid={orgid}
-              onBack={handleBack}
-              states={states}
-              isAdding={isAdding}
-              selectedFormId={selectedFormId}
-              onError={setError}
-              onSuccess={(msg) => { setSuccessMessage(msg); loadAllForms(); }}
-          />
-        );
       case 'w4form':
         return (
           <W4Form
@@ -1089,7 +1045,6 @@ const I9Forms = ({
                     const isFinalStateForEmployee = (
                         (form.FORM_TYPE === 'I9' && (form.FORM_STATUS === 'EMPLOYER_VERIFIED' || form.FORM_STATUS === 'EMPLOYEE_SUBMITTED')) ||
                         (form.FORM_TYPE === 'W4' && (form.FORM_STATUS === 'VERIFIED' || form.FORM_STATUS === 'SUBMITTED')) ||
-                        (form.FORM_TYPE === 'W9' && form.FORM_STATUS === 'SUBMITTED') ||
                         form.FORM_STATUS === 'REJECTED'
                     );
 
