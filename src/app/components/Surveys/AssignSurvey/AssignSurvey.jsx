@@ -141,16 +141,16 @@ const AssignSurvey = ({ surveys, employees, currentUser }) => {
                                 <th className="survey_th">Title</th>
                                 <th className="survey_th">Category</th>
                                 <th className="survey_th">End Date</th>
-                                <th className="survey_th">Action</th>
+                                {/* <th className="survey_th">Action</th> */}
                             </tr>
                         </thead>
                         <tbody>
                             {surveys.map(s => (
-                                <tr key={s.survey_id} className="survey_tr">
+                                <tr key={s.survey_id} className="survey_tr" onClick={() => handleOpenAssign(s)} style={{cursor:'pointer'}}>
                                     <td className="survey_td"><strong>{s.title}</strong></td>
                                     <td className="survey_td">{s.category}</td>
                                     <td className="survey_td">{formatDate(s.end_date)}</td>
-                                    <td className="survey_td">
+                                    {/* <td className="survey_td">
                                         <button 
                                             className="survey_btn survey_btn_primary survey_btn_sm"
                                             onClick={() => handleOpenAssign(s)}
@@ -158,7 +158,7 @@ const AssignSurvey = ({ surveys, employees, currentUser }) => {
                                         >
                                             {loading ? '...' : 'Assign'}
                                         </button>
-                                    </td>
+                                    </td> */}
                                 </tr>
                             ))}
                             {surveys.length === 0 && <tr><td colSpan="4" className="survey_td" style={{textAlign:'center'}}>No active surveys found.</td></tr>}

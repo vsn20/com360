@@ -196,17 +196,17 @@ const SurveyQuestions = ({ initialMySurveys, initialOrgSurveys, currentUser }) =
                             <th className="survey_th">Category</th>
                             <th className="survey_th">End Date</th>
                             <th className="survey_th">Status</th>
-                            <th className="survey_th">Action</th>
+                            {/* <th className="survey_th">Action</th> */}
                         </tr>
                     </thead>
                     <tbody>
                         {mySurveys.map(s => (
-                            <tr key={s.survey_id} className="survey_tr">
+                            <tr key={s.survey_id} className="survey_tr" onClick={() => openBuilder(s)} style={{cursor:'pointer'}}>
                                 <td className="survey_td"><strong>{s.title}</strong></td>
                                 <td className="survey_td">{s.category}</td>
                                 <td className="survey_td">{formatDate(s.end_date)}</td>
                                 <td className="survey_td"><span className={`survey_badge ${s.is_active ? 'survey_badge_active' : 'survey_badge_inactive'}`}>{s.is_active ? 'Active' : 'Inactive'}</span></td>
-                                <td className="survey_td"><button className="survey_btn survey_btn_primary survey_btn_sm" onClick={() => openBuilder(s)}>Edit / Build</button></td>
+                                {/* <td className="survey_td"><button className="survey_btn survey_btn_primary survey_btn_sm" onClick={() => openBuilder(s)}>Edit / Build</button></td> */}
                             </tr>
                         ))}
                     </tbody>
