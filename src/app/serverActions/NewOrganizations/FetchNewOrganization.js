@@ -93,6 +93,7 @@ export async function fetchRequests() {
 }
 
 // --- 1.1 FETCH EXISTING ORGANIZATIONS ---
+// --- 1.1 FETCH EXISTING ORGANIZATIONS ---
 export async function fetchExistingOrganizations() {
   const metaPool = MetaDBconnection();
   try {
@@ -101,17 +102,33 @@ export async function fetchExistingOrganizations() {
         o.org_id,
         o.org_name,
         COALESCE(p.plan_name, 'N/A') as plan_name,
-        TRIM(CONCAT(COALESCE(s.admin_first_name, ''), ' ', COALESCE(s.admin_last_name, ''))) as admin_name,
-        (SELECT email FROM C_EMP WHERE org_id = o.org_id ORDER BY created_at ASC LIMIT 1) as admin_email,
+        
+        -- 1. Fetch Admin Name specifically from the Employee table where isadmin=1
+        (SELECT TRIM(CONCAT(COALESCE(emp_first_name, ''), ' ', COALESCE(emp_middle_name, ''))) 
+         FROM C_EMP 
+         WHERE org_id = o.org_id AND isadmin = 1 
+         LIMIT 1) as admin_name,
+
+        -- 2. Fetch Admin Email specifically from the Employee table where isadmin=1
+        (SELECT email 
+         FROM C_EMP 
+         WHERE org_id = o.org_id AND isadmin = 1 
+         LIMIT 1) as admin_email,
+
+        -- 3. Count ALL employees (linked via the main join 'e' below)
         COUNT(e.emp_id) as total_employees,
         SUM(CASE WHEN e.active = 'Y' THEN 1 ELSE 0 END) as active_employees,
         SUM(CASE WHEN e.active = 'N' THEN 1 ELSE 0 END) as inactive_employees
+
       FROM C_ORG o
       LEFT JOIN C_SUBSCRIBER s ON o.org_id = s.org_id
       LEFT JOIN C_SUBSCRIBER_PLAN sp ON s.subscriber_id = sp.subscriber_id AND sp.active = 'Y'
       LEFT JOIN C_PLAN p ON sp.plan_id = p.plan_id
-      LEFT JOIN C_EMP e ON o.org_id = e.org_id AND e.isadmin=1
-      GROUP BY o.org_id, o.org_name, p.plan_name, s.admin_first_name, s.admin_last_name
+      
+      -- 4. Main Join for counts: REMOVED "AND e.isadmin=1" so we get everyone
+      LEFT JOIN C_EMP e ON o.org_id = e.org_id
+      
+      GROUP BY o.org_id, o.org_name, p.plan_name
       ORDER BY o.org_name ASC
     `);
     return rows;
