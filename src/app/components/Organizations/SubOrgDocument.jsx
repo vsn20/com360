@@ -6,6 +6,14 @@ import { saveW9FormForSubOrg, submitW9FormForSubOrg } from '@/app/serverActions/
 import SignatureCanvas from 'react-signature-canvas';
 import styles from './suborgdocument.module.css';
 
+const getTodayDate = () => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`; // Format: YYYY-MM-DD
+};
+
 const SubOrgDocument = ({ suborgid, orgid, documents: initialDocuments, onDocumentsUpdate, documenttypes, states }) => {
   // View States: 'list', 'add', 'detail', 'w9form'
   const [viewState, setViewState] = useState('list');
@@ -44,12 +52,13 @@ const SubOrgDocument = ({ suborgid, orgid, documents: initialDocuments, onDocume
     signature_date: new Date().toISOString().split('T')[0],
   });
   const [formattedTin, setFormattedTin] = useState('');
+  
+  // ✅ UPDATED: Only canvas and image upload (removed PDF)
   const [signatureType, setSignatureType] = useState('canvas');
   const w9SigCanvas = React.useRef(null);
-  const pdfFileInputRef = React.useRef(null);
-  const [pdfSignatureFile, setPdfSignatureFile] = useState(null);
-  const [pdfSignaturePreview, setPdfSignaturePreview] = useState(null);
-  const [isExtractingSignature, setIsExtractingSignature] = useState(false);
+  const imageFileInputRef = React.useRef(null);
+  const [imageSignatureFile, setImageSignatureFile] = useState(null);
+  const [imageSignaturePreview, setImageSignaturePreview] = useState(null);
 
   // Filter/Sort States
   const [searchQuery, setSearchQuery] = useState('');
@@ -103,35 +112,34 @@ const SubOrgDocument = ({ suborgid, orgid, documents: initialDocuments, onDocume
   };
 
   const handleW9FormClick = () => {
-    setViewState('w9form');
-    setError(null);
-    // Reset W-9 form data
-    setW9FormData({
-      name: '',
-      business_name: '',
-      tax_classification: 'INDIVIDUAL',
-      llc_classification_code: '',
-      exempt_payee_code: '',
-      exemption_from_fatca_code: '',
-      address_street: '',
-      city: '',
-      state: '',
-      zip_code: '',
-      taxpayer_identification_number: '',
-      signature_date: new Date().toISOString().split('T')[0],
-    });
-    setFormattedTin('');
-    setSignatureType('canvas');
-    setPdfSignatureFile(null);
-    setPdfSignaturePreview(null);
-    setIsExtractingSignature(false);
-    if (w9SigCanvas.current) {
-      w9SigCanvas.current.clear();
-    }
-    if (pdfFileInputRef.current) {
-      pdfFileInputRef.current.value = '';
-    }
-  };
+  setViewState('w9form');
+  setError(null);
+  // Reset W-9 form data with TODAY'S date
+  setW9FormData({
+    name: '',
+    business_name: '',
+    tax_classification: 'INDIVIDUAL',
+    llc_classification_code: '',
+    exempt_payee_code: '',
+    exemption_from_fatca_code: '',
+    address_street: '',
+    city: '',
+    state: '',
+    zip_code: '',
+    taxpayer_identification_number: '',
+    signature_date: getTodayDate(), // ✅ Use today's date
+  });
+  setFormattedTin('');
+  setSignatureType('canvas');
+  setImageSignatureFile(null);
+  setImageSignaturePreview(null);
+  if (w9SigCanvas.current) {
+    w9SigCanvas.current.clear();
+  }
+  if (imageFileInputRef.current) {
+    imageFileInputRef.current.value = '';
+  }
+};
 
   const handleRowClick = (doc) => {
     setSelectedDoc(doc);
@@ -151,24 +159,23 @@ const SubOrgDocument = ({ suborgid, orgid, documents: initialDocuments, onDocume
 
   // W-9 Form Handlers
   const formatTin = (value, taxClass) => {
-    if (!value) return '';
-    const digitsOnly = value.replace(/\D/g, '');
-    
-    if (taxClass === 'INDIVIDUAL') {
-      // SSN: XXX-XX-XXXX (but don't restrict length)
-      if (digitsOnly.length <= 3) return digitsOnly;
-      if (digitsOnly.length <= 5) return `${digitsOnly.slice(0, 3)}-${digitsOnly.slice(3)}`;
-      if (digitsOnly.length <= 9) return `${digitsOnly.slice(0, 3)}-${digitsOnly.slice(3, 5)}-${digitsOnly.slice(5)}`;
-      // Allow more than 9 digits without formatting
-      return `${digitsOnly.slice(0, 3)}-${digitsOnly.slice(3, 5)}-${digitsOnly.slice(5, 9)}${digitsOnly.slice(9)}`;
-    } else {
-      // EIN: XX-XXXXXXX (but don't restrict length)
-      if (digitsOnly.length <= 2) return digitsOnly;
-      if (digitsOnly.length <= 9) return `${digitsOnly.slice(0, 2)}-${digitsOnly.slice(2)}`;
-      // Allow more than 9 digits without formatting
-      return `${digitsOnly.slice(0, 2)}-${digitsOnly.slice(2, 9)}${digitsOnly.slice(9)}`;
-    }
-  };
+  if (!value) return '';
+  const digitsOnly = value.replace(/\D/g, '');
+  
+  // ✅ STRICT: Limit to 9 digits maximum
+  const limitedDigits = digitsOnly.slice(0, 9);
+  
+  if (taxClass === 'INDIVIDUAL') {
+    // SSN: XXX-XX-XXXX
+    if (limitedDigits.length <= 3) return limitedDigits;
+    if (limitedDigits.length <= 5) return `${limitedDigits.slice(0, 3)}-${limitedDigits.slice(3)}`;
+    return `${limitedDigits.slice(0, 3)}-${limitedDigits.slice(3, 5)}-${limitedDigits.slice(5, 9)}`;
+  } else {
+    // EIN: XX-XXXXXXX
+    if (limitedDigits.length <= 2) return limitedDigits;
+    return `${limitedDigits.slice(0, 2)}-${limitedDigits.slice(2, 9)}`;
+  }
+};
 
   const handleW9InputChange = (e) => {
     const { name, value } = e.target;
@@ -195,160 +202,111 @@ const SubOrgDocument = ({ suborgid, orgid, documents: initialDocuments, onDocume
     }
   };
 
-  const handlePdfSignatureUpload = async (e) => {
+  // ✅ NEW: Handle image signature upload (PNG, JPG, JPEG only)
+  const handleImageSignatureUpload = (e) => {
     const file = e.target.files[0];
     if (!file) {
-      setPdfSignatureFile(null);
-      setPdfSignaturePreview(null);
+      setImageSignatureFile(null);
+      setImageSignaturePreview(null);
       return;
     }
 
-    if (file.type !== 'application/pdf') {
-      setError('Please upload a valid PDF file');
-      if (pdfFileInputRef.current) pdfFileInputRef.current.value = '';
+    // ✅ Validate file type
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+    if (!validTypes.includes(file.type)) {
+      setError('Please upload a PNG, JPG, or JPEG image file');
+      if (imageFileInputRef.current) imageFileInputRef.current.value = '';
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      setError('PDF file size must be less than 5MB');
-      if (pdfFileInputRef.current) pdfFileInputRef.current.value = '';
+    // ✅ Validate file size (2MB max)
+    const maxSize = 2 * 1024 * 1024; // 2MB
+    if (file.size > maxSize) {
+      setError(`Image size must be less than 2MB. Your file is ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+      if (imageFileInputRef.current) imageFileInputRef.current.value = '';
       return;
     }
 
     setError(null);
-    setPdfSignatureFile(file);
-    setIsExtractingSignature(true);
+    setImageSignatureFile(file);
 
-    try {
-      console.log('📄 PDF Upload - Loading pdfjs-dist library...');
-      // Import pdfjs-dist
-      const pdfjsModule = await import('pdfjs-dist/build/pdf.min.mjs');
-      const pdfjsLib = pdfjsModule.default || pdfjsModule;
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setImageSignaturePreview(event.target.result);
+    };
+    reader.readAsDataURL(file);
+  };
 
-      console.log('📄 PDF Upload - pdfjs-dist version:', pdfjsLib.version);
-      
-      // Set worker source
-      if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
-        pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
-      }
-      console.log('📄 PDF Upload - Worker source set');
-
-      // Read file as ArrayBuffer
-      console.log('📄 PDF Upload - Reading file...');
-      const arrayBuffer = await file.arrayBuffer();
-      console.log('📄 PDF Upload - File read, size:', arrayBuffer.byteLength);
-      
-      // Validate PDF header
-      const header = new Uint8Array(arrayBuffer.slice(0, 5));
-      const headerStr = String.fromCharCode(...header);
-      console.log('📄 PDF Upload - Header:', headerStr);
-      
-      if (headerStr !== '%PDF-') {
-        throw new Error('Invalid PDF file');
-      }
-      
-      // Load PDF document
-      console.log('📄 PDF Upload - Loading PDF...');
-      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-      const pdfDoc = await loadingTask.promise;
-      console.log('📄 PDF Upload - PDF loaded, pages:', pdfDoc.numPages);
-      
-      // Get first page
-      console.log('📄 PDF Upload - Getting first page...');
-      const page = await pdfDoc.getPage(1);
-      console.log('📄 PDF Upload - Page loaded');
-      
-      // Render to canvas
-      const scale = 2;
-      const viewport = page.getViewport({ scale });
-      console.log('📄 PDF Upload - Viewport:', viewport.width, 'x', viewport.height);
-      
-      const canvas = document.createElement('canvas');
-      const context = canvas.getContext('2d');
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-      
-      console.log('📄 PDF Upload - Rendering to canvas...');
-      await page.render({
-        canvasContext: context,
-        viewport: viewport,
-      }).promise;
-      console.log('📄 PDF Upload - Render complete');
-      
-      // Convert to PNG
-      const signatureDataUrl = canvas.toDataURL('image/png');
-      console.log('📄 PDF Upload - PNG created, length:', signatureDataUrl.length);
-      
-      setPdfSignaturePreview(signatureDataUrl);
-      setIsExtractingSignature(false);
-      console.log('✅ PDF Upload - Success!');
-
-    } catch (err) {
-      console.error('❌ PDF Upload - Error:', err);
-      setError('Failed to process PDF: ' + err.message);
-      setIsExtractingSignature(false);
-      setPdfSignatureFile(null);
-      if (pdfFileInputRef.current) pdfFileInputRef.current.value = '';
+  const clearImageSignature = () => {
+    setImageSignatureFile(null);
+    setImageSignaturePreview(null);
+    if (imageFileInputRef.current) {
+      imageFileInputRef.current.value = '';
     }
   };
 
-  const clearPdfSignature = () => {
-    setPdfSignatureFile(null);
-    setPdfSignaturePreview(null);
-    if (pdfFileInputRef.current) {
-      pdfFileInputRef.current.value = '';
-    }
-  };
-
+  // ✅ UPDATED: W-9 Submit handler - only handle image signatures
   const handleW9Submit = async (e) => {
-    e.preventDefault();
-    setError(null);
-    setIsLoading(true);
+  e.preventDefault();
+  setError(null);
+  setIsLoading(true);
 
-    try {
-      // Validate signature based on type
-      let signatureData = null;
-      
-      if (signatureType === 'canvas') {
-        if (w9SigCanvas.current?.isEmpty()) {
-          throw new Error('Please provide a signature');
-        }
-        signatureData = w9SigCanvas.current.toDataURL('image/png');
-      } else if (signatureType === 'pdf') {
-        if (!pdfSignaturePreview) {
-          throw new Error('Please upload a PDF with your signature');
-        }
-        // pdfSignaturePreview is already a PNG data URL from the canvas
-        signatureData = pdfSignaturePreview;
-      }
-
-      if (!signatureData) {
-        throw new Error('Signature is required');
-      }
-
-      // Prepare form data
-      const submitData = {
-        suborgid,
-        orgid,
-        signature_data: signatureData,
-        ...w9FormData,
-      };
-
-      // Submit the form
-      const result = await submitW9FormForSubOrg(submitData);
-
-      if (result.success) {
-        if (onDocumentsUpdate) await onDocumentsUpdate();
-        handleBackClick();
-      } else {
-        throw new Error(result.error || 'Failed to submit form');
-      }
-    } catch (err) {
-      setError(err.message || 'Failed to submit W-9 form');
-    } finally {
-      setIsLoading(false);
+  try {
+    // ✅ Validate TIN length (must be exactly 9 digits)
+    const tinDigits = (w9FormData.taxpayer_identification_number || '').replace(/\D/g, '');
+    if (tinDigits.length !== 9) {
+      throw new Error(`Taxpayer Identification Number must be exactly 9 digits. You entered ${tinDigits.length} digit${tinDigits.length !== 1 ? 's' : ''}.`);
     }
-  };
+
+    // Validate signature based on type
+    let signatureData = null;
+    
+    if (signatureType === 'canvas') {
+      if (w9SigCanvas.current?.isEmpty()) {
+        throw new Error('Please provide a signature');
+      }
+      signatureData = w9SigCanvas.current.toDataURL('image/png');
+    } else if (signatureType === 'image') {
+      if (!imageSignaturePreview) {
+        throw new Error('Please upload a signature image');
+      }
+      signatureData = imageSignaturePreview;
+    }
+
+    if (!signatureData) {
+      throw new Error('Signature is required');
+    }
+
+    // ✅ Validate it's an image format
+    if (!signatureData.startsWith('data:image/')) {
+      throw new Error('Invalid signature format. Only images are accepted.');
+    }
+
+    // Prepare form data
+    const submitData = {
+      suborgid,
+      orgid,
+      signature_data: signatureData,
+      ...w9FormData,
+    };
+
+    // Submit the form
+    const result = await submitW9FormForSubOrg(submitData);
+
+    if (result.success) {
+      if (onDocumentsUpdate) await onDocumentsUpdate();
+      handleBackClick();
+    } else {
+      throw new Error(result.error || 'Failed to submit form');
+    }
+  } catch (err) {
+    setError(err.message || 'Failed to submit W-9 form');
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -432,7 +390,6 @@ const SubOrgDocument = ({ suborgid, orgid, documents: initialDocuments, onDocume
             document_name: form.documentName,
             document_type: form.documentType,
             document_purpose: form.documentPurpose,
-            // Note: path updates might require a refresh or refetch return from server action
         };
         setSelectedDoc(updatedDoc);
         setEditingDetail(false);
@@ -629,19 +586,35 @@ const SubOrgDocument = ({ suborgid, orgid, documents: initialDocuments, onDocume
           
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
-              <label>
-                Taxpayer Identification Number (SSN or EIN)*
-              </label>
-              <input
-                type="text"
-                name="taxpayer_identification_number"
-                value={formattedTin}
-                onChange={handleW9InputChange}
-                className={styles.formInput}
-                placeholder={w9FormData.tax_classification === 'INDIVIDUAL' ? '###-##-####' : '##-#######'}
-                required
-              />
-            </div>
+  <label>
+    Taxpayer Identification Number (SSN or EIN)*
+    <span style={{ fontSize: '12px', color: '#666', marginLeft: '8px' }}>
+      (Must be exactly 9 digits)
+    </span>
+  </label>
+  <input
+    type="text"
+    name="taxpayer_identification_number"
+    value={formattedTin}
+    onChange={handleW9InputChange}
+    className={styles.formInput}
+    placeholder={w9FormData.tax_classification === 'INDIVIDUAL' ? '###-##-####' : '##-#######'}
+    maxLength={w9FormData.tax_classification === 'INDIVIDUAL' ? 11 : 10} // ✅ Limit input length
+    required
+  />
+  {formattedTin && (
+    <span style={{ 
+      fontSize: '12px', 
+      color: (w9FormData.taxpayer_identification_number || '').replace(/\D/g, '').length === 9 ? '#28a745' : '#dc3545',
+      marginTop: '4px',
+      display: 'block'
+    }}>
+      {(w9FormData.taxpayer_identification_number || '').replace(/\D/g, '').length} of 9 digits entered
+      {(w9FormData.taxpayer_identification_number || '').replace(/\D/g, '').length === 9 && ' ✓'}
+    </span>
+  )}
+</div>
+
             <div className={styles.formGroup}>
               <label>Exempt Payee Code (if applicable)</label>
               <input
@@ -697,11 +670,11 @@ const SubOrgDocument = ({ suborgid, orgid, documents: initialDocuments, onDocume
                 <input
                   type="radio"
                   name="signatureType"
-                  value="pdf"
-                  checked={signatureType === 'pdf'}
+                  value="image"
+                  checked={signatureType === 'image'}
                   onChange={(e) => setSignatureType(e.target.value)}
                 />
-                <span>Upload Signed PDF</span>
+                <span>Upload Signature Image</span>
               </label>
             </div>
 
@@ -729,33 +702,27 @@ const SubOrgDocument = ({ suborgid, orgid, documents: initialDocuments, onDocume
               </>
             ) : (
               <>
-                <label style={{ marginTop: '10px', display: 'block' }}>Upload Signed PDF*</label>
+                <label style={{ marginTop: '10px', display: 'block' }}>Upload Signature Image*</label>
                 <p style={{ fontSize: '13px', color: '#666', marginTop: '5px', marginBottom: '10px' }}>
-                  Upload a PDF containing your signature. We'll extract the signature automatically.
+                  Upload a PNG, JPG, or JPEG image of your signature (Max size: 2MB)
                 </p>
                 <input
-                  ref={pdfFileInputRef}
+                  ref={imageFileInputRef}
                   type="file"
-                  accept="application/pdf"
-                  onChange={handlePdfSignatureUpload}
+                  accept="image/png,image/jpeg,image/jpg"
+                  onChange={handleImageSignatureUpload}
                   className={styles.formInput}
                   style={{ marginTop: '10px' }}
                 />
                 
-                {isExtractingSignature && (
-                  <p style={{ color: '#007bff', fontSize: '14px', marginTop: '10px' }}>
-                    Extracting signature from PDF...
-                  </p>
-                )}
-
-                {pdfSignaturePreview && !isExtractingSignature && (
+                {imageSignaturePreview && (
                   <div style={{ marginTop: '15px', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
                     <p style={{ margin: '0 0 10px 0', fontSize: '13px', fontWeight: 'bold', color: '#28a745' }}>
-                      ✓ Signature extracted successfully:
+                      ✓ Signature preview:
                     </p>
                     <img
-                      src={pdfSignaturePreview}
-                      alt="Extracted Signature"
+                      src={imageSignaturePreview}
+                      alt="Signature Preview"
                       style={{ 
                         maxWidth: '400px', 
                         maxHeight: '150px', 
@@ -767,11 +734,11 @@ const SubOrgDocument = ({ suborgid, orgid, documents: initialDocuments, onDocume
                     />
                     <button 
                       type="button" 
-                      onClick={clearPdfSignature}
+                      onClick={clearImageSignature}
                       className={styles.cancelButton}
                       style={{ marginTop: '10px' }}
                     >
-                      Remove & Upload Different PDF
+                      Remove & Upload Different Image
                     </button>
                   </div>
                 )}
@@ -1039,7 +1006,6 @@ const SubOrgDocument = ({ suborgid, orgid, documents: initialDocuments, onDocume
                 <th className={styles.tableHeader} onClick={() => requestSort('document_name')}>Name</th>
                 <th className={styles.tableHeader}>Attachment</th>
                 <th className={styles.tableHeader} onClick={() => requestSort('document_type')}>Type</th>
-                {/* <th className={styles.tableHeader} onClick={() => requestSort('last_updated_date')}>Last Updated</th> */}
                 <th className={styles.tableHeader}>Purpose</th>
                 <th className={styles.tableHeader}>Action</th>
               </tr>
@@ -1063,7 +1029,6 @@ const SubOrgDocument = ({ suborgid, orgid, documents: initialDocuments, onDocume
                     ) : 'No File'}
                   </td>
                   <td className={styles.tableCell}>{getTypeName(d.document_type)}</td>
-                  {/* <td className={styles.tableCell}>{d.last_updated_date || 'N/A'}</td> */}
                   <td className={styles.tableCell}>{d.document_purpose || 'N/A'}</td>
                   <td className={styles.tableCell}>
                     <button className={styles.deleteButton} onClick={(e) => handleDelete(e, d.id)}>Delete</button>

@@ -8,14 +8,75 @@ import {
   submitW4Form,
 } from '@/app/serverActions/forms/w4form/action';
 import SignatureCanvas from 'react-signature-canvas';
-import styles from '../W9Form/W9Forms.module.css'; // Reusing W9Form styles
+import styles from '../W9Form/W9Forms.module.css';
 
-const formatDate = (date) => {
-  if (!date || isNaN(new Date(date))) return 'N/A';
-  const d = new Date(date);
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${month}/${day}/${d.getFullYear()}`;
+// --- DATE UTILITIES (MATCHING I-983 LOGIC) ---
+
+// Get today's date in local timezone YYYY-MM-DD
+const getLocalTodayDate = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+// Format date for input[type="date"] ensuring local time is respected
+const formatDateForInput = (dateStr) => {
+    if (!dateStr) return '';
+    try {
+        // Handle YYYY-MM-DD or YYYY-MM-DDTHH...
+        if (typeof dateStr === 'string') {
+            const cleanDate = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
+            const parts = cleanDate.split('-');
+            if (parts.length === 3) {
+                const year = parts[0];
+                const month = parts[1];
+                const day = parts[2];
+                if (year < 1900 || year > 2100) return '';
+                return `${year}-${month}-${day}`;
+            }
+        }
+        
+        // Fallback for Date objects
+        const date = new Date(dateStr);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        if (year < 1900 || year > 2100) return '';
+        return `${year}-${month}-${day}`;
+    } catch (e) { return ''; }
+};
+
+// Helper function to format dates for display (MM/DD/YYYY)
+const formatDateDisplay = (dateStr) => {
+    if (!dateStr) return 'N/A';
+    try {
+        let year, month, day;
+        
+        // Handle YYYY-MM-DD or YYYY-MM-DDTHH...
+        if (typeof dateStr === 'string') {
+            const cleanDate = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
+            const parts = cleanDate.split('-');
+            if (parts.length === 3) {
+                year = parts[0];
+                month = parts[1];
+                day = parts[2];
+                const yearNum = parseInt(year);
+                if (yearNum < 1900 || yearNum > 2100) return 'Invalid Date';
+                return `${String(month).padStart(2, '0')}/${String(day).padStart(2, '0')}/${year}`;
+            }
+        }
+        
+        // Fallback for Date objects
+        const d = new Date(dateStr);
+        year = d.getFullYear();
+        month = String(d.getMonth() + 1).padStart(2, '0');
+        day = String(d.getDate()).padStart(2, '0');
+        
+        if (year < 1900 || year > 2100) return 'Invalid Date';
+        return `${month}/${day}/${year}`;
+    } catch (e) { return 'Invalid Date'; }
 };
 
 const W4Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onError, onSuccess }) => {
@@ -35,7 +96,7 @@ const W4Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
     other_income: 0,
     deductions: 0,
     extra_withholding: 0,
-    signature_date: new Date().toISOString().split('T')[0],
+    signature_date: getLocalTodayDate(),
   });
 
   const [totalCredits, setTotalCredits] = useState(0);
@@ -44,14 +105,13 @@ const W4Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
   const [currentFormId, setCurrentFormId] = useState(null);
   const [formattedSsn, setFormattedSsn] = useState('');
   const sigCanvas = useRef(null);
-  const [timestamp, setTimestamp] = useState(Date.now()); // Used for cache-busting images
+  const [timestamp, setTimestamp] = useState(Date.now());
   
-  // Signature type state (canvas or pdf)
-  const pdfFileInputRef = useRef(null);
+  // Signature type state (canvas or image)
+  const imageFileInputRef = useRef(null);
   const [signatureType, setSignatureType] = useState('canvas');
-  const [pdfSignatureFile, setPdfSignatureFile] = useState(null);
-  const [pdfSignaturePreview, setPdfSignaturePreview] = useState(null);
-  const [isExtractingSignature, setIsExtractingSignature] = useState(false);
+  const [imageSignatureFile, setImageSignatureFile] = useState(null);
+  const [imageSignaturePreview, setImageSignaturePreview] = useState(null);
 
   // --- Data Loading Effect ---
   useEffect(() => {
@@ -88,7 +148,7 @@ const W4Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
             other_income: 0,
             deductions: 0,
             extra_withholding: 0,
-            signature_date: new Date().toISOString().split('T')[0],
+            signature_date: getLocalTodayDate(),
           });
           setFormattedSsn(ssn);
 
@@ -124,9 +184,7 @@ const W4Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
             other_income: w4Form.OTHER_INCOME || 0,
             deductions: w4Form.DEDUCTIONS || 0,
             extra_withholding: w4Form.EXTRA_WITHHOLDING || 0,
-            signature_date: w4Form.EMPLOYEE_SIGNATURE_DATE
-              ? new Date(w4Form.EMPLOYEE_SIGNATURE_DATE).toISOString().split('T')[0]
-              : new Date().toISOString().split('T')[0],
+            signature_date: formatDateForInput(w4Form.EMPLOYEE_SIGNATURE_DATE) || getLocalTodayDate(),
           });
           setFormattedSsn(formatSsn(w4Form.SSN));
         }
@@ -162,7 +220,6 @@ const W4Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
     }
   };
 
-
   const formatSsn = (value) => {
     if (!value) return '';
     const digits = value.replace(/\D/g, '');
@@ -179,15 +236,15 @@ const W4Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
 
   const clearSignature = () => sigCanvas.current?.clear();
 
-  // Handle signature type change (canvas or pdf)
+  // Handle signature type change (canvas or image)
   const handleSignatureTypeChange = (e) => {
     const newType = e.target.value;
     setSignatureType(newType);
     if (newType === 'canvas') {
-      setPdfSignatureFile(null);
-      setPdfSignaturePreview(null);
-      if (pdfFileInputRef.current) {
-        pdfFileInputRef.current.value = '';
+      setImageSignatureFile(null);
+      setImageSignaturePreview(null);
+      if (imageFileInputRef.current) {
+        imageFileInputRef.current.value = '';
       }
     } else {
       if (sigCanvas.current) {
@@ -196,110 +253,76 @@ const W4Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
     }
   };
 
-  // Handle PDF file selection and extract signature using client-side rendering
-  const handlePdfFileChange = async (e) => {
-    const file = e.target.files?.[0];
+  // --- Image Upload Handler (Matching I-983) ---
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
     if (!file) {
-      setPdfSignatureFile(null);
-      setPdfSignaturePreview(null);
+      setImageSignatureFile(null);
+      setImageSignaturePreview(null);
       return;
     }
 
-    if (file.type !== 'application/pdf') {
-      onError('Please upload a valid PDF file.');
-      e.target.value = '';
+    // Validate types
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+    if (!validTypes.includes(file.type)) {
+      onError('Please upload a PNG, JPG, or JPEG image file.');
+      if (imageFileInputRef.current) imageFileInputRef.current.value = '';
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      onError('PDF file size must be less than 5MB.');
-      e.target.value = '';
+    // Validate size (2MB)
+    const maxSize = 2 * 1024 * 1024; // 2MB
+    if (file.size > maxSize) {
+      onError(`Image size must be less than 2MB. Your file is ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+      if (imageFileInputRef.current) imageFileInputRef.current.value = '';
       return;
     }
 
-    onError(null);
-    setPdfSignatureFile(file);
-    setIsExtractingSignature(true);
+    setImageSignatureFile(file);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setImageSignaturePreview(event.target.result);
+    };
+    reader.readAsDataURL(file);
+  };
 
-    try {
-      // FIX: Use explicit min.mjs path to avoid "Object.defineProperty" Webpack error
-      const pdfjsModule = await import('pdfjs-dist/build/pdf.min.mjs');
-      const pdfjsLib = pdfjsModule.default || pdfjsModule;
-
-      if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
-          pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
-      }
-
-      const arrayBuffer = await file.arrayBuffer();
-      const header = new Uint8Array(arrayBuffer.slice(0, 5));
-      const headerStr = String.fromCharCode(...header);
-      
-      if (headerStr !== '%PDF-') {
-        throw new Error('File does not have valid PDF header.');
-      }
-      
-      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-      const pdfDoc = await loadingTask.promise;
-      const page = await pdfDoc.getPage(1);
-      
-      const scale = 2;
-      const viewport = page.getViewport({ scale });
-      
-      const canvas = document.createElement('canvas');
-      const context = canvas.getContext('2d');
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-      
-      await page.render({
-        canvasContext: context,
-        viewport: viewport,
-      }).promise;
-      
-      const signatureDataUrl = canvas.toDataURL('image/png');
-      setPdfSignaturePreview(signatureDataUrl);
-      onError(null);
-      
-    } catch (err) {
-      console.error('PDF extraction error:', err);
-      onError('Failed to process PDF file: ' + (err.message || 'Unknown error'));
-      setPdfSignatureFile(null);
-      setPdfSignaturePreview(null);
-      if (pdfFileInputRef.current) {
-        pdfFileInputRef.current.value = '';
-      }
-    } finally {
-      setIsExtractingSignature(false);
+  // Clear image signature
+  const clearImageSignature = () => {
+    setImageSignatureFile(null);
+    setImageSignaturePreview(null);
+    if (imageFileInputRef.current) {
+      imageFileInputRef.current.value = '';
     }
   };
 
-  // Clear PDF signature
-  const clearPdfSignature = () => {
-    setPdfSignatureFile(null);
-    setPdfSignaturePreview(null);
-    if (pdfFileInputRef.current) {
-      pdfFileInputRef.current.value = '';
+  // Get signature data based on type
+  const getSignatureData = () => {
+    if (signatureType === 'canvas') {
+      if (sigCanvas.current && !sigCanvas.current.isEmpty()) {
+        return sigCanvas.current.toDataURL('image/png');
+      }
+      return null;
+    } else if (signatureType === 'image' && imageSignaturePreview) {
+      if (imageSignaturePreview.startsWith('data:image/')) {
+        return imageSignaturePreview;
+      }
     }
+    return null;
   };
 
   const sanitizeNumericFields = (data) => {
-      const numericFields = ['qualifying_children_count', 'other_dependents_count', 'other_credits_amount', 'other_income', 'deductions', 'extra_withholding'];
-      const sanitizedData = { ...data };
-      numericFields.forEach(field => {
-          const value = parseFloat(sanitizedData[field]);
-          sanitizedData[field] = isNaN(value) ? 0 : value;
-      });
-      return sanitizedData;
+    const numericFields = ['qualifying_children_count', 'other_dependents_count', 'other_credits_amount', 'other_income', 'deductions', 'extra_withholding'];
+    const sanitizedData = { ...data };
+    numericFields.forEach(field => {
+      const value = parseFloat(sanitizedData[field]);
+      sanitizedData[field] = isNaN(value) ? 0 : value;
+    });
+    return sanitizedData;
   };
 
   const getPayload = () => {
     const sanitizedFormData = sanitizeNumericFields(formData);
-
-    let signatureData = null;
-    if (signatureType === 'canvas') {
-      signatureData = sigCanvas.current?.isEmpty() ? null : sigCanvas.current.toDataURL('image/png');
-    } else if (signatureType === 'pdf') {
-      signatureData = pdfSignaturePreview;
-    }
+    const signatureData = getSignatureData();
 
     return {
       ...sanitizedFormData,
@@ -324,6 +347,10 @@ const W4Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
         if (!currentFormId) {
           setCurrentFormId(result.id);
         }
+        // Clear image preview on successful save
+        if (signatureType === 'image' && imageSignaturePreview) {
+          clearImageSignature();
+        }
       } else {
         throw new Error(result.error);
       }
@@ -340,18 +367,12 @@ const W4Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
     setIsSaving(true);
 
     try {
-      if (signatureType === 'canvas') {
-        if (sigCanvas.current?.isEmpty()) {
-          throw new Error('Signature is required to submit the form.');
-        }
-      } else if (signatureType === 'pdf') {
-        if (!pdfSignaturePreview) {
-          throw new Error('Please upload a PDF signature file.');
-        }
+      const signatureData = getSignatureData();
+      if (!signatureData) {
+        throw new Error('Signature is required to submit the form.');
       }
 
       const payload = getPayload();
-
       const result = await submitW4Form(payload, currentFormId);
       if (result.success) {
         onSuccess(result.message);
@@ -369,15 +390,15 @@ const W4Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
   const isSubmitted = existingForm?.FORM_STATUS === 'SUBMITTED' || existingForm?.FORM_STATUS === 'VERIFIED';
 
   const displayNumericValue = (value) => {
-      const num = parseFloat(value);
-      if (value === '' || value == null || isNaN(num) || num === 0) {
-          return '';
-      }
-      return value;
+    const num = parseFloat(value);
+    if (value === '' || value == null || isNaN(num) || num === 0) {
+      return '';
+    }
+    return value;
   };
 
   return (
-    <div className={styles.w9FormContainer}> {/* Reusing W9 styles */}
+    <div className={styles.w9FormContainer}>
       <div className={styles.headerSection}>
         <h2 className={styles.title}>
           {isAdding ? 'Add W-4 Form' : isSubmitted ? 'View W-4 Form' : 'Edit W-4 Form'}
@@ -457,7 +478,7 @@ const W4Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
               disabled={isSubmitted}
               className={styles.formCheckbox}
             />
-            Check this box if you hold more than one job at a time or are married filing jointly and your spouse also works. (Use estimator at www.irs.gov/W4App or Multiple Jobs Worksheet).
+            {' '}Check this box if you hold more than one job at a time or are married filing jointly and your spouse also works. (Use estimator at www.irs.gov/W4App or Multiple Jobs Worksheet).
           </label>
         </div>
       </div>
@@ -465,29 +486,29 @@ const W4Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
       {/* --- Step 3: Claim Dependents --- */}
       <div className={styles.formSection}>
         <h3>Step 3: Claim Dependents</h3>
-        <p>(If your total income will be \$200,000 or less (\$400,000 or less if married filing jointly))</p>
+        <p>(If your total income will be $200,000 or less ($400,000 or less if married filing jointly))</p>
         <div className={styles.formRow}>
           <div className={styles.formGroup}>
             <label>Qualifying Children under age 17</label>
             <input type="number" name="qualifying_children_count" value={displayNumericValue(formData.qualifying_children_count)} onChange={handleChange} min="0" disabled={isSubmitted} placeholder="0"/>
-            <span>Multiply by \$2,000 = \$ {(Number(formData.qualifying_children_count || 0) * 2000).toFixed(0)}</span>
+            <span>Multiply by $2,000 = $ {(Number(formData.qualifying_children_count || 0) * 2000).toFixed(0)}</span>
           </div>
           <div className={styles.formGroup}>
             <label>Other Dependents</label>
             <input type="number" name="other_dependents_count" value={displayNumericValue(formData.other_dependents_count)} onChange={handleChange} min="0" disabled={isSubmitted} placeholder="0"/>
-            <span>Multiply by \$500 = \$ {(Number(formData.other_dependents_count || 0) * 500).toFixed(0)}</span>
+            <span>Multiply by $500 = $ {(Number(formData.other_dependents_count || 0) * 500).toFixed(0)}</span>
           </div>
         </div>
-         <div className={styles.formRow}>
-             <div className={styles.formGroup}>
-                 <label>Other Credits (e.g., education)</label>
-                 <input type="number" name="other_credits_amount" value={displayNumericValue(formData.other_credits_amount)} onChange={handleChange} min="0" step="0.01" disabled={isSubmitted} placeholder="0.00"/>
-             </div>
-            <div className={`${styles.formGroup} ${styles.totalCreditsGroup}`}>
-                <label style={{ fontWeight: 'bold' }}>Total Credits (Add lines above)</label>
-                <input value={`\$${totalCredits.toFixed(2)}`} readOnly disabled className={styles.totalField} />
-            </div>
-         </div>
+        <div className={styles.formRow}>
+          <div className={styles.formGroup}>
+            <label>Other Credits (e.g., education)</label>
+            <input type="number" name="other_credits_amount" value={displayNumericValue(formData.other_credits_amount)} onChange={handleChange} min="0" step="0.01" disabled={isSubmitted} placeholder="0.00"/>
+          </div>
+          <div className={`${styles.formGroup} ${styles.totalCreditsGroup}`}>
+            <label style={{ fontWeight: 'bold' }}>Total Credits (Add lines above)</label>
+            <input value={`$${totalCredits.toFixed(2)}`} readOnly disabled className={styles.totalField} />
+          </div>
+        </div>
       </div>
 
       {/* --- Step 4: Other Adjustments --- */}
@@ -524,15 +545,15 @@ const W4Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
                   style={{ maxWidth: '300px', border: '1px solid #ccc', borderRadius: '4px' }}
                 />
               </div>
-              <p>Date Signed: {formatDate(existingForm.EMPLOYEE_SIGNATURE_DATE)}</p>
+              <p>Date Signed: {formatDateDisplay(existingForm.EMPLOYEE_SIGNATURE_DATE)}</p>
             </div>
           )
         ) : (
           <>
             <div className={styles.formRow}>
               <div className={styles.formGroup}>
-                  <label>Signature Date</label>
-                  <input type="date" name="signature_date" value={formData.signature_date} onChange={handleChange} disabled={isSubmitted} />
+                <label>Signature Date</label>
+                <input type="date" name="signature_date" value={formData.signature_date} onChange={handleChange} disabled={isSubmitted} />
               </div>
             </div>
             
@@ -557,12 +578,12 @@ const W4Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
                   <input
                     type="radio"
                     name="w4SignatureType"
-                    value="pdf"
-                    checked={signatureType === 'pdf'}
+                    value="image"
+                    checked={signatureType === 'image'}
                     onChange={handleSignatureTypeChange}
                     style={{ marginRight: '8px' }}
                   />
-                  Upload Signature PDF
+                  Upload Signature Image
                 </label>
               </div>
             </div>
@@ -581,52 +602,44 @@ const W4Form = ({ empid, orgid, onBack, states, isAdding, selectedFormId, onErro
               </div>
             )}
 
-            {/* PDF Upload Option */}
-            {signatureType === 'pdf' && (
+            {/* Image Upload Option */}
+            {signatureType === 'image' && (
               <div className={styles.formGroup}>
-                <label>Upload Signature PDF*</label>
+                <label>Upload Signature Image*</label>
                 <p style={{ fontSize: '13px', color: '#666', marginBottom: '10px' }}>
-                  Upload a PDF file containing your signature. The signature will be extracted automatically.
+                  Upload a PNG, JPG, or JPEG image (Max 2MB).
                 </p>
                 <div style={{ marginBottom: '10px' }}>
                   <input
                     type="file"
-                    ref={pdfFileInputRef}
-                    accept="application/pdf"
-                    onChange={handlePdfFileChange}
-                    disabled={isExtractingSignature}
+                    ref={imageFileInputRef}
+                    accept="image/png,image/jpeg,image/jpg"
+                    onChange={handleImageUpload}
                     style={{ 
                       padding: '10px', 
                       border: '2px dashed #007bff', 
                       borderRadius: '4px', 
                       width: '100%', 
-                      maxWidth: '600px',
-                      backgroundColor: '#fff',
-                      cursor: 'pointer'
+                      maxWidth: '400px',
+                      backgroundColor: '#fff'
                     }}
                   />
                 </div>
-                
-                {isExtractingSignature && (
-                  <p style={{ color: '#007bff', fontSize: '14px' }}>
-                    Extracting signature from PDF...
-                  </p>
-                )}
 
-                {/* PDF Signature Preview */}
-                {pdfSignaturePreview && !isExtractingSignature && (
+                {/* Image Signature Preview */}
+                {imageSignaturePreview && (
                   <div style={{ marginTop: '10px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
                     <p style={{ margin: '0 0 10px 0', fontSize: '13px', fontWeight: 'bold', color: '#28a745' }}>
-                      ✓ Signature extracted successfully:
+                      ✓ Signature preview:
                     </p>
                     <img
-                      src={pdfSignaturePreview}
-                      alt="Extracted Signature"
+                      src={imageSignaturePreview}
+                      alt="Signature Preview"
                       style={{ maxWidth: '300px', maxHeight: '100px', border: '1px solid #ccc', borderRadius: '4px', backgroundColor: '#fff' }}
                     />
                     <div style={{ marginTop: '10px' }}>
-                      <button type="button" onClick={clearPdfSignature} className={`${styles.button} ${styles.clearButton}`}>
-                        Remove & Upload Different PDF
+                      <button type="button" onClick={clearImageSignature} className={`${styles.button} ${styles.clearButton}`}>
+                        Remove & Upload Different Image
                       </button>
                     </div>
                   </div>

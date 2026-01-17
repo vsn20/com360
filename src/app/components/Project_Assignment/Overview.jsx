@@ -62,7 +62,19 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
         const projectData = await fetchProjectsForAssignment();
         setProjects(projectData);
         // Extract unique account IDs for dropdown
-        const uniqueAccounts = [...new Set(projectData.map(project => project.ACCNT_ID))].filter(id => id).sort();
+      const uniqueAccounts = Array.from(
+  new Map(
+    projectData
+      .filter(p => p.ACCNT_ID) // remove nulls
+      .map(p => [
+        p.ACCNT_ID,
+        {
+          ACCNT_ID: p.ACCNT_ID,
+          ALIAS_NAME: p.ALIAS_NAME
+        }
+      ])
+  ).values()
+).sort((a, b) => a.ALIAS_NAME.localeCompare(b.ALIAS_NAME));
         setAccountOptions(uniqueAccounts);
         setError(null);
       } catch (err) {
@@ -855,7 +867,7 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
             <button onClick={() => handleaddprojectassignment()} className="project_assign_button">Assign Project</button>
           </div>
 
-          <div className="project_assign_search_filter_container">
+          <div className="project_assign_search_filter_container" suppressHydrationWarning>
             <input
               type="text"
               value={searchQuery}
@@ -869,11 +881,12 @@ const Overview = ({ orgId, billTypes, otBillType, payTerms }) => {
               className="project_assign_filter_select"
             >
               <option value="">All Accounts</option>
-              {accountOptions.map((accountId) => (
-                <option key={accountId} value={accountId}>
-                  Account-{getdisplayprojectid(accountId)}
-                </option>
-              ))}
+             {accountOptions.map(account => (
+  <option key={account.ACCNT_ID} value={account.ACCNT_ID}>
+    {account.ALIAS_NAME}
+  </option>
+))}
+
             </select>
             <input
               type="date"

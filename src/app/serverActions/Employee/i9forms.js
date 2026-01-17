@@ -6,14 +6,33 @@ import fs from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
 
-// ✅ Utility function to format dates properly
+// ✅ UPDATED: Date formatting utility matching I-983 (String logic only)
 const formatDate = (date) => {
-  if (!date || isNaN(new Date(date))) return null;
-  const d = new Date(date);
-  const year = d.getUTCFullYear();
-  const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(d.getUTCDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  if (!date) return null;
+
+  // If it's already a YYYY-MM-DD string, trust it and return it
+  if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    return date;
+  }
+
+  // If it's a full ISO string (e.g. 2026-02-20T...), split it
+  if (typeof date === 'string' && date.includes('T')) {
+    return date.split('T')[0];
+  }
+  
+  // Fallback for Date objects (use local time components)
+  try {
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return null;
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    if (year < 1900 || year > 2100) return null;
+    return `${year}-${month}-${day}`;
+  } catch (e) {
+    console.warn("Error formatting date for DB:", e);
+    return null;
+  }
 };
 
 // ✅ Generate SHA256 hash of signature for integrity
@@ -21,7 +40,7 @@ const generateSignatureHash = (base64Data) => {
   return crypto.createHash('sha256').update(base64Data).digest('hex');
 };
 
-// ✅ IMPROVED: Upload signature using PRIMARY KEY as filename
+// ✅ Upload signature using PRIMARY KEY as filename (Images only)
 export async function uploadSignature(base64Data, formId, signatureType = 'employee') {
   try {
     console.log(`📝 Uploading ${signatureType} signature for form ID:`, formId);
@@ -30,11 +49,16 @@ export async function uploadSignature(base64Data, formId, signatureType = 'emplo
       throw new Error('Form ID is required for signature upload');
     }
     
+    // Validate base64 image format
+    if (!base64Data.startsWith('data:image/')) {
+      throw new Error('Invalid image format. Only PNG, JPG, or JPEG images are allowed.');
+    }
+    
     // Define directory
     const publicDir = path.join(process.cwd(), 'public', 'uploads', 'forms_signatures');
     await fs.mkdir(publicDir, { recursive: true });
     
-    // Handle PNG/JPEG data (from canvas or PDF client-side rendering)
+    // Handle PNG/JPEG data (from canvas or image upload)
     const base64Image = base64Data.replace(/^data:image\/\w+;base64,/, '');
     const buffer = Buffer.from(base64Image, 'base64');
     const filename = `form_${formId}_${signatureType}.png`;
@@ -143,6 +167,7 @@ export async function canEditForm(formId) {
 // ✅ Add new form with proper status
 export async function addForm(formData) {
   const pool = await DBconnection();
+    const dateNow = new Date().toLocaleDateString();
   
   try {
     // Validate employee and org exist
@@ -197,7 +222,7 @@ export async function addForm(formData) {
         ALIEN_NUMBER, WORK_AUTHORIZATION_EXPIRY, USCIS_A_NUMBER, I94_ADMISSION_NUMBER,
         FOREIGN_PASSPORT_NUMBER, COUNTRY_OF_ISSUANCE, EMPLOYEE_SIGNATURE_DATE,
         CREATED_AT
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const values = [
@@ -208,7 +233,8 @@ export async function addForm(formData) {
       employee_city, employee_state, employee_zip_code, formattedDob,
       employee_ssn, employee_email, employee_phone, citizenship_status,
       alien_number, formattedWorkAuthExpiry, uscis_a_number, i94_admission_number,
-      foreign_passport_number, country_of_issuance, formattedSignatureDate
+      foreign_passport_number, country_of_issuance, formattedSignatureDate,
+      dateNow
     ];
 
     const [result] = await pool.query(query, values);
@@ -262,8 +288,9 @@ export async function fetchFormsByEmpId(empId, orgId, formType = null) {
   }
 }
 
-// ✅ IMPROVED: Update form with proper validation and status update
+// ✅ Update form with proper validation and status update
 export async function updateForm(formId, formData) {
+    const dateNow = new Date().toLocaleDateString();
   const pool = await DBconnection();
   
   try {
@@ -302,7 +329,7 @@ export async function updateForm(formId, formData) {
           EMPLOYEE_SSN = ?, EMPLOYEE_EMAIL = ?, EMPLOYEE_PHONE = ?, CITIZENSHIP_STATUS = ?,
           ALIEN_NUMBER = ?, WORK_AUTHORIZATION_EXPIRY = ?, USCIS_A_NUMBER = ?, I94_ADMISSION_NUMBER = ?,
           FOREIGN_PASSPORT_NUMBER = ?, COUNTRY_OF_ISSUANCE = ?, EMPLOYEE_SIGNATURE_DATE = ?,
-          EMPLOYEE_VERIFIED_FLAG = ?, FORM_STATUS = ?, UPDATED_AT = NOW()
+          EMPLOYEE_VERIFIED_FLAG = ?, FORM_STATUS = ?, UPDATED_AT = ?
       WHERE ID = ?
     `;
 
@@ -313,7 +340,7 @@ export async function updateForm(formId, formData) {
       employee_ssn, employee_email, employee_phone, citizenship_status,
       alien_number, formattedWorkAuthExpiry, uscis_a_number, i94_admission_number,
       foreign_passport_number, country_of_issuance, formattedSignatureDate,
-      employee_verified_flag, formStatus, formId
+      employee_verified_flag, formStatus, dateNow, formId
     ];
 
     const [result] = await pool.query(query, values);

@@ -6,6 +6,44 @@ import SignatureCanvas from 'react-signature-canvas';
 import { verifyForm } from '@/app/serverActions/Employee/documentverification';
 import styles from './Verification.module.css';
 
+// --- DATE UTILITIES (MATCHING I-983 LOGIC) ---
+
+// Get today's date in local timezone YYYY-MM-DD (Prevents day-before issue)
+const getLocalTodayDate = () => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+// Format date for input[type="date"] ensuring local time is respected
+const formatDateForInput = (dateStr) => {
+  if (!dateStr) return '';
+  try {
+    // Handle YYYY-MM-DD or YYYY-MM-DDTHH...
+    if (typeof dateStr === 'string') {
+      const cleanDate = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
+      const parts = cleanDate.split('-');
+      if (parts.length === 3) {
+        const year = parts[0];
+        const month = parts[1];
+        const day = parts[2];
+        if (year < 1900 || year > 2100) return '';
+        return `${year}-${month}-${day}`;
+      }
+    }
+    
+    // Fallback for Date objects
+    const date = new Date(dateStr);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    if (year < 1900 || year > 2100) return '';
+    return `${year}-${month}-${day}`;
+  } catch (e) { return ''; }
+};
+
 // Helper function to safely handle null/undefined values
 const safeValue = (value, defaultValue = '') => {
   return value ?? defaultValue;
@@ -35,7 +73,7 @@ const VerificationForm = ({
     doc3_issuing_authority: '',
     doc3_number: '',
     doc3_expiry: '',
-    employer_signature_date: new Date().toISOString().split('T')[0],
+    employer_signature_date: getLocalTodayDate(),
     employer_name: '',
     employer_title: '',
     employer_business_name: orgName || '',
@@ -50,12 +88,11 @@ const VerificationForm = ({
   const sigCanvas = useRef(null);
   const [timestamp] = useState(Date.now()); // Used for cache-busting images
   
-  // Signature type: 'canvas' or 'pdf'
+  // ✅ NEW: Image signature support (matching I-983)
   const [signatureType, setSignatureType] = useState('canvas');
-  const [pdfSignatureFile, setPdfSignatureFile] = useState(null);
-  const [pdfSignaturePreview, setPdfSignaturePreview] = useState(null);
-  const [isExtractingSignature, setIsExtractingSignature] = useState(false);
-  const pdfFileInputRef = useRef(null);
+  const imageFileInputRef = useRef(null);
+  const [imageSignatureFile, setImageSignatureFile] = useState(null);
+  const [imageSignaturePreview, setImageSignaturePreview] = useState(null);
 
   const isVerified = form.FORM_STATUS === 'EMPLOYER_VERIFIED';
   // Allow editing if the form is pending, or if the user is an admin (even if already verified).
@@ -66,21 +103,21 @@ const VerificationForm = ({
     if (form.EMPLOYER_FIRST_DAY) {
       setFormData(prev => ({
         ...prev,
-        employer_first_day: form.EMPLOYER_FIRST_DAY ? new Date(form.EMPLOYER_FIRST_DAY).toISOString().split('T')[0] : '',
+        employer_first_day: formatDateForInput(form.EMPLOYER_FIRST_DAY),
         employer_list_type: form.EMPLOYER_LIST_TYPE || 'LIST_A',
         doc1_title: form.DOC1_TITLE || '',
         doc1_issuing_authority: form.DOC1_ISSUING_AUTHORITY || '',
         doc1_number: form.DOC1_NUMBER || '',
-        doc1_expiry: form.DOC1_EXPIRY ? new Date(form.DOC1_EXPIRY).toISOString().split('T')[0] : '',
+        doc1_expiry: formatDateForInput(form.DOC1_EXPIRY),
         doc2_title: form.DOC2_TITLE || '',
         doc2_issuing_authority: form.DOC2_ISSUING_AUTHORITY || '',
         doc2_number: form.DOC2_NUMBER || '',
-        doc2_expiry: form.DOC2_EXPIRY ? new Date(form.DOC2_EXPIRY).toISOString().split('T')[0] : '',
+        doc2_expiry: formatDateForInput(form.DOC2_EXPIRY),
         doc3_title: form.DOC3_TITLE || '',
         doc3_issuing_authority: form.DOC3_ISSUING_AUTHORITY || '',
         doc3_number: form.DOC3_NUMBER || '',
-        doc3_expiry: form.DOC3_EXPIRY ? new Date(form.DOC3_EXPIRY).toISOString().split('T')[0] : '',
-        employer_signature_date: form.EMPLOYER_SIGNATURE_DATE ? new Date(form.EMPLOYER_SIGNATURE_DATE).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        doc3_expiry: formatDateForInput(form.DOC3_EXPIRY),
+        employer_signature_date: formatDateForInput(form.EMPLOYER_SIGNATURE_DATE) || getLocalTodayDate(),
         employer_name: form.EMPLOYER_NAME || '',
         employer_title: form.EMPLOYER_TITLE || '',
         employer_business_name: form.EMPLOYER_BUSINESS_NAME || orgName || '',
@@ -99,9 +136,59 @@ const VerificationForm = ({
     }));
   };
 
-  const clearSignature = () => {
+  // ✅ NEW: Clear canvas signature
+  const clearCanvasSignature = () => {
     if (sigCanvas.current) {
       sigCanvas.current.clear();
+    }
+  };
+
+  // ✅ NEW: Handle image signature file selection
+  const handleImageChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+    if (!validTypes.includes(file.type)) {
+      setError('Please upload a PNG or JPEG image.');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image file is too large. Maximum size is 5MB.');
+      return;
+    }
+
+    setImageSignatureFile(file);
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImageSignaturePreview(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // ✅ NEW: Clear image signature
+  const clearImageSignature = () => {
+    setImageSignatureFile(null);
+    setImageSignaturePreview(null);
+    if (imageFileInputRef.current) {
+      imageFileInputRef.current.value = '';
+    }
+  };
+
+  // ✅ UPDATED: Handle signature type change
+  const handleSignatureTypeChange = (e) => {
+    const newType = e.target.value;
+    setSignatureType(newType);
+    // Clear the other signature type
+    if (newType === 'canvas') {
+      clearImageSignature();
+    } else {
+      clearCanvasSignature();
     }
   };
 
@@ -134,132 +221,14 @@ const VerificationForm = ({
         if (!sigCanvas.current || sigCanvas.current.isEmpty()) {
           throw new Error('Signature is required to verify or re-verify the form. Please draw your signature.');
         }
-      } else if (signatureType === 'pdf') {
-        if (!pdfSignaturePreview) {
-          throw new Error('Signature is required to verify or re-verify the form. Please upload a PDF with your signature.');
+      } else if (signatureType === 'image') {
+        if (!imageSignaturePreview) {
+          throw new Error('Signature is required to verify or re-verify the form. Please upload a signature image.');
         }
       }
     }
 
     return true;
-  };
-
-  // Handle signature type change
-  const handleSignatureTypeChange = (e) => {
-    const newType = e.target.value;
-    setSignatureType(newType);
-    // Clear the other signature type
-    if (newType === 'canvas') {
-      setPdfSignatureFile(null);
-      setPdfSignaturePreview(null);
-      if (pdfFileInputRef.current) {
-        pdfFileInputRef.current.value = '';
-      }
-    } else {
-      if (sigCanvas.current) {
-        sigCanvas.current.clear();
-      }
-    }
-  };
-
-  // Handle PDF file selection and extract signature using client-side rendering
-  const handlePdfFileChange = async (e) => {
-    const file = e.target.files?.[0];
-    
-    if (!file) {
-      setPdfSignatureFile(null);
-      setPdfSignaturePreview(null);
-      return;
-    }
-
-    // Validate file type
-    if (file.type !== 'application/pdf') {
-      setError('Please upload a valid PDF file.');
-      e.target.value = '';
-      return;
-    }
-
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      setError('PDF file size must be less than 5MB.');
-      e.target.value = '';
-      return;
-    }
-
-    setError(null);
-    setPdfSignatureFile(file);
-    setIsExtractingSignature(true);
-
-    try {
-      // FIX: Use explicit min.mjs path to avoid "Object.defineProperty" Webpack error
-      const pdfjsModule = await import('pdfjs-dist/build/pdf.min.mjs');
-      const pdfjsLib = pdfjsModule.default || pdfjsModule;
-      
-      // Set worker source
-      if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
-          pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
-      }
-
-      // Read file as ArrayBuffer
-      const arrayBuffer = await file.arrayBuffer();
-      
-      // Check if file starts with PDF header
-      const header = new Uint8Array(arrayBuffer.slice(0, 5));
-      const headerStr = String.fromCharCode(...header);
-      
-      if (headerStr !== '%PDF-') {
-        throw new Error('File does not have valid PDF header.');
-      }
-      
-      // Load the PDF document
-      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-      const pdfDoc = await loadingTask.promise;
-      
-      // Get the first page
-      const page = await pdfDoc.getPage(1);
-      
-      // Set up canvas for rendering
-      const scale = 2;
-      const viewport = page.getViewport({ scale });
-      
-      // Create an offscreen canvas
-      const canvas = document.createElement('canvas');
-      const context = canvas.getContext('2d');
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-      
-      // Render PDF page to canvas
-      await page.render({
-        canvasContext: context,
-        viewport: viewport,
-      }).promise;
-      
-      // Convert canvas to PNG data URL
-      const signatureDataUrl = canvas.toDataURL('image/png');
-      
-      setPdfSignaturePreview(signatureDataUrl);
-      setError(null);
-      
-    } catch (err) {
-      console.error('PDF extraction error:', err);
-      setError('Failed to process PDF file: ' + (err.message || 'Unknown error'));
-      setPdfSignatureFile(null);
-      setPdfSignaturePreview(null);
-      if (pdfFileInputRef.current) {
-        pdfFileInputRef.current.value = '';
-      }
-    } finally {
-      setIsExtractingSignature(false);
-    }
-  };
-
-  // Clear PDF signature
-  const clearPdfSignature = () => {
-    setPdfSignatureFile(null);
-    setPdfSignaturePreview(null);
-    if (pdfFileInputRef.current) {
-      pdfFileInputRef.current.value = '';
-    }
   };
 
   const handleSubmit = async (e) => {
@@ -270,171 +239,185 @@ const VerificationForm = ({
     try {
       validateForm();
 
-      // Get signature data based on selected type
-      let sigImage = null;
+      // ✅ Get signature data based on signature type
+      let signatureData = null;
+      
       if (signatureType === 'canvas') {
-        const canvas = sigCanvas.current.getCanvas();
-        sigImage = canvas.toDataURL('image/png');
-      } else if (signatureType === 'pdf') {
-        sigImage = pdfSignaturePreview; // Already in base64 format from PDF extraction
+        if (sigCanvas.current && !sigCanvas.current.isEmpty()) {
+          signatureData = sigCanvas.current.toDataURL('image/png');
+        }
+      } else if (signatureType === 'image') {
+        if (imageSignaturePreview) {
+          signatureData = imageSignaturePreview;
+        }
       }
 
-      const dataToSubmit = {
+      const payload = {
+        formId: form.ID,
+        verifierEmpId,
+        orgId,
         ...formData,
-        form_id: form.ID,
-        emp_id: form.EMP_ID,
-        org_id: orgId,
-        verifier_id: verifierEmpId,
-        signature_data: sigImage
+        signature_data: signatureData,
       };
 
-      const result = await verifyForm(dataToSubmit);
+      const result = await verifyForm(payload);
 
       if (result.success) {
-        onSuccess('Form verified and uploaded to documents successfully!');
+        onSuccess('Form verified successfully!');
       } else {
         throw new Error(result.error || 'Failed to verify form');
       }
     } catch (err) {
-      setError(err.message || 'Failed to verify form');
+      setError(err.message);
       console.error('Verification error:', err);
     } finally {
       setIsSaving(false);
     }
   };
 
+  const handleEditToggle = () => {
+    setIsEditing(!isEditing);
+    setError(null);
+    
+    // Reset signature states when toggling edit mode
+    setSignatureType('canvas');
+    setImageSignatureFile(null);
+    setImageSignaturePreview(null);
+  };
+
   const handleCancelEdit = () => {
     setIsEditing(false);
-    // No need to reset form data, as useEffect will handle it based on `isEditing` state.
+    setError(null);
+    
+    // Reset signature states
+    setSignatureType('canvas');
+    setImageSignatureFile(null);
+    setImageSignaturePreview(null);
   };
 
-  const formatDate = (dateStr) => {
-    if (!dateStr) return 'N/A';
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return 'N/A';
-    const adjustedDate = new Date(date.getTime() + date.getTimezoneOffset() * 60000);
-    const month = String(adjustedDate.getMonth() + 1).padStart(2, '0');
-    const day = String(adjustedDate.getDate()).padStart(2, '0');
-    return `${month}/${day}/${adjustedDate.getFullYear()}`;
-  };
-
-  const getCitizenshipLabel = (status) => {
-    const labels = {
-      1: '1. A citizen of the United States',
-      2: '2. A noncitizen national of the United States',
-      3: '3. A lawful permanent resident',
-      4: '4. An alien authorized to work'
-    };
-    return labels[status] || 'N/A';
-  };
-  
-  const isFormDisabled = isVerified && !isEditing;
+  const isFormDisabled = !canEdit || (isVerified && !isEditing);
 
   return (
-    <div className={styles.verificationFormContainer}>
+    <div className={styles.verificationContainer}>
+      <div className={styles.formHeader}>
+        <h2>I-9 Form - Section 2: Employer Review and Verification</h2>
+        <div className={styles.headerButtons}>
+          {isVerified && isAdmin && !isEditing && (
+            <button
+              type="button"
+              className={`${styles.button} ${styles.editButton}`}
+              onClick={handleEditToggle}
+            >
+              Edit Verification
+            </button>
+          )}
+          <button
+            type="button"
+            className={`${styles.button} ${styles.backButton}`}
+            onClick={onBack}
+            disabled={isSaving}
+          >
+            Back to List
+          </button>
+        </div>
+      </div>
+
       {error && (
         <div className={styles.errorMessage}>
           <strong>Error:</strong> {error}
         </div>
       )}
 
-      <div className={styles.headerSection}>
-        <h2 className={styles.title}>
-          {isVerified && !isEditing ? 'View Verified I-9 Form' : 'Verify I-9 Form'}
-        </h2>
-        <div className={styles.headerButtons}>
-          {isVerified && !isEditing && canEdit && (
-            <button 
-              className={`${styles.button} ${styles.editButton}`}
-              onClick={() => setIsEditing(true)}
-            >
-              Re-verify Form
-            </button>
-          )}
-          <button className={`${styles.button} ${styles.backButton}`} onClick={onBack}>
-            Back to List
-          </button>
+      {isVerified && !isEditing && (
+        <div className={styles.infoMessage}>
+          This form has been verified. {isAdmin ? 'You can edit it if needed.' : 'Contact an administrator if changes are needed.'}
         </div>
-      </div>
+      )}
 
-      <div className={styles.formSections}>
-        {/* Section 1: Employee Information (Read-only) */}
-        <div className={styles.formSection}>
-          <h3>Section 1: Employee Information (Submitted by Employee)</h3>
-          
-          <div className={styles.infoGrid}>
-            <div className={styles.infoItem}>
-              <label>Employee Name:</label>
-              <span>{form.EMPLOYEE_FIRST_NAME} {form.EMPLOYEE_MIDDLE_INITIAL} {form.EMPLOYEE_LAST_NAME}</span>
-            </div>
+      <div className={styles.formContent}>
+        <form onSubmit={handleSubmit}>
+          {/* Employee Information Section (Read-only) */}
+          <div className={styles.formSection}>
+            <h3>Section 1: Employee Information (Completed by Employee)</h3>
             
-            {form.EMPLOYEE_OTHER_LAST_NAMES && (
-              <div className={styles.infoItem}>
-                <label>Other Last Names:</label>
-                <span>{form.EMPLOYEE_OTHER_LAST_NAMES}</span>
+            <div className={styles.formRow}>
+              <div className={styles.formGroup}>
+                <label>Last Name</label>
+                <input
+                  type="text"
+                  value={safeValue(form.EMPLOYEE_LAST_NAME)}
+                  disabled
+                  className={styles.readOnlyInput}
+                />
               </div>
-            )}
-            
-            <div className={styles.infoItem}>
-              <label>Address:</label>
-              <span>
-                {form.EMPLOYEE_STREET_ADDRESS}
-                {form.EMPLOYEE_APT_NUMBER && `, Apt ${form.EMPLOYEE_APT_NUMBER}`}
-                <br />
-                {form.EMPLOYEE_CITY}, {form.EMPLOYEE_STATE} {form.EMPLOYEE_ZIP_CODE}
-              </span>
-            </div>
-            
-            <div className={styles.infoItem}>
-              <label>Date of Birth:</label>
-              <span>{formatDate(form.EMPLOYEE_DOB)}</span>
-            </div>
-            
-            <div className={styles.infoItem}>
-              <label>SSN:</label>
-              <span>{form.EMPLOYEE_SSN || 'N/A'}</span>
-            </div>
-            
-            <div className={styles.infoItem}>
-              <label>Email:</label>
-              <span>{form.EMPLOYEE_EMAIL || 'N/A'}</span>
-            </div>
-            
-            <div className={styles.infoItem}>
-              <label>Phone:</label>
-              <span>{form.EMPLOYEE_PHONE || 'N/A'}</span>
-            </div>
-            
-            <div className={styles.infoItem}>
-              <label>Citizenship Status:</label>
-              <span>{getCitizenshipLabel(form.CITIZENSHIP_STATUS)}</span>
-            </div>
-            
-            {form.USCIS_A_NUMBER && (
-              <div className={styles.infoItem}>
-                <label>USCIS A-Number:</label>
-                <span>{form.USCIS_A_NUMBER}</span>
+              <div className={styles.formGroup}>
+                <label>First Name</label>
+                <input
+                  type="text"
+                  value={safeValue(form.EMPLOYEE_FIRST_NAME)}
+                  disabled
+                  className={styles.readOnlyInput}
+                />
               </div>
-            )}
-            
-            {form.WORK_AUTHORIZATION_EXPIRY && (
-              <div className={styles.infoItem}>
-                <label>Work Authorization Expiry:</label>
-                <span>{formatDate(form.WORK_AUTHORIZATION_EXPIRY)}</span>
+              <div className={styles.formGroup}>
+                <label>Middle Initial</label>
+                <input
+                  type="text"
+                  value={safeValue(form.EMPLOYEE_MIDDLE_INITIAL)}
+                  disabled
+                  className={styles.readOnlyInput}
+                />
               </div>
-            )}
-            
-            <div className={styles.infoItem}>
-              <label>Employee Signature Date:</label>
-              <span>{formatDate(form.EMPLOYEE_SIGNATURE_DATE)}</span>
             </div>
-            
+
+            <div className={styles.formRow}>
+              <div className={styles.formGroup}>
+                <label>Address</label>
+                <input
+                  type="text"
+                  value={`${safeValue(form.EMPLOYEE_STREET_ADDRESS)} ${safeValue(form.EMPLOYEE_APT_NUMBER)}`}
+                  disabled
+                  className={styles.readOnlyInput}
+                />
+              </div>
+            </div>
+
+            <div className={styles.formRow}>
+              <div className={styles.formGroup}>
+                <label>City</label>
+                <input
+                  type="text"
+                  value={safeValue(form.EMPLOYEE_CITY)}
+                  disabled
+                  className={styles.readOnlyInput}
+                />
+              </div>
+              <div className={styles.formGroup}>
+                <label>State</label>
+                <input
+                  type="text"
+                  value={safeValue(form.EMPLOYEE_STATE)}
+                  disabled
+                  className={styles.readOnlyInput}
+                />
+              </div>
+              <div className={styles.formGroup}>
+                <label>ZIP Code</label>
+                <input
+                  type="text"
+                  value={safeValue(form.EMPLOYEE_ZIP_CODE)}
+                  disabled
+                  className={styles.readOnlyInput}
+                />
+              </div>
+            </div>
+
             {form.EMPLOYEE_SIGNATURE_URL && (
-              <div className={`${styles.infoItem} ${styles.infoItemFullWidth}`}>
-                <label>Employee Signature:</label>
+              <div className={styles.formGroup}>
+                <label>Employee Signature</label>
                 <div className={styles.signatureDisplay}>
                   <img 
-                    src={`${form.EMPLOYEE_SIGNATURE_URL}?t=${timestamp}`} 
+                    src={`${form.EMPLOYEE_SIGNATURE_URL}?t=${timestamp}`}
                     alt="Employee Signature"
                     style={{ maxWidth: '300px', border: '1px solid #ccc', borderRadius: '4px' }}
                   />
@@ -442,94 +425,96 @@ const VerificationForm = ({
               </div>
             )}
           </div>
-        </div>
 
-        {/* Section 2: Employer Verification */}
-        <form onSubmit={handleSubmit}>
+          {/* Section 2: Employer Verification */}
           <div className={styles.formSection}>
             <h3>Section 2: Employer Review and Verification</h3>
-            
-            <div className={styles.formRow}>
-              <div className={styles.formGroup}>
-                <label>First Day of Employment*</label>
-                <input
-                  type="date"
-                  name="employer_first_day"
-                  value={safeValue(formData.employer_first_day)}
-                  onChange={handleChange}
-                  required
-                  disabled={isFormDisabled}
-                />
-              </div>
-              
-              <div className={styles.formGroup}>
-                <label>Document List Type*</label>
-                <select
-                  name="employer_list_type"
-                  value={safeValue(formData.employer_list_type, 'LIST_A')}
-                  onChange={handleChange}
-                  disabled={isFormDisabled}
-                >
-                  <option value="LIST_A">List A (Identity & Employment Authorization)</option>
-                  <option value="LIST_B_C">List B & C (Identity + Employment Authorization)</option>
-                </select>
-              </div>
+
+            <div className={styles.formGroup}>
+              <label>Employee's First Day of Employment*</label>
+              <input
+                type="date"
+                name="employer_first_day"
+                value={safeValue(formData.employer_first_day)}
+                onChange={handleChange}
+                required
+                disabled={isFormDisabled}
+              />
+            </div>
+
+            <div className={styles.formGroup}>
+              <label>Document List Type*</label>
+              <select
+                name="employer_list_type"
+                value={safeValue(formData.employer_list_type)}
+                onChange={handleChange}
+                required
+                disabled={isFormDisabled}
+              >
+                <option value="LIST_A">List A - Documents that Establish Both Identity and Employment Authorization</option>
+                <option value="LIST_B_AND_C">List B (Identity) and List C (Employment Authorization)</option>
+              </select>
             </div>
 
             {/* Document 1 */}
-            <h4>{formData.employer_list_type === 'LIST_A' ? 'List A Document' : 'List B Document (Identity)'}</h4>
-            <div className={styles.formRow}>
-              <div className={styles.formGroup}>
-                <label>Document Title*</label>
-                <input
-                  type="text"
-                  name="doc1_title"
-                  value={safeValue(formData.doc1_title)}
-                  onChange={handleChange}
-                  required
-                  disabled={isFormDisabled}
-                />
-              </div>
+            <div className={styles.documentSection}>
+              <h4>{formData.employer_list_type === 'LIST_A' ? 'List A Document' : 'List B Document (Identity)'}</h4>
               
-              <div className={styles.formGroup}>
-                <label>Issuing Authority</label>
-                <input
-                  type="text"
-                  name="doc1_issuing_authority"
-                  value={safeValue(formData.doc1_issuing_authority)}
-                  onChange={handleChange}
-                  disabled={isFormDisabled}
-                />
+              <div className={styles.formRow}>
+                <div className={styles.formGroup}>
+                  <label>Document Title*</label>
+                  <input
+                    type="text"
+                    name="doc1_title"
+                    value={safeValue(formData.doc1_title)}
+                    onChange={handleChange}
+                    required
+                    disabled={isFormDisabled}
+                    placeholder="e.g., U.S. Passport, Driver's License"
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label>Issuing Authority</label>
+                  <input
+                    type="text"
+                    name="doc1_issuing_authority"
+                    value={safeValue(formData.doc1_issuing_authority)}
+                    onChange={handleChange}
+                    disabled={isFormDisabled}
+                    placeholder="e.g., U.S. Department of State"
+                  />
+                </div>
+              </div>
+
+              <div className={styles.formRow}>
+                <div className={styles.formGroup}>
+                  <label>Document Number</label>
+                  <input
+                    type="text"
+                    name="doc1_number"
+                    value={safeValue(formData.doc1_number)}
+                    onChange={handleChange}
+                    disabled={isFormDisabled}
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label>Expiration Date (if any)</label>
+                  <input
+                    type="date"
+                    name="doc1_expiry"
+                    value={safeValue(formData.doc1_expiry)}
+                    onChange={handleChange}
+                    disabled={isFormDisabled}
+                  />
+                </div>
               </div>
             </div>
 
-            <div className={styles.formRow}>
-              <div className={styles.formGroup}>
-                <label>Document Number</label>
-                <input
-                  type="text"
-                  name="doc1_number"
-                  value={safeValue(formData.doc1_number)}
-                  onChange={handleChange}
-                  disabled={isFormDisabled}
-                />
-              </div>
-              
-              <div className={styles.formGroup}>
-                <label>Expiration Date</label>
-                <input
-                  type="date"
-                  name="doc1_expiry"
-                  value={safeValue(formData.doc1_expiry)}
-                  onChange={handleChange}
-                  disabled={isFormDisabled}
-                />
-              </div>
-            </div>
-
-            {formData.employer_list_type === 'LIST_B_C' && (
-              <>
+            {/* Document 2 - Only for List B&C */}
+            {formData.employer_list_type === 'LIST_B_AND_C' && (
+              <div className={styles.documentSection}>
                 <h4>List C Document (Employment Authorization)</h4>
+                
                 <div className={styles.formRow}>
                   <div className={styles.formGroup}>
                     <label>Document Title*</label>
@@ -540,9 +525,9 @@ const VerificationForm = ({
                       onChange={handleChange}
                       required
                       disabled={isFormDisabled}
+                      placeholder="e.g., Social Security Card"
                     />
                   </div>
-                  
                   <div className={styles.formGroup}>
                     <label>Issuing Authority</label>
                     <input
@@ -551,6 +536,7 @@ const VerificationForm = ({
                       value={safeValue(formData.doc2_issuing_authority)}
                       onChange={handleChange}
                       disabled={isFormDisabled}
+                      placeholder="e.g., Social Security Administration"
                     />
                   </div>
                 </div>
@@ -566,9 +552,8 @@ const VerificationForm = ({
                       disabled={isFormDisabled}
                     />
                   </div>
-                  
                   <div className={styles.formGroup}>
-                    <label>Expiration Date</label>
+                    <label>Expiration Date (if any)</label>
                     <input
                       type="date"
                       name="doc2_expiry"
@@ -578,64 +563,64 @@ const VerificationForm = ({
                     />
                   </div>
                 </div>
-              </>
+              </div>
             )}
 
-            {/* Document 3 (Optional) */}
-            <h4>Additional Document (Optional)</h4>
-            <div className={styles.formRow}>
-              <div className={styles.formGroup}>
-                <label>Document Title</label>
-                <input
-                  type="text"
-                  name="doc3_title"
-                  value={safeValue(formData.doc3_title)}
-                  onChange={handleChange}
-                  disabled={isFormDisabled}
-                />
-              </div>
+            {/* Document 3 - Optional additional document */}
+            <div className={styles.documentSection}>
+              <h4>Additional Document (Optional)</h4>
               
-              <div className={styles.formGroup}>
-                <label>Issuing Authority</label>
-                <input
-                  type="text"
-                  name="doc3_issuing_authority"
-                  value={safeValue(formData.doc3_issuing_authority)}
-                  onChange={handleChange}
-                  disabled={isFormDisabled}
-                />
+              <div className={styles.formRow}>
+                <div className={styles.formGroup}>
+                  <label>Document Title</label>
+                  <input
+                    type="text"
+                    name="doc3_title"
+                    value={safeValue(formData.doc3_title)}
+                    onChange={handleChange}
+                    disabled={isFormDisabled}
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label>Issuing Authority</label>
+                  <input
+                    type="text"
+                    name="doc3_issuing_authority"
+                    value={safeValue(formData.doc3_issuing_authority)}
+                    onChange={handleChange}
+                    disabled={isFormDisabled}
+                  />
+                </div>
               </div>
-            </div>
 
-            <div className={styles.formRow}>
-              <div className={styles.formGroup}>
-                <label>Document Number</label>
-                <input
-                  type="text"
-                  name="doc3_number"
-                  value={safeValue(formData.doc3_number)}
-                  onChange={handleChange}
-                  disabled={isFormDisabled}
-                />
-              </div>
-              
-              <div className={styles.formGroup}>
-                <label>Expiration Date</label>
-                <input
-                  type="date"
-                  name="doc3_expiry"
-                  value={safeValue(formData.doc3_expiry)}
-                  onChange={handleChange}
-                  disabled={isFormDisabled}
-                />
+              <div className={styles.formRow}>
+                <div className={styles.formGroup}>
+                  <label>Document Number</label>
+                  <input
+                    type="text"
+                    name="doc3_number"
+                    value={safeValue(formData.doc3_number)}
+                    onChange={handleChange}
+                    disabled={isFormDisabled}
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label>Expiration Date (if any)</label>
+                  <input
+                    type="date"
+                    name="doc3_expiry"
+                    value={safeValue(formData.doc3_expiry)}
+                    onChange={handleChange}
+                    disabled={isFormDisabled}
+                  />
+                </div>
               </div>
             </div>
 
             {/* Employer/Verifier Information */}
-            <h4>Certification</h4>
             <div className={styles.formRow}>
               <div className={styles.formGroup}>
-                <label>Last Name, First Name of Verifier*</label>
+                <label>Name of Employer or Authorized Representative*</label>
                 <input
                   type="text"
                   name="employer_name"
@@ -643,12 +628,10 @@ const VerificationForm = ({
                   onChange={handleChange}
                   required
                   disabled={isFormDisabled}
-                  placeholder="Last, First Name"
                 />
               </div>
-              
               <div className={styles.formGroup}>
-                <label>Title/Position of Verifier*</label>
+                <label>Title*</label>
                 <input
                   type="text"
                   name="employer_title"
@@ -662,7 +645,7 @@ const VerificationForm = ({
 
             <div className={styles.formRow}>
               <div className={styles.formGroup}>
-                <label>Employer's Business Name</label>
+                <label>Employer Business Name</label>
                 <input
                   type="text"
                   name="employer_business_name"
@@ -671,34 +654,32 @@ const VerificationForm = ({
                   disabled={isFormDisabled}
                 />
               </div>
-              
               <div className={styles.formGroup}>
-                <label>Signature Date*</label>
+                <label>Employer Address</label>
                 <input
-                  type="date"
-                  name="employer_signature_date"
-                  value={safeValue(formData.employer_signature_date)}
+                  type="text"
+                  name="employer_address"
+                  value={safeValue(formData.employer_address)}
                   onChange={handleChange}
-                  required
                   disabled={isFormDisabled}
                 />
               </div>
             </div>
 
             <div className={styles.formGroup}>
-              <label>Business Address (City, State, ZIP)</label>
+              <label>Signature Date*</label>
               <input
-                type="text"
-                name="employer_address"
-                value={safeValue(formData.employer_address)}
+                type="date"
+                name="employer_signature_date"
+                value={safeValue(formData.employer_signature_date)}
                 onChange={handleChange}
+                required
                 disabled={isFormDisabled}
-                placeholder="City, State, ZIP Code"
               />
             </div>
 
             <div className={styles.formGroup}>
-              <label>
+              <label style={{ display: 'flex', alignItems: 'center' }}>
                 <input
                   type="checkbox"
                   name="alternative_procedure_used"
@@ -740,9 +721,23 @@ const VerificationForm = ({
               <div className={styles.formGroup}>
                 <label>Signature of Employer or Authorized Representative*</label>
                 
+                {/* Existing signature display (if editing) */}
+                {isEditing && form.VERIFIER_SIGNATURE_URL && (
+                  <div style={{ marginBottom: '10px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+                    <p style={{ margin: '0 0 10px 0', fontSize: '13px', fontWeight: 'bold' }}>
+                      Current signature (will be replaced):
+                    </p>
+                    <img 
+                      src={form.VERIFIER_SIGNATURE_URL}
+                      alt="Current Signature" 
+                      style={{ maxWidth: '300px', border: '1px solid #ccc', borderRadius: '4px' }}
+                    />
+                  </div>
+                )}
+
                 {/* Signature Type Selection */}
-                <div style={{ marginBottom: '15px', padding: '10px', backgroundColor: '#f0f0f0', borderRadius: '4px' }}>
-                  <p style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: 'bold' }}>
+                <div style={{ marginBottom: '15px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+                  <p style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: '500' }}>
                     {isEditing 
                       ? 'Choose how to provide a new signature (will replace existing):' 
                       : 'Choose signature method:'}
@@ -763,28 +758,15 @@ const VerificationForm = ({
                       <input
                         type="radio"
                         name="verifierSignatureType"
-                        value="pdf"
-                        checked={signatureType === 'pdf'}
+                        value="image"
+                        checked={signatureType === 'image'}
                         onChange={handleSignatureTypeChange}
                         style={{ marginRight: '8px' }}
                       />
-                      Upload Signature PDF
+                      Upload Signature Image
                     </label>
                   </div>
                 </div>
-
-                {isEditing && form.VERIFIER_SIGNATURE_URL && (
-                  <div style={{ marginBottom: '10px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
-                    <p style={{ margin: '0 0 10px 0', fontSize: '13px', fontWeight: 'bold' }}>
-                      Current signature (will be replaced):
-                    </p>
-                    <img 
-                      src={form.VERIFIER_SIGNATURE_URL}
-                      alt="Current Signature" 
-                      style={{ maxWidth: '300px', border: '1px solid #ccc', borderRadius: '4px' }}
-                    />
-                  </div>
-                )}
 
                 {/* Canvas Signature Option */}
                 {signatureType === 'canvas' && (
@@ -804,7 +786,7 @@ const VerificationForm = ({
                     </div>
                     <button 
                       type="button" 
-                      onClick={clearSignature}
+                      onClick={clearCanvasSignature}
                       className={`${styles.button} ${styles.clearButton}`}
                       style={{ marginTop: '10px' }}
                     >
@@ -813,62 +795,54 @@ const VerificationForm = ({
                   </>
                 )}
 
-                {/* PDF Upload Option */}
-                {signatureType === 'pdf' && (
+                {/* Image Upload Option */}
+                {signatureType === 'image' && (
                   <>
-                    <p style={{ fontSize: '14px', color: '#666', marginBottom: '10px' }}>
-                      Upload a PDF file containing your signature. The signature will be extracted automatically.
+                    <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#666' }}>
+                      Upload a PNG, JPG, or JPEG image of your signature.
                     </p>
                     <div style={{ marginBottom: '10px' }}>
                       <input
                         type="file"
-                        ref={pdfFileInputRef}
-                        accept="application/pdf"
-                        onChange={handlePdfFileChange}
-                        disabled={isExtractingSignature}
+                        ref={imageFileInputRef}
+                        accept="image/png,image/jpeg,image/jpg"
+                        onChange={handleImageChange}
                         style={{ 
                           padding: '10px', 
                           border: '2px dashed #007bff', 
                           borderRadius: '4px', 
                           width: '100%', 
-                          maxWidth: '600px',
-                          backgroundColor: '#fff',
-                          cursor: 'pointer'
+                          maxWidth: '400px',
+                          backgroundColor: '#fff'
                         }}
                       />
                     </div>
                     
-                    {isExtractingSignature && (
-                      <p style={{ color: '#007bff', fontSize: '14px' }}>
-                        Extracting signature from PDF...
-                      </p>
-                    )}
-
-                    {/* PDF Signature Preview */}
-                    {pdfSignaturePreview && !isExtractingSignature && (
+                    {imageSignaturePreview && (
                       <div style={{ marginTop: '10px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
                         <p style={{ margin: '0 0 10px 0', fontSize: '13px', fontWeight: 'bold', color: '#28a745' }}>
-                          ✓ Signature extracted successfully:
+                          ✓ Signature preview:
                         </p>
                         <img 
-                          src={pdfSignaturePreview} 
-                          alt="Extracted Signature Preview" 
+                          src={imageSignaturePreview} 
+                          alt="Signature Preview" 
                           style={{ 
-                            maxWidth: '100%', 
-                            maxHeight: '200px', 
+                            maxWidth: '300px', 
+                            maxHeight: '100px', 
                             border: '1px solid #ccc', 
                             borderRadius: '4px',
                             backgroundColor: '#fff'
                           }} 
                         />
-                        <button 
-                          type="button" 
-                          onClick={clearPdfSignature}
-                          className={`${styles.button} ${styles.clearButton}`}
-                          style={{ marginTop: '10px' }}
-                        >
-                          Clear & Upload Different PDF
-                        </button>
+                        <div style={{ marginTop: '10px' }}>
+                          <button 
+                            type="button" 
+                            onClick={clearImageSignature}
+                            className={`${styles.button} ${styles.clearButton}`}
+                          >
+                            Remove & Upload Different Image
+                          </button>
+                        </div>
                       </div>
                     )}
                   </>

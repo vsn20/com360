@@ -2,7 +2,38 @@
 
 import DBconnection from '@/app/utils/config/db';
 import { cookies } from 'next/headers';
-import { getW4FormDetails, generateW4PDF, uploadPDFToDocuments } from './w4form/action'; // Import from W-4 actions
+import { getW4FormDetails, generateW4PDF, uploadPDFToDocuments } from './w4form/action';
+
+// --- DATE UTILITIES (MATCHING I-983 LOGIC) ---
+
+// ✅ FIXED: Date formatting utility to prevent day-before issue (String logic only)
+const formatDate = (date) => {
+    if (!date) return null;
+
+    // If it's already a YYYY-MM-DD string, trust it and return it
+    if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        return date;
+    }
+
+    // If it's a full ISO string (e.g. 2026-02-20T...), split it
+    if (typeof date === 'string' && date.includes('T')) {
+        return date.split('T')[0];
+    }
+    
+    // Fallback for Date objects (use local time components)
+    try {
+        const d = new Date(date);
+        if (isNaN(d.getTime())) return null;
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        if (year < 1900 || year > 2100) return null;
+        return `${year}-${month}-${day}`;
+    } catch (e) {
+        console.warn("Error formatting date for DB:", e);
+        return null;
+    }
+};
 
 // Helper to decode JWT
 const decodeJwt = (token) => {
@@ -31,7 +62,8 @@ export async function verifyW4Form({ formId: prefixedFormId, verifierId, orgId, 
     const decoded = decodeJwt(token);
     if (!decoded || !decoded.userId) throw new Error('Authentication failed.');
 
-    const verificationDate = new Date();
+    // ✅ FIXED: Use formatDate() for consistent date handling
+    const formattedEmploymentDate = formatDate(employerData.first_date_of_employment);
     
     // Update the form with employer data and set status to VERIFIED
     await pool.query(
@@ -46,7 +78,7 @@ export async function verifyW4Form({ formId: prefixedFormId, verifierId, orgId, 
       [
         verifierId,
         employerData.employer_name_address,
-        employerData.first_date_of_employment,
+        formattedEmploymentDate,
         employerData.employer_ein,
         formId
       ]

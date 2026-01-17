@@ -6,7 +6,7 @@ import { cookies } from 'next/headers';
 import fs from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'; // KEEP THIS
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 
 const safeValue = (value, defaultValue = '') => {
   return value ?? defaultValue;
@@ -28,9 +28,78 @@ const generateSignatureHash = (base64Data) => {
   return crypto.createHash('sha256').update(base64Data).digest('hex');
 };
 
-// Upload employer signature
+// ✅ UPDATED: Date formatting utility matching I-983 (String logic only)
+const formatDate = (date) => {
+  if (!date) return null;
+
+  // If it's already a YYYY-MM-DD string, trust it and return it
+  if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    return date;
+  }
+
+  // If it's a full ISO string (e.g. 2026-02-20T...), split it
+  if (typeof date === 'string' && date.includes('T')) {
+    return date.split('T')[0];
+  }
+  
+  // Fallback for Date objects (use local time components)
+  try {
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return null;
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    if (year < 1900 || year > 2100) return null;
+    return `${year}-${month}-${day}`;
+  } catch (e) {
+    console.warn("Error formatting date for DB:", e);
+    return null;
+  }
+};
+
+// ✅ UPDATED: Display format MM/DD/YYYY for PDF (String logic only)
+const formatPdfDate = (dateStr) => {
+  if (!dateStr) return '';
+
+  try {
+    let year, month, day;
+    
+    // Handle YYYY-MM-DD or YYYY-MM-DDTHH...
+    if (typeof dateStr === 'string') {
+      const cleanDate = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
+      const parts = cleanDate.split('-');
+      if (parts.length === 3) {
+        year = parts[0];
+        month = parts[1];
+        day = parts[2];
+        return `${month}/${day}/${year}`;
+      }
+    }
+    
+    // Fallback for Date objects
+    const d = new Date(dateStr);
+    year = d.getFullYear();
+    month = String(d.getMonth() + 1).padStart(2, '0');
+    day = String(d.getDate()).padStart(2, '0');
+    
+    if (year < 1900 || year > 2100) return '';
+    return `${month}/${day}/${year}`;
+  } catch (e) {
+    console.warn("Error formatting PDF date:", e);
+    return '';
+  }
+};
+
+// ✅ UPDATED: Upload employer signature (Images only)
 async function uploadEmployerSignature(base64Data, formId) {
   try {
+    console.log(`📝 Uploading employer signature for form ID: ${formId}`);
+    
+    // Validate base64 image format
+    if (!base64Data.startsWith('data:image/')) {
+      throw new Error('Invalid image format. Only PNG, JPG, or JPEG images are allowed.');
+    }
+    
     const base64Image = base64Data.replace(/^data:image\/\w+;base64,/, '');
     const buffer = Buffer.from(base64Image, 'base64');
     
@@ -48,21 +117,20 @@ async function uploadEmployerSignature(base64Data, formId) {
     
     const hash = generateSignatureHash(base64Image);
     
+    console.log('✅ Employer signature saved:', filename);
+    
     return { 
       success: true, 
       path: `/uploads/forms_signatures/${filename}`,
       hash: hash
     };
   } catch (error) {
-    console.error('Error uploading employer signature:', error);
+    console.error('❌ Error uploading employer signature:', error);
     return { success: false, error: error.message };
   }
 }
 
-// Generate I-9 PDF with filled data
-// Replace ONLY the generateI9PDF function in documentverification.js
-// DO NOT add new imports - use existing ones at top of file
-
+// ✅ UPDATED: Generate I-9 PDF with proper date formatting
 async function generateI9PDF(formData, employeeData, verifierData, orgData) {
   try {
     console.log('📄 Starting PDF generation...');
@@ -134,12 +202,8 @@ async function generateI9PDF(formData, employeeData, verifierData, orgData) {
     safeSetDropdown(form, 'State', employeeData.EMPLOYEE_STATE);
     safeSetField(form, 'ZIP Code', employeeData.EMPLOYEE_ZIP_CODE);
     
-    // Date of Birth
-    if (employeeData.EMPLOYEE_DOB) {
-      const dob = new Date(employeeData.EMPLOYEE_DOB);
-      const dobStr = `${String(dob.getMonth() + 1).padStart(2, '0')}/${String(dob.getDate()).padStart(2, '0')}/${dob.getFullYear()}`;
-      safeSetField(form, 'Date of Birth mmddyyyy', dobStr);
-    }
+    // Date of Birth - using formatPdfDate
+    safeSetField(form, 'Date of Birth mmddyyyy', formatPdfDate(employeeData.EMPLOYEE_DOB));
     
     // SSN, Email, Phone
     safeSetField(form, 'US Social Security Number', employeeData.EMPLOYEE_SSN);
@@ -148,7 +212,8 @@ async function generateI9PDF(formData, employeeData, verifierData, orgData) {
     
     // Citizenship status checkboxes (CB_1, CB_2, CB_3, CB_4)
     if (employeeData.CITIZENSHIP_STATUS) {
-      switch(employeeData.CITIZENSHIP_STATUS) {
+      const citizenshipStatus = parseInt(employeeData.CITIZENSHIP_STATUS);
+      switch(citizenshipStatus) {
         case 1:
           safeCheckBox(form, 'CB_1'); // A citizen of the United States
           break;
@@ -161,11 +226,7 @@ async function generateI9PDF(formData, employeeData, verifierData, orgData) {
           break;
         case 4:
           safeCheckBox(form, 'CB_4'); // An alien authorized to work
-          if (employeeData.WORK_AUTHORIZATION_EXPIRY) {
-            const expiry = new Date(employeeData.WORK_AUTHORIZATION_EXPIRY);
-            const expiryStr = `${String(expiry.getMonth() + 1).padStart(2, '0')}/${String(expiry.getDate()).padStart(2, '0')}/${expiry.getFullYear()}`;
-            safeSetField(form, 'Exp Date mmddyyyy', expiryStr);
-          }
+          safeSetField(form, 'Exp Date mmddyyyy', formatPdfDate(employeeData.WORK_AUTHORIZATION_EXPIRY));
           safeSetField(form, 'USCIS ANumber', employeeData.USCIS_A_NUMBER);
           safeSetField(form, 'Form I94 Admission Number', employeeData.I94_ADMISSION_NUMBER);
           
@@ -179,21 +240,13 @@ async function generateI9PDF(formData, employeeData, verifierData, orgData) {
     }
     
     // Employee signature date
-    if (employeeData.EMPLOYEE_SIGNATURE_DATE) {
-      const sigDate = new Date(employeeData.EMPLOYEE_SIGNATURE_DATE);
-      const sigDateStr = `${String(sigDate.getMonth() + 1).padStart(2, '0')}/${String(sigDate.getDate()).padStart(2, '0')}/${sigDate.getFullYear()}`;
-      safeSetField(form, "Today's Date mmddyyy", sigDateStr);
-    }
+    safeSetField(form, "Today's Date mmddyyy", formatPdfDate(employeeData.EMPLOYEE_SIGNATURE_DATE));
     
     // ============= SECTION 2: EMPLOYER REVIEW AND VERIFICATION =============
     console.log('\n👔 Filling Section 2: Employer Verification...');
     
     // First day of employment
-    if (formData.employer_first_day) {
-      const firstDay = new Date(formData.employer_first_day);
-      const firstDayStr = `${String(firstDay.getMonth() + 1).padStart(2, '0')}/${String(firstDay.getDate()).padStart(2, '0')}/${firstDay.getFullYear()}`;
-      safeSetField(form, 'FirstDayEmployed mmddyyyy', firstDayStr);
-    }
+    safeSetField(form, 'FirstDayEmployed mmddyyyy', formatPdfDate(formData.employer_first_day));
     
     // Document verification based on List A or List B & C
     if (formData.employer_list_type === 'LIST_A') {
@@ -204,24 +257,14 @@ async function generateI9PDF(formData, employeeData, verifierData, orgData) {
       safeSetField(form, 'Document Title 1', formData.doc1_title);
       safeSetField(form, 'Issuing Authority 1', formData.doc1_issuing_authority);
       safeSetField(form, 'Document Number 0 (if any)', formData.doc1_number);
-      
-      if (formData.doc1_expiry) {
-        const doc1Exp = new Date(formData.doc1_expiry);
-        const doc1ExpStr = `${String(doc1Exp.getMonth() + 1).padStart(2, '0')}/${String(doc1Exp.getDate()).padStart(2, '0')}/${doc1Exp.getFullYear()}`;
-        safeSetField(form, 'Expiration Date if any', doc1ExpStr);
-      }
+      safeSetField(form, 'Expiration Date if any', formatPdfDate(formData.doc1_expiry));
       
       // Document 2 (optional)
       if (formData.doc2_title) {
         safeSetField(form, 'Document Title 2 If any', formData.doc2_title);
         safeSetField(form, 'Issuing Authority_2', formData.doc2_issuing_authority);
         safeSetField(form, 'Document Number If any_2', formData.doc2_number);
-        
-        if (formData.doc2_expiry) {
-          const doc2Exp = new Date(formData.doc2_expiry);
-          const doc2ExpStr = `${String(doc2Exp.getMonth() + 1).padStart(2, '0')}/${String(doc2Exp.getDate()).padStart(2, '0')}/${doc2Exp.getFullYear()}`;
-          safeSetField(form, 'List A.  Document 2. Expiration Date (if any)', doc2ExpStr);
-        }
+        safeSetField(form, 'List A.  Document 2. Expiration Date (if any)', formatPdfDate(formData.doc2_expiry));
       }
       
       // Document 3 (optional)
@@ -229,12 +272,7 @@ async function generateI9PDF(formData, employeeData, verifierData, orgData) {
         safeSetField(form, 'List A.   Document Title 3.  If any', formData.doc3_title);
         safeSetField(form, 'List A. Document 3.  Enter Issuing Authority', formData.doc3_issuing_authority);
         safeSetField(form, 'List A.  Document 3 Number.  If any', formData.doc3_number);
-        
-        if (formData.doc3_expiry) {
-          const doc3Exp = new Date(formData.doc3_expiry);
-          const doc3ExpStr = `${String(doc3Exp.getMonth() + 1).padStart(2, '0')}/${String(doc3Exp.getDate()).padStart(2, '0')}/${doc3Exp.getFullYear()}`;
-          safeSetField(form, 'Document Number if any_3', doc3ExpStr);
-        }
+        safeSetField(form, 'Document Number if any_3', formatPdfDate(formData.doc3_expiry));
       }
       
     } else {
@@ -245,23 +283,13 @@ async function generateI9PDF(formData, employeeData, verifierData, orgData) {
       safeSetField(form, 'List B Document 1 Title', formData.doc1_title);
       safeSetField(form, 'List B Issuing Authority 1', formData.doc1_issuing_authority);
       safeSetField(form, 'List B Document Number 1', formData.doc1_number);
-      
-      if (formData.doc1_expiry) {
-        const doc1Exp = new Date(formData.doc1_expiry);
-        const doc1ExpStr = `${String(doc1Exp.getMonth() + 1).padStart(2, '0')}/${String(doc1Exp.getDate()).padStart(2, '0')}/${doc1Exp.getFullYear()}`;
-        safeSetField(form, 'List B Expiration Date 1', doc1ExpStr);
-      }
+      safeSetField(form, 'List B Expiration Date 1', formatPdfDate(formData.doc1_expiry));
       
       // List C (Employment Authorization) - Document 2
       safeSetField(form, 'List C Document Title 1', formData.doc2_title);
       safeSetField(form, 'List C Issuing Authority 1', formData.doc2_issuing_authority);
       safeSetField(form, 'List C Document Number 1', formData.doc2_number);
-      
-      if (formData.doc2_expiry) {
-        const doc2Exp = new Date(formData.doc2_expiry);
-        const doc2ExpStr = `${String(doc2Exp.getMonth() + 1).padStart(2, '0')}/${String(doc2Exp.getDate()).padStart(2, '0')}/${doc2Exp.getFullYear()}`;
-        safeSetField(form, 'List C Expiration Date 1', doc2ExpStr);
-      }
+      safeSetField(form, 'List C Expiration Date 1', formatPdfDate(formData.doc2_expiry));
     }
     
     // Additional Information
@@ -282,11 +310,7 @@ async function generateI9PDF(formData, employeeData, verifierData, orgData) {
       formData.employer_name);
     
     // Signature date
-    if (formData.employer_signature_date) {
-      const empSigDate = new Date(formData.employer_signature_date);
-      const empSigDateStr = `${String(empSigDate.getMonth() + 1).padStart(2, '0')}/${String(empSigDate.getDate()).padStart(2, '0')}/${empSigDate.getFullYear()}`;
-      safeSetField(form, 'S2 Todays Date mmddyyyy', empSigDateStr);
-    }
+    safeSetField(form, 'S2 Todays Date mmddyyyy', formatPdfDate(formData.employer_signature_date));
     
     // Business information
     safeSetField(form, 'Employers Business or Org Name', 
@@ -356,6 +380,7 @@ async function generateI9PDF(formData, employeeData, verifierData, orgData) {
     return { success: false, error: error.message };
   }
 }
+
 // Upload PDF to documents
 async function uploadPDFToDocuments(pdfBytes, empId, orgId, formId, userId) {
   try {
@@ -365,6 +390,7 @@ async function uploadPDFToDocuments(pdfBytes, empId, orgId, formId, userId) {
     const timestamp = Date.now();
     const filename = `I9_Form_${empId}_${formId}_${timestamp}.pdf`;
     const filePath = path.join(uploadDir, filename);
+    const dateNow = new Date().toLocaleDateString();
     
     await fs.writeFile(filePath, pdfBytes);
     
@@ -375,8 +401,8 @@ async function uploadPDFToDocuments(pdfBytes, empId, orgId, formId, userId) {
     const [result] = await pool.query(
       `INSERT INTO C_EMP_DOCUMENTS 
        (empid, orgid, document_name, document_type, subtype, document_path, document_purpose, 
-        comments, startdate, enddate, created_by, updated_by, created_date, last_updated_date)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NULL, ?, ?, NOW(), NOW())`,
+        comments, enddate, created_by, updated_by, created_date, last_updated_date,startdate)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?,?)`,
       [
         empId, 
         orgId, 
@@ -387,7 +413,10 @@ async function uploadPDFToDocuments(pdfBytes, empId, orgId, formId, userId) {
         5, // document_purpose
         `Automatically uploaded after form verification. Form ID: ${formId}`,
         userId,
-        userId
+        userId,
+        dateNow,
+        dateNow,
+        dateNow
       ]
     );
     
@@ -499,7 +528,7 @@ export async function getFormDetails(formId) {
   }
 }
 
-// Verify form
+// ✅ UPDATED: Verify form with proper date handling
 export async function verifyForm(formData) {
   const pool = await DBconnection();
   
@@ -519,10 +548,9 @@ export async function verifyForm(formData) {
     const userId = decoded.userId;
     
     const {
-      form_id,
-      emp_id,
-      org_id,
-      verifier_id,
+      formId,
+      verifierEmpId,
+      orgId,
       employer_first_day,
       employer_list_type,
       doc1_title,
@@ -547,16 +575,7 @@ export async function verifyForm(formData) {
       signature_data
     } = formData;
 
-    // Format dates
-    const formatDate = (date) => {
-      if (!date || isNaN(new Date(date))) return null;
-      const d = new Date(date);
-      const year = d.getUTCFullYear();
-      const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-      const day = String(d.getUTCDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    };
-
+    // Format dates using the improved formatDate function
     const formattedFirstDay = formatDate(employer_first_day);
     const formattedSignatureDate = formatDate(employer_signature_date);
     const formattedDoc1Expiry = formatDate(doc1_expiry);
@@ -564,7 +583,7 @@ export async function verifyForm(formData) {
     const formattedDoc3Expiry = formatDate(doc3_expiry);
 
     // Upload employer signature
-    const sigUploadResult = await uploadEmployerSignature(signature_data, form_id);
+    const sigUploadResult = await uploadEmployerSignature(signature_data, formId);
     
     if (!sigUploadResult.success) {
       throw new Error('Failed to upload signature: ' + sigUploadResult.error);
@@ -573,7 +592,7 @@ export async function verifyForm(formData) {
     // Get verifier details
     const [verifierRows] = await pool.query(
       'SELECT EMP_FST_NAME, EMP_LAST_NAME, JOB_TITLE FROM C_EMP WHERE empid = ? AND orgid = ?',
-      [verifier_id, org_id]
+      [verifierEmpId, orgId]
     );
     
     if (verifierRows.length === 0) {
@@ -581,6 +600,8 @@ export async function verifyForm(formData) {
     }
     
     const verifier = verifierRows[0];
+
+     const dateNow = new Date().toLocaleDateString();
 
     // Update form with Section 2 data
     const updateQuery = `
@@ -611,13 +632,13 @@ export async function verifyForm(formData) {
           EMPLOYER_ADDRESS = ?,
           ALTERNATIVE_PROCEDURE_USED = ?,
           ADDITIONAL_INFO = ?,
-          UPDATED_AT = NOW(),
+          UPDATED_AT = ?,
           UPDATED_BY = ?
       WHERE ID = ?
     `;
 
     const updateValues = [
-      verifier_id,
+      verifierEmpId,
       sigUploadResult.path,
       formattedSignatureDate,
       formattedFirstDay,
@@ -642,18 +663,22 @@ export async function verifyForm(formData) {
       alternative_procedure_used ? 1 : 0,
       additional_info,
       userId,
-      form_id
+      dateNow,
+      formId
     ];
 
     await pool.query(updateQuery, updateValues);
 
     // Get complete form data for PDF generation
-    const [formRows] = await pool.query('SELECT * FROM C_FORMS WHERE ID = ?', [form_id]);
+    const [formRows] = await pool.query('SELECT * FROM C_FORMS WHERE ID = ?', [formId]);
     const completeFormData = formRows[0];
 
+    // Get employee ID for PDF upload
+    const empId = completeFormData.EMP_ID;
+
     // Get org data
-    const [orgRows] = await pool.query('SELECT orgname FROM C_ORG WHERE orgid = ?', [org_id]);
-    const orgData = orgRows.length > 0 ? orgRows[0] : { NAME: employer_business_name };
+    const [orgRows] = await pool.query('SELECT orgname FROM C_ORG WHERE orgid = ?', [orgId]);
+    const orgData = orgRows.length > 0 ? orgRows[0] : { orgname: employer_business_name };
 
     // Generate PDF
     const pdfResult = await generateI9PDF(
@@ -674,9 +699,9 @@ export async function verifyForm(formData) {
     // Upload PDF to documents
     const uploadResult = await uploadPDFToDocuments(
       pdfResult.pdfBytes,
-      emp_id,
-      org_id,
-      form_id,
+      empId,
+      orgId,
+      formId,
       userId
     );
 

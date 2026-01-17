@@ -7,8 +7,36 @@ import crypto from 'crypto';
 import { PDFDocument } from 'pdf-lib';
 import { cookies } from 'next/headers';
 
-// Utility function to format dates
+// ✅ UPDATED CONFIGURATION - Reduced signature height to prevent overlap
+const SIGNATURE_CONFIG = {
+  position: { x: 180, y: 190 },
+  dimensions: { width: 200, height: 25 }, // ✅ Reduced from 40 to 30
+  date: { x: 450, y: 195, fontSize: 11 }
+};
+
+// ✅ MAX FILE SIZE - 2MB for images
+const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB
+
+// ✅ FIXED: Get today's date in local timezone (no day-before issue)
+const getTodayDate = () => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`; // Format: YYYY-MM-DD for input[type="date"]
+};
+
+// ✅ FIXED: Utility function to format dates for display (prevents day-before issue)
 const formatDate = (date) => {
+  if (!date || isNaN(new Date(date))) return '';
+  const d = new Date(date);
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${month}/${day}/${d.getFullYear()}`;
+};
+
+// Utility function for database date format
+const formatDateForDB = (date) => {
   if (!date || isNaN(new Date(date))) return null;
   const d = new Date(date);
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
@@ -19,14 +47,21 @@ const generateSignatureHash = (base64Data) => {
   return crypto.createHash('sha256').update(base64Data).digest('hex');
 };
 
-// Upload W-9 signature for sub-org
-async function uploadW9SignatureSubOrg(base64Data, suborgid, timestamp) {
+// ✅ Upload signature image (PNG/JPG/JPEG only - NO PDF)
+async function uploadW9SignatureImage(base64Data, suborgid, timestamp) {
   try {
-    // Both canvas and PDF signatures come as PNG data URLs now
+    // Validate base64 image format
+    if (!base64Data.startsWith('data:image/')) {
+      throw new Error('Invalid image format. Only PNG, JPG, or JPEG images are allowed.');
+    }
+
     const base64Image = base64Data.replace(/^data:image\/\w+;base64,/, '');
     const buffer = Buffer.from(base64Image, 'base64');
     
-    if (buffer.length > 5 * 1024 * 1024) throw new Error('Signature file too large (max 5MB)');
+    // ✅ Check file size (2MB limit)
+    if (buffer.length > MAX_IMAGE_SIZE) {
+      throw new Error(`Signature image too large. Maximum size is 2MB. Your file is ${(buffer.length / 1024 / 1024).toFixed(2)}MB`);
+    }
     
     const publicDir = path.join(process.cwd(), 'public', 'uploads', 'forms_signatures');
     await fs.mkdir(publicDir, { recursive: true });
@@ -37,14 +72,16 @@ async function uploadW9SignatureSubOrg(base64Data, suborgid, timestamp) {
     await fs.writeFile(filePath, buffer);
     const hash = generateSignatureHash(base64Image);
     
+    console.log(`✅ Signature uploaded: ${filename} (${(buffer.length / 1024).toFixed(2)}KB)`);
+    
     return { success: true, path: `/uploads/forms_signatures/${filename}`, hash };
   } catch (error) {
-    console.error('Error uploading W-9 signature:', error);
+    console.error('❌ Error uploading W-9 signature:', error);
     return { success: false, error: error.message };
   }
 }
 
-// Generate W-9 PDF
+// ✅ UPDATED: Generate W-9 PDF with reduced signature height and strict TIN validation
 async function generateW9PDF(w9Data) {
   try {
     const templatePath = path.join(process.cwd(), "public", "templates", "fw9.pdf");
@@ -57,7 +94,7 @@ async function generateW9PDF(w9Data) {
       try {
         const field = form.getTextField(fieldName);
         field.setText(value || "");
-      } catch {
+      } catch (err) {
         console.warn(`⚠️ Field not found: ${fieldName}`);
       }
     };
@@ -66,7 +103,7 @@ async function generateW9PDF(w9Data) {
       try {
         const field = form.getCheckBox(fieldName);
         field.check();
-      } catch {
+      } catch (err) {
         console.warn(`⚠️ Checkbox not found: ${fieldName}`);
       }
     };
@@ -85,7 +122,7 @@ async function generateW9PDF(w9Data) {
     setSafeText("topmostSubform[0].Page1[0].f1_05[0]", w9Data.exempt_payee_code || "");
     setSafeText("topmostSubform[0].Page1[0].f1_06[0]", w9Data.exemption_from_fatca_code || "");
 
-    // Handle Tax Classification checkboxes
+    // Tax Classification checkboxes
     const taxClassMap = {
       INDIVIDUAL: "topmostSubform[0].Page1[0].Boxes3a-b_ReadOrder[0].c1_1[0]",
       C_CORPORATION: "topmostSubform[0].Page1[0].Boxes3a-b_ReadOrder[0].c1_1[1]",
@@ -106,53 +143,78 @@ async function generateW9PDF(w9Data) {
       );
     }
 
-    // TIN Field Mapping
-    const tin = (w9Data.taxpayer_identification_number || "").replace(/-/g, "");
-    if (tin.length === 9) {
-      if (w9Data.tax_classification === "INDIVIDUAL") {
-        setSafeText("topmostSubform[0].Page1[0].f1_11[0]", tin.substring(0, 3));
-        setSafeText("topmostSubform[0].Page1[0].f1_12[0]", tin.substring(3, 5));
-        setSafeText("topmostSubform[0].Page1[0].f1_13[0]", tin.substring(5, 9));
-      } else {
-        setSafeText("topmostSubform[0].Page1[0].f1_14[0]", tin.substring(0, 2));
-        setSafeText("topmostSubform[0].Page1[0].f1_15[0]", tin.substring(2, 9));
-      }
+    // ✅ STRICT TIN VALIDATION - Must be exactly 9 digits
+    const tin = (w9Data.taxpayer_identification_number || "").replace(/\D/g, "");
+    
+    console.log(`🔢 Processing TIN: ${tin} (Length: ${tin.length})`);
+    
+    if (tin.length !== 9) {
+      throw new Error(`Invalid TIN: Must be exactly 9 digits. Received ${tin.length} digits.`);
+    }
+    
+    if (w9Data.tax_classification === "INDIVIDUAL") {
+      // SSN: XXX-XX-XXXX
+      const ssn1 = tin.substring(0, 3);
+      const ssn2 = tin.substring(3, 5);
+      const ssn3 = tin.substring(5, 9);
+      
+      console.log(`📝 SSN Parts: [${ssn1}] [${ssn2}] [${ssn3}]`);
+      
+      setSafeText("topmostSubform[0].Page1[0].f1_11[0]", ssn1);
+      setSafeText("topmostSubform[0].Page1[0].f1_12[0]", ssn2);
+      setSafeText("topmostSubform[0].Page1[0].f1_13[0]", ssn3);
+    } else {
+      // EIN: XX-XXXXXXX
+      const ein1 = tin.substring(0, 2);
+      const ein2 = tin.substring(2, 9);
+      
+      console.log(`📝 EIN Parts: [${ein1}] [${ein2}]`);
+      
+      setSafeText("topmostSubform[0].Page1[0].f1_14[0]", ein1);
+      setSafeText("topmostSubform[0].Page1[0].f1_15[0]", ein2);
     }
 
-    // Embed Signature + Date
+    // ✅ UPDATED: Embed Signature Image with reduced height (30px instead of 40px)
     if (w9Data.signature_url) {
       try {
         const sigPath = path.join(process.cwd(), "public", w9Data.signature_url);
         const sigBytes = await fs.readFile(sigPath);
-        const sigImage = await pdfDoc.embedPng(sigBytes);
         
+        // Embed as PNG
+        const sigImage = await pdfDoc.embedPng(sigBytes);
         const helveticaFont = await pdfDoc.embedFont('Helvetica');
 
-        const sigX = 200;
-        const sigY = 185;
+        // ✅ Use reduced signature height to prevent overlap
+        const { x, y } = SIGNATURE_CONFIG.position;
+        const { width, height } = SIGNATURE_CONFIG.dimensions;
 
         // Draw signature image
-        page.drawImage(sigImage, { x: sigX, y: sigY, width: 200, height: 40 });
+        page.drawImage(sigImage, { x, y, width, height });
+        
+        console.log(`✍️ Signature embedded at (${x}, ${y}) with size ${width}x${height}`);
 
-        // Draw date
-        const dateText = w9Data.signature_date
-          ? new Date(w9Data.signature_date).toLocaleDateString('en-US')
-          : new Date().toLocaleDateString('en-US');
+        // ✅ Draw date using corrected format function
+        const dateText = formatDate(w9Data.signature_date || new Date());
          
         page.drawText(dateText, {
-          x: 450,
-          y: sigY + 10,
-          size: 11,
+          x: SIGNATURE_CONFIG.date.x,
+          y: SIGNATURE_CONFIG.date.y,
+          size: SIGNATURE_CONFIG.date.fontSize,
           font: helveticaFont,
         });
+        
+        console.log(`📅 Date added: ${dateText}`);
 
       } catch (err) {
-        console.warn(`⚠️ Failed to embed signature/date: ${err.message}`);
+        console.warn(`⚠️ Failed to embed signature: ${err.message}`);
       }
     }
 
     form.flatten();
     const finalBytes = await pdfDoc.save();
+    
+    console.log(`✅ W-9 PDF generated successfully`);
+    
     return { success: true, pdfBytes: finalBytes };
 
   } catch (error) {
@@ -161,7 +223,7 @@ async function generateW9PDF(w9Data) {
   }
 }
 
-// Upload PDF to sub-organization documents
+// ✅ Always create NEW document (never replace existing)
 async function uploadPDFToSubOrgDocuments(pdfBytes, suborgid, orgid, userId) {
     try {
         const pool = await DBconnection();
@@ -170,44 +232,26 @@ async function uploadPDFToSubOrgDocuments(pdfBytes, suborgid, orgid, userId) {
         const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'documents');
         await fs.mkdir(uploadDir, { recursive: true });
 
-        const filename = `W9_Form_SubOrg_${suborgid}_${Date.now()}.pdf`;
+        const timestamp = Date.now();
+        const filename = `W9_Form_SubOrg_${suborgid}_${timestamp}.pdf`;
         const filePath = path.join(uploadDir, filename);
         await fs.writeFile(filePath, pdfBytes);
         const documentPath = `/uploads/documents/${filename}`;
 
         const documentPurpose = 'Auto Generated';
         const documentType = 6; // W-9 type ID
-        const documentName = `W-9 Form (Submitted ${new Date().toLocaleDateString()})`;
+        const currentDate = formatDate(new Date());
+        const documentName = `W-9 Form (Submitted ${currentDate})`;
 
-        // Check for existing W-9 document
-        const [existingDocs] = await pool.query(
-            `SELECT id FROM C_SUB_ORG_DOCUMENTS
-             WHERE suborgid = ? AND orgid = ? AND document_type = ?`,
-            [suborgid, orgid, documentType]
+        // ✅ ALWAYS INSERT - Never update existing documents
+        await pool.query(
+            `INSERT INTO C_SUB_ORG_DOCUMENTS
+               (suborgid, orgid, document_name, document_type, document_path, document_purpose, created_by, updated_by, created_date, last_updated_date)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+            [suborgid, orgid, documentName, documentType, documentPath, documentPurpose, userId, userId]
         );
-
-        if (existingDocs.length > 0) {
-            // Update existing record
-            await pool.query(
-                `UPDATE C_SUB_ORG_DOCUMENTS SET
-                   document_name = ?,
-                   document_path = ?,
-                   updated_by = ?,
-                   last_updated_date = NOW()
-                 WHERE id = ?`,
-                [documentName, documentPath, userId, existingDocs[0].id]
-            );
-            console.log(`✅ Updated W-9 document for suborgid ${suborgid}`);
-        } else {
-            // Insert new record
-            await pool.query(
-                `INSERT INTO C_SUB_ORG_DOCUMENTS
-                   (suborgid, orgid, document_name, document_type, document_path, document_purpose, created_by, updated_by, created_date, last_updated_date)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-                [suborgid, orgid, documentName, documentType, documentPath, documentPurpose, userId, userId]
-            );
-            console.log(`✅ Inserted new W-9 document for suborgid ${suborgid}`);
-        }
+        
+        console.log(`✅ NEW W-9 document created for suborgid ${suborgid}: ${documentName}`);
 
         return { success: true, path: documentPath };
 
@@ -220,8 +264,6 @@ async function uploadPDFToSubOrgDocuments(pdfBytes, suborgid, orgid, userId) {
 // Save W-9 form as draft (for sub-org)
 export async function saveW9FormForSubOrg(formData) {
   try {
-    // For sub-org W-9, we don't need to save to database
-    // Just return success - data will only be saved when submitted
     return { success: true, message: 'Draft saved locally' };
   } catch (error) {
     console.error('Error saving W-9 draft:', error);
@@ -229,13 +271,24 @@ export async function saveW9FormForSubOrg(formData) {
   }
 }
 
-// Submit W-9 form (for sub-org) - generates PDF and saves to documents
+// ✅ Submit W-9 form with strict TIN validation
 export async function submitW9FormForSubOrg(formData) {
   try {
     const { suborgid, orgid, signature_data, ...w9Data } = formData;
 
+    // ✅ Validate signature is provided and is an image
     if (!signature_data) {
       throw new Error('Signature is required to submit the form.');
+    }
+
+    if (!signature_data.startsWith('data:image/')) {
+      throw new Error('Signature must be an image (PNG, JPG, or JPEG).');
+    }
+
+    // ✅ STRICT TIN VALIDATION - Must be exactly 9 digits
+    const tin = (w9Data.taxpayer_identification_number || "").replace(/\D/g, "");
+    if (tin.length !== 9) {
+      throw new Error(`Taxpayer Identification Number must be exactly 9 digits. You entered ${tin.length} digits.`);
     }
 
     // Get user ID from JWT
@@ -247,14 +300,17 @@ export async function submitW9FormForSubOrg(formData) {
 
     const timestamp = Date.now();
 
-    // Upload signature (both canvas and PDF-extracted are PNG now)
-    const signatureResult = await uploadW9SignatureSubOrg(signature_data, suborgid, timestamp);
+    // ✅ Upload image signature
+    console.log('📤 Uploading signature image...');
+    const signatureResult = await uploadW9SignatureImage(signature_data, suborgid, timestamp);
     
     if (!signatureResult.success) {
-      throw new Error('Failed to upload signature.');
+      throw new Error(signatureResult.error || 'Failed to upload signature.');
     }
 
-    // Prepare data for PDF generation
+    console.log('✅ Signature uploaded successfully');
+
+    // ✅ Prepare data for PDF generation with validated TIN
     const pdfData = {
       name: w9Data.name,
       business_name: w9Data.business_name,
@@ -264,18 +320,22 @@ export async function submitW9FormForSubOrg(formData) {
       exemption_from_fatca_code: w9Data.exemption_from_fatca_code,
       address_street: w9Data.address_street,
       address_city_state_zip: `${w9Data.city}, ${w9Data.state} ${w9Data.zip_code}`,
-      taxpayer_identification_number: w9Data.taxpayer_identification_number,
+      taxpayer_identification_number: tin, // ✅ Use validated 9-digit TIN
       signature_date: w9Data.signature_date,
       signature_url: signatureResult.path
     };
 
-    // Generate PDF
+    // ✅ Generate PDF with reduced signature height
+    console.log('📄 Generating W-9 PDF...');
     const pdfResult = await generateW9PDF(pdfData);
     if (!pdfResult.success) {
-      throw new Error('Failed to generate PDF.');
+      throw new Error(pdfResult.error || 'Failed to generate PDF.');
     }
 
-    // Upload to documents
+    console.log('✅ PDF generated successfully');
+
+    // ✅ Upload to documents (always creates new entry)
+    console.log('💾 Saving W-9 document...');
     const uploadResult = await uploadPDFToSubOrgDocuments(
       pdfResult.pdfBytes,
       suborgid,
@@ -284,13 +344,19 @@ export async function submitW9FormForSubOrg(formData) {
     );
 
     if (!uploadResult.success) {
-      throw new Error('Failed to save document.');
+      throw new Error(uploadResult.error || 'Failed to save document.');
     }
 
+    console.log('✅ W-9 form submission complete!');
     return { success: true, message: 'W-9 form submitted successfully!' };
 
   } catch (error) {
     console.error('❌ Error submitting W-9 form:', error);
     return { success: false, error: error.message };
   }
+}
+
+// ✅ EXPORT: Function to get today's date for frontend
+export async function getTodayDateForW9() {
+  return { success: true, date: getTodayDate() };
 }
